@@ -116,48 +116,76 @@
 
   <script>
       htmx.on("htmx:afterSwap", (e) => {
-        if (e.detail.target.id == "dialog") {
+        if (e.detail.target.id === "dialog") {
           $("#modal").modal({
             show: true,
-            keyboard: false,
+            keyboard: false
           })
         }
       })
 
       htmx.on("htmx:beforeSwap", (e) => {
         if (e.detail.target.id == "dialog" && !e.detail.xhr.response) {
-          $('#modal').modal('hide')
+          $('#modal').modal('hide');
           e.detail.shouldSwap = false
         }
       })
 
       htmx.on("hidden.bs.modal", () => {
-        document.getElementById("dialog").innerHTML = ""
+        document.getElementById("dialog").innerHTML = "";
       })
+
+      htmx.onLoad(() => {
+        htmx.findAll(".toast").forEach((element) => {
+          element.toast('show');
+        })
+      })
+
+      document.addEventListener("show-toast", event => {
+        const { message, level } = event.detail
+        const notifiq = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        })
+        notifiq.fire({
+          icon: level,
+          title: message
+        })
+      })
+
+
   </script>
 
 
   {% if messages %}
     <script>
       {% for message in messages %}
-      const notifiq = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 5000,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-          toast.addEventListener('mouseenter', Swal.stopTimer)
-          toast.addEventListener('mouseleave', Swal.resumeTimer)
-        }
-      })
-      notifiq.fire({
-        icon: '{{ message.level_tag|safe }}',
-        title: '{{ message|safe }}'
-      })
+        const notifiq = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        })
+        notifiq.fire({
+          icon: '{{ message.level_tag|safe }}',
+          title: '{{ message|safe }}'
+        })
       {% endfor %}
     </script>
   {% endif %}
+
 
     {% comment %}
     Script tags with only code, no src (defer by default). To run

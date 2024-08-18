@@ -27,6 +27,8 @@ services:
         - action: sync
           path: .
           target: /app
+        - action: rebuild
+          path: ./requirements/base.txt
 
   postgres:
     build:

@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.http import HttpResponse
+from django.urls import reverse
 
 from crm.utils.models import BaseModel
 
@@ -31,12 +33,20 @@ class OrganizationMaster(BaseModel):
                              blank=True,
                              null=True)
 
+    slug = models.SlugField(null=False, unique=True)
+
     def all_members(self) -> models.QuerySet:
         """
         Returns all members including owner and admins.
         """
 
         return self.members.all() | self.admins.all() | self.owner
+
+    def get_dashboard_url(self) -> str:
+        """
+        Gives organization Dashboard url.
+        """
+        return reverse('organizations:dashboard', kwargs={'slug': self.slug})
 
     def __str__(self) -> str:
         return self.name

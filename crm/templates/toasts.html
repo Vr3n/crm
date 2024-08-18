@@ -1,0 +1,9 @@
+<div id="toasts" hx-swap-oob="afterbegin">
+  {% for message in messages %}
+  <div class="toast bg-{{ message.level_tags|safe }} text-dark" data-animation="true" data-delay="20000">
+    <div class="toast-body">
+      {{ message|safe }}
+    </div>
+  </div>
+  {% endfor %}
+</div>

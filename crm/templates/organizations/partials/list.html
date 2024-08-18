@@ -1,15 +1,15 @@
-<div class="row">
-  {% for organization in organizations %}
-  <div class="col">
-    <div class="card" role="button" tabindex="0">
+{% for organization in organizations %}
+<div class="col">
+  <a href="{{ organization.get_dashboard_url }}">
+    <div class="card card-hover" role="button" tabindex="0">
       {% if organization.image %}
-      <img src="{{ organization.image }}" class="card-img-top" alt="{{ organization.name }} logo"></img>
+        <img src="{{ organization.image }}" class="card-img-top" alt="{{ organization.name }} logo"></img>
       {% endif %}
       <div class="card-body">
         <h5 class="card-title">{{ organization.name }}</h5>
         <p class="card-text">{{ organization.description }}</p>
       </div>
     </div>
-  </div>
-  {% endfor %}
+  </a>
 </div>
+{% endfor %}

@@ -1,7 +1,11 @@
+import json
 from django.contrib.auth.decorators import login_required
+from django.db.models import QuerySet
 from django.forms.models import modelformset_factory
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.contrib import messages
+from django.utils.text import slugify
 
 from crm.organizations.forms import OrganizationCreateForm, OrganizationEmailForm, OrganizationMobileForm
 from crm.organizations.models import OrganizationEmailMaster, OrganizationMaster, OrganizationMobileNumberMaster
@@ -30,7 +34,11 @@ def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
             request.POST, request.FILES)
 
         if org_form.is_valid():
+            cleaned_data = org_form.cleaned_data
+            name = cleaned_data.get('name')
             org = org_form.save(commit=False)
+            org.slug = slugify(name)
+            print(org.slug)
             org.owner = request.user
             org.save()
 
@@ -52,7 +60,13 @@ def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
                     email_obj.save()
 
             return HttpResponse(status=204, headers={
-                'HX-Trigger': 'organizationsListChanged'
+                'HX-Trigger': json.dumps({
+                    'organizationsListChanged': 'organizationChnages',
+                    'show-toast': {
+                        'message': 'Organization Created Successfully!',
+                        'level': 'success',
+                    }
+                })
             })
     else:
         org_form = OrganizationCreateForm()
@@ -64,3 +78,21 @@ def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
     return render(request,
                   'organizations/forms/create-organization.html',
                   context=context)
+
+
+@login_required
+def organization_dashboard_view(request: HttpRequest,
+                                slug: str) -> HttpResponse:
+    organization: QuerySet = OrganizationMaster.objects.filter(slug=slug)
+
+    if not organization.exists():
+        messages.error(request, "Organization Does not Exist!")
+        return redirect("organizations:list")
+
+    print(organization)
+
+    context = {
+        "organization": organization.first()
+    }
+
+    return render(request, "organizations/dashboard.html", context)
