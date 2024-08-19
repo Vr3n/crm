@@ -18,3 +18,7 @@
   box-shadow: 4px 7px 47px -17px rgba(0,0,0,0.75);
   transition-delay: 150ms;
 }
+
+.sidebar-brand {
+  font-size: 1.125rem;
+}

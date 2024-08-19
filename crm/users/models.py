@@ -2,7 +2,7 @@
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
-from django.db.models import CharField
+from django.db.models import CharField, QuerySet
 from django.db.models import EmailField
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -37,3 +37,15 @@ class User(AbstractUser):
 
         """
         return reverse("users:detail", kwargs={"pk": self.id})
+
+    def get_organizations_queryset(self) -> QuerySet:
+        """
+        Get All the organizations that user in included in.
+
+        Returns:
+            QuerySet: organizations.
+        """
+
+        return (self.organizationmaster_set.all() |
+                self.admin_in_organizations.all() |
+                self.organizations.all()).distinct()
