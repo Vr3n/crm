@@ -1,4 +1,4 @@
-
+{% load crispy_forms_tags %}
 {% load static i18n compress%}<!DOCTYPE html>
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
@@ -16,7 +16,7 @@
   <meta name="author"
         content="Viren Suresh Ila Patel" />
   <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
-  {% block css %}
+{% block css %}
 <!-- Your stuff: Third-party CSS libraries go here -->
 	<!-- core:css -->
   <link rel="stylesheet" href="{% static 'vendors/core/core.css' %}">
@@ -24,6 +24,8 @@
   <!-- plugin css for this page -->
   <link rel="stylesheet" href="{% static 'vendors/bootstrap-datepicker/bootstrap-datepicker.min.css' %}">
 	<!-- end plugin css for this page -->
+  <link rel="stylesheet" href="{% static 'vendors/sweetalert2/sweetalert2.min.css' %}"></link>
+  <link rel="stylesheet" href="{% static 'vendors/select2/select2.min.css' %}"></link>
 	<!-- inject:css -->
   <link rel="stylesheet" href="{% static 'fonts/feather-font/css/iconfont.css' %}">
   <link rel="stylesheet" href="{% static 'vendors/flag-icon-css/css/flag-icon.min.css' %}">
@@ -51,6 +53,9 @@
 <script src="{% static 'vendors/core/core.js' %}"></script>
 <!-- endinject -->
 <!-- plugin js for this page -->
+<script src="{% static 'vendors/htmx.min.js' %}"></script>
+<script src="{% static 'vendors/sweetalert2/sweetalert2.min.js' %}"></script>
+<script src="{% static 'vendors/select2/select2.min.js' %}"></script>
 <script src="{% static 'vendors/chartjs/Chart.min.js' %}"></script>
 <script src="{% static 'vendors/jquery.flot/jquery.flot.js' %}"></script>
 <script src="{% static 'vendors/jquery.flot/jquery.flot.resize.js' %}"></script>
@@ -95,8 +100,93 @@
   {% endblock body %}
   <!-- /container -->
   {% block modal %}
+  <div id="modal" class="modal" data-backdrop="static" data-keyboard="false">
+    <div id="dialog" class="modal-dialog modal-lg" hx-target="this">
+    </div>
+  </div>
   {% endblock modal %}
   {% block inline_javascript %}
+  <script>
+    window.addEventListener("DOMContentLoaded", (event) => {
+      document.body.addEventListener("htmx:configRequest", (event) => {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}'
+      })
+    })
+  </script>
+
+  <script>
+      htmx.on("htmx:afterSwap", (e) => {
+        if (e.detail.target.id === "dialog") {
+          $("#modal").modal({
+            show: true,
+            keyboard: false
+          })
+        }
+      })
+
+      htmx.on("htmx:beforeSwap", (e) => {
+        if (e.detail.target.id == "dialog" && !e.detail.xhr.response) {
+          $('#modal').modal('hide');
+          e.detail.shouldSwap = false
+        }
+      })
+
+      htmx.on("hidden.bs.modal", () => {
+        document.getElementById("dialog").innerHTML = "";
+      })
+
+      htmx.onLoad(() => {
+        htmx.findAll(".toast").forEach((element) => {
+          element.toast('show');
+        })
+      })
+
+      document.addEventListener("show-toast", event => {
+        const { message, level } = event.detail
+        const notifiq = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        })
+        notifiq.fire({
+          icon: level,
+          title: message
+        })
+      })
+
+
+  </script>
+
+
+  {% if messages %}
+    <script>
+      {% for message in messages %}
+        const notifiq = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        })
+        notifiq.fire({
+          icon: '{{ message.level_tag|safe }}',
+          title: '{{ message|safe }}'
+        })
+      {% endfor %}
+    </script>
+  {% endif %}
+
+
     {% comment %}
     Script tags with only code, no src (defer by default). To run
     with a "defer" so that you run inline code:
