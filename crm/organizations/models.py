@@ -40,7 +40,7 @@ class OrganizationMaster(BaseModel):
         Returns all members including owner and admins.
         """
 
-        return self.members.all() | self.admins.all() | self.owner
+        return self.members.all() | self.admins.all()
 
     def get_dashboard_url(self) -> str:
         """

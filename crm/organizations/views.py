@@ -89,10 +89,24 @@ def organization_dashboard_view(request: HttpRequest,
         messages.error(request, "Organization Does not Exist!")
         return redirect("organizations:list")
 
-    print(organization)
-
     context = {
         "organization": organization.first()
     }
 
     return render(request, "organizations/dashboard.html", context)
+
+
+@login_required
+def organization_settings_view(request: HttpRequest,
+                               slug: str) -> HttpResponse:
+    organization: QuerySet = OrganizationMaster.objects.filter(slug=slug)
+
+    if not organization.exists():
+        messages.error(request, "Organization Does not Exist!")
+        return redirect("organizations:list")
+
+    context = {
+        "organization": organization.first()
+    }
+
+    return render(request, "organizations/settings.html", context)

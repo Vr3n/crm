@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+<h4><span class="text-primary">{{ organization.name }}</span> settings.</h4>
+<hr />
+<div class="row">
+  <span id="org-admins-table" class="card p-4 col-md-6">
+    <h5>Admins</h5>
+    <table class="table mt-4">
+      <thead>
+        <tr class="table-info">
+          <th>Name</th>
+          <th>Email</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for admin in organization.admins.all %}
+          <tr>
+            <td>{{ admin.name }}</td>
+            <td>{{ admin.email}}</td>
+            <td>
+              <button class="btn btn-info">Make Member</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td rowspan="2">No admins in this organization.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </span>
+  <span id="org-members-table" class="card p-4 col-md-6">
+    <h5>Staffs</h5>
+    <table class="table mt-4">
+      <thead >
+        <tr class="table-danger">
+          <th>Name</th>
+          <th>Email</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in organization.members.all %}
+          <tr>
+            <td>{{ member.name }}</td>
+            <td>{{ member.email}}</td>
+            <td>
+              <button class="btn btn-info">Make Admin</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td rowspan="2">No members in this organization.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </span>
+</div>
+
+{% endblock content %}
