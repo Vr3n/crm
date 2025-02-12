@@ -1,7 +1,13 @@
 <nav class="sidebar">
       <div class="sidebar-header">
       <a href="{{ organization.get_dashboard_url }}" class="sidebar-brand">
-            <img src="{{ organization.logo.url }}" style="width:100px;height:100px;" alt="{{ organization.name }}">
+        
+        {% if organization.logo is None %}
+          <img src="{{ organization.logo.url }}" style="width:100px;height:100px;" alt="{{ organization.name }}">
+        {% else %}
+          <p>{{ organization.name }}</p>
+        {% endif %}
+          
         </a>
         <div class="sidebar-toggler not-active">
           <span></span>

@@ -20,7 +20,7 @@ services:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
     ports:
-      - '8000:8000'
+      - "8000:8000"
     command: /start
     develop:
       watch:
@@ -55,7 +55,6 @@ services:
     volumes:
       - crm_local_redis_data:/data
 
-
   celeryworker:
     <<: *django
     image: crm_local_celeryworker
@@ -83,5 +82,5 @@ services:
     image: crm_local_flower
     container_name: crm_local_flower
     ports:
-      - '5555:5555'
+      - "5555:5555"
     command: /start-flower
