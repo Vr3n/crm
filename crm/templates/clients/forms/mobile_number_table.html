@@ -1,0 +1,32 @@
+<!-- The client mobile number form -->
+<form
+  hx-include="input#client_id"
+  hx-post="{% url 'hx-clients-mobile-numbers' %}"
+  hx-target="this"
+>
+  <div class="form-group row">
+    <div class="col-sm-8">
+      {{ form.mobile_number }}
+      <!-- -->
+      {% if form.mobile_number.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.mobile_number.errors %}
+        <!-- -->
+        {{ error }}
+        <!-- -->
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-sm-4">
+      <button type="Submit" class="btn btn-sm btn-success">Submit</button>
+      <button
+        type="Cancel"
+        @click="console.log($event.target.parentNode.parentNode.parentNode.remove())"
+        class="btn btn-sm btn-danger"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</form>
