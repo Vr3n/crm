@@ -1,0 +1,47 @@
+<table
+  hx-trigger="lead_mobile_added from:body"
+  hx-get="{% url 'hx-lead-mobile-number-table' lead_id=lead_id %}"
+  hx-target="this"
+  hx-swap="outerHTML"
+  class="table table-hover mb-0"
+>
+  <thead>
+    <tr>
+      <th class="pt-0"></th>
+      <th class=""></th>
+      <th class=""></th>
+    </tr>
+  </thead>
+  <tbody id="mobile_table_body">
+    {% for mobile_number in mobile_numbers %}
+    <tr>
+      <td>{{ mobile_number.mobile_number|default_if_none:"Not Provided" }}</td>
+      <td>
+        <a class="btn btn-secondary btn-sm">
+          <i data-feather="edit"></i>
+          Update
+        </a>
+      </td>
+      <td>
+        <a
+          hx-trigger="confirmed"
+          onClick="Swal.fire({'icon': 'warning', title: 'Confirm', text:'Do you want to Delete?', 'showDenyButton': true, 'denyButtonText': 'No'}).then((result)=>{
+              if(result.isConfirmed){
+                htmx.trigger(this, 'confirmed');  
+              } 
+          })"
+          hx-delete="{% url 'hx-leads-mobile-table-delete' mobile_number.id %}"
+          class="btn btn-danger btn-sm"
+        >
+          <i data-feather="delete"></i>
+          Delete
+        </a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="3">No Mobile Numbers Provided</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

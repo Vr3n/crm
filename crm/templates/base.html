@@ -141,7 +141,7 @@
         })
       })
 
-      document.addEventListener("show-toast", event => {
+      document.addEventListener("message", event => {
         const { message, level } = event.detail
         const notifiq = Swal.mixin({
           toast: true,
