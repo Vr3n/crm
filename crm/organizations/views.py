@@ -62,7 +62,7 @@ def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
             return HttpResponse(status=204, headers={
                 'HX-Trigger': json.dumps({
                     'organizationsListChanged': 'organizationChnages',
-                    'show-toast': {
+                    'message': {
                         'message': 'Organization Created Successfully!',
                         'level': 'success',
                     }
