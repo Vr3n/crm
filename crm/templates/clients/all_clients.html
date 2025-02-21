@@ -18,7 +18,7 @@
   <div
     class="card card-body"
     hx-trigger="revealed"
-    hx-get="{% url 'hx-create-client' %}"
+    hx-get="{% url 'hx-create-client' request.organization.slug %}"
     hx-swap="innerHTML"
     hx-target="this"
     id="create-form"
@@ -73,7 +73,7 @@
           class="table-responsive"
           hx-trigger="client_create_success from:body"
           hx-swap="innerHTML"
-          hx-get="{% url 'hx-clients-table' %}"
+          hx-get="{% url 'hx-clients-table' slug=request.organization.slug %}"
           id="all-clients-table"
         >
           {% include 'clients/tables/clients.html' %}

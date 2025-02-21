@@ -7,8 +7,9 @@ from .models import (ClientMaster, ClientMobileNumberMaster,
 class ClientComprehensiveForm(forms.ModelForm):
     class Meta:
         model = ClientMaster
-        fields = ['first_name', 'middle_name', 'last_name', 'gender']
+        fields = ['organization','first_name', 'middle_name', 'last_name', 'gender']
         widgets = {
+            'organization': forms.HiddenInput(),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'middle_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),

@@ -1,8 +1,11 @@
 from django.db.models import Prefetch
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 from django_htmx.http import trigger_client_event
+
+from crm.utils.decorators import organization_slug_required
 
 from .forms import (
     ClientAddressForm, ClientComprehensiveForm, ClientEmailAddressTableForm,
@@ -14,6 +17,8 @@ from .models import (
 # Create your views here.
 
 
+@login_required
+@organization_slug_required
 def client_list_view(request):
     clients = ClientMaster.objects.active() \
         .prefetch_related("mobile_numbers", "emails")
@@ -21,6 +26,8 @@ def client_list_view(request):
     return render(request, "clients/all_clients.html", context)
 
 
+@login_required
+@organization_slug_required
 def client_detail_view(request: HttpRequest, pk: int):
     client = get_object_or_404(ClientMaster, pk=pk)
 
@@ -31,33 +38,37 @@ def client_detail_view(request: HttpRequest, pk: int):
     return render(request, 'clients/client_detail.html', context=context)
 
 
+@login_required
+@organization_slug_required
 def hx_clients_table(request: HttpRequest) -> HttpResponse:
     """
-    Returns Partial table html containing leads.
+    Returns Partial table html containing clients.
     """
 
-    leads = ClientMaster.objects.prefetch_related(
+    clients = ClientMaster.objects.prefetch_related(
         Prefetch(
             'mobile_numbers',
-            queryset=ClientMobileNumberMaster.objects.order_by('id')[:1],
+            queryset=ClientMobileNumberMaster.objects.order_by('-created_at')[:1],
             to_attr='first_mobile'
         ),
         Prefetch(
             'emails',
-            queryset=ClientEmailMaster.objects.order_by('id')[:1],
+            queryset=ClientEmailMaster.objects.order_by('-created_at')[:1],
             to_attr='first_email'
         )
     ).order_by('-created_at')
     context = {
-        'leads': leads
+        'clients': clients 
     }
 
     return render(
-        request, 'leads/tables/leads.html',
+        request, 'clients/tables/clients.html',
         context=context
     )
 
 
+@login_required
+@organization_slug_required
 def hx_create_client(request: HttpRequest):
     """
     Handle HTMX request to create a new client.
@@ -87,13 +98,15 @@ def hx_create_client(request: HttpRequest):
 
             response = render(request, form_template)
             response = trigger_client_event(
-                response, "client_create_success"
-            )
-            return trigger_client_event(
                 response, "message", {
-                    'type': 'success',
+                    'level': 'success',
                     'message': 'Client saved succesfully!'
                 })
+            response = trigger_client_event(
+                response, "client_create_success"
+            )
+
+            return response
 
         else:
             context = {
@@ -105,7 +118,7 @@ def hx_create_client(request: HttpRequest):
             res = render(request, form_template, context)
             return trigger_client_event(
                 res, "message", {
-                    'type': 'error',
+                    'level': 'error',
                     'message': 'Error during saving the client!'
                 })
 
@@ -125,6 +138,8 @@ def hx_create_client(request: HttpRequest):
 
 
 @require_http_methods(["DELETE"])
+@login_required
+@organization_slug_required
 def hx_delete_client_view(request, pk):
     client_obj = ClientMaster.objects.filter(pk=pk)
 
@@ -132,7 +147,7 @@ def hx_delete_client_view(request, pk):
         res = HttpResponse()
         res = trigger_client_event(
             res, "message", {
-                'type': 'error',
+                'level': 'error',
                 'message': 'Cannot find the client.'
             })
         return res
@@ -151,7 +166,7 @@ def hx_delete_client_view(request, pk):
     # Send success message
     res = trigger_client_event(
         res, "message", {
-            'type': 'success',
+            'level': 'success',
             'message': 'Deleted Client Successfully!'
         })
 
@@ -163,13 +178,15 @@ def hx_delete_client_view(request, pk):
     return res
 
 
+@login_required
+@organization_slug_required
 def hx_client_mobile_table(
         request: HttpRequest, client_id: int) -> HttpResponse:
     """
     A Client Mobile table.
     """
     mobile_numbers = ClientMobileNumberMaster.objects.filter(client=client_id)
-    client_id = mobile_numbers.first().client.id if mobile_numbers else client_id  # noqa
+    client_id = mobile_numbers.first().client.uuid if mobile_numbers else client_id  # noqa
 
     context = {
         'mobile_numbers': mobile_numbers,
@@ -180,6 +197,8 @@ def hx_client_mobile_table(
 
 
 @require_http_methods(['DELETE', 'POST'])
+@login_required
+@organization_slug_required
 def hx_client_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Deleting the mobile number for a client.
@@ -190,7 +209,7 @@ def hx_client_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
         res = HttpResponse()
         res = trigger_client_event(
             res, "message", {
-                'type': 'error',
+                'level': 'error',
                 'message': 'Cannot find the mobile number.'
             })
         return res
@@ -200,15 +219,15 @@ def hx_client_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     mobile_obj.delete()
 
     context = {
-        'client_id': client_id.id,
+        'client_id': client_id.uuid,
         'mobile_numbers': ClientMobileNumberMaster.objects.filter(
-            client=client_id.id)
+            client=client_id.uuid)
     }
 
     res = render(request, 'clients/tables/mobile_numbers.html', context)
     res = trigger_client_event(
         res, "message", {
-            'type': 'success',
+            'level': 'success',
             'message': 'Deleted Mobile Number Successfully!'
         })
     res = trigger_client_event(res, 'client_mobile_deleted')
@@ -216,6 +235,8 @@ def hx_client_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     return res
 
 
+@login_required
+@organization_slug_required
 def hx_client_mobile_table_form(request: HttpRequest) -> HttpResponse:
     """
     Enables adding client mobile numbers dynamically on the table.
@@ -224,7 +245,7 @@ def hx_client_mobile_table_form(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         client_id = request.POST.get('client')[0]
-        client_obj = ClientMaster.objects.get(id=client_id)
+        client_obj = ClientMaster.objects.get(uuid=client_id)
         form = ClientMobileNumberTableForm(request.POST)
 
         if form.is_valid():
@@ -235,7 +256,7 @@ def hx_client_mobile_table_form(request: HttpRequest) -> HttpResponse:
             res = HttpResponse()
             res = trigger_client_event(
                 res, "message", {
-                    'type': 'success',
+                    'level': 'success',
                     'message': 'Mobile Number Added Successfully!'
                 }
             )
@@ -253,13 +274,15 @@ def hx_client_mobile_table_form(request: HttpRequest) -> HttpResponse:
         request, 'clients/forms/mobile_number_table.html', {'form': form})
 
 
+@login_required
+@organization_slug_required
 def hx_client_email_table(
         request: HttpRequest, client_id: int) -> HttpResponse:
     """
     A Client Email Address table.
     """
     email_addresses = ClientEmailMaster.objects.filter(client=client_id)
-    client_id = email_addresses.first().client.id if email_addresses else client_id  # noqa
+    client_id = email_addresses.first().client.uuid if email_addresses else client_id  # noqa
 
     context = {
         'email_addresses': email_addresses,
@@ -269,6 +292,8 @@ def hx_client_email_table(
     return render(request, 'clients/tables/emails.html', context)
 
 
+@login_required
+@organization_slug_required
 @require_http_methods(['DELETE', 'POST'])
 def hx_client_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """
@@ -279,7 +304,7 @@ def hx_client_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     if not email_obj.exists():
         res = HttpResponse()
         res = trigger_client_event(
-            res, "message", {'type': 'error', 'message': 'Cannot find the email address.'})
+            res, "message", {'level': 'error', 'message': 'Cannot find the email address.'})
         return res
 
     email_obj = email_obj.first()
@@ -287,13 +312,13 @@ def hx_client_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     email_obj.delete()
 
     context = {
-        'client_id': client_id.id,
-        'emails': ClientEmailMaster.objects.filter(client=client_id.id)
+        'client_id': client_id.uuid,
+        'emails': ClientEmailMaster.objects.filter(client=client_id.uuid)
     }
 
     res = render(request, 'clients/tables/emails.html', context)
     res = trigger_client_event(res, "message", {
-                               'type': 'success',
+                               'level': 'success',
                                'message': 'Deleted Email Address Successfully!'
                                })
     res = trigger_client_event(res, 'client_email_deleted')
@@ -301,6 +326,8 @@ def hx_client_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     return res
 
 
+@login_required
+@organization_slug_required
 def hx_client_email_table_form(request: HttpRequest) -> HttpResponse:
     """
     Enables adding client email addresses dynamically on the table.
@@ -309,7 +336,7 @@ def hx_client_email_table_form(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         client_id = request.POST.get('client')[0]
-        client_obj = ClientMaster.objects.get(id=client_id)
+        client_obj = ClientMaster.objects.get(uuid=client_id)
         form = ClientEmailAddressTableForm(request.POST)
 
         if form.is_valid():
@@ -320,7 +347,7 @@ def hx_client_email_table_form(request: HttpRequest) -> HttpResponse:
             res = HttpResponse()
             res = trigger_client_event(
                 res, "message",
-                {'type': 'success', 'message': 'Email Added Successfully!'})
+                {'level': 'success', 'message': 'Email Added Successfully!'})
             res = trigger_client_event(res, 'client_email_added')
             return res
 
@@ -330,7 +357,7 @@ def hx_client_email_table_form(request: HttpRequest) -> HttpResponse:
         res = trigger_client_event(
             res,
             "message",
-            {'type': 'error', 'message': 'Problem saving email.'})
+            {'level': 'error', 'message': 'Problem saving email.'})
         return res
 
     return render(

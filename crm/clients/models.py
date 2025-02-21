@@ -2,16 +2,10 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from crm.organizations.models import OrganizationMaster
+from crm.utils.models import BaseModel
+
 from .querysets import ClientQuerySet
-
-
-class BaseModel(models.Model):
-    """Base model with created_at and updated_at fields"""
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
 
 
 class ClientMaster(BaseModel):
@@ -21,6 +15,8 @@ class ClientMaster(BaseModel):
         ("O", "Other"),
     ]
 
+    organization = models.ForeignKey(OrganizationMaster,
+                                     on_delete=models.CASCADE)
     first_name = models.CharField(max_length=255)
     middle_name = models.CharField(max_length=255, blank=True, null=True)
     last_name = models.CharField(max_length=255)

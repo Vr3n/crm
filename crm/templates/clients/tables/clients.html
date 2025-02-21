@@ -15,8 +15,7 @@
     <tr>
       <td>{{ client.get_full_name }}</td>
       <td>
-        {{ client.mobile_numbers.first.mobile_number|default_if_none:"Not
-        Provided" }}
+        {{ client.mobile_numbers.first.mobile_number|default_if_none:"Not Provided" }}
       </td>
       <td>{{ client.emails.first.email|default_if_none:"Not Provided" }}</td>
       <td>
@@ -33,7 +32,7 @@
       <td>{{ client.gender }}</td>
       <td>
         <a
-          href="{% url 'client-detail' client.pk %}"
+          href="{% url 'client-detail' request.organization.slug client.pk %}"
           class="btn btn-primary btn-sm"
         >
           Detail
@@ -49,7 +48,7 @@
                 htmx.trigger(this, 'confirmed');  
               } 
           })"
-          hx-delete="{% url 'hx-delete-client' client.pk %}"
+          hx-delete="{% url 'hx-delete-client' request.organization.slug client.pk %}"
           class="btn btn-danger btn-sm"
         >
           Delete
