@@ -1,8 +1,8 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Row, Column
+# from crispy_forms.helper import FormHelper
+# from crispy_forms.layout import Layout, Row, Column
 
 
 from .models import (LeadAddressMaster, LeadEmailAddressMaster,
@@ -14,33 +14,40 @@ class LeadCreateForm(forms.ModelForm):
     source = forms.CharField(
         label=_("Source"),
         required=False,
-        widget=forms.TextInput
+        widget=forms.TextInput(attrs={'class': 'form-control'})
     )
 
     class Meta:
         model = LeadMaster
         fields = ['organization', 'first_name',
                   'middle_name', 'last_name', 'source',]
+        widgets = {
+            'organization': forms.HiddenInput(),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'middle_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'source': forms.TextInput(attrs={ 'class': 'form-control' }),
+        }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
-        self.helper = FormHelper()
-        self.helper.form_tag = False
+    #     self.helper = FormHelper()
+    #     self.helper.form_tag = False
 
-        self.helper.layout = Layout(
-            Row(
-                Column('first_name', css_class='form-group col-xs-12 col-sm-4 mb-0'),
-                Column('middle_name',
-                       css_class='form-group col-xs-12 col-sm-4 mb-0'),
-                Column('last_name', css_class='form-group col-xs-12 col-sm-4 mb-0'),
-            ),
-            Row(
-                Column("source", css_class="form-group col-sm-12 mb-0")
-            )
-        )
-        self.fields['first_name'].required = True
-        self.fields['last_name'].required = True
+    #     self.helper.layout = Layout(
+    #         Row(
+    #             Column('first_name', css_class='form-group col-xs-12 col-sm-4 mb-0'),
+    #             Column('middle_name',
+    #                    css_class='form-group col-xs-12 col-sm-4 mb-0'),
+    #             Column('last_name', css_class='form-group col-xs-12 col-sm-4 mb-0'),
+    #         ),
+    #         Row(
+    #             Column("source", css_class="form-group col-sm-12 mb-0")
+    #         )
+    #     )
+    #     self.fields['first_name'].required = True
+    #     self.fields['last_name'].required = True
 
 
 class LeadMobileNumberForm(forms.ModelForm):

@@ -15,12 +15,11 @@
       <td>{{ lead.get_full_name }}</td>
       <td>{{ lead.created_at|date:"d M Y H:i" }}</td>
       <td>
-        {{ lead.mobile_numbers.first.mobile_number|default_if_none:"Not
-        Provided" }}
+        {{ lead.mobile_numbers.first.mobile_number|default_if_none:"Not Provided" }}
       </td>
       <td>{{ lead.emails.first.email|default_if_none:"Not Provided" }}</td>
       <td>
-        <a href="{% url 'lead-detail' lead.pk %}" class="btn btn-primary">
+        <a href="{% url 'lead-detail' slug=request.organization.slug pk=lead.pk %}" class="btn btn-primary">
           Detail
         </a>
       </td>
@@ -34,7 +33,7 @@
                 htmx.trigger(this, 'confirmed');  
               } 
           })"
-          hx-delete="{% url 'hx-delete-lead' lead.pk %}"
+          hx-delete="{% url 'hx-delete-lead' slug=request.organization.slug pk=lead.pk %}"
           class="btn btn-danger"
         >
           Delete

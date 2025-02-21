@@ -1,11 +1,11 @@
 <nav class="sidebar">
       <div class="sidebar-header">
-      <a href="{{ organization.get_dashboard_url }}" class="sidebar-brand">
+      <a href="{{ request.organization.get_dashboard_url }}" class="sidebar-brand">
         
-        {% if organization.logo is None %}
-          <img src="{{ organization.logo.url }}" style="width:100px;height:100px;" alt="{{ organization.name }}">
+        {% if request.organization.logo is None %}
+          <img src="{{ request.organization.logo.url }}" style="width:100px;height:100px;" alt="{{ request.organization.name }}">
         {% else %}
-          <p>{{ organization.name }}</p>
+          <p>{{ request.organization.name }}</p>
         {% endif %}
           
         </a>
@@ -19,15 +19,15 @@
         <ul class="nav">
           <li class="nav-item nav-category">Main</li>
           <li class="nav-item active">
-              <a href="{{ organization.get_dashboard_url }}" class="nav-link active">
+              <a href="{{ request.organization.get_dashboard_url }}" class="nav-link active">
                 <i class="link-icon" data-feather="box"></i>
                 <span class="link-title">Dashboard</span>
               </a>
           </li>
-          {% if request.user == organization.owner or request.user in organizations.admins.all %}
+          {% if request.user == request.organization.owner or request.user in request.organizations.admins.all %}
             <li class="nav-item nav-category">Organization</li>
             <li class="nav-item">
-            <a href="{% url 'organizations:settings' organization.slug %}" class="nav-link">
+            <a href="{% url 'organizations-settings' request.organization.slug %}" class="nav-link">
                   <i class="link-icon" data-feather="settings"></i>
                   <span class="link-title">Settings</span>
               </a>
@@ -35,7 +35,7 @@
           {% endif %}
           <li class="nav-item nav-category">Clients</li>
           <li class="nav-item">
-            <a href="{% url 'client-list' %}" class="nav-link">
+            <a href="{% url 'client-list' request.organization.slug %}" class="nav-link">
               <i class="link-icon" data-feather="message-square"></i>
               <span class="link-title">All clients</span>
             </a>
@@ -48,7 +48,7 @@
           </li>
           <li class="nav-item nav-category">Leads</li>
           <li class="nav-item">
-            <a href="{% url 'all-leads' %}" class="nav-link">
+            <a href="{% url 'all-leads' request.organization.slug %}" class="nav-link">
               <i class="link-icon" data-feather="message-square"></i>
               <span class="link-title">All Leads</span>
             </a>

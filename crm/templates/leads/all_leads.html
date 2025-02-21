@@ -18,7 +18,7 @@
   <div
     class="card card-body"
     hx-trigger="revealed"
-    hx-get="{% url 'hx-create-lead' %}"
+    hx-get="{% url 'hx-create-lead' slug=request.organization.slug %}"
     hx-swap="innerHTML"
     hx-target="this"
     id="create-form"
@@ -73,7 +73,7 @@
           class="table-responsive"
           hx-trigger="lead_create_success from:body"
           hx-swap="innerHTML"
-          hx-get="{% url 'hx-leads-table' %}"
+          hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
           id="all-leads-table"
         >
           {% include 'leads/tables/leads.html' %}

@@ -19,7 +19,7 @@ class LeadMaster(BaseModel):
         last_name (str): Lead's last name.
         gender (str, optional): Lead's gender, chosen from GENDER_CHOICES.
 
-    Methods:
+   Methods:
         get_full_name -> str: Lead's Full name.
 
     """
@@ -71,6 +71,7 @@ class LeadMobileNumberMaster(BaseModel):
     lead = models.ForeignKey(
         LeadMaster, on_delete=models.CASCADE, related_name="mobile_numbers")
     mobile_number = models.CharField(
+        unique=True,
         max_length=10,
         validators=[RegexValidator(
             r'^\d{10}$', message="Enter a valid 10-digit mobile number.")]
@@ -101,7 +102,7 @@ class LeadEmailAddressMaster(BaseModel):
     """
     lead = models.ForeignKey(
         LeadMaster, on_delete=models.CASCADE, related_name="emails")
-    email = models.EmailField()
+    email = models.EmailField(unique=True)
 
     class Meta:
         verbose_name = 'Lead Email address'

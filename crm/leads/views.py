@@ -4,13 +4,16 @@ from django.shortcuts import get_object_or_404, render
 from django_htmx.http import trigger_client_event
 from django.forms import inlineformset_factory
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 
-from leads.forms import (
-    LeadAddressForm, LeadComprehensiveForm,
+from crm.utils.decorators import organization_slug_required
+
+from .forms import (
+    LeadAddressForm, LeadCreateForm,
     LeadMobileNumberForm, LeadEmailForm,
     LeadMobileNumberTableForm, LeadEmailAddressTableForm
 )
-from leads.models import (
+from .models import (
     LeadMaster, LeadMobileNumberMaster,
     LeadEmailAddressMaster
 )
@@ -26,7 +29,8 @@ EmailFormSet = inlineformset_factory(
     form=LeadEmailForm, extra=1, can_delete=True
 )
 
-
+@login_required
+@organization_slug_required
 def all_leads_view(request: HttpRequest) -> HttpResponse:
     """
     Displaying all leads.
@@ -47,7 +51,9 @@ def all_leads_view(request: HttpRequest) -> HttpResponse:
     )
 
 
-def lead_detail_view(request: HttpRequest, pk: int):
+@login_required
+@organization_slug_required
+def lead_detail_view(request: HttpRequest, pk: str):
     lead = get_object_or_404(LeadMaster, pk=pk)
 
     context = {
@@ -57,6 +63,8 @@ def lead_detail_view(request: HttpRequest, pk: int):
     return render(request, 'leads/lead_detail.html', context=context)
 
 
+@login_required
+@organization_slug_required
 def hx_lead_delete_view(request: HttpRequest, pk: int):
     lead_obj = LeadMaster.objects.filter(pk=pk)
 
@@ -90,6 +98,8 @@ def hx_lead_delete_view(request: HttpRequest, pk: int):
     return res
 
 
+@login_required
+@organization_slug_required
 def hx_create_lead(request: HttpRequest) -> HttpResponse:
     """
     Handles the creation of new lead, along with associated mobile numbers,
@@ -99,7 +109,7 @@ def hx_create_lead(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         # Binding the submitted data to the form.
-        lead_form = LeadComprehensiveForm(request.POST)
+        lead_form = LeadCreateForm(request.POST)
         mobile_formset = MobileNumberFormSet(request.POST, prefix='mobile')
         email_formset = EmailFormSet(request.POST, prefix='email')
         address_form = LeadAddressForm(request.POST)
@@ -150,7 +160,7 @@ def hx_create_lead(request: HttpRequest) -> HttpResponse:
             return res
 
     # The get request is performed.
-    lead_form = LeadComprehensiveForm()
+    lead_form = LeadCreateForm()
     mobile_formset = MobileNumberFormSet(prefix='mobile')
     email_formset = EmailFormSet(prefix='email')
     address_form = LeadAddressForm()
@@ -165,6 +175,8 @@ def hx_create_lead(request: HttpRequest) -> HttpResponse:
     return render(request, 'leads/forms/lead_create.html', context)
 
 
+@login_required
+@organization_slug_required
 def hx_edit_lead(request: HttpRequest, pk: int):
     """
     Edit an existing lead. If not found, return an HTMX response
@@ -183,7 +195,7 @@ def hx_edit_lead(request: HttpRequest, pk: int):
 
     if request.method == "POST":
         # Binding the submitted data to the form.
-        lead_form = LeadComprehensiveForm(request.POST, instance=lead)
+        lead_form = LeadCreateForm(request.POST, instance=lead)
         mobile_formset = MobileNumberFormSet(request.POST, instance=lead)
         email_formset = EmailFormSet(request.POST, instance=lead)
         address_form = LeadAddressForm(request.POST, instance=lead)
@@ -211,6 +223,8 @@ def hx_edit_lead(request: HttpRequest, pk: int):
             return render(request, '', context)
 
 
+@login_required
+@organization_slug_required
 def hx_leads_table(request: HttpRequest) -> HttpResponse:
     """
     Returns Partial table html containing leads.
@@ -219,12 +233,12 @@ def hx_leads_table(request: HttpRequest) -> HttpResponse:
     leads = LeadMaster.objects.prefetch_related(
         Prefetch(
             'mobile_numbers',
-            queryset=LeadMobileNumberMaster.objects.order_by('id')[:1],
+            queryset=LeadMobileNumberMaster.objects.order_by('uuid')[:1],
             to_attr='first_mobile'
         ),
         Prefetch(
             'emails',
-            queryset=LeadEmailAddressMaster.objects.order_by('id')[:1],
+            queryset=LeadEmailAddressMaster.objects.order_by('uuid')[:1],
             to_attr='first_email'
         )
     ).order_by('-created_at')
@@ -238,13 +252,15 @@ def hx_leads_table(request: HttpRequest) -> HttpResponse:
     )
 
 
+@login_required
+@organization_slug_required
 def hx_lead_mobile_table(request: HttpRequest, lead_id: int) -> HttpResponse:
     """
     A lead Mobile table.
     """
 
     mobile_numbers = LeadMobileNumberMaster.objects.filter(lead=lead_id)
-    lead_id = mobile_numbers.first().lead.id
+    lead_id = mobile_numbers.first().lead.uuid
 
     context = {
         'mobile_numbers': mobile_numbers,
@@ -256,6 +272,8 @@ def hx_lead_mobile_table(request: HttpRequest, lead_id: int) -> HttpResponse:
                   context)
 
 
+@login_required
+@organization_slug_required
 @require_http_methods(['DELETE', 'POST'])
 def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """
@@ -278,9 +296,9 @@ def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     mobile_obj.delete()
 
     context = {
-        'lead_id': lead_id.id,
+        'lead_id': lead_id.uuid,
         'mobile_numbers': LeadMobileNumberMaster.objects.filter(
-            lead=lead_id.id)
+            lead=lead_id.uuid)
     }
 
     res = render(
@@ -300,6 +318,8 @@ def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     return res
 
 
+@login_required
+@organization_slug_required
 def hx_mobile_table_form(request: HttpRequest) -> HttpResponse:
     """
     Enables us to create mobile number on table dynamically.
@@ -351,6 +371,8 @@ def hx_mobile_table_form(request: HttpRequest) -> HttpResponse:
         request, 'leads/forms/mobile_number_table.html', context=context)
 
 
+@login_required
+@organization_slug_required
 def hx_email_table_form(request: HttpRequest) -> HttpResponse:
     """
     Enables us to create email addresses dynamically on the table.
@@ -402,13 +424,15 @@ def hx_email_table_form(request: HttpRequest) -> HttpResponse:
         request, 'leads/forms/email_address_table.html', context=context)
 
 
+@login_required
+@organization_slug_required
 def hx_lead_email_table(request: HttpRequest, lead_id: int) -> HttpResponse:
     """
     A lead Email Address table.
     """
 
     email_addresses = LeadEmailAddressMaster.objects.filter(lead=lead_id)
-    lead_id = email_addresses.first().lead.id if email_addresses else lead_id
+    lead_id = email_addresses.first().lead.uuid if email_addresses else lead_id
 
     context = {
         'email_addresses': email_addresses,
@@ -421,6 +445,8 @@ def hx_lead_email_table(request: HttpRequest, lead_id: int) -> HttpResponse:
 
 
 @require_http_methods(['DELETE', 'POST'])
+@login_required
+@organization_slug_required
 def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Deleting an email address.
@@ -442,8 +468,8 @@ def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     email_obj.delete()
 
     context = {
-        'lead_id': lead_id.id,
-        'email_addresses': LeadEmailAddressMaster.objects.filter(lead=lead_id.id)
+        'lead_id': lead_id.uuid,
+        'email_addresses': LeadEmailAddressMaster.objects.filter(lead=lead_id.uuid)
     }
 
     res = render(

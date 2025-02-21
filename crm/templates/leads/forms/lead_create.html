@@ -1,7 +1,7 @@
 <form
   id="lead-create-form-partial"
   method="post"
-  hx-post="{% url 'hx-create-lead' %}"
+  hx-post="{% url 'hx-create-lead' slug=request.organization.slug %}"
   hx-swap="none"
 >
   <div class="card mb-3">
@@ -9,6 +9,7 @@
     <div class="card-body">
       <div class="row">
         <div class="col-md-3">
+          <input type="hidden" name="organization" value="{{ request.organization.pk }}">
           <label>First Name</label>
           {{ lead_form.first_name}}
           <!--errors -->
@@ -39,12 +40,12 @@
           {% endif %}
         </div>
         <div class="col-md-3">
-          <label>Gender</label>
-          {{ lead_form.gender}}
+          <label>Source</label>
+          {{ lead_form.source}}
           <!--errors -->
-          {% if lead_form.gender.errors %}
+          {% if lead_form.source.errors %}
           <div class="invalid-feedback d-block">
-            {{ lead_form.gender.errors }}
+            {{ lead_form.source.errors }}
           </div>
           {% endif %}
         </div>

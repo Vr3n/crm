@@ -6,4 +6,4 @@ set -o nounset
 
 python manage.py makemigrations
 python manage.py migrate
-exec python -m debugpy --listen 0.0.0.0:6942 --wait-for-client manage.py runserver_plus 0.0.0.0:8000
+exec python manage.py runserver_plus 0.0.0.0:8000
