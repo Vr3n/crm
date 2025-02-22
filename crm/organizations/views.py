@@ -9,13 +9,14 @@ from django.utils.text import slugify
 
 from crm.organizations.forms import OrganizationCreateForm, OrganizationEmailForm, OrganizationMobileForm
 from crm.organizations.models import OrganizationEmailMaster, OrganizationMaster, OrganizationMobileNumberMaster
+from crm.utils.decorators import organization_slug_required
 
 # Create your views here.
 
 
 @login_required
 def organizations_list_view(request: HttpRequest) -> HttpResponse:
-    orgs = OrganizationMaster.objects.filter()
+    orgs = OrganizationMaster.objects.user_in(request.user)
 
     context = {
         "organizations": orgs
@@ -81,32 +82,12 @@ def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-def organization_dashboard_view(request: HttpRequest,
-                                slug: str) -> HttpResponse:
-    organization: QuerySet = OrganizationMaster.objects.filter(slug=slug)
-
-    if not organization.exists():
-        messages.error(request, "Organization Does not Exist!")
-        return redirect("organizations:list")
-
-    context = {
-        "organization": organization.first()
-    }
-
-    return render(request, "organizations/dashboard.html", context)
+@organization_slug_required
+def organization_dashboard_view(request: HttpRequest) -> HttpResponse:
+    return render(request, "organizations/dashboard.html")
 
 
 @login_required
-def organization_settings_view(request: HttpRequest,
-                               slug: str) -> HttpResponse:
-    organization: QuerySet = OrganizationMaster.objects.filter(slug=slug)
-
-    if not organization.exists():
-        messages.error(request, "Organization Does not Exist!")
-        return redirect("organizations:list")
-
-    context = {
-        "organization": organization.first()
-    }
-
-    return render(request, "organizations/settings.html", context)
+@organization_slug_required
+def organization_settings_view(request: HttpRequest) -> HttpResponse:
+    return render(request, "organizations/settings.html")

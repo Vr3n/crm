@@ -15,7 +15,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 
 @login_required
 def home_view(request: HttpRequest) -> HttpResponse:
-    return redirect("organizations:list")
+    return redirect("organizations-list")
 
 
 urlpatterns = [
@@ -26,8 +26,7 @@ urlpatterns = [
     path("users/", include("crm.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
-    path("organizations/", include(("crm.organizations.urls", "organizations"),
-         namespace="organizations")),
+    path("organizations/", include("crm.organizations.urls")),
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]
@@ -66,6 +65,7 @@ if settings.DEBUG:
             kwargs={"exception": Exception("Page not Found")},
         ),
         path("500/", default_views.server_error),
+        path("__reload__/", include("django_browser_reload.urls")),
     ]
     if "debug_toolbar" in settings.INSTALLED_APPS:
         import debug_toolbar

@@ -1,0 +1,47 @@
+<table
+  hx-trigger="client_email_added from:body"
+  hx-get="{% url 'hx-client-email-address-table' client_id=client_id %}"
+  hx-target="this"
+  hx-swap="outerHTML"
+  class="table table-hover mb-0"
+>
+  <thead>
+    <tr>
+      <th class="pt-0"></th>
+      <th class=""></th>
+      <th class=""></th>
+    </tr>
+  </thead>
+  <tbody id="client_email_table_body">
+    {% for email in emails %}
+    <tr>
+      <td>{{ email.email|default_if_none:"Not Provided" }}</td>
+      <td>
+        <a class="btn btn-secondary btn-sm">
+          <i data-feather="edit"></i>
+          Update
+        </a>
+      </td>
+      <td>
+        <a
+          hx-trigger="confirmed"
+          onClick="Swal.fire({'icon': 'warning', title: 'Confirm', text:'Do you want to Delete?', 'showDenyButton': true, 'denyButtonText': 'No'}).then((result)=>{
+              if(result.isConfirmed){
+                htmx.trigger(this, 'confirmed');  
+              } 
+          })"
+          hx-delete="{% url 'hx-clients-email-table-delete' email.id %}"
+          class="btn btn-danger btn-sm"
+        >
+          <i data-feather="delete"></i>
+          Delete
+        </a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="3">No Email Addresses Provided</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

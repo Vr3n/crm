@@ -3,6 +3,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.urls import reverse
 
+from crm.organizations.querysets import OrganizationQuerySet
 from crm.utils.models import BaseModel
 
 # Create your models here.
@@ -35,6 +36,8 @@ class OrganizationMaster(BaseModel):
 
     slug = models.SlugField(null=False, unique=True)
 
+    objects = OrganizationQuerySet.as_manager()
+
     def all_members(self) -> models.QuerySet:
         """
         Returns all members including owner and admins.
@@ -46,7 +49,7 @@ class OrganizationMaster(BaseModel):
         """
         Gives organization Dashboard url.
         """
-        return reverse('organizations:dashboard', kwargs={'slug': self.slug})
+        return reverse('organizations-dashboard', kwargs={'slug': self.slug})
 
     def __str__(self) -> str:
         return self.name
