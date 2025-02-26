@@ -7,6 +7,8 @@ from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.utils.text import slugify
 
+from crown_crm.clients.models import ClientMaster
+from crown_crm.leads.models import LeadMaster
 from crown_crm.organizations.forms import OrganizationCreateForm, OrganizationEmailForm, OrganizationMobileForm
 from crown_crm.organizations.models import OrganizationEmailMaster, OrganizationMaster, OrganizationMobileNumberMaster
 from crown_crm.utils.decorators import organization_slug_required
@@ -95,10 +97,32 @@ def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
 @login_required
 @organization_slug_required
 def organization_dashboard_view(request: HttpRequest) -> HttpResponse:
-    return render(request, "organizations/dashboard.html")
+
+
+    lead_count = LeadMaster.objects.filter(
+        organization=request.organization).count()
+
+    client_count = ClientMaster.objects.filter(
+        organization=request.organization).count()
+
+    recent_leads = LeadMaster.objects.filter(
+        organization=request.organization).order_by('-created_at')[:5]
+
+    recent_clients = ClientMaster.objects.filter(
+        organization=request.organization).order_by('-created_at')[:5]
+
+    context = {
+        'lead_count': lead_count,
+        'client_count': client_count,
+        'recent_clients': recent_clients,
+        'recent_leads': recent_leads,
+    }
+
+    return render(request, "organizations/dashboard.html", context=context)
 
 
 @login_required
 @organization_slug_required
 def organization_settings_view(request: HttpRequest) -> HttpResponse:
+
     return render(request, "organizations/settings.html")

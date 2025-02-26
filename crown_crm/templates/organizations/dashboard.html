@@ -1,6 +1,100 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block content %}
+<h4>
+  Welcome, to <span class="text-primary">{{ request.organization.name }}</span>
+</h4>
+<br />
+<div class="row">
+  <div class="col-md-6 col-xl-6">
+    <div class="metric-card bg-c-blue order-card">
+      <div class="card-block">
+        <h3 class="m-b-20">
+          Leads <span class="f-right">{{ lead_count }}</span>
+        </h3>
+        {% comment %}
+        <p class="m-b-0">Completed Orders<span class="f-right">351</span></p>
+        {% endcomment %}
+      </div>
+    </div>
+  </div>
 
+  <div class="col-md-6 col-xl-6">
+    <div class="metric-card bg-c-green order-card">
+      <div class="card-block">
+        <h3 class="m-b-20">
+          Clients <span class="f-right">{{ client_count }}</span>
+        </h3>
+        {% comment %}
+        <p class="m-b-0">Completed Orders<span class="f-right">351</span></p>
+        {% endcomment %}
+      </div>
+    </div>
+  </div>
 
-{% block content %}
-<h4>Welcome, to <span class="text-primary">{{ request.organization.name }}</span></h4>
+  {% comment %}
+  <div class="col-md-4 col-xl-3">
+    <div class="card bg-c-yellow order-card">
+      <div class="card-block">
+        <h6 class="m-b-20">Orders Received</h6>
+        <h2 class="text-right">
+          <i class="fa fa-refresh f-left"></i><span>486</span>
+        </h2>
+        <p class="m-b-0">Completed Orders<span class="f-right">351</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 col-xl-3">
+    <div class="card bg-c-pink order-card">
+      <div class="card-block">
+        <h6 class="m-b-20">Orders Received</h6>
+        <h2 class="text-right">
+          <i class="fa fa-credit-card f-left"></i><span>486</span>
+        </h2>
+        <p class="m-b-0">Completed Orders<span class="f-right">351</span></p>
+      </div>
+    </div>
+  </div>
+  {% endcomment %}
+</div>
+<hr />
+<div class="row">
+  <div class="col-sm-12 col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="col-sm-12">
+          <h5 class="card-title text-danger">Recent Leads</h5>
+          <hr />
+          <div class="table-responsive">
+            {% include 'leads/tables/leads.html' with leads=recent_leads %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-12 col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title text-danger">Recent Clients</h5>
+        <hr />
+        <div class="table-responsive">
+            {% include 'clients/tables/clients.html' with clients=recent_clients %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<hr />
+<div class="row">
+  {% comment %} <div class="col-sm-12 col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title text-danger">Unverified Emails</h5>
+        <hr />
+        <div class="table-responsive">
+          {% include 'backoffice/tables/emails/unverified_email_table.html' %}
+        </div>
+      </div>
+    </div>
+  </div> {% endcomment %}
+</div>
 {% endblock content %}
