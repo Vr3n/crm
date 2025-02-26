@@ -1,6 +1,6 @@
-# Translations for the crm project
-# Copyright (C) 2024 Viren Suresh Ila Patel
-# Viren Suresh Ila Patel <vickyspatel@gmail.com>, 2024.
+# Translations for the crown_crm project
+# Copyright (C) 2025 Viren Suresh Ila Patel
+# Viren Suresh Ila Patel <virenspatel99@gmail.com>, 2025.
 #
 #, fuzzy
 msgid ""

@@ -5,19 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Docker Debugger: Django",
+            "name": "Python Debugger: Django",
             "type": "debugpy",
-            "request": "attach",
-            "connect": {
-                "host": "127.0.0.1",
-                "port": "6942"
-            },
-            "pathMappings": [
-                {
-                    "localRoot": "${workspaceFolder}",
-                    "remoteRoot": "/app"
-                }
-            ]
+            "request": "launch",
+            "args": [
+                "runserver"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}\\manage.py"
         }
     ]
 }

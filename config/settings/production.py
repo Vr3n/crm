@@ -2,6 +2,7 @@
 from .base import *  # noqa: F403
 from .base import DATABASES
 from .base import INSTALLED_APPS
+from .base import REDIS_URL
 from .base import SPECTACULAR_SETTINGS
 from .base import env
 
@@ -10,7 +11,7 @@ from .base import env
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["crm.com"])
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["crowncrm.com"])
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -21,10 +22,10 @@ DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": env("REDIS_URL"),
+        "LOCATION": REDIS_URL,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # Mimicing memcache behavior.
+            # Mimicking memcache behavior.
             # https://github.com/jazzband/django-redis#memcached-exceptions-behavior
             "IGNORE_EXCEPTIONS": True,
         },
@@ -78,15 +79,16 @@ STORAGES = {
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="crm <noreply@crm.com>",
+    default="crown_crm <noreply@crowncrm.com>",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
 SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-subject-prefix
 EMAIL_SUBJECT_PREFIX = env(
     "DJANGO_EMAIL_SUBJECT_PREFIX",
-    default="[crm] ",
+    default="[crown_crm] ",
 )
+ACCOUNT_EMAIL_SUBJECT_PREFIX = EMAIL_SUBJECT_PREFIX
 
 # ADMIN
 # ------------------------------------------------------------------------------
@@ -170,7 +172,7 @@ LOGGING = {
 # -------------------------------------------------------------------------------
 # Tools that generate code samples can use SERVERS to point to the correct domain
 SPECTACULAR_SETTINGS["SERVERS"] = [
-    {"url": "https://crm.com", "description": "Production server"},
+    {"url": "https://crowncrm.com", "description": "Production server"},
 ]
 # Your stuff...
 # ------------------------------------------------------------------------------
