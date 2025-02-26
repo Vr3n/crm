@@ -29,6 +29,17 @@ def organizations_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+def organizations_navbar_list_view(request: HttpRequest) -> HttpResponse:
+    orgs = OrganizationMaster.objects.user_in(request.user)
+
+    context = {
+        "organizations": orgs
+    }
+
+    return render(request, "organizations/partials/navbar-list.html", context)
+
+
+@login_required
 def hx_organization_create_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         org_form = OrganizationCreateForm(

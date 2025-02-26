@@ -36,7 +36,7 @@ def all_leads_view(request: HttpRequest) -> HttpResponse:
     Displaying all leads.
     """
 
-    leads = LeadMaster.objects.prefetch_related(
+    leads = LeadMaster.objects.filter(organization=request.organization).prefetch_related(
         'mobile_numbers', 'emails').order_by('-created_at')
 
     print(leads)
@@ -81,7 +81,7 @@ def hx_lead_delete_view(request: HttpRequest, pk: int):
     lead_obj.delete()
 
     context = {
-        'leads': LeadMaster.objects.filter()
+        'leads': LeadMaster.objects.filter(organization=request.organization)
     }
 
     res = render(
@@ -230,7 +230,7 @@ def hx_leads_table(request: HttpRequest) -> HttpResponse:
     Returns Partial table html containing leads.
     """
 
-    leads = LeadMaster.objects.prefetch_related(
+    leads = LeadMaster.objects.filter(organization=request.organization).prefetch_related(
         Prefetch(
             'mobile_numbers',
             queryset=LeadMobileNumberMaster.objects.order_by('uuid')[:1],

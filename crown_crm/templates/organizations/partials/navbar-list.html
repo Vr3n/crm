@@ -1,0 +1,19 @@
+<a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+  <i data-feather="briefcase" title="us"></i> <span class="font-weight-medium ml-1 mr-1 d-none d-md-inline-block">Organizations</span>
+</a>
+<div class="dropdown-menu" aria-labelledby="languageDropdown">
+  {% for org in request.user.get_organizations_queryset %}
+    <a href="{{ org.get_dashboard_url }}" class="dropdown-item py-2">
+      <span class="ml-1">{{ org.name }}</span>
+    </a>
+  {% endfor %} 
+  <button
+    hx-get="{% url 'organizations-hx-create' %}"
+    hx-target="#dialog"
+    class="btn btn-outline-primary"
+    role="button"
+    tabindex="0">
+    <i data-feather="plus-circle"></i>
+    <span>Create New Organization<span>
+  </button>
+</div>

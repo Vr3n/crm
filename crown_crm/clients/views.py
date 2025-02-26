@@ -20,7 +20,7 @@ from .models import (
 @login_required
 @organization_slug_required
 def client_list_view(request):
-    clients = ClientMaster.objects.active() \
+    clients = ClientMaster.objects.filter(organization=request.organization).active() \
         .prefetch_related("mobile_numbers", "emails")
     context = {"clients": clients}
     return render(request, "clients/all_clients.html", context)
@@ -45,10 +45,11 @@ def hx_clients_table(request: HttpRequest) -> HttpResponse:
     Returns Partial table html containing clients.
     """
 
-    clients = ClientMaster.objects.prefetch_related(
+    clients = ClientMaster.objects.filter(organization=request.organization).prefetch_related(
         Prefetch(
             'mobile_numbers',
-            queryset=ClientMobileNumberMaster.objects.order_by('-created_at')[:1],
+            queryset=ClientMobileNumberMaster.objects.order_by(
+                '-created_at')[:1],
             to_attr='first_mobile'
         ),
         Prefetch(
@@ -58,7 +59,7 @@ def hx_clients_table(request: HttpRequest) -> HttpResponse:
         )
     ).order_by('-created_at')
     context = {
-        'clients': clients 
+        'clients': clients
     }
 
     return render(
@@ -158,7 +159,7 @@ def hx_delete_client_view(request, pk):
 
     # Filter active clients (not deleted)
     context = {
-        'clients': ClientMaster.objects.active()
+        'clients': ClientMaster.objects.filter(organization=request.organization).active()
     }
 
     res = render(request, 'clients/tables/clients.html', context)
