@@ -1,10 +1,53 @@
 {% load crispy_forms_tags %}
-{% load static i18n compress%}<!DOCTYPE html>
+{% load static i18n compress%}
+<!DOCTYPE html>
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <style>
+      .metric-card {
+        border-radius: 5px;
+        -webkit-box-shadow: 0 1px 2.94px 0.06px rgba(4, 26, 55, 0.16);
+        box-shadow: 0 1px 2.94px 0.06px rgba(4, 26, 55, 0.16);
+        border: none;
+        margin-bottom: 30px;
+        -webkit-transition: all 0.3s ease-in-out;
+        transition: all 0.3s ease-in-out;
+      }
+    
+      .metric-card .card-block {
+        padding: 25px;
+      }
+
+      .f-left {
+        float: left;
+      }
+    
+      .f-right {
+        float: right;
+      }
+
+      .bg-c-blue {
+        background: linear-gradient(45deg, #4099ff, #73b4ff);
+      }
+    
+      .bg-c-green {
+        background: linear-gradient(45deg, #2ed8b6, #59e0c5);
+      }
+    
+      .bg-c-yellow {
+        background: linear-gradient(45deg, #ffb64d, #ffcb80);
+      }
+    
+      .bg-c-pink {
+        background: linear-gradient(45deg, #ff5370, #ff869a);
+      }
+    </style>
+    {% block custom_styles %}
+    <!-- Your pagewise custom styling -->
+    {% endblock custom_styles %}
     <title>
       {% block title %}
       crm
@@ -18,18 +61,18 @@
   <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
 {% block css %}
 <!-- Your stuff: Third-party CSS libraries go here -->
-	<!-- core:css -->
+  <!-- core:css -->
   <link rel="stylesheet" href="{% static 'vendors/core/core.css' %}">
-	<!-- endinject -->
+  <!-- endinject -->
   <!-- plugin css for this page -->
   <link rel="stylesheet" href="{% static 'vendors/bootstrap-datepicker/bootstrap-datepicker.min.css' %}">
-	<!-- end plugin css for this page -->
+  <!-- end plugin css for this page -->
   <link rel="stylesheet" href="{% static 'vendors/sweetalert2/sweetalert2.min.css' %}"></link>
   <link rel="stylesheet" href="{% static 'vendors/select2/select2.min.css' %}"></link>
-	<!-- inject:css -->
+  <!-- inject:css -->
   <link rel="stylesheet" href="{% static 'fonts/feather-font/css/iconfont.css' %}">
   <link rel="stylesheet" href="{% static 'vendors/flag-icon-css/css/flag-icon.min.css' %}">
-	<!-- endinject -->
+  <!-- endinject -->
   <!-- Layout styles -->
   <link rel="stylesheet" href="{% static 'css/demo_1/style.css' %}">
 <!-- This file stores project-specific CSS -->
@@ -70,7 +113,7 @@
 <!-- custom js for this page -->
 <script src="{% static 'js/dashboard.js' %}"></script>
 <script src="{% static 'js/datepicker.js' %}"></script>
-	<!-- end custom js for this page -->
+  <!-- end custom js for this page -->
 
 
 <!-- place project specific Javascript in this file -->
