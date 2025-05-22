@@ -2,7 +2,6 @@
   <thead>
     <tr>
       <th class="pt-0">Name</th>
-      <th class="pt-0">Created At</th>
       <th class="pt-0">Mobile Number</th>
       <th class="pt-0">Email Address</th>
       <th class=""></th>
@@ -13,13 +12,12 @@
     {% for lead in leads %}
     <tr>
       <td>{{ lead.get_full_name }}</td>
-      <td>{{ lead.created_at|date:"d M Y H:i" }}</td>
       <td>
         {{ lead.mobile_numbers.first.mobile_number|default_if_none:"Not Provided" }}
       </td>
       <td>{{ lead.emails.first.email|default_if_none:"Not Provided" }}</td>
       <td>
-        <a href="{% url 'lead-detail' slug=request.organization.slug pk=lead.pk %}" class="btn btn-primary">
+        <a href="{% url 'lead-detail' slug=request.organization.slug pk=lead.pk %}" class="btn btn-sm btn-primary">
           Detail
         </a>
       </td>
@@ -30,11 +28,11 @@
           hx-swap="outerHTML"
           onClick="Swal.fire({'icon': 'warning', title: 'Confirm', text:'Do you want to Delete?', 'showDenyButton': true, 'denyButtonText': 'No'}).then((result)=>{
               if(result.isConfirmed){
-                htmx.trigger(this, 'confirmed');  
-              } 
+                htmx.trigger(this, 'confirmed');
+              }
           })"
           hx-delete="{% url 'hx-delete-lead' slug=request.organization.slug pk=lead.pk %}"
-          class="btn btn-danger"
+          class="btn btn-sm btn-danger"
         >
           Delete
         </a>

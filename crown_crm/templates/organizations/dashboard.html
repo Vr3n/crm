@@ -16,12 +16,11 @@
       </div>
     </div>
   </div>
-
   <div class="col-md-6 col-xl-6">
-    <div class="metric-card bg-c-green order-card">
+    <div class="metric-card bg-c-yellow order-card">
       <div class="card-block">
         <h3 class="m-b-20">
-          Clients <span class="f-right">{{ client_count }}</span>
+          Sessions <span class="f-right">4</span>
         </h3>
         {% comment %}
         <p class="m-b-0">Completed Orders<span class="f-right">351</span></p>
@@ -29,7 +28,6 @@
       </div>
     </div>
   </div>
-
   {% comment %}
   <div class="col-md-4 col-xl-3">
     <div class="card bg-c-yellow order-card">
@@ -61,23 +59,10 @@
   <div class="col-sm-12 col-md-6">
     <div class="card">
       <div class="card-body">
-        <div class="col-sm-12">
-          <h5 class="card-title text-danger">Recent Leads</h5>
-          <hr />
-          <div class="table-responsive">
-            {% include 'leads/tables/leads.html' with leads=recent_leads %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-12 col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <h5 class="card-title text-danger">Recent Clients</h5>
+        <h5 class="card-title text-danger">Recent Leads</h5>
         <hr />
         <div class="table-responsive">
-            {% include 'clients/tables/clients.html' with clients=recent_clients %}
+          {% include 'leads/tables/leads.html' with leads=recent_leads %}
         </div>
       </div>
     </div>
