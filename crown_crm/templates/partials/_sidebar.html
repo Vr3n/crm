@@ -2,13 +2,13 @@
   <nav class="sidebar">
       <div class="sidebar-header">
       <a href="{{ request.organization.get_dashboard_url }}" class="sidebar-brand">
-        
+
         {% if request.organization.logo is None %}
           <img src="{{ request.organization.logo.url }}" style="width:100px;height:100px;" alt="{{ request.organization.name }}">
         {% else %}
           <p>{{ request.organization.name }}</p>
         {% endif %}
-          
+
         </a>
         <div class="sidebar-toggler not-active">
           <span></span>
@@ -34,19 +34,19 @@
               </a>
             </li>
           {% endif %}
-          <li class="nav-item nav-category">Clients</li>
-          <li class="nav-item">
-            <a href="{% url 'client-list' request.organization.slug %}" class="nav-link">
-              <i class="link-icon" data-feather="message-square"></i>
-              <span class="link-title">All clients</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="link-icon" data-feather="calendar"></i>
-              <span class="link-title">Diets</span>
-            </a>
-          </li>
+          <!-- <li class="nav-item nav-category">Clients</li> -->
+          <!-- <li class="nav-item"> -->
+          <!--   <a href="{% url 'client-list' request.organization.slug %}" class="nav-link"> -->
+          <!--     <i class="link-icon" data-feather="message-square"></i> -->
+          <!--     <span class="link-title">All clients</span> -->
+          <!--   </a> -->
+          <!-- </li> -->
+          <!-- <li class="nav-item"> -->
+          <!--   <a href="#" class="nav-link"> -->
+          <!--     <i class="link-icon" data-feather="calendar"></i> -->
+          <!--     <span class="link-title">Diets</span> -->
+          <!--   </a> -->
+          <!-- </li> -->
           <li class="nav-item nav-category">Leads</li>
           <li class="nav-item">
             <a href="{% url 'all-leads' request.organization.slug %}" class="nav-link">

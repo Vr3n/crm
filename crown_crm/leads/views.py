@@ -9,25 +9,28 @@ from django.contrib.auth.decorators import login_required
 from crown_crm.utils.decorators import organization_slug_required
 
 from .forms import (
-    LeadAddressForm, LeadCreateForm,
-    LeadMobileNumberForm, LeadEmailForm,
-    LeadMobileNumberTableForm, LeadEmailAddressTableForm
+    LeadAddressForm,
+    LeadCreateForm,
+    LeadMobileNumberForm,
+    LeadEmailForm,
+    LeadMobileNumberTableForm,
+    LeadEmailAddressTableForm,
 )
-from .models import (
-    LeadMaster, LeadMobileNumberMaster,
-    LeadEmailAddressMaster
-)
+from .models import LeadMaster, LeadMobileNumberMaster, LeadEmailAddressMaster
 
 # Create your views here.
 
 MobileNumberFormSet = inlineformset_factory(
-    LeadMaster, LeadMobileNumberMaster,
-    form=LeadMobileNumberForm, extra=1, can_delete=True
+    LeadMaster,
+    LeadMobileNumberMaster,
+    form=LeadMobileNumberForm,
+    extra=1,
+    can_delete=True,
 )
 EmailFormSet = inlineformset_factory(
-    LeadMaster, LeadEmailAddressMaster,
-    form=LeadEmailForm, extra=1, can_delete=True
+    LeadMaster, LeadEmailAddressMaster, form=LeadEmailForm, extra=1, can_delete=True
 )
+
 
 @login_required
 @organization_slug_required
@@ -36,19 +39,17 @@ def all_leads_view(request: HttpRequest) -> HttpResponse:
     Displaying all leads.
     """
 
-    leads = LeadMaster.objects.filter(organization=request.organization).prefetch_related(
-        'mobile_numbers', 'emails').order_by('-created_at')
+    leads = (
+        LeadMaster.objects.filter(organization=request.organization)
+        .prefetch_related("mobile_numbers", "emails")
+        .order_by("-created_at")
+    )
 
     print(leads)
 
-    context = {
-        'leads': leads
-    }
+    context = {"leads": leads}
 
-    return render(
-        request, 'leads/all_leads.html',
-        context=context
-    )
+    return render(request, "leads/all_leads.html", context=context)
 
 
 @login_required
@@ -56,11 +57,9 @@ def all_leads_view(request: HttpRequest) -> HttpResponse:
 def lead_detail_view(request: HttpRequest, pk: str):
     lead = get_object_or_404(LeadMaster, pk=pk)
 
-    context = {
-        'lead': lead
-    }
+    context = {"lead": lead}
 
-    return render(request, 'leads/lead_detail.html', context=context)
+    return render(request, "leads/lead_detail.html", context=context)
 
 
 @login_required
@@ -71,29 +70,21 @@ def hx_lead_delete_view(request: HttpRequest, pk: int):
     if not lead_obj.exists():
         res = HttpResponse()
         res = trigger_client_event(
-            res, "message", {
-                'level': 'error',
-                'message': 'Cannot find the lead number.'
-            })
+            res,
+            "message",
+            {"level": "error", "message": "Cannot find the lead number."},
+        )
         return res
 
     lead_obj = lead_obj.first()
     lead_obj.delete()
 
-    context = {
-        'leads': LeadMaster.objects.filter(organization=request.organization)
-    }
+    context = {"leads": LeadMaster.objects.filter(organization=request.organization)}
 
-    res = render(
-        request,
-        'leads/tables/leads.html',
-        context
-    )
+    res = render(request, "leads/tables/leads.html", context)
     res = trigger_client_event(
-        res, "message", {
-            'level': 'success',
-            'message': 'Deleted Lead Successfully!'
-        })
+        res, "message", {"level": "success", "message": "Deleted Lead Successfully!"}
+    )
 
     return res
 
@@ -110,8 +101,8 @@ def hx_create_lead(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         # Binding the submitted data to the form.
         lead_form = LeadCreateForm(request.POST)
-        mobile_formset = MobileNumberFormSet(request.POST, prefix='mobile')
-        email_formset = EmailFormSet(request.POST, prefix='email')
+        mobile_formset = MobileNumberFormSet(request.POST, prefix="mobile")
+        email_formset = EmailFormSet(request.POST, prefix="email")
         address_form = LeadAddressForm(request.POST)
 
         if (
@@ -131,48 +122,44 @@ def hx_create_lead(request: HttpRequest) -> HttpResponse:
             email_formset.save()
             address_form.save()
 
-            res = render(request, 'leads/forms/lead_create.html')
+            res = render(request, "leads/forms/lead_create.html")
             res = trigger_client_event(
-                res, "message", {
-                    'level': 'success',
-                    'message': 'Lead Created Successfully!'
-                })
-            res = trigger_client_event(
-                res, "lead_create_success"
+                res,
+                "message",
+                {"level": "success", "message": "Lead Created Successfully!"},
             )
+            res = trigger_client_event(res, "lead_create_success")
             return res
         else:
             # The invalid response with error messages is returned.
             context = {
-                'lead_form': lead_form,
-                'mobile_formset': mobile_formset,
-                'email_formset': email_formset,
-                'address_form': address_form
+                "lead_form": lead_form,
+                "mobile_formset": mobile_formset,
+                "email_formset": email_formset,
+                "address_form": address_form,
             }
 
-            res = render(request, 'leads/forms/lead_create.html', context)
+            res = render(request, "leads/forms/lead_create.html", context)
             res = trigger_client_event(
-                res, "message", {
-                    'level': 'error',
-                    'message': 'Error creating lead!'
-                })
+                res, "message", {"level": "error", "message": "Error creating lead!"}
+            )
 
             return res
 
     # The get request is performed.
     lead_form = LeadCreateForm()
-    mobile_formset = MobileNumberFormSet(prefix='mobile')
-    email_formset = EmailFormSet(prefix='email')
+    mobile_formset = MobileNumberFormSet(prefix="mobile")
+    email_formset = EmailFormSet(prefix="email")
     address_form = LeadAddressForm()
 
     context = {
-        'lead_form': lead_form,
-        'mobile_formset': mobile_formset,
-        'email_formset': email_formset,
-        'address_form': address_form
+        "lead_form": lead_form,
+        "mobile_formset": mobile_formset,
+        "email_formset": email_formset,
+        "address_form": address_form,
     }
 
-    return render(request, 'leads/forms/lead_create.html', context)
+    return render(request, "leads/forms/lead_create.html", context)
 
 
 @login_required
@@ -187,9 +174,9 @@ def hx_edit_lead(request: HttpRequest, pk: int):
 
     if not lead_qs.exists():
         # Handling the case with custom error message.
-        res = render(request, '', status=404)
+        res = render(request, "", status=404)
 
-        return trigger_client_event(res, "message", 'Lead doesn\'t exist!')
+        return trigger_client_event(res, "message", "Lead doesn't exist!")
 
     lead = lead_qs.first()
 
@@ -211,16 +198,16 @@ def hx_edit_lead(request: HttpRequest, pk: int):
             email_formset.save()
             address_form.save()
 
-            return render(request, '')
+            return render(request, "")
         else:
             # The invalid response with error messages is returned.
             context = {
-                'lead_form': lead_form,
-                'mobile_formset': mobile_formset,
-                'email_formset': email_formset
+                "lead_form": lead_form,
+                "mobile_formset": mobile_formset,
+                "email_formset": email_formset,
             }
 
-            return render(request, '', context)
+            return render(request, "", context)
 
 
 @login_required
@@ -230,26 +217,25 @@ def hx_leads_table(request: HttpRequest) -> HttpResponse:
     Returns Partial table html containing leads.
     """
 
-    leads = LeadMaster.objects.filter(organization=request.organization).prefetch_related(
-        Prefetch(
-            'mobile_numbers',
-            queryset=LeadMobileNumberMaster.objects.order_by('uuid')[:1],
-            to_attr='first_mobile'
-        ),
-        Prefetch(
-            'emails',
-            queryset=LeadEmailAddressMaster.objects.order_by('uuid')[:1],
-            to_attr='first_email'
+    leads = (
+        LeadMaster.objects.filter(organization=request.organization)
+        .prefetch_related(
+            Prefetch(
+                "mobile_numbers",
+                queryset=LeadMobileNumberMaster.objects.order_by("uuid")[:1],
+                to_attr="first_mobile",
+            ),
+            Prefetch(
+                "emails",
+                queryset=LeadEmailAddressMaster.objects.order_by("uuid")[:1],
+                to_attr="first_email",
+            ),
         )
-    ).order_by('-created_at')
-    context = {
-        'leads': leads
-    }
-
-    return render(
-        request, 'leads/tables/leads.html',
-        context=context
+        .order_by("-created_at")
     )
+    context = {"leads": leads}
+
+    return render(request, "leads/tables/leads.html", context=context)
 
 
 @login_required
@@ -262,19 +248,14 @@ def hx_lead_mobile_table(request: HttpRequest, lead_id: int) -> HttpResponse:
     mobile_numbers = LeadMobileNumberMaster.objects.filter(lead=lead_id)
     lead_id = mobile_numbers.first().lead.uuid
 
-    context = {
-        'mobile_numbers': mobile_numbers,
-        'lead_id': lead_id
-    }
+    context = {"mobile_numbers": mobile_numbers, "lead_id": lead_id}
 
-    return render(request,
-                  'leads/tables/mobile_numbers.html',
-                  context)
+    return render(request, "leads/tables/mobile_numbers.html", context)
 
 
 @login_required
 @organization_slug_required
-@require_http_methods(['DELETE', 'POST'])
+@require_http_methods(["DELETE", "POST"])
 def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Deleteing the mobile number
@@ -285,10 +266,10 @@ def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     if not mobile_obj.exists():
         res = HttpResponse()
         res = trigger_client_event(
-            res, "message", {
-                'level': 'error',
-                'message': 'Cannot find the mobile number.'
-            })
+            res,
+            "message",
+            {"level": "error", "message": "Cannot find the mobile number."},
+        )
         return res
 
     mobile_obj = mobile_obj.first()
@@ -296,24 +277,17 @@ def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
     mobile_obj.delete()
 
     context = {
-        'lead_id': lead_id.uuid,
-        'mobile_numbers': LeadMobileNumberMaster.objects.filter(
-            lead=lead_id.uuid)
+        "lead_id": lead_id.uuid,
+        "mobile_numbers": LeadMobileNumberMaster.objects.filter(lead=lead_id.uuid),
     }
 
-    res = render(
-        request,
-        'leads/tables/mobile_numbers.html',
-        context
-    )
+    res = render(request, "leads/tables/mobile_numbers.html", context)
     res = trigger_client_event(
-        res, "message", {
-            'level': 'success',
-            'message': 'Deleted Mobile Number Successfully!'
-        })
-    res = trigger_client_event(
-        res, 'lead_mobile_added'
+        res,
+        "message",
+        {"level": "success", "message": "Deleted Mobile Number Successfully!"},
     )
+    res = trigger_client_event(res, "lead_mobile_added")
 
     return res
 
@@ -328,8 +302,9 @@ def hx_mobile_table_form(request: HttpRequest) -> HttpResponse:
     form = LeadMobileNumberTableForm()
 
     if request.method == "POST":
-        lead_id = request.POST.get('lead')[0]
-        lead_obj = LeadMaster.objects.get(id=lead_id)
+        lead_id = request.POST.get("lead")
+        print(lead_id)
+        lead_obj = LeadMaster.objects.get(uuid=lead_id)
         form = LeadMobileNumberTableForm(request.POST)
 
         if form.is_valid():
@@ -340,35 +315,26 @@ def hx_mobile_table_form(request: HttpRequest) -> HttpResponse:
 
             res = HttpResponse()
             res = trigger_client_event(
-                res, "message", {
-                    'level': 'success',
-                    'message': 'Lead Created Successfully!'
-                })
-            res = trigger_client_event(
-                res, 'lead_mobile_added'
+                res,
+                "message",
+                {"level": "success", "message": "Lead Created Successfully!"},
             )
+            res = trigger_client_event(res, "lead_mobile_added")
 
             return res
         else:
-            context = {
-                'form': form
-            }
+            context = {"form": form}
 
             res = render(
-                request,
-                'leads/forms/mobile_number_table.html', context=context
+                request, "leads/forms/mobile_number_table.html", context=context
             )
-            res = trigger_client_event(
-                res, "message", "Error adding mobile number.")
+            res = trigger_client_event(res, "message", "Error adding mobile number.")
 
             return res
 
-    context = {
-        'form': form
-    }
+    context = {"form": form}
 
-    return render(
-        request, 'leads/forms/mobile_number_table.html', context=context)
+    return render(request, "leads/forms/mobile_number_table.html", context=context)
 
 
 @login_required
@@ -381,8 +347,8 @@ def hx_email_table_form(request: HttpRequest) -> HttpResponse:
     form = LeadEmailAddressTableForm()
 
     if request.method == "POST":
-        lead_id = request.POST.get('lead')[0]
-        lead_obj = LeadMaster.objects.get(id=lead_id)
+        lead_id = request.POST.get("lead")
+        lead_obj = LeadMaster.objects.get(uuid=lead_id)
         form = LeadEmailAddressTableForm(request.POST)
 
         if form.is_valid():
@@ -393,40 +359,31 @@ def hx_email_table_form(request: HttpRequest) -> HttpResponse:
 
             res = HttpResponse()
             res = trigger_client_event(
-                res, "message", {
-                    'level': 'success',
-                    'message': 'Email Added Successfully!'
-                })
-            res = trigger_client_event(
-                res, 'lead_email_added'
+                res,
+                "message",
+                {"level": "success", "message": "Email Added Successfully!"},
             )
+            res = trigger_client_event(res, "lead_email_added")
 
             return res
         else:
-            context = {
-                'form': form
-            }
+            context = {"form": form}
 
             res = render(
-                request,
-                'leads/forms/email_address_table.html', context=context
+                request, "leads/forms/email_address_table.html", context=context
             )
-            res = trigger_client_event(
-                res, "message", "Error adding email address.")
+            res = trigger_client_event(res, "message", "Error adding email address.")
 
             return res
 
-    context = {
-        'form': form
-    }
+    context = {"form": form}
 
-    return render(
-        request, 'leads/forms/email_address_table.html', context=context)
+    return render(request, "leads/forms/email_address_table.html", context=context)
 
 
 @login_required
 @organization_slug_required
-def hx_lead_email_table(request: HttpRequest, lead_id: int) -> HttpResponse:
+def hx_lead_email_table(request: HttpRequest, lead_id: str) -> HttpResponse:
     """
     A lead Email Address table.
     """
@@ -434,17 +391,12 @@ def hx_lead_email_table(request: HttpRequest, lead_id: int) -> HttpResponse:
     email_addresses = LeadEmailAddressMaster.objects.filter(lead=lead_id)
     lead_id = email_addresses.first().lead.uuid if email_addresses else lead_id
 
-    context = {
-        'email_addresses': email_addresses,
-        'lead_id': lead_id
-    }
+    context = {"email_addresses": email_addresses, "lead_id": str(lead_id)}
 
-    return render(request,
-                  'leads/tables/emails.html',
-                  context)
+    return render(request, "leads/tables/emails.html", context)
 
 
-@require_http_methods(['DELETE', 'POST'])
+@require_http_methods(["DELETE", "POST"])
 @login_required
 @organization_slug_required
 def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
@@ -457,10 +409,10 @@ def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     if not email_obj.exists():
         res = HttpResponse()
         res = trigger_client_event(
-            res, "message", {
-                'level': 'error',
-                'message': 'Cannot find the email address.'
-            })
+            res,
+            "message",
+            {"level": "error", "message": "Cannot find the email address."},
+        )
         return res
 
     email_obj = email_obj.first()
@@ -468,22 +420,16 @@ def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     email_obj.delete()
 
     context = {
-        'lead_id': lead_id.uuid,
-        'email_addresses': LeadEmailAddressMaster.objects.filter(lead=lead_id.uuid)
+        "lead_id": lead_id.uuid,
+        "email_addresses": LeadEmailAddressMaster.objects.filter(lead=lead_id.uuid),
     }
 
-    res = render(
-        request,
-        'leads/tables/emails.html',
-        context
-    )
+    res = render(request, "leads/tables/emails.html", context)
     res = trigger_client_event(
-        res, "message", {
-            'level': 'success',
-            'message': 'Deleted Email Address Successfully!'
-        })
-    res = trigger_client_event(
-        res, 'lead_email_deleted'
+        res,
+        "message",
+        {"level": "success", "message": "Deleted Email Address Successfully!"},
     )
+    res = trigger_client_event(res, "lead_email_deleted")
 
     return res

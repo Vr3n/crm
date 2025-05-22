@@ -1,6 +1,6 @@
 <form
   hx-include="input#lead_id"
-  hx-post="{% url 'hx-leads-mobile-numbers' %}"
+  hx-post="{% url 'hx-leads-mobile-numbers' slug=request.organization.slug %}"
   hx-target="this"
 >
   <div class="form-group row">

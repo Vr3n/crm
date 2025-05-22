@@ -1,6 +1,6 @@
 <table
   hx-trigger="lead_mobile_added from:body"
-  hx-get="{% url 'hx-lead-mobile-number-table' lead_id=lead_id %}"
+  hx-get="{% url 'hx-lead-mobile-number-table' slug=request.organization.slug lead_id=lead_id %}"
   hx-target="this"
   hx-swap="outerHTML"
   class="table table-hover mb-0"
@@ -27,10 +27,10 @@
           hx-trigger="confirmed"
           onClick="Swal.fire({'icon': 'warning', title: 'Confirm', text:'Do you want to Delete?', 'showDenyButton': true, 'denyButtonText': 'No'}).then((result)=>{
               if(result.isConfirmed){
-                htmx.trigger(this, 'confirmed');  
-              } 
+                htmx.trigger(this, 'confirmed');
+              }
           })"
-          hx-delete="{% url 'hx-leads-mobile-table-delete' mobile_number.id %}"
+          hx-delete="{% url 'hx-leads-mobile-table-delete' slug=request.organization.slug pk=mobile_number.uuid %}"
           class="btn btn-danger btn-sm"
         >
           <i data-feather="delete"></i>

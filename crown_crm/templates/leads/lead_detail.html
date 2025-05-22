@@ -4,20 +4,19 @@
 <h4>Lead: {{ lead.get_full_name }}</h4>
 <p><small>Added on: {{ lead.created_at|date:"d M Y H:i" }} </small></p>
 
-<input type="hidden" name="lead" id="lead_id" value="{{ lead.uuid }}" />
+<input type="hidden" name="lead" id="lead_id" value="{{ lead.uuid|stringformat:'s' }}" />
 
 <div class="row mt-4">
   <div class="col-sm-12 col-lg-6 stretch-card">
     <div class="card">
       <div class="card-body">
         <h6 class="card-title">Mobile Numbers</h6>
-        {% include 'leads/tables/mobile_numbers.html' with
-        mobile_numbers=lead.mobile_numbers.all lead_id=lead.uuid %}
+        {% include 'leads/tables/mobile_numbers.html' with mobile_numbers=lead.mobile_numbers.all lead_id=lead.uuid|stringformat:'s' %}
       </div>
       <div class="card-footer">
         <span id="mobile_add_form"></span>
-        <button type="button" 
-          hx-get="{% url 'hx-leads-mobile-numbers' slug=request.organization.slug %}"
+        <button type="button"
+          hx-get="{% url 'hx-leads-mobile-numbers' request.organization.slug %}"
           hx-target="#mobile_add_form"
           hx-swap="beforeend"
           class="btn btn-outline-primary">
@@ -31,12 +30,12 @@
     <div class="card">
       <div class="card-body">
         <h6 class="card-title">Emails</h6>
-        {% include 'leads/tables/emails.html' with emails=lead.emails.all lead_id=lead.id %}
+        {% include 'leads/tables/emails.html' with email_addresses=lead.emails.all lead_id=lead.uuid|stringformat:'s' %}
       </div>
       <div class="card-footer">
         <span id="email_add_form"></span>
-        <button type="button" 
-          hx-get="{% url 'hx-leads-email-addresses' slug=request.organization.slug %}"
+        <button type="button"
+          hx-get="{% url 'hx-leads-email-addresses' slug=request.organization.slug  %}"
           hx-target="#email_add_form"
           hx-swap="beforeend"
           class="btn btn-outline-primary">
