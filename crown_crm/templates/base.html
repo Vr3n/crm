@@ -125,6 +125,7 @@
 
 
 {% endblock javascript %}
+
 </head>
 <body class="{% block bodyclass %}{% endblock bodyclass %}">
   {% block body %}
@@ -149,7 +150,6 @@
   </div>
   {% endblock modal %}
 
-  {% block inline_javascript %}
   <script>
     window.addEventListener("DOMContentLoaded", (event) => {
       document.body.addEventListener("htmx:configRequest", (event) => {
@@ -240,7 +240,6 @@
       });
     </script>
     {% endcomment %}
-  {% endblock inline_javascript %}
   {% block custom_js %}
   {% endblock custom_js %}
 </body>

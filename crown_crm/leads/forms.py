@@ -57,6 +57,7 @@ class LeadMobileNumberForm(forms.ModelForm):
         widgets = {
             'mobile_number': forms.TextInput(attrs={
                 'class': 'form-control',
+                'inputmode': 'numeric',
             })
         }
 

@@ -19,6 +19,7 @@ urlpatterns = [
          name="hx-leads-mobile-numbers"),
     path('hx/mobile-numners/table/delete/<uuid:pk>', views.hx_lead_mobile_delete,
          name="hx-leads-mobile-table-delete"),
+    path("hx/add-mobile-form/", views.hx_add_mobile_form, name="hx-add-mobile-form"),
 
     # HX Email views.
     path('hx/email-addresses/table/<uuid:lead_id>/', views.hx_lead_email_table,

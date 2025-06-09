@@ -74,7 +74,7 @@ class Transaction(BaseModel):
     )
 
     def __str__(self):
-        return f"Transaction #{self.id} of {self.amount} on {self.transaction_date}"
+        return f"Transaction of {self.amount} on {self.transaction_date}"
 
     class Meta:
         verbose_name = "Transaction"

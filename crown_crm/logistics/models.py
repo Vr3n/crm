@@ -24,6 +24,7 @@ class ServiceProductAbstract(BaseModel):
 
 
 class Service(ServiceProductAbstract):
+    code = models.CharField(max_length=255,unique=True)
     duration = models.DurationField(blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
 
@@ -76,7 +77,7 @@ class Order(BaseModel):
     )  # e.g., 'Pending', 'Confirmed', 'Shipped', 'Delivered'
 
     def __str__(self):
-        return f"Order #{self.id} for {self.lead.get_full_name()}"
+        return f"Order for {self.lead.get_full_name()}"
 
     class Meta:
         verbose_name = "Order"
@@ -93,14 +94,14 @@ class OrderLineItem(BaseModel):
         Order, on_delete=models.CASCADE, related_name="line_items"
     )
     service = models.ForeignKey(
-        "products.Service",
+        "logistics.Service",
         on_delete=models.CASCADE,
         related_name="order_line_items",
         null=True,
         blank=True,
     )
     product = models.ForeignKey(
-        "products.Product",
+        "logistics.Product",
         on_delete=models.CASCADE,
         related_name="order_line_items",
         null=True,

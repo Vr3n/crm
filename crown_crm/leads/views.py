@@ -5,6 +5,7 @@ from django_htmx.http import trigger_client_event
 from django.forms import inlineformset_factory
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
 
 from crown_crm.utils.decorators import organization_slug_required
 
@@ -433,3 +434,15 @@ def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     res = trigger_client_event(res, "lead_email_deleted")
 
     return res
+
+
+@login_required
+@organization_slug_required
+def hx_add_mobile_form(request):
+    form_id = int(request.GET.get("mobile-TOTAL_FORMS", 0))
+    form = LeadMobileNumberForm(prefix=f"mobile-{form_id}")
+    html = render_to_string("leads/forms/mobile_form_row.html", {
+        "form": form,
+        "form_id": form_id
+    })
+    return HttpResponse(html)
