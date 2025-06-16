@@ -79,7 +79,7 @@
             type="button"
             class="btn btn-outline-primary"
             id="add-mobile-btn"
-            hx-get="{% url 'hx-add-mobile-form' slug=request.organization.slug %}"
+            hx-get="{% url 'hx-add-mobile-formset-input' slug=request.organization.slug %}"
             hx-target="#mobile-formset-container"
             hx-include="input[name='mobile-TOTAL_FORMS']"
             hx-swap="beforeend"
@@ -93,11 +93,11 @@
     <div class="col-sm-1 col-md-6">
       <div class="card mb-3">
         <div class="card-header">Email Addresses</div>
-        <div class="card-body">
+        <div id="email-formset-container" class="card-body">
           {{ email_formset.management_form }}
           <!-- -->
           {% for form in email_formset %}
-          <div>
+          <div class="form-group">
             {{ form.email }}
             <!-- errors -->
             {% if email_formset.errors %}
@@ -109,6 +109,19 @@
             {% endif %}
           </div>
           {% endfor %}
+        </div>
+        <div class="card-footer">
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            id="add-email-btn"
+            hx-get="{% url 'hx-add-email-formset-input' slug=request.organization.slug %}"
+            hx-target="#email-formset-container"
+            hx-include="input[name='email-TOTAL_FORMS']"
+            hx-swap="beforeend"
+          >
+            Add Another Email 
+          </button>
         </div>
       </div>
     </div>
@@ -198,6 +211,22 @@
 
       // Also update the next form_id in hx-get
       const addBtn = document.getElementById("add-mobile-btn");
+      const nextId = parseInt(totalFormsInput.value);
+      const newUrl = new URL(addBtn.getAttribute("hx-get"), window.location.origin);
+      newUrl.searchParams.set("form_id", nextId);
+      addBtn.setAttribute("hx-get", newUrl.pathname + newUrl.search);
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener("htmx:afterSwap", function (e) {
+    if (e.target.id === "email-formset-container") {
+      const totalFormsInput = document.querySelector('input[name="email-TOTAL_FORMS"]');
+      totalFormsInput.value = parseInt(totalFormsInput.value) + 1;
+
+      // Also update the next form_id in hx-get
+      const addBtn = document.getElementById("add-email-btn");
       const nextId = parseInt(totalFormsInput.value);
       const newUrl = new URL(addBtn.getAttribute("hx-get"), window.location.origin);
       newUrl.searchParams.set("form_id", nextId);
