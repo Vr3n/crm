@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+  Services - {{ block.super }}
+{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+  <h2>Services</h2>
+  <button class="btn btn-primary my-2"
+          type="button"
+          hx-get="{% url 'hx-create-service' slug=request.organization.slug %}"
+          hx-target="#modal-form">
+    Add new Service
+  </button>
+  
+  <div class="row">
+    <div class="col-lg-12 col-xl-12 stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-baseline mb-2">
+            <h6 class="card-title mb-0">Services</h6>
+            <div class="dropdown mb-2">
+              <button class="btn p-0"
+                      type="button"
+                      id="dropdownMenuButtonServices"
+                      data-toggle="dropdown"
+                      aria-haspopup="true"
+                      aria-expanded="false">
+                <i class="icon-lg text-muted pb-3px" data-feather="more-horizontal"></i>
+              </button>
+              <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonServices">
+                <a class="dropdown-item d-flex align-items-center" href="#">
+                  <i data-feather="eye" class="icon-sm mr-2"></i>
+                  <span>View</span>
+                </a>
+                <a class="dropdown-item d-flex align-items-center" href="#">
+                  <i data-feather="download" class="icon-sm mr-2"></i>
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Services Table Container -->
+          <div class="table-responsive"
+               hx-trigger="service_create_success from:body, service_update_success from:body, service_delete_success from:body"
+               hx-swap="innerHTML"
+               hx-get="{% url 'hx-services-table' slug=request.organization.slug %}"
+               id="services-table">
+            {% include "logistics/tables/services.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
