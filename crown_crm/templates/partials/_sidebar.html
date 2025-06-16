@@ -57,6 +57,38 @@
               <span class="link-title">Lead Discussion History</span>
             </a>
           </li>
+          <li class="nav-item nav-category">Billing</li>
+          <li class="nav-item">
+            <a href="{% url 'all-leads' request.organization.slug %}" class="nav-link">
+              <i class="link-icon" data-feather="folder-minus"></i>
+              <span class="link-title">Sales Bills</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <i class="link-icon" data-feather="folder-plus"></i>
+              <span class="link-title">Purchase Bills</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <i class="link-icon" data-feather="shopping-cart"></i>
+              <span class="link-title">Orders</span>
+            </a>
+          </li>
+          <li class="nav-item nav-category">Masters</li>
+          <li class="nav-item">
+            <a href="{% url 'products' request.organization.slug %}" class="nav-link">
+              <i class="link-icon" data-feather="box"></i>
+              <span class="link-title">Products Master</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'services' request.organization.slug %}" class="nav-link">
+              <i class="link-icon" data-feather="trello"></i>
+              <span class="link-title">Services Master</span>
+            </a>
+          </li>
           {% if request.user == request.organization.owner or request.user in request.organizations.admins.all %}
             <li class="nav-item nav-category">Organization</li>
             <li class="nav-item">
