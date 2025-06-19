@@ -2,7 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 
-from .models import Service, Product, Order, OrderLineItem, CategorySP
+from .models import Service, Product, CategorySP
 
 class ServiceCreateForm(forms.ModelForm):
     """Form for creating new services."""
@@ -119,28 +119,3 @@ class ProductCreateForm(ProductBaseForm):
 class ProductUpdateForm(ProductBaseForm):
     """Form for updating existing products."""
     ...
-
-class OrderForm(forms.ModelForm):
-    """Form for creating orders."""
-    
-    class Meta:
-        model = Order
-        fields = ['organization', 'lead', 'status']
-        widgets = {
-            'lead': forms.Select(attrs={'class': 'form-control'})
-        }
-
-class OrderLineItemForm(forms.ModelForm):
-    """Form for creating order line items."""
-    
-    class Meta:
-        model = OrderLineItem
-        fields = ['order', 'product', 'service', 'quantity', 'price']
-        widgets = {
-            'organization': forms.HiddenInput(),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'category': forms.SelectMultiple(attrs={'class': 'form-control'}),
-            'code': forms.TextInput(attrs={'class': 'form-control'}),
-        }
