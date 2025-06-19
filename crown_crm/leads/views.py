@@ -5,8 +5,10 @@ from django_htmx.http import trigger_client_event
 from django.forms import inlineformset_factory
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
 
 from crown_crm.utils.decorators import organization_slug_required
+from crown_crm.utils.types import OrgHttpRequest
 
 from .forms import (
     LeadAddressForm,
@@ -34,7 +36,7 @@ EmailFormSet = inlineformset_factory(
 
 @login_required
 @organization_slug_required
-def all_leads_view(request: HttpRequest) -> HttpResponse:
+def all_leads_view(request: OrgHttpRequest) -> HttpResponse:
     """
     Displaying all leads.
     """
@@ -54,7 +56,7 @@ def all_leads_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @organization_slug_required
-def lead_detail_view(request: HttpRequest, pk: str):
+def lead_detail_view(request: OrgHttpRequest, pk: str):
     lead = get_object_or_404(LeadMaster, pk=pk)
 
     context = {"lead": lead}
@@ -64,7 +66,7 @@ def lead_detail_view(request: HttpRequest, pk: str):
 
 @login_required
 @organization_slug_required
-def hx_lead_delete_view(request: HttpRequest, pk: int):
+def hx_lead_delete_view(request: OrgHttpRequest, pk: int):
     lead_obj = LeadMaster.objects.filter(pk=pk)
 
     if not lead_obj.exists():
@@ -91,7 +93,7 @@ def hx_lead_delete_view(request: HttpRequest, pk: int):
 
 @login_required
 @organization_slug_required
-def hx_create_lead(request: HttpRequest) -> HttpResponse:
+def hx_create_lead(request: OrgHttpRequest) -> HttpResponse:
     """
     Handles the creation of new lead, along with associated mobile numbers,
     and email addresses using formsets. Displays the form and saves data if
@@ -164,7 +166,7 @@ def hx_create_lead(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @organization_slug_required
-def hx_edit_lead(request: HttpRequest, pk: int):
+def hx_edit_lead(request: OrgHttpRequest, pk: int):
     """
     Edit an existing lead. If not found, return an HTMX response
     with an error message.
@@ -212,7 +214,7 @@ def hx_edit_lead(request: HttpRequest, pk: int):
 
 @login_required
 @organization_slug_required
-def hx_leads_table(request: HttpRequest) -> HttpResponse:
+def hx_leads_table(request: OrgHttpRequest) -> HttpResponse:
     """
     Returns Partial table html containing leads.
     """
@@ -240,7 +242,7 @@ def hx_leads_table(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @organization_slug_required
-def hx_lead_mobile_table(request: HttpRequest, lead_id: int) -> HttpResponse:
+def hx_lead_mobile_table(request: OrgHttpRequest, lead_id: int) -> HttpResponse:
     """
     A lead Mobile table.
     """
@@ -256,7 +258,7 @@ def hx_lead_mobile_table(request: HttpRequest, lead_id: int) -> HttpResponse:
 @login_required
 @organization_slug_required
 @require_http_methods(["DELETE", "POST"])
-def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
+def hx_lead_mobile_delete(request: OrgHttpRequest, pk: int) -> HttpResponse:
     """
     Deleteing the mobile number
     """
@@ -294,7 +296,7 @@ def hx_lead_mobile_delete(request: HttpRequest, pk: int) -> HttpResponse:
 
 @login_required
 @organization_slug_required
-def hx_mobile_table_form(request: HttpRequest) -> HttpResponse:
+def hx_mobile_table_form(request: OrgHttpRequest) -> HttpResponse:
     """
     Enables us to create mobile number on table dynamically.
     """
@@ -339,7 +341,7 @@ def hx_mobile_table_form(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @organization_slug_required
-def hx_email_table_form(request: HttpRequest) -> HttpResponse:
+def hx_email_table_form(request: OrgHttpRequest) -> HttpResponse:
     """
     Enables us to create email addresses dynamically on the table.
     """
@@ -383,7 +385,7 @@ def hx_email_table_form(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @organization_slug_required
-def hx_lead_email_table(request: HttpRequest, lead_id: str) -> HttpResponse:
+def hx_lead_email_table(request: OrgHttpRequest, lead_id: str) -> HttpResponse:
     """
     A lead Email Address table.
     """
@@ -399,7 +401,7 @@ def hx_lead_email_table(request: HttpRequest, lead_id: str) -> HttpResponse:
 @require_http_methods(["DELETE", "POST"])
 @login_required
 @organization_slug_required
-def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
+def hx_lead_email_delete(request: OrgHttpRequest, pk: int) -> HttpResponse:
     """
     Deleting an email address.
     """
@@ -433,3 +435,26 @@ def hx_lead_email_delete(request: HttpRequest, pk: int) -> HttpResponse:
     res = trigger_client_event(res, "lead_email_deleted")
 
     return res
+
+
+@login_required
+@organization_slug_required
+def hx_add_mobile_formset_input(request: OrgHttpRequest):
+    form_id = int(request.GET.get("mobile-TOTAL_FORMS", 0))
+    form = LeadMobileNumberForm(prefix=f"mobile-{form_id}")
+    html = render_to_string("leads/forms/mobile_form_row.html", {
+        "form": form,
+        "form_id": form_id
+    })
+    return HttpResponse(html)
+
+@login_required
+@organization_slug_required
+def hx_add_email_formset_input(request: OrgHttpRequest):
+    form_id = int(request.GET.get("email-TOTAL_FORMS", 0))
+    form = LeadEmailForm(prefix=f"email-{form_id}")
+    html = render_to_string("leads/forms/email_form_row.html", {
+        "form": form,
+        "form_id": form_id
+    })
+    return HttpResponse(html)

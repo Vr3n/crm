@@ -99,6 +99,8 @@ LOCAL_APPS = [
     "crown_crm.organizations",
     "crown_crm.leads",
     "crown_crm.clients",
+    "crown_crm.logistics",
+    "crown_crm.accounting",
     # Your stuff: custom apps go here
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps

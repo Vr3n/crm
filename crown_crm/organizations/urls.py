@@ -16,6 +16,7 @@ urlpatterns = [
          name="organizations-settings"),
     path("<slug:slug>/leads/", include("crown_crm.leads.urls")),
     path("<slug:slug>/clients/", include("crown_crm.clients.urls")),
+    path("<slug:slug>/logistics/", include("crown_crm.logistics.urls")),
 
     # HTMX VIEWS #
     path("hx/nav-list/", organizations_navbar_list_view, name="hx-nav-organizations-list"),

@@ -3,12 +3,15 @@ from django.db.models import QuerySet
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.http import HttpRequest
-from typing import Callable
+from typing import Any, Callable, TypeVar, TypeVarTuple, cast
 
 from crown_crm.organizations.models import OrganizationMaster
+from crown_crm.utils.types import OrgHttpRequest
 
+# Preserve View function type signatures.
+F = TypeVar("F", bound=Callable[..., Any])
 
-def organization_slug_required(view_func: Callable) -> Callable:
+def organization_slug_required(view_func: F) -> F:
     """Decorator to inject organization slug into request.
 
     the decorator:
@@ -20,20 +23,19 @@ def organization_slug_required(view_func: Callable) -> Callable:
         view_func: The view function to be decorated.
 
     Returns:
-        Callable: Wrapped view function with organization slug handling.
+        F: Wrapped view function with organization slug handling.
     """
 
     @wraps(view_func)
-    def _wrapped_view(request: HttpRequest,
-                      slug: str, *args, **kwargs) -> Callable:
-        organization: QuerySet = OrganizationMaster.objects.filter(slug=slug)
-
-        if not organization.exists():
+    def _wrapped_view(request: OrgHttpRequest,
+                      slug: str, *args, **kwargs) -> F:
+        try:
+            organization = OrganizationMaster.objects.get(slug=slug)
+        except OrganizationMaster.DoesNotExist:
             messages.error(request, "Organization Does not Exist!")
             return redirect("organizations-list")
-
         # Attaching the organization to request obj.
-        request.organization = organization.first()
+        request.organization = organization
 
         return view_func(request, *args, **kwargs)
-    return _wrapped_view
+    return cast(F, _wrapped_view)
