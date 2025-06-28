@@ -48,9 +48,9 @@ LOCALE_PATHS = [str(BASE_DIR / "locale")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 # DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -91,7 +91,6 @@ THIRD_PARTY_APPS = [
     "django_htmx",
     "drf_spectacular",
     "django_browser_reload",
-
 ]
 
 LOCAL_APPS = [
@@ -209,6 +208,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "crown_crm.users.context_processors.allauth_settings",
             ],
+            "libraries": {"model_extras": "crown_crm.templatetags.model_extras"},
         },
     },
 ]

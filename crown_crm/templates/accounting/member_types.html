@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Member Types - {{ block.super }}{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Page Heading -->
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Member Types</h1>
+    <button class="btn btn-primary"
+            hx-get="{% url 'hx-create-member-type' slug=request.organization.slug %}"
+            hx-target="#modal-form">
+      <i data-feather="plus" class="icon-sm"></i> Add Member Type
+    </button>
+  </div>
+
+  <!-- Content Row -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+          <h6 class="m-0 font-weight-bold text-primary">Member Types</h6>
+        </div>
+        <div class="card-body">
+          <div id="member-types-table" 
+               hx-get="{% url 'hx-member-types-table' slug=request.organization.slug %}"
+               hx-trigger="membertype_update_success from:body, membertype_create_success from:body, membertype_delete_success from:body">
+            {% include "accounting/tables/member_types_table.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

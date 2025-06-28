@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}
+  New Membership Sale - {{ block.super }}
+{% endblock title %}
+{% block content %}
+  <h4>Membership Sale</h4>
+  {% include "accounting/partials/membership_sale_form.html" %}
+{% endblock content %}
+{% block custom_js %}
+  <script>
+    const selected_lead_card = (leadName, leadId, mobileNumbers, emails) => (`
+      <div class="card border-info mb-3">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="feather icon-user me-2 text-white-50"></i>
+            <h6 class="card-title mb-0 text-white fw-normal">${leadName}</h6>
+          </div>
+          <button type="button" class="btn btn-xs btn-outline-light border-0 p-1" onclick="removeSelectedLead()" title="Remove lead">
+            <i class="feather icon-x" style="font-size: 0.9rem; line-height: 1;"></i>
+          </button>
+        </div>
+        <div class="card-body p-3">
+          <div class="row g-3">
+            <div class="col-6">
+              <div class="border-end h-100 d-flex flex-column justify-content-center">
+                <div class="text-muted small mb-1">
+                  <i class="feather icon-phone me-1"></i> Contact
+                </div>
+                <div class="fw-bold">${mobileNumbers || 'N/A'}</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="h-100 d-flex flex-column justify-content-center">
+                <div class="text-muted small mb-1">
+                  <i class="feather icon-mail me-1"></i> Email
+                </div>
+                <div class="fw-bold text-truncate">${emails || 'N/A'}</div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="lead" value="${leadId}">
+        </div>
+      </div>`);
+  function selectLead(card) {
+    const leadId = card.dataset.leadId;
+    const leadName = card.dataset.leadName;
+    console.log(card.dataset)
+    const mobileNumbers = JSON.parse(card.dataset.leadMobileNumbers);
+    const emails = JSON.parse(card.dataset.leadEmails);
+    const selectionDiv = document.getElementById('leadSelection');
+
+    // Render selected lead summary
+    selectionDiv.innerHTML = selected_lead_card(leadName, leadId, mobileNumbers, emails);
+
+    // Optionally clear search results
+    const results = document.getElementById('leadSearchResults');
+    if (results) {
+      results.innerHTML = '';
+    }
+  }
+
+  function removeSelectedLead() {
+    const selectionDiv = document.getElementById('leadSelection');
+    if (selectionDiv) {
+      selectionDiv.innerHTML = '';
+    }
+  }
+
+  document.body.addEventListener('lead_create_success', function(evt) {
+    const leadData = evt.detail;
+    const leadId = leadData.id; // model_to_dict serializes pk as 'id'
+    const leadName = [leadData.first_name, leadData.middle_name, leadData.last_name].filter(Boolean).join(' ');
+    const selectionDiv = document.getElementById('leadSelection');
+
+    // Render the newly created lead in the selection area
+    selectionDiv.innerHTML = selected_lead_card(leadName, leadId, mobileNumbers, emails);
+
+    // Clear the search input and results
+    document.getElementById('leadSearch').value = '';
+    document.getElementById('leadSearchResults').innerHTML = '';
+
+    // Hide the modal (assumes Bootstrap 4.6 with jQuery)
+    $('#modal-container').modal('hide');
+  });
+
+  // ===================== MEMBERSHIP PLAN SELECTION ====================
+  const selected_membership_card = (planName, planPrice, ptSessions, dietPlans, planId) => (`
+      <div class="card border-success mb-3">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="feather icon-check-circle me-2 text-white-50"></i>
+            <h6 class="card-title mb-0 text-white fw-normal">${planName}</h6>
+          </div>
+          <button type="button" class="btn btn-xs btn-outline-light border-0 p-1" onclick="removeSelectedMembershipPlan()" title="Remove plan">
+            <i class="feather icon-x" style="font-size: 0.9rem; line-height: 1;"></i>
+          </button>
+        </div>
+        <div class="card-body p-3">
+          <div class="row g-3 text-center">
+            <div class="col-4">
+              <div class="border-end h-100 d-flex flex-column justify-content-center">
+                <div class="text-muted small mb-1">
+                  <i class="feather icon-tag me-1"></i> Price
+                </div>
+                <div class="fw-bold">₹${parseFloat(planPrice).toFixed(2)}</div>
+              </div>
+            </div>
+            
+            <div class="col-4">
+              <div class="border-end h-100 d-flex flex-column justify-content-center">
+                <div class="text-muted small mb-1">
+                  <i class="feather icon-activity me-1"></i> PT Sessions
+                </div>
+                <div class="fw-bold">${ptSessions || 'None'}</div>
+              </div>
+            </div>
+            
+            <div class="col-4">
+              <div class="h-100 d-flex flex-column justify-content-center">
+                <div class="text-muted small mb-1">
+                  <i class="feather icon-pie-chart me-1"></i> Diet Plans
+                </div>
+                <div class="fw-bold">${dietPlans || 'None'}</div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="plan" value="${planId}">
+        </div>
+      </div>`)
+  function selectMembershipPlan(card) {
+    console.log('Selected plan:', card.dataset);
+    const planId = card.dataset.planId;
+    const planName = card.dataset.planName;
+    const planPrice = parseFloat(card.dataset.planPrice) || 0;
+    const ptSessions = parseInt(card.dataset.planPtSessions) || 0;
+    const dietPlans = parseInt(card.dataset.planDietPlans) || 0;
+    
+    const selectionDiv = document.getElementById('membershipPlanSelection');
+    const customizationSection = document.getElementById('customizationSection');
+
+    // Render selected plan summary
+    selectionDiv.innerHTML = selected_membership_card(planName, planPrice, ptSessions, dietPlans, planId);
+
+    // Initialize customization section with plan defaults
+    const customPrice = parseFloat(planPrice || 0);
+    document.getElementById('decidedAmount').value = customPrice.toFixed(2);
+    document.getElementById('customPrice').value = customPrice.toFixed(2);
+    document.getElementById('customPtSessions').value = ptSessions || 0;
+    document.getElementById('customDietPlans').value = dietPlans || 0;
+    document.getElementById('customDuration').value = 'yearly';
+    
+    // Initialize payment section with the new price
+    updatePaymentAmount();
+
+    // Show customization section
+    if (customizationSection) {
+      customizationSection.style.display = 'block';
+    }
+
+    const results = document.getElementById('membershipPlanSearchResults');
+    if (results) {
+      results.innerHTML = '';
+    }
+  }
+
+  function removeSelectedMembershipPlan() {
+    const selectionDiv = document.getElementById('membershipPlanSelection');
+    const customizationSection = document.getElementById('customizationSection');
+    
+    if (selectionDiv) {
+      selectionDiv.innerHTML = '';
+    }
+    
+    if (customizationSection) {
+      customizationSection.style.display = 'none';
+    }
+  }
+
+  // Handle plan quick-create success via HTMX event
+  document.body.addEventListener('membership_plan_create_success', function(evt) {
+    const plan = evt.detail;
+    console.log('Plan created:', plan);
+    
+    // Check if the plan data is in the expected format
+    if (!plan || !plan.id) {
+      console.error('Invalid plan data received:', plan);
+      return;
+    }
+    
+    const selectionDiv = document.getElementById('membershipPlanSelection');
+    const customizationSection = document.getElementById('customizationSection');
+    
+    if (!selectionDiv || !customizationSection) {
+      console.error('Required elements not found');
+      return;
+    }
+    
+    // Use the plan data to update the UI
+    const planPrice = parseFloat(plan.price || 0);
+    const ptSessions = parseInt(plan.pt_sessions || 0);
+    const dietPlans = parseInt(plan.diet_plans || 0);
+    
+    // Update the selected plan card
+    selectionDiv.innerHTML = selected_membership_card(
+      plan.name || 'New Plan',
+      planPrice,
+      ptSessions,
+      dietPlans,
+      plan.id || plan.pk  // Try both id and pk in case the API uses different field names
+    );
+    
+    // Initialize customization section with plan defaults
+    const priceStr = planPrice.toFixed(2);
+    document.getElementById('decidedAmount').value = priceStr;
+    document.getElementById('customPrice').value = priceStr;
+    document.getElementById('customPtSessions').value = ptSessions;
+    document.getElementById('customDietPlans').value = dietPlans;
+    document.getElementById('customDuration').value = 'yearly';
+    
+    // Show customization section and update payment
+    customizationSection.style.display = 'block';
+    updatePaymentAmount();
+    
+    // Clear search and close modal
+    const searchInput = document.getElementById('membershipPlanSearch');
+    const searchResults = document.getElementById('membershipPlanSearchResults');
+    if (searchInput) searchInput.value = '';
+    if (searchResults) searchResults.innerHTML = '';
+    
+    const modal = document.getElementById('modal-container');
+    if (modal) {
+      $(modal).modal('hide');
+    }
+  });
+  
+  // Initialize payment section
+  function initPaymentSection() {
+    const paymentAmount = document.getElementById('paymentAmount');
+    if (paymentAmount) {
+      paymentAmount.value = '';
+      paymentAmount.max = '0';
+      document.getElementById('balanceAmount').textContent = '0.00';
+    }
+  }
+
+  // Update payment amount when custom price changes
+  function updatePaymentAmount() {
+    const customPrice = parseFloat(document.getElementById('customPrice')?.value) || 0;
+    const paymentAmount = document.getElementById('paymentAmount');
+    
+    if (paymentAmount) {
+      paymentAmount.max = customPrice;
+      // Only update the payment amount if it's empty or equal to the previous max
+      if (!paymentAmount.value || parseFloat(paymentAmount.value) > customPrice) {
+        paymentAmount.value = customPrice > 0 ? customPrice.toFixed(2) : '';
+      }
+      updateBalance();
+    }
+  }
+
+  // Update balance amount
+  function updateBalance() {
+    const customPrice = parseFloat(document.getElementById('customPrice')?.value) || 0;
+    const paymentAmount = parseFloat(document.getElementById('paymentAmount')?.value) || 0;
+    const balanceAmount = document.getElementById('balanceAmount');
+    const paymentInput = document.getElementById('paymentAmount');
+    
+    if (balanceAmount && paymentInput) {
+      const balance = Math.max(0, customPrice - paymentAmount).toFixed(2);
+      balanceAmount.textContent = balance;
+      
+      // Toggle invalid class based on payment amount
+      if (paymentAmount > customPrice) {
+        paymentInput.classList.add('is-invalid');
+      } else {
+        paymentInput.classList.remove('is-invalid');
+      }
+    }
+  }
+
+  
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initPaymentSection);
+  
+  // Event listeners
+  const customPriceInput = document.getElementById('customPrice');
+  const paymentAmountInput = document.getElementById('paymentAmount');
+  
+  if (customPriceInput) {
+    customPriceInput.addEventListener('input', updatePaymentAmount);
+  }
+  
+  if (paymentAmountInput) {
+    paymentAmountInput.addEventListener('input', updateBalance);
+    
+    paymentAmountInput.addEventListener('change', function() {
+      const customPrice = parseFloat(customPriceInput?.value) || 0;
+      if (this.value > customPrice) {
+        this.value = customPrice.toFixed(2);
+        updateBalance();
+      }
+    });
+  }
+
+  // Calculate discount when custom price changes
+  document.getElementById('customPrice')?.addEventListener('input', function() {
+    const decidedAmount = parseFloat(document.getElementById('decidedAmount').value) || 0;
+    const customPrice = parseFloat(this.value) || 0;
+    const discountInfo = document.getElementById('discountInfo');
+    const discountPercentage = document.getElementById('discountPercentage');
+    
+    if (customPrice < decidedAmount && decidedAmount > 0) {
+      const discount = ((decidedAmount - customPrice) / decidedAmount) * 100;
+      discountPercentage.textContent = discount.toFixed(2);
+      discountInfo.style.display = 'block';
+      
+      // Visual feedback for discount
+      this.classList.remove('is-valid');
+      this.classList.add('is-valid');
+    } else {
+      discountInfo.style.display = 'none';
+      this.classList.remove('is-valid');
+    }
+  });
+  
+  // Handle remove selected membership plan
+  function removeSelectedMembershipPlan() {
+    document.getElementById('membershipPlanSelection').innerHTML = '';
+    document.getElementById('customizationSection').style.display = 'none';
+    document.getElementById('membershipPlanSearch').value = '';
+    // Reset payment section
+    initPaymentSection();
+  }
+  </script>
+{% endblock custom_js %}

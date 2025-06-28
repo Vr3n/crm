@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}
+  {{ member_type.name }} - Member Type - {{ block.super }}
+{% endblock title %}
+{% block content %}
+  {% include "accounting/partials/member_type_detail.html" %}
+{% endblock content %}
+{% block custom_js %}
+  <script>
+htmx.on("membertype_update_success", (e) => {
+  $('#modal-container').modal('hide');
+  e.detail.shouldSwap = false
+}) 
+  </script>
+{% endblock custom_js %}

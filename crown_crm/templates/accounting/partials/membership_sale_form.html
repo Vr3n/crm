@@ -1,0 +1,192 @@
+<form hx-post="{% url 'hx-create-membership-sale' slug=request.organization.slug %}"
+      hx-target="this"
+      hx-swap="innerHTML"
+      class="needs-validation">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {{ form.lead.as_hidden }}
+  {{ form.plan.as_hidden }}
+  <input type="hidden"
+         name="organization"
+         value="{{ request.organization.slug }}">
+  <!-- Lead Card -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">Lead</h3>
+      <button hx-get="{% url 'hx-quick-create-lead' slug=request.organization.slug %}"
+              hx-target="#modal-form"
+              class="btn btn-outline-danger">+ Create New Lead</button>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label for="leadSearch" class="form-label">Search Your Lead</label>
+        <small class="text-muted">Type to search lead, or create new lead</small>
+        <div class="input-group">
+          <input type="search"
+                 name="lead"
+                 id="leadSearch"
+                 placeholder="Search Lead"
+                 class="form-control"
+                 autocomplete="off"
+                 hx-get="{% url 'search-lead' slug=request.organization.slug %}"
+                 hx-trigger="keyup changed delay:250ms"
+                 hx-target="#leadSearchResults"
+                 hx-swap="innerHTML">
+        </div>
+        <div class="list-group list-group-flush" id="leadSearchResults">
+          {% include "leads/partials/search_results.html" %}
+        </div>
+      </div>
+      <div id="leadSelection"></div>
+    </div>
+  </div>
+  <!-- Lead Card -->
+  <!-- Membership Plan Card -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">Membership Plan</h3>
+      <button hx-get="{% url 'hx-create-membership-plan' slug=request.organization.slug %}"
+              hx-target="#modal-form"
+              class="btn btn-outline-danger">+ Create New Membership Plan</button>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label for="membershipPlanSearch" class="form-label">Search Your Membership Plan</label>
+        <small class="text-muted">Type to search membership plan, or create new membership plan</small>
+        <div class="input-group">
+          <input type="search"
+                 name="membership_plan_search"
+                 id="membershipPlanSearch"
+                 placeholder="Search Membership Plan"
+                 class="form-control"
+                 autocomplete="off"
+                 hx-get="{% url 'search-membership-plan' slug=request.organization.slug %}"
+                 hx-trigger="keyup changed delay:250ms"
+                 hx-target="#membershipPlanSearchResults"
+                 hx-swap="innerHTML">
+        </div>
+        <div class="list-group list-group-flush" id="membershipPlanSearchResults">
+          {% include "accounting/partials/membership_plan_search_results.html" %}
+        </div>
+      </div>
+      <div id="membershipPlanSelection"></div>
+      <!-- Customization Section -->
+      <div id="customizationSection" class="mt-4" style="display: none;">
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row mb-3">
+              <!-- First Row - 2 columns -->
+              <div class="col-md-4 mb-3">
+                <label for="customPtSessions" class="form-label">PT Sessions</label>
+                <div class="input-group">
+                  <input type="number"
+                         id="customPtSessions"
+                         name="custom_pt_sessions"
+                         class="form-control"
+                         min="0">
+                  <span class="input-group-text">sessions</span>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="customDietPlans" class="form-label">Diet Plans</label>
+                <div class="input-group">
+                  <input type="number"
+                         id="customDietPlans"
+                         name="custom_diet_plans"
+                         class="form-control"
+                         min="0">
+                  <span class="input-group-text">plans</span>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="customDuration" class="form-label">Duration</label>
+                <select id="customDuration" name="custom_duration" class="form-select">
+                  <option value="yearly" selected>Yearly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="6months">6 Months</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Membership Plan Card -->
+  <!-- Payment Process Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="card-title mb-0">Payment Details</h3>
+    </div>
+    <div class="card-body">
+      <!-- Pricing Section -->
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Base Price</label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <input type="number"
+                   id="decidedAmount"
+                   class="form-control bg-light"
+                   readonly>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="customPrice" class="form-label">Selling Price</label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <input type="number"
+                   id="customPrice"
+                   value="{{ form.custom_price.value|default_if_none:'' }}"
+                   name="custom_price"
+                   class="form-control"
+                   step="0.01"
+                   min="0"
+                   onchange="updateBalance()">
+          </div>
+          <div id="discountInfo"
+               class="form-text text-success"
+               style="display: none">
+            <i class="feather icon-tag"></i> <span id="discountPercentage">0</span>% discount applied
+          </div>
+        </div>
+      </div>
+      <!-- Payment Section -->
+      <div class="border-top pt-3">
+        <h6 class="mb-3">Payment Information</h6>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="paymentAmount" class="form-label">Amount Paid</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number"
+                     id="paymentAmount"
+                     name="payment_amount"
+                     class="form-control"
+                     step="0.01"
+                     min="0"
+                     oninput="updateBalance()"
+                     required>
+            </div>
+            <small class="form-text text-muted">
+              Balance: ₹<span id="balanceAmount">0.00</span>
+            </small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="paymentMethod" class="form-label">Payment Method</label>
+            <select id="paymentMethod" name="payment_method" class="form-select" required>
+              <option value="cash" selected>Cash</option>
+              <option value="card">Card</option>
+              <option value="upi">UPI</option>
+              <option value="bank">Bank Transfer</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Payment Process Card -->
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>

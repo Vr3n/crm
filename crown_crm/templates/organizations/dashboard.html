@@ -1,101 +1,98 @@
-{% extends 'base.html' %} 
+{% extends "base.html" %}
 <!-- -->
 {% block content %}
-<h4>
-  Welcome, to <span class="text-primary">{{ request.organization.name }}</span>
-</h4>
-<br />
-<div class="my-3">
-  <a href="#" class="btn btn-primary">+ Add Lead</a>
-  <a href="#" class="btn btn-success">+ Add Order</a>
-  <a href="#" class="btn btn-warning">+ Add Purchase</a>
-</div>
-<br />
-<div class="row">
-  <div class="col-md-3">
-    <div class="metric-card bg-c-blue">
-      <div class="card-block">
-        <h3>Leads <span class="float-right">{{ lead_count }}</span></h3>
-      </div>
-    </div>
+  <h4>
+    Welcome, to <span class="text-primary">{{ request.organization.name }}</span>
+  </h4>
+  <br />
+  <div class="my-3">
+    <a href="#" class="btn btn-primary">+ Add Lead</a>
+    <a href="{% url 'sale-create' slug=request.organization.slug %}"
+       class="btn btn-warning">+ Add New Sale</a>
   </div>
-  <div class="col-md-3">
-    <div class="metric-card bg-c-green">
-      <div class="card-block">
-        <h3>Orders <span class="float-right">3</span></h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="metric-card bg-c-teal">
-      <div class="card-block">
-        <h3>Purchases <span class="float-right">2</span></h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="metric-card bg-c-yellow">
-      <div class="card-block">
-        <h3>Followups <span class="float-right">6</span></h3>
-      </div>
-    </div>
-  </div>
-</div>
-<hr />
-<div class="row">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Leads</h5>
+  <br />
+  <div class="row">
+    <div class="col-md-3">
+      <div class="metric-card bg-c-blue">
+        <div class="card-block">
+          <h3>
+            Leads <span class="float-right">{{ lead_count }}</span>
+          </h3>
         </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="metric-card bg-c-green">
+        <div class="card-block">
+          <h3>
+            Orders <span class="float-right">3</span>
+          </h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="metric-card bg-c-teal">
+        <div class="card-block">
+          <h3>
+            Purchases <span class="float-right">2</span>
+          </h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="metric-card bg-c-yellow">
+        <div class="card-block">
+          <h3>
+            Followups <span class="float-right">6</span>
+          </h3>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Orders</h5>
+  <hr />
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Recent Leads</h5>
+          </div>
+          <div class="table-responsive">{% include "leads/tables/leads.html" with leads=recent_leads %}</div>
         </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Recent Orders</h5>
+          </div>
+          <div class="table-responsive">{% include "leads/tables/leads.html" with leads=recent_leads %}</div>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-<div class="row mt-4">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Purchases</h5>
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Recent Sales</h5>
+          </div>
+          <div class="table-responsive">{% include "leads/tables/leads.html" with leads=recent_leads %}</div>
         </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Recent Followups</h5>
+          </div>
+          <div class="table-responsive">{% include "leads/tables/leads.html" with leads=recent_leads %}</div>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Followups</h5>
-        </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock content %}
 <!-- -->

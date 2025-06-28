@@ -1,0 +1,49 @@
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Payment Receipt</h5>
+    <small class="text-muted">{{ receipt.date|date:"d M Y H:i" }}</small>
+  </div>
+  <div class="card-body">
+    <div class="mb-2">
+      <strong>Receipt&nbsp;#:</strong> {{ receipt.pk }}
+    </div>
+    <div class="mb-2">
+      <strong>Lead:</strong> {{ sale.lead }}
+    </div>
+    <div class="mb-2">
+      <strong>Membership Plan:</strong> {{ sale.plan.name }} ({{ sale.effective_duration|capfirst }})
+    </div>
+    <hr>
+    <div class="row mb-2">
+      <div class="col-6">Amount Paid</div>
+      <div class="col-6 text-end">₹ {{ receipt.amount }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-6">Opening Balance</div>
+      <div class="col-6 text-end">₹ {{ receipt.opening_balance }}</div>
+    </div>
+    <div class="row mb-2">
+      <div class="col-6">Closing Balance</div>
+      <div class="col-6 text-end fw-bold">₹ {{ receipt.closing_balance }}</div>
+    </div>
+    <hr>
+    <div class="mb-2">
+      <strong>Payment Method:</strong> {{ receipt.get_method_display }}
+    </div>
+    {% if receipt.reference %}
+      <div class="mb-2">
+        <strong>Reference:</strong> {{ receipt.reference }}
+      </div>
+    {% endif %}
+    {% if receipt.notes %}
+      <div class="mb-2">
+        <strong>Notes:</strong> {{ receipt.notes }}
+      </div>
+    {% endif %}
+  </div>
+  <div class="card-footer text-center bg-white">
+    <button class="btn btn-outline-secondary" onclick="window.print()">
+      <i class="feather icon-printer"></i> Print
+    </button>
+  </div>
+</div>

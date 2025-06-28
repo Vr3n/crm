@@ -23,11 +23,16 @@ class LeadMaster(BaseModel):
         get_full_name -> str: Lead's Full name.
 
     """
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('T', 'Transgender'),
-    ]
+    class Gender(models.TextChoices):
+        MALE = 'M', 'Male'
+        FEMALE = 'F', 'Female'
+        TRANSGENDER = 'T', 'Transgender'
+
+    class Status(models.TextChoices):
+        NEW = 'NEW', 'New'
+        INTERESTED = 'INTERESTED', 'Interested'
+        CONVERTED = 'CONVERTED', 'Converted'
+        DROPPED = 'DROPPED', 'Dropped'
 
     organization = models.ForeignKey(
         OrganizationMaster, on_delete=models.CASCADE, related_name='leads')
@@ -35,7 +40,10 @@ class LeadMaster(BaseModel):
     middle_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=50)
     gender = models.CharField(
-        max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+        max_length=10, choices=Gender.choices, blank=True, null=True)
+    status = models.CharField(
+        max_length=15, choices=Status.choices, default=Status.NEW,
+        help_text='Current status of the lead')
 
     def get_full_name(self) -> str:
         """Constructs the full name of the lead.

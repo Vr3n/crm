@@ -1,104 +1,100 @@
 {% if request.organization %}
   <nav class="sidebar">
-      <div class="sidebar-header">
-      <a href="{{ request.organization.get_dashboard_url }}" class="sidebar-brand">
-
+    <div class="sidebar-header">
+      <a href="{{ request.organization.get_dashboard_url }}"
+         class="sidebar-brand">
         {% if request.organization.logo is None %}
-          <img src="{{ request.organization.logo.url }}" style="width:100px;height:100px;" alt="{{ request.organization.name }}">
+          <img src="{{ request.organization.logo.url }}"
+               width="60"
+               height="40"
+               alt="{{ request.organization.name }}">
         {% else %}
-          <p>{{ request.organization.name }}</p>
+          <p class="fs-4">{{ request.organization.name }}</p>
         {% endif %}
-
-        </a>
-        <div class="sidebar-toggler not-active">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+      </a>
+      <div class="sidebar-toggler not-active">
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
-      <div class="sidebar-body">
-        <ul class="nav">
-          <li class="nav-item nav-category">Main</li>
-          <li class="nav-item active">
-              <a href="{{ request.organization.get_dashboard_url }}" class="nav-link active">
-                <i class="link-icon" data-feather="box"></i>
-                <span class="link-title">Dashboard</span>
-              </a>
-          </li>
-          <!-- <li class="nav-item nav-category">Clients</li> -->
-          <!-- <li class="nav-item"> -->
-          <!--   <a href="{% url 'client-list' request.organization.slug %}" class="nav-link"> -->
-          <!--     <i class="link-icon" data-feather="message-square"></i> -->
-          <!--     <span class="link-title">All clients</span> -->
-          <!--   </a> -->
-          <!-- </li> -->
-          <!-- <li class="nav-item"> -->
-          <!--   <a href="#" class="nav-link"> -->
-          <!--     <i class="link-icon" data-feather="calendar"></i> -->
-          <!--     <span class="link-title">Diets</span> -->
-          <!--   </a> -->
-          <!-- </li> -->
-          <li class="nav-item nav-category">Leads</li>
+    </div>
+    <div class="sidebar-body">
+      <ul class="nav">
+        <li class="nav-item nav-category">Main</li>
+        <li class="nav-item active">
+          <a href="{{ request.organization.get_dashboard_url }}"
+             class="nav-link active">
+            <i class="link-icon" data-feather="box"></i>
+            <span class="link-title">Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item nav-category">Leads</li>
+        <li class="nav-item">
+          <a href="{% url 'all-leads' request.organization.slug %}"
+             class="nav-link">
+            <i class="link-icon" data-feather="message-square"></i>
+            <span class="link-title">All Leads</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="link-icon" data-feather="calendar"></i>
+            <span class="link-title">Lead Followups</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#" class="nav-link">
+            <i class="link-icon" data-feather="calendar"></i>
+            <span class="link-title">Lead Discussion History</span>
+          </a>
+        </li>
+        <li class="nav-item nav-category">Sale</li>
+        <li class="nav-item">
+          <a href="{% url 'sales' request.organization.slug %}" class="nav-link">
+            <i class="link-icon" data-feather="dollar-sign"></i>
+            <span class="link-title">Membership Sales</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'all-leads' request.organization.slug %}"
+             class="nav-link">
+            <i class="link-icon" data-feather="book-open"></i>
+            <span class="link-title">Receipts</span>
+          </a>
+        </li>
+        <li class="nav-item nav-category">Masters</li>
+        <li class="nav-item">
+          <a href="{% url 'membership-plans' request.organization.slug %}"
+             class="nav-link">
+            <i class="link-icon" data-feather="trello"></i>
+            <span class="link-title">Membership Plans</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'member-types' request.organization.slug %}"
+             class="nav-link">
+            <i class="link-icon" data-feather="tag"></i>
+            <span class="link-title">Member Types</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'products' request.organization.slug %}"
+             class="nav-link">
+            <i class="link-icon" data-feather="box"></i>
+            <span class="link-title">Products</span>
+          </a>
+        </li>
+        {% if request.user == request.organization.owner or request.user in request.organizations.admins.all %}
+          <li class="nav-item nav-category">Organization</li>
           <li class="nav-item">
-            <a href="{% url 'all-leads' request.organization.slug %}" class="nav-link">
-              <i class="link-icon" data-feather="message-square"></i>
-              <span class="link-title">All Leads</span>
+            <a href="{% url 'organizations-settings' request.organization.slug %}"
+               class="nav-link">
+              <i class="link-icon" data-feather="settings"></i>
+              <span class="link-title">Settings</span>
             </a>
           </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="link-icon" data-feather="calendar"></i>
-              <span class="link-title">Lead Followups</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="link-icon" data-feather="calendar"></i>
-              <span class="link-title">Lead Discussion History</span>
-            </a>
-          </li>
-          <li class="nav-item nav-category">Billing</li>
-          <li class="nav-item">
-            <a href="{% url 'all-leads' request.organization.slug %}" class="nav-link">
-              <i class="link-icon" data-feather="folder-minus"></i>
-              <span class="link-title">Sales Bills</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="link-icon" data-feather="folder-plus"></i>
-              <span class="link-title">Purchase Bills</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link">
-              <i class="link-icon" data-feather="shopping-cart"></i>
-              <span class="link-title">Orders</span>
-            </a>
-          </li>
-          <li class="nav-item nav-category">Masters</li>
-          <li class="nav-item">
-            <a href="{% url 'products' request.organization.slug %}" class="nav-link">
-              <i class="link-icon" data-feather="box"></i>
-              <span class="link-title">Products Master</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{% url 'services' request.organization.slug %}" class="nav-link">
-              <i class="link-icon" data-feather="trello"></i>
-              <span class="link-title">Services Master</span>
-            </a>
-          </li>
-          {% if request.user == request.organization.owner or request.user in request.organizations.admins.all %}
-            <li class="nav-item nav-category">Organization</li>
-            <li class="nav-item">
-            <a href="{% url 'organizations-settings' request.organization.slug %}" class="nav-link">
-                  <i class="link-icon" data-feather="settings"></i>
-                  <span class="link-title">Settings</span>
-              </a>
-            </li>
-          {% endif %}
-        </ul>
-      </div>
-    </nav>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
 {% endif %}

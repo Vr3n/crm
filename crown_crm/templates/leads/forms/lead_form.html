@@ -1,0 +1,185 @@
+{% load static %}
+<form hx-post="{{ request.path }}"
+      hx-trigger="submit,submitting"
+      hx-on="submitting:document.body.classList.add('loading')"
+      hx-on="after-settle:document.body.classList.remove('loading')"
+      class="modal-content">
+  <div class="modal-header">
+    <h5 class="modal-title">Create Lead</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">X</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden"
+           name="organization"
+           value="{{ request.organization.pk }}">
+    {% if form.errors %}
+      <div class="alert alert-danger mt-3">
+        <strong>Error:</strong> Please correct the errors below.
+      </div>
+    {% endif %}
+    <div class="row">
+      <div class="col-md-4 col-sm-12">
+        <div class="form-group">
+          <label for="{{ lead_form.first_name.id_for_label }}" class="form-label">First Name</label>
+          {{ lead_form.first_name }}
+          {% if lead_form.first_name.errors %}
+            <div class="invalid-feedback d-block">{{ lead_form.first_name.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-4 col-sm-12">
+        <div class="form-group">
+          <label for="{{ lead_form.middle_name.id_for_label }}" class="form-label">Middle Name</label>
+          {{ lead_form.middle_name }}
+          {% if lead_form.middle_name.errors %}
+            <div class="invalid-feedback d-block">{{ lead_form.middle_name.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-4 col-sm-12">
+        <div class="form-group">
+          <label for="{{ lead_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+          {{ lead_form.last_name }}
+          {% if lead_form.last_name.errors %}
+            <div class="invalid-feedback d-block">{{ lead_form.last_name.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-md-4 col-sm-12">
+        <div class="form-group">
+          <label for="{{ lead_form.source.id_for_label }}" class="form-label">Source</label>
+          {{ lead_form.source }}
+          {% if lead_form.source.errors %}<div class="invalid-feedback d-block">{{ lead_form.source.errors.0 }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6 col-sm-12">
+        <div class="card mb-3">
+          <div class="card-header">Mobile Numbers</div>
+          <div id="mobile-formset-container" class="card-body">
+            {{ mobile_formset.management_form }}
+            {% for form in mobile_formset %}
+              <div class="form-group">
+                {{ form.mobile_number }}
+                {% if form.mobile_number.errors %}
+                  <div class="invalid-feedback d-block">{{ form.mobile_number.errors.0 }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          <div class="card-footer">
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    hx-get="{% url 'hx-add-mobile-formset-input' slug=request.organization.slug %}"
+                    hx-target="#mobile-formset-container"
+                    hx-include="input[name='mobile-TOTAL_FORMS']"
+                    hx-swap="beforeend">Add Mobile</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-sm-12">
+        <div class="card mb-3">
+          <div class="card-header">Email Addresses</div>
+          <div id="email-formset-container" class="card-body">
+            {{ email_formset.management_form }}
+            {% for form in email_formset %}
+              <div class="form-group">
+                {{ form.email }}
+                {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          <div class="card-footer">
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    hx-get="{% url 'hx-add-email-formset-input' slug=request.organization.slug %}"
+                    hx-target="#email-formset-container"
+                    hx-include="input[name='email-TOTAL_FORMS']"
+                    hx-swap="beforeend">Add Email</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Address</div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.flat_building.id_for_label }}">Flat/Building</label>
+              {{ address_form.flat_building }}
+              {% if address_form.flat_building.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.flat_building.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.street.id_for_label }}">Street</label>
+              {{ address_form.street }}
+              {% if address_form.street.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.street.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.area.id_for_label }}">Area</label>
+              {{ address_form.area }}
+              {% if address_form.area.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.area.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.landmark.id_for_label }}">Landmark</label>
+              {{ address_form.landmark }}
+              {% if address_form.landmark.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.landmark.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.city.id_for_label }}">City</label>
+              {{ address_form.city }}
+              {% if address_form.city.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.city.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.state.id_for_label }}">State</label>
+              {{ address_form.state }}
+              {% if address_form.state.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.state.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4 col-sm-12">
+            <div class="form-group">
+              <label for="{{ address_form.pincode.id_for_label }}">Pincode</label>
+              {{ address_form.pincode }}
+              {% if address_form.pincode.errors %}
+                <div class="invalid-feedback d-block">{{ address_form.pincode.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="button" class="btn btn-outline-danger" data-dismiss="modal">Cancel</button>
+  </div>
+</form>

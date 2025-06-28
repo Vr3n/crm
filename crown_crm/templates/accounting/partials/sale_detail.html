@@ -1,0 +1,24 @@
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">{{ sale.plan.name }} ({{ sale.membership_type.name }})</h5>
+    <p class="card-text mb-1">
+      <strong>Lead:</strong> {{ sale.lead.full_name }}
+    </p>
+    <p class="card-text mb-1">
+      <strong>Start date:</strong> {{ sale.start_date|date:"d M Y" }}
+    </p>
+    <p class="card-text mb-1">
+      <strong>Duration:</strong> {{ sale.duration }}
+    </p>
+    <p class="card-text mb-1">
+      <strong>Amount:</strong> ₹ {{ sale.decided_amount }}
+    </p>
+    {% if sale.is_customized %}<span class="badge badge-warning">Customized</span>{% endif %}
+    {% if sale.notes %}
+      <hr>
+      <p class="card-text">
+        <strong>Notes:</strong> {{ sale.notes }}
+      </p>
+    {% endif %}
+  </div>
+</div>
