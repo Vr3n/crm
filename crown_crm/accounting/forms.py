@@ -206,7 +206,7 @@ class MembershipSaleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """Initialize the form with custom settings."""
-        organization = kwargs.pop("organization", None)
+        kwargs.pop("organization", None)
         super().__init__(*args, **kwargs)
 
         # # Filter plans and member types by organization
@@ -286,6 +286,9 @@ class MembershipSaleCreateForm(MembershipSaleForm):
     def clean(self):
         """Run additional inter-field validation."""
         cleaned_data = super().clean()
+        if cleaned_data is None:
+            self.add_error("__all__", "Invalid data provided.")
+            return cleaned_data
         payment_amount: Decimal = cleaned_data.get("payment_amount") or Decimal("0")
         custom_price: Decimal = cleaned_data.get("custom_price") or Decimal("0")
         payment_method = cleaned_data.get("payment_method")

@@ -729,7 +729,7 @@ def sales_view(request: OrgHttpRequest) -> HttpResponse:
     """Display the membership sales list page."""
     sales = (
         MembershipSale.objects.filter(organization=request.organization)
-        .select_related("lead", "plan", "membership_type")
+        .select_related("lead", "plan")
         .order_by("-created_at")
     )
     return render(request, "accounting/sales.html", {"sales": sales})
@@ -740,7 +740,7 @@ def sales_view(request: OrgHttpRequest) -> HttpResponse:
 def sale_detail_view(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     """Display a single sale detail page."""
     sale = get_object_or_404(
-        MembershipSale.objects.select_related("lead", "plan", "membership_type"),
+        MembershipSale,
         uuid=uuid,
         organization=request.organization,
     )
@@ -831,7 +831,7 @@ def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
     """Return partial table rows for sales list."""
     sales = (
         MembershipSale.objects.filter(organization=request.organization)
-        .select_related("lead", "plan", "membership_type")
+        .select_related("lead", "plan")
         .order_by("-created_at")
     )
     return render(request, "accounting/tables/sales_table.html", {"sales": sales})
@@ -842,7 +842,7 @@ def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
 def hx_sale_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     """Return partial detail card for a sale (used on main page and modal)."""
     sale = get_object_or_404(
-        MembershipSale.objects.select_related("lead", "plan", "membership_type"),
+        MembershipSale,
         uuid=uuid,
         organization=request.organization,
     )
@@ -872,7 +872,9 @@ def sale_create_view(request: OrgHttpRequest) -> HttpResponse:
 def hx_sale_update(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     """Update an existing sale via HTMX modal."""
     sale = get_object_or_404(
-        MembershipSale, uuid=uuid, organization=request.organization
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
     )
 
     if request.method == "POST":
@@ -908,7 +910,9 @@ def hx_sale_update(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
 def hx_sale_delete(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     """Delete a sale via HTMX."""
     sale = get_object_or_404(
-        MembershipSale, uuid=uuid, organization=request.organization
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
     )
     if request.method == "POST":
         sale.delete()

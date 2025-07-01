@@ -41,7 +41,8 @@
       </div>
       <input type="hidden"
              name="lead"
-             value="{{ form.lead.uuid|default_if_none:'' }}"
+             required
+             value="{{ form.lead.uuid }}"
              id="lead">
       <div id="leadSelection"></div>
     </div>
@@ -77,7 +78,8 @@
       </div>
       <input type="hidden"
              name="plan"
-             value="{{ form.plan.uuid|default_if_none:'' }}"
+             required
+             value="{{ form.plan.uuid }}"
              id="plan">
       <div id="membershipPlanSelection"></div>
       <!-- Customization Section -->
