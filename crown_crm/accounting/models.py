@@ -77,7 +77,6 @@ class MembershipSale(BaseModel):
         plan (MembershipPlan): The standard membership plan being sold.
         membership_type (MemberType): Type of membership (e.g., Gold, Platinum).
         duration (str): Selected duration from Duration.choices.
-        decided_amount (Decimal): Final agreed amount for this sale.
         is_customized (bool): Whether any plan details were customized.
         custom_pt_sessions (int, optional): Override for PT sessions if customized.
         custom_diet_plans (int, optional): Override for diet plans if customized.
@@ -120,28 +119,13 @@ class MembershipSale(BaseModel):
         on_delete=models.PROTECT,
         related_name="sales",
     )
-    membership_type = models.ForeignKey(
-        "accounting.MemberType",
-        on_delete=models.PROTECT,
-    )
-
     # Standard Plan Fields (can be overridden)
     duration = models.CharField(
         max_length=20,
         choices=Duration.choices,
         help_text="Selected duration for this membership",
     )
-    decided_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        help_text="Final agreed amount for this sale",
-    )
 
-    # Customization Flags and Overrides
-    is_customized = models.BooleanField(
-        default=False,
-        help_text="Whether any plan details were customized",
-    )
     custom_pt_sessions = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -197,46 +181,6 @@ class MembershipSale(BaseModel):
         return self.receipts.aggregate(  # type: ignore[attr-defined]
             total=Sum("amount")
         )["total"] or Decimal("0")
-
-    @property
-    def effective_pt_sessions(self) -> int:
-        """
-        Get the effective PT sessions after applying customizations.
-
-        Returns:
-            int: Custom PT sessions if set, otherwise from the plan.
-        """
-        return self.custom_pt_sessions if self.is_customized else self.plan.pt_sessions
-
-    @property
-    def effective_diet_plans(self) -> int:
-        """
-        Get the effective diet plans after applying customizations.
-
-        Returns:
-            int: Custom diet plans if set, otherwise from the plan.
-        """
-        return self.custom_diet_plans if self.is_customized else self.plan.diet_plans
-
-    @property
-    def effective_duration(self) -> str:
-        """
-        Get the effective duration after applying customizations.
-
-        Returns:
-            str: Custom duration if set, otherwise the standard duration.
-        """
-        return self.custom_duration if self.is_customized else self.duration
-
-    @property
-    def effective_price(self) -> Decimal:
-        """
-        Get the effective price after applying customizations.
-
-        Returns:
-            Decimal: Custom price if set, otherwise the standard price.
-        """
-        return self.custom_price if self.is_customized else self.decided_amount
 
     def clean(self) -> None:
         """
@@ -343,7 +287,7 @@ class MembershipSale(BaseModel):
     @property
     def balance(self) -> Decimal:
         """Calculate remaining balance."""
-        return self.decided_amount - self.total_paid
+        return self.custom_price - self.total_paid
 
     def update_balance_snapshots(self) -> None:
         """
@@ -353,7 +297,7 @@ class MembershipSale(BaseModel):
         with transaction.atomic():
             # Get all receipts ordered by date
             receipts = self.receipts.order_by("date", "id")  # type: ignore[attr-defined]
-            running_balance = self.decided_amount
+            running_balance = self.custom_price
 
             # Update each receipt's balances in order
             for receipt in receipts:
@@ -364,7 +308,9 @@ class MembershipSale(BaseModel):
 
     def __str__(self) -> str:
         """Return a string representation of the membership sale."""
-        return f"Sale: {self.lead.get_full_name()} - {self.plan} - {self.created_at}"
+        return (
+            f"Sale: {self.lead.get_full_name()} - {self.plan.name} - {self.created_at}"
+        )
 
 
 class PaymentReceipt(BaseModel):

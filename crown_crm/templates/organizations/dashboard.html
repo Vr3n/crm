@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 <!-- -->
 {% block content %}
   <h4>
@@ -12,39 +13,43 @@
   </div>
   <br />
   <div class="row">
-    <div class="col-md-3">
-      <div class="metric-card bg-c-blue">
-        <div class="card-block">
-          <h3>
-            Leads <span class="float-right">{{ lead_count }}</span>
-          </h3>
+    <!-- Leads Card -->
+    <div class="col-md-4 mb-4">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <p class="text-muted">Leads</p>
+            <small class="text-muted">this week</small>
+            <div class="metric-value">3</div>
+            <div class="metric-change up">+20% ↑</div>
+          </div>
+          <div id="leadsChart"></div>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="metric-card bg-c-green">
-        <div class="card-block">
-          <h3>
-            Orders <span class="float-right">3</span>
-          </h3>
+    <!-- Membership Sales Card -->
+    <div class="col-md-4 mb-4">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <p class="text-muted">Memberships Sold</p>
+            <div class="metric-value">3</div>
+            <div class="metric-change down">-10% ↓</div>
+          </div>
+          <div id="salesChart"></div>
         </div>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="metric-card bg-c-teal">
-        <div class="card-block">
-          <h3>
-            Purchases <span class="float-right">2</span>
-          </h3>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="metric-card bg-c-yellow">
-        <div class="card-block">
-          <h3>
-            Followups <span class="float-right">6</span>
-          </h3>
+    <!-- Followups Card -->
+    <div class="col-md-4 mb-4">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <p class="text-muted">Followups</p>
+            <div class="metric-value">6</div>
+            <div class="metric-change up">+8.3% ↑</div>
+          </div>
+          <div id="followupChart"></div>
         </div>
       </div>
     </div>
@@ -96,3 +101,6 @@
   </div>
 {% endblock content %}
 <!-- -->
+{% block custom_js %}
+  <script src="{% static 'js/appjs/dashboard.js' %}"></script>
+{% endblock custom_js %}

@@ -1,5 +1,7 @@
 from decimal import Decimal
+
 from django import forms
+from django.utils import timezone
 
 from .models import (
     MemberType,
@@ -174,14 +176,15 @@ class MembershipSaleForm(forms.ModelForm):
         model = MembershipSale
         fields = [
             "lead",
-            "membership_type",
             "plan",
             "duration",
-            "decided_amount",
+            "membership_start_date",
             "notes",
         ]
         widgets = {
-            "lead": forms.Select(attrs={"class": "form-control select2", "required": True}),
+            "lead": forms.Select(
+                attrs={"class": "form-control select2", "required": True}
+            ),
             "membership_type": forms.Select(
                 attrs={"class": "form-control select2", "required": True}
             ),
@@ -190,14 +193,6 @@ class MembershipSaleForm(forms.ModelForm):
             ),
             "duration": forms.Select(
                 attrs={"class": "form-control select2", "required": True}
-            ),
-            "decided_amount": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0",
-                    "required": True,
-                }
             ),
             "notes": forms.Textarea(
                 attrs={
@@ -214,22 +209,17 @@ class MembershipSaleForm(forms.ModelForm):
         organization = kwargs.pop("organization", None)
         super().__init__(*args, **kwargs)
 
-        # Filter plans and member types by organization
-        if organization:
-            self.fields["plan"].queryset = MembershipPlan.objects.filter(  # type: ignore
-                organization=organization, is_active=True
-            )
-            self.fields["membership_type"].queryset = MemberType.objects.filter(  # type: ignore
-                organization=organization
-            )
-
-        # Set initial values if creating a new instance
+        # # Filter plans and member types by organization
+        # if organization:
+        #     self.fields["plan"].queryset = MembershipPlan.objects.filter(  # type: ignore
+        #         organization=organization, is_active=True
+        #     )
         if not self.instance.pk:
-            self.fields["decided_amount"].initial = 0
+            self.fields["custom_price"].initial = 0
 
-    def clean_decided_amount(self):
+    def clean_custom_price(self):
         """Validate that the decided amount is a positive number."""
-        amount = self.cleaned_data.get("decided_amount")
+        amount = self.cleaned_data.get("custom_price")
         if amount is not None and amount < 0:
             raise forms.ValidationError("Amount cannot be negative.")
         return amount
@@ -244,21 +234,40 @@ class MembershipSaleCreateForm(MembershipSaleForm):
     transaction.
     """
 
+    membership_start_date = forms.DateField(
+        label="Membership Start Date",
+        required=True,
+        widget=forms.DateInput(
+            attrs={
+                "class": "form-control",
+                "type": "date",
+            },
+            format="%d-%m-%Y",
+        ),
+        initial=timezone.now().date(),
+    )
+
     payment_amount = forms.DecimalField(
         min_value=Decimal("0"),
         max_digits=10,
         decimal_places=2,
         required=False,
-        widget=forms.NumberInput(attrs={
-            "class": "form-control",
-            "step": "0.01",
-            "min": "0",
-        }),
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "step": "0.01",
+                "min": "0",
+            }
+        ),
     )
     payment_method = forms.ChoiceField(
-        choices=PaymentReceipt.Method.choices,
-        required=False,
+        choices=[("", "Select a payment method..."), *PaymentReceipt.Method.choices],
+        required=True,
         widget=forms.Select(attrs={"class": "form-select"}),
+        error_messages={
+            "required": "Please select a payment method.",
+            "invalid_choice": "Please select a valid payment method.",
+        },
     )
 
     class Meta(MembershipSaleForm.Meta):
@@ -268,7 +277,7 @@ class MembershipSaleCreateForm(MembershipSaleForm):
             "custom_duration",
             "custom_pt_sessions",
             "custom_diet_plans",
-            # extra non-model
+            # extra non-model fields
             "payment_amount",
             "payment_method",
         ]
@@ -278,14 +287,18 @@ class MembershipSaleCreateForm(MembershipSaleForm):
         """Run additional inter-field validation."""
         cleaned_data = super().clean()
         payment_amount: Decimal = cleaned_data.get("payment_amount") or Decimal("0")
-        decided_amount: Decimal = cleaned_data.get("decided_amount") or Decimal("0")
+        custom_price: Decimal = cleaned_data.get("custom_price") or Decimal("0")
         payment_method = cleaned_data.get("payment_method")
 
-        if payment_amount and payment_amount > decided_amount:
-            self.add_error("payment_amount", "Paid amount cannot exceed decided amount.")
+        if payment_amount and payment_amount > custom_price:
+            self.add_error(
+                "payment_amount", "Paid amount cannot exceed decided amount."
+            )
 
         if payment_amount > 0 and not payment_method:
-            self.add_error("payment_method", "Select payment method when amount is provided.")
+            self.add_error(
+                "payment_method", "Select payment method when amount is provided."
+            )
 
         return cleaned_data
 
@@ -302,7 +315,9 @@ class MembershipSaleCreateForm(MembershipSaleForm):
         from django.db import transaction  # local import to avoid circular
 
         payment_amount = self.cleaned_data.get("payment_amount") or Decimal("0")
-        payment_method = self.cleaned_data.get("payment_method") or PaymentReceipt.Method.CASH
+        payment_method = (
+            self.cleaned_data.get("payment_method") or PaymentReceipt.Method.CASH
+        )
 
         with transaction.atomic():
             sale: MembershipSale = super().save(commit=False)
@@ -315,7 +330,7 @@ class MembershipSaleCreateForm(MembershipSaleForm):
                     organization=organization,
                     amount=payment_amount,
                     method=payment_method,
-                    opening_balance=sale.decided_amount,
-                    closing_balance=sale.decided_amount - payment_amount,
+                    opening_balance=sale.custom_price,
+                    closing_balance=sale.custom_price - payment_amount,
                 )
         return sale

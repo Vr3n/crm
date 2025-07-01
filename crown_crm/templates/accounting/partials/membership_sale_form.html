@@ -3,14 +3,16 @@
       hx-swap="innerHTML"
       class="needs-validation">
   {% csrf_token %}
-  {{ form.non_field_errors }}
-  {{ form.lead.as_hidden }}
-  {{ form.plan.as_hidden }}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+  {% endif %}
   <input type="hidden"
          name="organization"
          value="{{ request.organization.slug }}">
   <!-- Lead Card -->
-  <div class="card">
+  <div class="card mb-2">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h3 class="card-title mb-0">Lead</h3>
       <button hx-get="{% url 'hx-quick-create-lead' slug=request.organization.slug %}"
@@ -23,13 +25,13 @@
         <small class="text-muted">Type to search lead, or create new lead</small>
         <div class="input-group">
           <input type="search"
-                 name="lead"
+                 name="leadSearch"
                  id="leadSearch"
                  placeholder="Search Lead"
                  class="form-control"
                  autocomplete="off"
                  hx-get="{% url 'search-lead' slug=request.organization.slug %}"
-                 hx-trigger="keyup changed delay:250ms"
+                 hx-trigger="keyup changed delay:550ms"
                  hx-target="#leadSearchResults"
                  hx-swap="innerHTML">
         </div>
@@ -37,12 +39,16 @@
           {% include "leads/partials/search_results.html" %}
         </div>
       </div>
+      <input type="hidden"
+             name="lead"
+             value="{{ form.lead.uuid|default_if_none:'' }}"
+             id="lead">
       <div id="leadSelection"></div>
     </div>
   </div>
   <!-- Lead Card -->
   <!-- Membership Plan Card -->
-  <div class="card">
+  <div class="card mb-2">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h3 class="card-title mb-0">Membership Plan</h3>
       <button hx-get="{% url 'hx-create-membership-plan' slug=request.organization.slug %}"
@@ -55,13 +61,13 @@
         <small class="text-muted">Type to search membership plan, or create new membership plan</small>
         <div class="input-group">
           <input type="search"
-                 name="membership_plan_search"
+                 name="membership_query"
                  id="membershipPlanSearch"
                  placeholder="Search Membership Plan"
                  class="form-control"
                  autocomplete="off"
                  hx-get="{% url 'search-membership-plan' slug=request.organization.slug %}"
-                 hx-trigger="keyup changed delay:250ms"
+                 hx-trigger="keyup changed delay:550ms"
                  hx-target="#membershipPlanSearchResults"
                  hx-swap="innerHTML">
         </div>
@@ -69,6 +75,10 @@
           {% include "accounting/partials/membership_plan_search_results.html" %}
         </div>
       </div>
+      <input type="hidden"
+             name="plan"
+             value="{{ form.plan.uuid|default_if_none:'' }}"
+             id="plan">
       <div id="membershipPlanSelection"></div>
       <!-- Customization Section -->
       <div id="customizationSection" class="mt-4" style="display: none;">
@@ -76,7 +86,7 @@
           <div class="card-body">
             <div class="row mb-3">
               <!-- First Row - 2 columns -->
-              <div class="col-md-4 mb-3">
+              <div class="col-md-6 mb-3">
                 <label for="customPtSessions" class="form-label">PT Sessions</label>
                 <div class="input-group">
                   <input type="number"
@@ -87,7 +97,7 @@
                   <span class="input-group-text">sessions</span>
                 </div>
               </div>
-              <div class="col-md-4 mb-3">
+              <div class="col-md-6 mb-3">
                 <label for="customDietPlans" class="form-label">Diet Plans</label>
                 <div class="input-group">
                   <input type="number"
@@ -98,14 +108,24 @@
                   <span class="input-group-text">plans</span>
                 </div>
               </div>
-              <div class="col-md-4 mb-3">
-                <label for="customDuration" class="form-label">Duration</label>
-                <select id="customDuration" name="custom_duration" class="form-select">
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3">
+                <label for="duration" class="form-label">Duration</label>
+                <select id="duration" name="duration" class="form-select">
                   <option value="yearly" selected>Yearly</option>
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
                   <option value="6months">6 Months</option>
                 </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="id_membership_start_date" class="form-label">Membership Start Date</label>
+                <input type="date"
+                       id="id_membership_start_date"
+                       name="membership_start_date"
+                       class="form-control"
+                       required>
               </div>
             </div>
           </div>
@@ -115,7 +135,7 @@
   </div>
   <!-- Membership Plan Card -->
   <!-- Payment Process Card -->
-  <div class="card mb-4">
+  <div class="card mb-2">
     <div class="card-header">
       <h3 class="card-title mb-0">Payment Details</h3>
     </div>
@@ -128,6 +148,7 @@
             <span class="input-group-text">₹</span>
             <input type="number"
                    id="decidedAmount"
+                   name="decided_amount"
                    class="form-control bg-light"
                    readonly>
           </div>
@@ -138,7 +159,7 @@
             <span class="input-group-text">₹</span>
             <input type="number"
                    id="customPrice"
-                   value="{{ form.custom_price.value|default_if_none:'' }}"
+                   value="{{ form.custom_price.value }}"
                    name="custom_price"
                    class="form-control"
                    step="0.01"
@@ -157,12 +178,13 @@
         <h6 class="mb-3">Payment Information</h6>
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label for="paymentAmount" class="form-label">Amount Paid</label>
+            <label for="payment_amount" class="form-label">Amount Paid</label>
             <div class="input-group">
               <span class="input-group-text">₹</span>
               <input type="number"
-                     id="paymentAmount"
+                     id="payment_amount"
                      name="payment_amount"
+                     value="{{ form.payment_amount.value }}"
                      class="form-control"
                      step="0.01"
                      min="0"
@@ -175,13 +197,22 @@
           </div>
           <div class="col-md-6 mb-3">
             <label for="paymentMethod" class="form-label">Payment Method</label>
-            <select id="paymentMethod" name="payment_method" class="form-select" required>
-              <option value="cash" selected>Cash</option>
-              <option value="card">Card</option>
-              <option value="upi">UPI</option>
-              <option value="bank">Bank Transfer</option>
-              <option value="other">Other</option>
+            <select name="payment_method" id="paymentMethod" class="form-select" required>
+              <option value="" {% if not form.payment_method.value %}selected{% endif %}>Select payment method...</option>
+              <option value="cash"
+                      {% if form.payment_method.value == 'cash' %}selected{% endif %}>Cash</option>
+              <option value="card"
+                      {% if form.payment_method.value == 'card' %}selected{% endif %}>Card</option>
+              <option value="upi"
+                      {% if form.payment_method.value == 'upi' %}selected{% endif %}>UPI</option>
+              <option value="bank"
+                      {% if form.payment_method.value == 'bank' %}selected{% endif %}>Bank Transfer</option>
+              <option value="other"
+                      {% if form.payment_method.value == 'other' %}selected{% endif %}>Other</option>
             </select>
+            {% if form.payment_method.errors %}
+              <div class="invalid-feedback d-block">{{ form.payment_method.errors.0 }}</div>
+            {% endif %}
           </div>
         </div>
       </div>

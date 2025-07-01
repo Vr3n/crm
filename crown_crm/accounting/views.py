@@ -100,7 +100,7 @@ def search_membership_plan_results_view(request: OrgHttpRequest) -> HttpResponse
     case-insensitive contains lookup on plan name. Only active plans
     of the current organization are considered.
     """
-    query: str = (request.GET.get("membership_plan") or "").strip()
+    query: str = (request.GET.get("membership_query") or "").strip()
 
     if query == "" or query is None:
         return render(

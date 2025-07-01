@@ -48,7 +48,7 @@ def search_results_view(request: OrgHttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: Rendered template with search results.
     """
-    query = request.GET.get("lead", "").strip()
+    query = request.GET.get("leadSearch", "").strip()
 
     if query == "":
         return render(request, "leads/partials/search_results.html")
