@@ -1,4 +1,7 @@
+from datetime import date
+from dateutil import relativedelta
 from decimal import Decimal
+
 from django.db import models
 from django.db.models import Sum
 from django.core.exceptions import ValidationError
@@ -65,6 +68,14 @@ class MembershipPlan(BaseModel):
         return f"{self.name}"
 
 
+DURATION_MAP = {
+    'monthly': relativedelta.relativedelta(months=1),
+    'quarterly': relativedelta.relativedelta(months=3),
+    '6months': relativedelta.relativedelta(months=6),
+    'yearly': relativedelta.relativedelta(years=1),
+}
+
+
 class MembershipSale(BaseModel):
     """
     Represents a single sale of a membership plan to a lead with optional customizations.
@@ -77,7 +88,6 @@ class MembershipSale(BaseModel):
         plan (MembershipPlan): The standard membership plan being sold.
         membership_type (MemberType): Type of membership (e.g., Gold, Platinum).
         duration (str): Selected duration from Duration.choices.
-        is_customized (bool): Whether any plan details were customized.
         custom_pt_sessions (int, optional): Override for PT sessions if customized.
         custom_diet_plans (int, optional): Override for diet plans if customized.
         custom_duration (str, optional): Override for duration if customized.
@@ -89,10 +99,7 @@ class MembershipSale(BaseModel):
     Properties:
         total_paid (Decimal): Total amount paid across all receipts.
         balance (Decimal): Remaining balance to be paid.
-        effective_pt_sessions (int): PT sessions after applying customizations.
-        effective_diet_plans (int): Diet plans after applying customizations.
-        effective_duration (str): Duration after applying customizations.
-        effective_price (Decimal): Price after applying customizations.
+        membership_end_date (date): End date of the membership.
     """
 
     class Duration(models.TextChoices):
@@ -171,48 +178,29 @@ class MembershipSale(BaseModel):
     )
 
     @property
-    def total_paid(self) -> Decimal:
+    def total_paid_amount(self) -> Decimal:
         """
         Calculate total amount paid across all receipts.
 
         Returns:
             Decimal: Total amount paid so far.
         """
-        return self.receipts.aggregate(  # type: ignore[attr-defined]
+        return self.receipts.aggregate(
             total=Sum("amount")
         )["total"] or Decimal("0")
 
-    def clean(self) -> None:
-        """
-        Validate the membership sale and calculate discount percentage.
+    @property
+    def membership_end_date(self) -> date:
+        delta = DURATION_MAP.get(self.duration)
+        if delta is None:
+            raise ValueError(f"Invalid duration: {self.duration}")
+        return self.membership_start_date + delta
 
-        Raises:
-            ValidationError: If any validation fails.
-        """
-        super().clean()
+    @property
+    def balance_amount(self) -> Decimal:
+        """Calculate remaining balance."""
+        return self.custom_price - self.total_paid_amount
 
-        # Check if any custom fields are set
-        has_custom_values = any(
-            [
-                self.custom_pt_sessions is not None,
-                self.custom_diet_plans is not None,
-                self.custom_duration is not None,
-                self.custom_price is not None,
-            ]
-        )
-
-        # If custom values exist but is_customized is False, set it to True
-        if has_custom_values and not self.is_customized:
-            self.is_customized = True
-
-        # If no custom values but is_customized is True, reset it
-        if not has_custom_values and self.is_customized:
-            self.is_customized = False
-
-        # Validate custom values if this is a customized sale
-        if self.is_customized:
-            self._validate_custom_values()
-            self._calculate_discount_percentage()
 
     def _validate_custom_values(self) -> None:
         """
@@ -239,56 +227,6 @@ class MembershipSale(BaseModel):
         ):
             raise ValidationError({"custom_duration": "Invalid duration value."})
 
-    def _calculate_discount_percentage(self) -> None:
-        """
-        Calculate and set the discount percentage based on standard vs custom price.
-
-        The discount is calculated based on the standard price for the selected duration.
-        """
-        if not self.is_customized or self.custom_price is None:
-            self.discount_percentage = Decimal("0")
-            return
-
-        # Calculate standard price for the selected duration
-        standard_price = self._get_standard_price_for_duration()
-
-        if standard_price == 0:
-            self.discount_percentage = Decimal("0")
-        else:
-            discount = ((standard_price - self.custom_price) / standard_price) * 100
-            self.discount_percentage = max(
-                Decimal("0"), min(Decimal("100"), discount.quantize(Decimal("0.01")))
-            )
-
-    def _get_standard_price_for_duration(self) -> Decimal:
-        """
-        Calculate the standard price for the selected duration.
-
-        Returns:
-            Decimal: Standard price for the selected duration.
-        """
-        duration = self.custom_duration if self.is_customized else self.duration
-
-        # Get the standard price for the selected duration
-        # This is a simplified calculation - adjust based on your pricing model
-        standard_price = self.plan.price
-
-        # Example: If the plan is yearly and custom duration is monthly
-        if (
-            duration == self.Duration.MONTHLY
-            and self.plan.duration == self.Duration.YEARLY
-        ):
-            return standard_price / 12
-
-        # Add more duration conversion logic as needed
-
-        return standard_price
-
-    @property
-    def balance(self) -> Decimal:
-        """Calculate remaining balance."""
-        return self.custom_price - self.total_paid
-
     def update_balance_snapshots(self) -> None:
         """
         Recompute all balance snapshots for related payment receipts.
@@ -306,10 +244,13 @@ class MembershipSale(BaseModel):
                 receipt.save(update_fields=["opening_balance", "closing_balance"])
                 running_balance = receipt.closing_balance
 
+    # Type checking shenanigans.
+    receipts: models.QuerySet["PaymentReceipt"]
+
     def __str__(self) -> str:
         """Return a string representation of the membership sale."""
         return (
-            f"Sale: {self.lead.get_full_name()} - {self.plan.name} - {self.created_at}"
+            f"Sale: {self.lead.full_name} - {self.plan.name} - {self.created_at}"
         )
 
 
@@ -326,7 +267,16 @@ class PaymentReceipt(BaseModel):
         notes: Additional notes about the payment
         opening_balance: Balance before this payment
         closing_balance: Balance after this payment
+        receipt_number: Auto-generated unique receipt number in format YY/MM/DD/duration_code/count
     """
+    
+    # Mapping of duration to code for receipt number generation
+    DURATION_CODES = {
+        'monthly': '01',
+        'quarterly': '03',
+        '6months': '06',
+        'yearly': '12'
+    }
 
     class Method(models.TextChoices):
         """Available payment methods."""
@@ -350,6 +300,9 @@ class PaymentReceipt(BaseModel):
     date = models.DateTimeField(default=timezone.now)
     method = models.CharField(
         max_length=20, choices=Method.choices, default=Method.CASH
+    )
+    receipt_number = models.CharField(
+        max_length=20, null=True, blank=True
     )
     reference = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True, null=True)
@@ -379,17 +332,44 @@ class PaymentReceipt(BaseModel):
         # Skip validation for existing instances during bulk operations
         if self._state.adding or getattr(self._state, "adding_fields", False):
             # Check for overpayment
-            if self.amount > self.sale.balance:
+            if self.amount > self.sale.balance_amount:
                 raise ValidationError(
                     {
-                        "amount": f"Payment amount (${self.amount}) exceeds the remaining balance (${self.sale.balance})."
+                        "amount": f"Payment amount (${self.amount}) exceeds the remaining balance (${self.sale.balance_amount})."
                     }
                 )
+
+    def _generate_receipt_number(self) -> str:
+        """Generate a unique receipt number for the payment.
+        
+        The format is: YY/MM/DD/duration_code/count
+        - YY/MM/DD: Current date
+        - duration_code: 2-digit code based on membership duration
+        - count: 4-digit sequential number within the organization
+        
+        Returns:
+            str: Generated receipt number
+        """
+        from django.db import transaction
+        
+        with transaction.atomic():
+            # Get current date in YY/MM/DD format
+            date_part = timezone.now().strftime('%y/%m/%d')
+            
+            # Get duration code from related sale
+            duration_code = self.DURATION_CODES.get(self.sale.duration, '00')
+            
+            # Get the latest receipt number for this organization
+            receipt_count = PaymentReceipt.objects.filter(
+                organization=self.organization,
+            ).count() + 1
+            
+            return f"{date_part}-{duration_code}-{receipt_count:04d}"
 
     @transaction.atomic
     def save(self, *args, **kwargs) -> None:
         """
-        Save the payment receipt with balance calculations.
+        Save the payment receipt with balance calculations and receipt number generation.
 
         Args:
             *args: Additional positional arguments
@@ -399,7 +379,8 @@ class PaymentReceipt(BaseModel):
             1. Validation is performed before saving
             2. Opening balance is calculated from the sale's current balance
             3. Closing balance is calculated by subtracting the payment amount
-            4. All operations are performed in a single transaction
+            4. Unique receipt number is generated for new records
+            5. All operations are performed in a single transaction
         """
         # Full clean to trigger validation
         self.full_clean()
@@ -407,76 +388,25 @@ class PaymentReceipt(BaseModel):
         is_new = self._state.adding
 
         if is_new:
+            # Generate receipt number for new records
+            if not self.receipt_number:
+                self.receipt_number = self._generate_receipt_number()
+                
             # For new receipts, calculate balances based on current state
-            self.opening_balance = self.sale.balance
+            self.opening_balance = self.sale.balance_amount
             self.closing_balance = self.opening_balance - self.amount
         else:
             # For updates, we need to handle potential amount changes
-            # More explanation in docs\membership_balance_snapshots.md
+            # More explanation in docs\\membership_balance_snapshots.md
             old_instance = type(self).objects.get(pk=self.pk)
             if old_instance.amount != self.amount:
                 # If amount changed, we need to update all subsequent receipts
                 super().save(*args, **kwargs)
                 self.sale.update_balance_snapshots()
                 return
+                
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         """Return a string representation of the payment receipt."""
-        return f"Receipt: {self.sale.lead.get_full_name()} - {self.amount} - {self.date.date()}"
-
-
-# class ReceiptBenefit(BaseModel):
-#     """
-#     Tracks which services/products were assigned to a lead as part of their sale.
-
-#     Attributes:
-#         sale: The membership sale this benefit is associated with
-#         service: The service assigned (optional)
-#         product: The product assigned (optional)
-#         quantity: Number of units assigned
-#         notes: Additional notes about the benefit
-#     """
-
-#     sale = models.ForeignKey(
-#         MembershipSale,
-#         on_delete=models.CASCADE,
-#         related_name="benefits",
-#         db_constraint=True,
-#     )
-#     service = models.ForeignKey(
-#         Service,
-#         on_delete=models.SET_NULL,
-#         null=True,
-#         blank=True,
-#         related_name="benefits",
-#         db_constraint=True,
-#     )
-#     product = models.ForeignKey(
-#         Product,
-#         on_delete=models.SET_NULL,
-#         null=True,
-#         blank=True,
-#         related_name="benefits",
-#         db_constraint=True,
-#     )
-#     quantity = models.PositiveIntegerField(default=1)
-#     notes = models.CharField(max_length=255, blank=True)
-
-#     def clean(self) -> None:
-#         """
-#         Validate that either a service or product is assigned, but not both.
-
-#         Raises:
-#             ValidationError: If neither service nor product is specified
-#         """
-#         if not self.service and not self.product:
-#             raise ValidationError("Either service or product must be selected.")
-
-#     def __str__(self) -> str:
-#         """Return a string representation of the receipt benefit."""
-#         if self.service:
-#             return f"{self.sale.lead.get_full_name()} - {self.service.name} x {self.quantity}"
-#         if self.product:
-#             return f"{self.sale.lead.get_full_name()} - {self.product.name} x {self.quantity}"
-#         return ""
+        return f"Receipt: {self.sale.lead.full_name} - {self.amount} - {self.date.date()}"

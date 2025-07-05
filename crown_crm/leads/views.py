@@ -113,11 +113,9 @@ def all_leads_view(request: OrgHttpRequest) -> HttpResponse:
 
     leads = (
         LeadMaster.objects.filter(organization=request.organization)
-        .prefetch_related("mobile_numbers", "emails")
+        .prefetch_related("mobile_numbers", "emails", "memberships")
         .order_by("-created_at")
     )
-
-    print(leads)
 
     context = {"leads": leads}
 

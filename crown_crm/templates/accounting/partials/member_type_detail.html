@@ -70,7 +70,7 @@
             {% if member_type.created_by %}
               <dt class="mt-2">Created By</dt>
               <dd>
-                {{ member_type.created_by.get_full_name|default:member_type.created_by.username }}
+                {{ member_type.created_by.full_name|default:member_type.created_by.username }}
               </dd>
             {% endif %}
           </dl>

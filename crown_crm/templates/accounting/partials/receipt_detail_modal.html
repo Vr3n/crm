@@ -1,0 +1,78 @@
+<div class="modal-header">
+  <h5 class="modal-title">Receipt #{{ receipt.receipt_number }}</h5>
+  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+</div>
+<div class="modal-body">
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <h6>Receipt Details</h6>
+      <table class="table table-sm">
+        <tr>
+          <th>Date:</th>
+          <td>{{ receipt.date|date:"F j, Y" }}</td>
+        </tr>
+        <tr>
+          <th>Member:</th>
+          <td>{{ receipt.sale.lead }}</td>
+        </tr>
+        <tr>
+          <th>Membership Plan:</th>
+          <td>{{ receipt.sale.plan.name }}</td>
+        </tr>
+      </table>
+    </div>
+    <div class="col-md-6">
+      <h6>Payment Information</h6>
+      <table class="table table-sm">
+        <tr>
+          <th>Amount:</th>
+          <td>₹{{ receipt.amount|floatformat:2 }}</td>
+        </tr>
+        <tr>
+          <th>Payment Method:</th>
+          <td>{{ receipt.payment_method }}</td>
+        </tr>
+        <tr>
+          <th>Status:</th>
+          <td>
+            <span class="badge badge-success">Paid</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  {% if receipt.notes %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0">Notes</h6>
+      </div>
+      <div class="card-body">{{ receipt.notes|linebreaks }}</div>
+    </div>
+  {% endif %}
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">Receipt Items</h6>
+      <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+        <i data-feather="printer" class="mr-1"></i> Print
+      </button>
+    </div>
+    <div class="card-body">{% include 'accounting/partials/payment_receipt.html' with receipt=receipt %}</div>
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+  <a href="{% url 'receipt-detail' slug=request.organization.slug uuid=receipt.uuid %}"
+     class="btn btn-primary">View Full Details</a>
+</div>
+<script>
+// Initialize Feather Icons
+feather.replace();
+
+// Initialize tooltips
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+});
+</script>

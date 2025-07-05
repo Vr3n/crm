@@ -1,0 +1,76 @@
+<form hx-post="{{ request.path }}"
+      hx-trigger="submit,submitting"
+      hx-on="submitting:document.body.classList.add('loading')"
+      hx-on="after-settle:document.body.classList.remove('loading')"
+      class="modal-content">
+  <div class="modal-header">
+    <h5 class="modal-title">Edit Payment Receipt</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">X</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    {% if form.errors %}
+      <div class="alert alert-danger mt-3">
+        <strong>Error:</strong> Please correct the errors below.
+      </div>
+    {% endif %}
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="{{ form.amount.id_for_label }}" class="form-label">
+            {{ form.amount.label }}
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            {{ form.amount }}
+          </div>
+          {% if form.amount.errors %}
+            <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="{{ form.method.id_for_label }}" class="form-label">
+            {{ form.method.label }}
+          </label>
+          {{ form.method }}
+          {% if form.method.errors %}
+            <div class="invalid-feedback d-block">{{ form.method.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-group mt-3">
+      <label for="{{ form.reference.id_for_label }}" class="form-label">
+        {{ form.reference.label }}
+      </label>
+      {{ form.reference }}
+      {% if form.reference.errors %}
+        <div class="invalid-feedback d-block">{{ form.reference.errors.0 }}</div>
+      {% endif %}
+    </div>
+    
+    <div class="form-group mt-3">
+      <label for="{{ form.notes.id_for_label }}" class="form-label">
+        {{ form.notes.label }}
+      </label>
+      {{ form.notes }}
+      {% if form.notes.errors %}
+        <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-save me-1"></i> Update
+    </button>
+    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">
+      <i class="fas fa-times me-1"></i> Cancel
+    </button>
+  </div>
+</form>

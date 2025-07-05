@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}{{ plan.name }} - {{ block.super }}{% endblock title %}
-
+{% block title %}
+  {{ plan.name }} - {{ block.super }}
+{% endblock title %}
 {% block content %}
-{% include "accounting/partials/membership_plan_detail.html" %}
+  {% include "accounting/partials/membership_plan_detail.html" %}
 {% endblock content %}

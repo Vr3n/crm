@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from django.db import models
 from django.core.validators import RegexValidator
 
 from crown_crm.organizations.models import OrganizationMaster
 from crown_crm.utils.models import BaseModel
+
+if TYPE_CHECKING:
+    from crown_crm.accounting.models import MembershipSale
 
 
 # Create your models here.
@@ -20,7 +26,7 @@ class LeadMaster(BaseModel):
         gender (str, optional): Lead's gender, chosen from GENDER_CHOICES.
 
    Methods:
-        get_full_name -> str: Lead's Full name.
+        full_name -> str: Lead's Full name.
 
     """
     class Gender(models.TextChoices):
@@ -45,7 +51,8 @@ class LeadMaster(BaseModel):
         max_length=15, choices=Status.choices, default=Status.NEW,
         help_text='Current status of the lead')
 
-    def get_full_name(self) -> str:
+    @property
+    def full_name(self) -> str:
         """Constructs the full name of the lead.
 
         Returns:
@@ -59,7 +66,15 @@ class LeadMaster(BaseModel):
         Returns:
             str: Full name of the lead.
         """
-        return self.get_full_name()
+        return self.full_name
+
+    # mypy typecheking.
+    mobile_numbers: models.QuerySet["LeadMobileNumberMaster"] 
+    emails: models.QuerySet["LeadEmailAddressMaster"] 
+    addresses: models.QuerySet["LeadAddressMaster"] 
+    discussions: models.QuerySet["LeadDiscussionHistory"] 
+    sources: models.QuerySet["LeadSourceMaster"]
+    memberships: models.QuerySet["MembershipSale"]
 
     class Meta:
         verbose_name = 'Lead'
@@ -95,7 +110,7 @@ class LeadMobileNumberMaster(BaseModel):
         Returns:
             str: Lead's full name followed by their mobile number.
         """
-        return f"{self.lead.get_full_name()} - {self.mobile_number}"
+        return f"{self.lead.full_name} - {self.mobile_number}"
 
 
 class LeadEmailAddressMaster(BaseModel):
@@ -122,7 +137,7 @@ class LeadEmailAddressMaster(BaseModel):
         Returns:
             str: Lead's full name followed by their email address.
         """
-        return f"{self.lead.get_full_name()} - {self.email}"
+        return f"{self.lead.full_name} - {self.email}"
 
 
 class LeadAddressMaster(BaseModel):
@@ -158,7 +173,7 @@ class LeadAddressMaster(BaseModel):
         Returns:
             str: Lead's full name followed by 'address'.
         """
-        return f"{self.lead.get_full_name()} address"
+        return f"{self.lead.full_name} address"
 
 
 class LeadDiscussionHistory(BaseModel):
@@ -181,7 +196,7 @@ class LeadDiscussionHistory(BaseModel):
         Returns:
             str: Descriptive text indicating this is discussion history for the lead.
         """
-        return f"Discussion history for {self.lead.get_full_name()}"
+        return f"Discussion history for {self.lead.full_name}"
 
 
 class LeadSourceMaster(BaseModel):
@@ -209,4 +224,4 @@ class LeadSourceMaster(BaseModel):
         Returns:
             str: Lead's name followed by the source information.
         """
-        return f"{self.lead} from {self.source}"
+        return f"{self.lead.full_name} from {self.source}"

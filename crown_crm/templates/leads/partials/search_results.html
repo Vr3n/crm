@@ -3,14 +3,14 @@
   <div class="card mb-2 bg-light hover-shadow hover-pointer selectable-lead"
        role="button"
        data-lead-id="{{ lead.uuid }}"
-       data-lead-name="{{ lead.get_full_name }}"
+       data-lead-name="{{ lead.full_name }}"
        data-lead-mobile-numbers="{{ lead.mobile_numbers.all|field_as_json:'mobile_number' }}"
        data-lead-emails="{{ lead.emails.all|field_as_json:'email' }}"
        onclick="selectLead(this)">
     <div class="card-body p-3">
       <div class="d-flex align-items-center">
         <div class="flex-grow-1">
-          <h6 class="mb-1">{{ lead.get_full_name }}</h6>
+          <h6 class="mb-1">{{ lead.full_name }}</h6>
           <i class="feather icon-phone text-primary mr-1"></i>
           {% for mobile in lead.mobile_numbers.all %}
             <span class="badge badge-light mr-1">{{ mobile.mobile_number }}</span>

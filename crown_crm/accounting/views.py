@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django_htmx.http import trigger_client_event
 from django.contrib.auth.decorators import login_required
 
@@ -15,10 +15,15 @@ from crown_crm.leads.models import LeadMaster
 from crown_crm.utils.decorators import organization_slug_required
 from crown_crm.utils.types import OrgHttpRequest
 
-from .forms import MemberTypeForm, MembershipPlanForm, MembershipSaleCreateForm
+from .forms import (
+    MemberTypeForm, 
+    MembershipPlanForm, 
+    MembershipSaleCreateForm,
+    PaymentReceiptForm,
+)
 from .models import MemberType, MembershipPlan
 from .forms import MembershipSaleForm
-from .models import MembershipSale
+from .models import MembershipSale, PaymentReceipt
 
 # Set up logging
 
@@ -171,18 +176,13 @@ def membership_plan_detail_view(request: OrgHttpRequest, uuid: UUID) -> HttpResp
     Returns:
         HttpResponse: Rendered template with membership plan details
     """
-    try:
-        plan = get_object_or_404(
-            MembershipPlan, uuid=uuid, organization=request.organization
-        )
-        context = {"plan": plan, "active_tab": "membership-plans"}
-        return render(
-            request, "accounting/partials/membership_plan_detail.html", context
-        )
-    except Exception as e:
-        logger.error(f"Error loading membership plan {uuid}: {str(e)}")
-        messages.error(request, "An error occurred while loading the membership plan.")
-        return redirect("membership-plans", slug=request.organization.slug)
+    plan = get_object_or_404(
+        MembershipPlan, uuid=uuid, organization=request.organization
+    )
+    context = {"plan": plan}
+    return render(
+        request, "accounting/membership_plan_detail.html", context
+    )
 
 
 @login_required
@@ -738,13 +738,34 @@ def sales_view(request: OrgHttpRequest) -> HttpResponse:
 @login_required
 @organization_slug_required
 def sale_detail_view(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
-    """Display a single sale detail page."""
+    """
+    Display a single sale detail page with related payment receipts.
+
+    Args:
+        request: The HTTP request object
+        uuid: UUID of the membership sale to display
+
+    Returns:
+        HttpResponse: Rendered template with sale and receipts data
+    """
+    # Get the sale with related data in an optimized way
     sale = get_object_or_404(
-        MembershipSale,
+        MembershipSale.objects.select_related(
+            "lead", "plan", "organization"
+        ).prefetch_related("receipts"),
         uuid=uuid,
         organization=request.organization,
     )
-    return render(request, "accounting/sale_detail.html", {"sale": sale})
+
+    # Get related receipts ordered by date (newest first)
+    receipts = sale.receipts.order_by("-date")
+
+    context = {
+        "sale": sale,
+        "receipts": receipts,
+    }
+
+    return render(request, "accounting/sale_detail.html", context)
 
 
 # -----------------------------------------------------------------------------
@@ -824,6 +845,60 @@ def hx_create_membership_sale(request: OrgHttpRequest) -> HttpResponse:
 
 # --------------------------- HTMX PARTIALS ------------------------------------
 
+@require_POST
+@login_required
+@organization_slug_required
+def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """Create a full-balance payment ``PaymentReceipt`` for an existing sale.
+
+    The endpoint is meant to be called via HTMX. It creates a new receipt
+    with :pyattr:`~accounting.models.PaymentReceipt.amount` equal to the current
+    outstanding balance on the sale and returns an HTML snippet representing
+    the newly-created timeline item.
+
+    Raises
+    ------
+    Http404
+        If the sale does not exist for the current organisation.
+    HttpResponse (400)
+        If no balance is pending.
+    """
+    sale = get_object_or_404(
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
+    )
+
+    # No balance – nothing to do
+    if sale.balance_amount <= 0:
+        resp = HttpResponse(status=400)
+        return trigger_client_event(
+            resp,
+            "message",
+            {
+                "level": "warning",
+                "message": "The membership sale is already fully paid.",
+            },
+        )
+
+    # Create the receipt atomically – validation inside model will protect us
+    with transaction.atomic():
+        receipt = PaymentReceipt.objects.create(
+            sale=sale,
+            organization=request.organization,
+            amount=sale.balance_amount,
+            method=PaymentReceipt.Method.CASH,
+        )
+
+    # Render timeline item partial for HTMX swap-in
+    snippet = render(
+        request,
+        "accounting/partials/receipt_timeline_item.html",
+        {"receipt": receipt},
+    )
+    # Also emit a generic client-side event so other listeners can react
+    return trigger_client_event(snippet, "payment_receipt_create_success")
+
 
 @login_required
 @organization_slug_required
@@ -835,6 +910,80 @@ def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
         .order_by("-created_at")
     )
     return render(request, "accounting/tables/sales_table.html", {"sales": sales})
+
+
+@login_required
+@organization_slug_required
+def receipt_list(request: OrgHttpRequest) -> HttpResponse:
+    """List all payment receipts for the current organization."""
+    receipts = PaymentReceipt.objects.filter(
+        organization=request.organization
+    ).select_related('sale').order_by('-date')
+    
+    return render(request, "accounting/receipts.html", {
+        "receipts": receipts
+    })
+
+
+@login_required
+@organization_slug_required
+def receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """Display details of a specific receipt."""
+    receipt = get_object_or_404(
+        PaymentReceipt,
+        uuid=uuid,
+        organization=request.organization
+    )
+    return render(request, "accounting/receipt_detail.html", {
+        "receipt": receipt
+    })
+
+
+@login_required
+@organization_slug_required
+def hx_receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """HTMX endpoint for receipt detail modal."""
+    receipt = get_object_or_404(
+        PaymentReceipt,
+        uuid=uuid,
+        organization=request.organization
+    )
+    return render(request, "accounting/partials/receipt_detail_modal.html", {
+        "receipt": receipt
+    })
+
+
+@require_http_methods(["DELETE"])
+@login_required
+@organization_slug_required
+def hx_delete_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """HTMX endpoint to delete a receipt."""
+    receipt = get_object_or_404(
+        PaymentReceipt,
+        uuid=uuid,
+        organization=request.organization
+    )
+    
+    try:
+        receipt.delete()
+        response = HttpResponse(status=204)
+        response = trigger_client_event(
+            response, 
+            "payment_receipt_delete_success"
+        )
+        return trigger_client_event(
+            response,
+            "message",
+            {"level": "success", "message": "Receipt deleted successfully!"}
+        )
+    except Exception as e:
+        logger.error(f"Error deleting receipt {uuid}: {str(e)}")
+        response = HttpResponse(status=500)
+        return trigger_client_event(
+            response,
+            "message",
+            {"level": "error", "message": "Error deleting receipt."}
+        )
 
 
 @login_required
@@ -933,4 +1082,62 @@ def hx_sale_delete(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
             "action_url": request.path,
             "title": "Delete Membership Sale",
         },
+    )
+
+
+@login_required
+@organization_slug_required
+@require_http_methods(["GET", "POST"])
+def hx_edit_receipt(
+    request: OrgHttpRequest, 
+    uuid: UUID
+) -> HttpResponse:
+    """
+    Handle editing a payment receipt via HTMX.
+    """
+    receipt = get_object_or_404(
+        PaymentReceipt,
+        uuid=uuid,
+        organization=request.organization
+    )
+
+    if request.method == "POST":
+        form = PaymentReceiptForm(request.POST, instance=receipt)
+        if form.is_valid():
+            form.save()
+            response = HttpResponse(status=204)
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "success", 
+                    "message": _("Payment receipt updated successfully!")
+                },
+            )
+            response = trigger_client_event(
+                response, 
+                "payment_receipt_update_success"
+            )
+            return response
+        else:
+            response = render(
+                request, 
+                "accounting/forms/receipt_form.html", 
+                {"form": form}
+            )
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "error",
+                    "message": _("Failed to update payment receipt. Please check the form for errors."),
+                },
+            )
+            return response
+
+    form = PaymentReceiptForm(instance=receipt)
+    return render(
+        request, 
+        "accounting/forms/receipt_form.html", 
+        {"form": form}
     )

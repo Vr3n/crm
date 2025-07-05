@@ -3,6 +3,7 @@
     <thead>
       <tr>
         <th>Lead</th>
+        <th>Receipt&nbsp;No.</th>
         <th>Plan</th>
         <th>Start&nbsp;Date</th>
         <th>Amount&nbsp;(₹)</th>
@@ -13,7 +14,8 @@
     <tbody>
       {% for sale in sales %}
         <tr id="sale-{{ sale.uuid }}">
-          <td>{{ sale.lead.get_full_name }}</td>
+          <td>{{ sale.lead.full_name }}</td>
+          <td>{{ sale.receipts.last.receipt_number }}</td>
           <td>{{ sale.plan.name }}</td>
           <td>{{ sale.membership_start_date|date:"d M Y" }}</td>
           <td>{{ sale.custom_price }}</td>

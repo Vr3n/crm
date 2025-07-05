@@ -11,6 +11,26 @@ from .models import (
 )
 
 
+class PaymentReceiptForm(forms.ModelForm):
+    """Form for editing PaymentReceipt instances."""
+    class Meta:
+        model = PaymentReceipt
+        fields = ['amount', 'method', 'reference', 'notes']
+        widgets = {
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'method': forms.Select(attrs={'class': 'form-select'}),
+            'reference': forms.TextInput(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2
+            }),
+        }
+
+
 class MemberTypeForm(forms.ModelForm):
     """Form for creating and updating MemberType instances."""
 

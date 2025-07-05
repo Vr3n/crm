@@ -5,13 +5,22 @@
   </div>
   <div class="card-body">
     <div class="mb-2">
-      <strong>Receipt&nbsp;#:</strong> {{ receipt.pk }}
+      <h4>{{ request.organization.name }}</h4>
+    </div>
+    <div class="mb-2 d-flex justify-content-between">
+      <p>
+        <strong>Receipt&nbsp;#:</strong> {{ receipt.receipt_number }}
+      </p>
+      <small class="text-muted">{{ receipt.date|date:"d M Y H:i" }}</small>
     </div>
     <div class="mb-2">
-      <strong>Lead:</strong> {{ sale.lead }}
+      <strong>Name:</strong> {{ receipt.sale.lead.full_name }}
     </div>
     <div class="mb-2">
-      <strong>Membership Plan:</strong> {{ sale.plan.name }} ({{ sale.effective_duration|capfirst }})
+      <strong>Membership Plan:</strong> {{ receipt.sale.plan.name }}
+      <p>
+        <small>starting from: {{ receipt.sale.membership_start_date|date:"d M Y" }}</small>
+      </p>
     </div>
     <hr>
     <div class="row mb-2">
@@ -19,16 +28,12 @@
       <div class="col-6 text-end">₹ {{ receipt.amount }}</div>
     </div>
     <div class="row mb-2">
-      <div class="col-6">Opening Balance</div>
-      <div class="col-6 text-end">₹ {{ receipt.opening_balance }}</div>
-    </div>
-    <div class="row mb-2">
-      <div class="col-6">Closing Balance</div>
-      <div class="col-6 text-end fw-bold">₹ {{ receipt.closing_balance }}</div>
+      <div class="col-6">Balance</div>
+      <div class="col-6 text-end">₹ {{ receipt.closing_balance }}</div>
     </div>
     <hr>
     <div class="mb-2">
-      <strong>Payment Method:</strong> {{ receipt.get_method_display }}
+      <strong>Payment Method:</strong> {{ receipt.method }}
     </div>
     {% if receipt.reference %}
       <div class="mb-2">
@@ -43,7 +48,7 @@
   </div>
   <div class="card-footer text-center bg-white">
     <button class="btn btn-outline-secondary" onclick="window.print()">
-      <i class="feather icon-printer"></i> Print
+      <i class="feather icon-printer"></i>Print
     </button>
   </div>
 </div>
