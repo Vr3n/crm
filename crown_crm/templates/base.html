@@ -231,6 +231,10 @@
         $('#modal-container').modal('hide');
         e.detail.shouldSwap = false
       })
+      htmx.on("organization_update_success", (e) => {
+        $('#modal-container').modal('hide');
+        e.detail.shouldSwap = false
+      })
 
       htmx.on("hidden.bs.modal", () => {
         document.getElementById("modal-form").innerHTML = "";

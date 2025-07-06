@@ -31,6 +31,27 @@ class PaymentReceiptForm(forms.ModelForm):
         }
 
 
+class CreatePaymentReceiptForm(forms.ModelForm):
+    """Form for paying Balance amount."""
+    class Meta:
+        model = PaymentReceipt
+        fields = ['sale', 'amount', 'method', 'reference', 'notes']
+        widgets = {
+            'sale': forms.HiddenInput(),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'method': forms.Select(attrs={'class': 'form-select'}),
+            'reference': forms.TextInput(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2
+            }),
+        }
+
+
 class MemberTypeForm(forms.ModelForm):
     """Form for creating and updating MemberType instances."""
 

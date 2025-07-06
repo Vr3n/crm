@@ -20,26 +20,24 @@
           <td>₹{{ receipt.amount|floatformat:2 }}</td>
           <td>{{ receipt.method }}</td>
           <td>
-            <span class="badge badge-success">Paid</span>
+            {% if receipt.sale.balance_amount > 0 %}
+              <span class="badge badge-warning">₹{{ receipt.sale.balance_amount|floatformat:2 }} Due</span>
+            {% else %}
+              <span class="badge badge-success">Paid</span>
+            {% endif %}
           </td>
           <td class="text-nowrap">
             <a href="{% url 'receipt-detail' slug=request.organization.slug uuid=receipt.uuid %}"
                class="btn btn-sm btn-primary">
               <i data-feather="eye" class="icon-sm"></i> View
             </a>
-            <button class="btn btn-sm btn-info"
-                    hx-get="{% url 'hx-receipt-detail' slug=request.organization.slug uuid=receipt.uuid %}"
-                    hx-target="#modal-container">
-              <i data-feather="printer" class="icon-sm"></i> Print
-            </button>
-            <button hx-trigger="confirmed"
-                    hx-target="#receipt-{{ receipt.uuid }}"
-                    hx-swap="outerHTML"
-                    onClick="Swal.fire({'icon': 'warning', title: 'Confirm', text:'Are you sure you want to delete this receipt?', 'showDenyButton': true, 'denyButtonText': 'No'}).then((result)=>{if(result.isConfirmed){htmx.trigger(this, 'confirmed');}})"
-                    hx-delete="{% url 'hx-delete-receipt' slug=request.organization.slug uuid=receipt.uuid %}"
-                    class="btn btn-sm btn-danger">
-              <i data-feather="trash-2" class="icon-sm"></i> Delete
-            </button>
+            {% if receipt.sale.balance_amount > 0 %}
+              <button hx-get="{% url 'hx-create-payment-receipt' slug=request.organization.slug uuid=receipt.uuid %}"
+                      hx-target="#modal-form"
+                      class="btn btn-sm btn-info">
+                <i data-feather="dollar-sign" class="icon-sm"></i> Pay Balance
+              </button>
+            {% endif %}
           </td>
         </tr>
       {% empty %}

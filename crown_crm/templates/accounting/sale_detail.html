@@ -31,14 +31,13 @@
               <strong>Balance:</strong> ₹ {{ sale.balance_amount|default:"0.00" }}
             </p>
             <div class="mt-2">
-              <button class="btn btn-sm btn-primary"
-                      hx-post="{% url 'hx-create-payment-receipt' slug=request.organization.slug uuid=sale.uuid %}"
-                      hx-target="#receipt-timeline"
-                      hx-swap="afterbegin"
-                      hx-trigger="click"
-                      {% if sale.balance_amount <= 0 %}disabled{% endif %}>
-                Add Payment (₹ {{ sale.balance_amount }})
-              </button>
+              {% if sale.balance_amount == 0 %}
+                <span class="badge">Paid</span>
+              {% else %}
+                <button class="btn btn-sm btn-primary"
+                        hx-get="{% url 'hx-create-payment-receipt' slug=request.organization.slug uuid=sale.uuid %}"
+                        hx-target="#modal-form">Add Payment (₹ {{ sale.balance_amount }})</button>
+              {% endif %}
             </div>
           </div>
         </div>

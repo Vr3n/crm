@@ -16,6 +16,7 @@ from crown_crm.utils.decorators import organization_slug_required
 from crown_crm.utils.types import OrgHttpRequest
 
 from .forms import (
+    CreatePaymentReceiptForm,
     MemberTypeForm, 
     MembershipPlanForm, 
     MembershipSaleCreateForm,
@@ -845,61 +846,6 @@ def hx_create_membership_sale(request: OrgHttpRequest) -> HttpResponse:
 
 # --------------------------- HTMX PARTIALS ------------------------------------
 
-@require_POST
-@login_required
-@organization_slug_required
-def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
-    """Create a full-balance payment ``PaymentReceipt`` for an existing sale.
-
-    The endpoint is meant to be called via HTMX. It creates a new receipt
-    with :pyattr:`~accounting.models.PaymentReceipt.amount` equal to the current
-    outstanding balance on the sale and returns an HTML snippet representing
-    the newly-created timeline item.
-
-    Raises
-    ------
-    Http404
-        If the sale does not exist for the current organisation.
-    HttpResponse (400)
-        If no balance is pending.
-    """
-    sale = get_object_or_404(
-        MembershipSale,
-        uuid=uuid,
-        organization=request.organization,
-    )
-
-    # No balance – nothing to do
-    if sale.balance_amount <= 0:
-        resp = HttpResponse(status=400)
-        return trigger_client_event(
-            resp,
-            "message",
-            {
-                "level": "warning",
-                "message": "The membership sale is already fully paid.",
-            },
-        )
-
-    # Create the receipt atomically – validation inside model will protect us
-    with transaction.atomic():
-        receipt = PaymentReceipt.objects.create(
-            sale=sale,
-            organization=request.organization,
-            amount=sale.balance_amount,
-            method=PaymentReceipt.Method.CASH,
-        )
-
-    # Render timeline item partial for HTMX swap-in
-    snippet = render(
-        request,
-        "accounting/partials/receipt_timeline_item.html",
-        {"receipt": receipt},
-    )
-    # Also emit a generic client-side event so other listeners can react
-    return trigger_client_event(snippet, "payment_receipt_create_success")
-
-
 @login_required
 @organization_slug_required
 def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
@@ -938,18 +884,70 @@ def receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
         "receipt": receipt
     })
 
-
 @login_required
 @organization_slug_required
-def hx_receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
-    """HTMX endpoint for receipt detail modal."""
+def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """
+    Pay the balance amount remaining for the sale.
+    """
+
     receipt = get_object_or_404(
         PaymentReceipt,
         uuid=uuid,
         organization=request.organization
     )
-    return render(request, "accounting/partials/receipt_detail_modal.html", {
-        "receipt": receipt
+
+    sale = receipt.sale
+
+    if sale.balance_amount <= 0:
+        response = HttpResponse(status=400)
+        return trigger_client_event(
+            response,
+            "message",
+            {
+                "level": "warning",
+                "message": "The membership sale is already fully paid.",
+            },
+        )
+
+    if request.method == "POST":
+        form = CreatePaymentReceiptForm(request.POST)
+        if form.is_valid():
+            receipt = form.save(commit=False)
+            receipt.organization = request.organization
+            receipt.save()
+            response = HttpResponse(status=400)
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "message": "Payment receipt created successfully!",
+                },
+            )
+            response = trigger_client_event(
+                response,
+                "payment_balance_success",
+            )
+            return response
+        else:
+            response = render(request, "accounting/forms/receipt_form.html", {
+                "form": form,
+                "sale": sale,
+            })
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "error",
+                    "message": "The membership sale is already fully paid.",
+                },
+            )
+            return response
+
+    form = CreatePaymentReceiptForm()
+    return render(request, "accounting/forms/receipt_form.html", {
+        "form": form,
+        "sale": sale,
     })
 
 
