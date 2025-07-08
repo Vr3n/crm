@@ -200,6 +200,26 @@ class MembershipSale(BaseModel):
     def balance_amount(self) -> Decimal:
         """Calculate remaining balance."""
         return self.custom_price - self.total_paid_amount
+        
+    @property
+    def days_left(self) -> int:
+        """
+        Calculate the number of days remaining until membership expiration.
+        
+        Returns:
+            int: Number of days remaining. Negative if membership has already expired.
+        """
+        if not self.membership_start_date or not self.duration:
+            return 0
+            
+        today = date.today()
+        end_date = self.membership_end_date
+        
+        if not end_date:
+            return 0
+            
+        delta = end_date - today
+        return delta.days
 
 
     def _validate_custom_values(self) -> None:

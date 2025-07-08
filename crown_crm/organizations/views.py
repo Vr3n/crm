@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.utils.text import slugify
 from django_htmx.http import trigger_client_event
 
+from crown_crm.accounting.models import MembershipSale
 from crown_crm.clients.models import ClientMaster
 from crown_crm.leads.models import LeadMaster
 from crown_crm.organizations.forms import OrganizationCreateForm, OrganizationEmailForm, OrganizationMobileForm
@@ -124,11 +125,18 @@ def organization_dashboard_view(request: OrgHttpRequest) -> HttpResponse:
     recent_clients = ClientMaster.objects.filter(
         organization=request.organization).order_by('-created_at')[:5]
 
+    membership_expirations = MembershipSale.objects.filter(
+        organization=request.organization,
+    )
+
+
     context = {
         'lead_count': lead_count,
         'client_count': client_count,
         'recent_clients': recent_clients,
         'recent_leads': recent_leads,
+        'membership_expirations': membership_expirations,
+        'recent_sales': membership_expirations.order_by('-created_at')
     }
 
     return render(request, "organizations/dashboard.html", context=context)
