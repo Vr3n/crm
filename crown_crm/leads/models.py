@@ -94,7 +94,6 @@ class LeadMobileNumberMaster(BaseModel):
     lead = models.ForeignKey(
         LeadMaster, on_delete=models.CASCADE, related_name="mobile_numbers")
     mobile_number = models.CharField(
-        unique=True,
         max_length=10,
         validators=[RegexValidator(
             r'^\d{10}$', message="Enter a valid 10-digit mobile number.")]
@@ -125,7 +124,7 @@ class LeadEmailAddressMaster(BaseModel):
     """
     lead = models.ForeignKey(
         LeadMaster, on_delete=models.CASCADE, related_name="emails")
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
 
     class Meta:
         verbose_name = 'Lead Email address'

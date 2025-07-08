@@ -7,7 +7,12 @@
   </h4>
   <br />
   <div class="my-3">
-    <a href="#" class="btn btn-primary">+ Add Lead</a>
+    <button type="button"
+            hx-get="{% url 'hx-create-lead' slug=request.organization.slug %}"
+            hx-target="#modal-form"
+            class="btn btn-primary">
+      <i data-feather="plus" class="icon-sm"></i> Add Lead
+    </button>
     <a href="{% url 'sale-create' slug=request.organization.slug %}"
        class="btn btn-warning">+ Add New Sale</a>
   </div>
@@ -158,31 +163,41 @@
                   <td>Alex Johnson</td>
                   <td>2025-07-03</td>
                   <td>Call</td>
-                  <td><span class="badge badge-warning">Pending</span></td>
+                  <td>
+                    <span class="badge badge-warning">Pending</span>
+                  </td>
                 </tr>
                 <tr>
                   <td>Maria Garcia</td>
                   <td>2025-07-04</td>
                   <td>Email</td>
-                  <td><span class="badge badge-info">Scheduled</span></td>
+                  <td>
+                    <span class="badge badge-info">Scheduled</span>
+                  </td>
                 </tr>
                 <tr>
                   <td>Robert Chen</td>
                   <td>2025-07-05</td>
                   <td>Meeting</td>
-                  <td><span class="badge badge-primary">Confirmed</span></td>
+                  <td>
+                    <span class="badge badge-primary">Confirmed</span>
+                  </td>
                 </tr>
                 <tr>
                   <td>Sarah Wilson</td>
                   <td>2025-07-03</td>
                   <td>Call</td>
-                  <td><span class="badge badge-danger">Overdue</span></td>
+                  <td>
+                    <span class="badge badge-danger">Overdue</span>
+                  </td>
                 </tr>
                 <tr>
                   <td>James Taylor</td>
                   <td>2025-07-06</td>
                   <td>Demo</td>
-                  <td><span class="badge badge-success">Completed</span></td>
+                  <td>
+                    <span class="badge badge-success">Completed</span>
+                  </td>
                 </tr>
               </tbody>
             </table>

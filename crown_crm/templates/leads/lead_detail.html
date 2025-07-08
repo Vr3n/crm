@@ -52,111 +52,111 @@
   <!-- row -->
   <div class="row my-2">
     <div class="col-sm-12">
-      <div class="card">
-        <div class="card-body">
-          <p class="card-title">Memberships</p>
-          {% if lead.memberships.exists %}
-            {% for membership in lead.memberships.all %}
-              <div class="card mb-3 border-0 shadow-sm">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                  <h5 class="card-title mb-0">{{ membership.plan.name }} <span class="badge badge-{{ membership.plan.get_type_display|lower }}">{{ membership.plan.get_type_display }}</span></h5>
-                  <span class="badge badge-{% if membership.balance_amount <= 0 %}success{% else %}warning{% endif %}">
-                    {% if membership.balance_amount <= 0 %}Paid in Full{% else %}{{ membership.balance_amount|floatformat:2 }} Due{% endif %}
-                  </span>
-                </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-6">
-                      <div class="mb-2">
-                        <small class="text-muted">Duration</small>
-                        <div>{{ membership.get_duration_display }}</div>
-                      </div>
-                      {% if membership.membership_start_date %}
-                      <div class="mb-2">
-                        <small class="text-muted">Start Date</small>
-                        <div>{{ membership.membership_start_date|date:"M d, Y" }}</div>
-                      </div>
-                      {% endif %}
-                      <div class="mb-2">
-                        <small class="text-muted">Plan Includes</small>
-                        <div class="mt-1">
-                          <span class="badge badge-pill badge-light mr-1">
-                            <i class="feather-check-circle text-success"></i> {{ membership.effective_pt_sessions }} PT Sessions
-                          </span>
-                          <span class="badge badge-pill badge-light">
-                            <i class="feather-check-circle text-success"></i> {{ membership.effective_diet_plans }} Diet Plans
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="mb-2">
-                        <small class="text-muted">Total Amount</small>
-                        <div class="h5 font-weight-bold">{{ membership.custom_price|default:membership.plan.price|floatformat:2 }}</div>
-                      </div>
-                      <div class="mb-2">
-                        <small class="text-muted">Paid</small>
-                        <div class="text-success">{{ membership.total_paid_amount|floatformat:2 }}</div>
-                      </div>
-                      <div class="mb-3">
-                        <small class="text-muted">Balance</small>
-                        <div class="h6 {% if membership.balance_amount > 0 %}text-danger{% else %}text-success{% endif %}">
-                          {{ membership.balance_amount|floatformat:2 }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {% if membership.notes %}
-                  <div class="alert alert-light small mt-2 mb-0">
-                    <i class="feather-info mr-1"></i> {{ membership.notes }}
-                  </div>
-                  {% endif %}
-                  
-                  {% with latest_receipt=membership.receipts.first %}
-                    {% if latest_receipt %}
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                      <small class="text-muted">
-                        Last payment: {{ latest_receipt.date|date:"M d, Y" }} ({{ latest_receipt.get_method_display }})
-                      </small>
-                      <a href="#" class="btn btn-sm btn-outline-primary">
-                        <i class="feather-file-text"></i> Receipt #{{ latest_receipt.receipt_number }}
-                      </a>
-                    </div>
-                    {% endif %}
-                  {% endwith %}
-                </div>
-                <div class="card-footer bg-white d-flex justify-content-between">
-                  <button class="btn btn-sm btn-outline-secondary">
-                    <i class="feather-edit-2"></i> Edit
-                  </button>
-                  {% if membership.balance_amount > 0 %}
-                  <button class="btn btn-sm btn-primary">
-                    <i class="feather-dollar-sign"></i> Make Payment
-                  </button>
-                  {% else %}
-                  <button class="btn btn-sm btn-success" disabled>
-                    <i class="feather-check"></i> Fully Paid
-                  </button>
-                  {% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <div class="card">
-              <div class="card-body text-center py-5">
-                <div class="text-muted mb-3">
-                  <i class="feather-info" style="font-size: 2rem;"></i>
-                  <div class="mt-2">No memberships found</div>
-                </div>
-                <button class="btn btn-outline-primary btn-sm">
-                  <i class="feather-plus"></i> Add Membership
-                </button>
-              </div>
+      <p class="card-title">Memberships</p>
+      {% if lead.memberships.exists %}
+        {% for membership in lead.memberships.all %}
+          <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">
+                {{ membership.plan.name }} <span class="badge badge-{{ membership.plan.get_type_display|lower }}">{{ membership.plan.get_type_display }}</span>
+              </h5>
+              <span class="badge badge-{% if membership.balance_amount <= 0 %}success{% else %}warning{% endif %}">
+                {% if membership.balance_amount <= 0 %}
+                  Paid in Full
+                {% else %}
+                  {{ membership.balance_amount|floatformat:2 }} Due
+                {% endif %}
+              </span>
             </div>
-          {% endif %}
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-2">
+                    <small class="text-muted">Duration</small>
+                    <div>{{ membership.get_duration_display }}</div>
+                  </div>
+                  {% if membership.membership_start_date %}
+                    <div class="mb-2">
+                      <small class="text-muted">Start Date</small>
+                      <div>{{ membership.membership_start_date|date:"M d, Y" }}</div>
+                    </div>
+                  {% endif %}
+                  <div class="mb-2">
+                    <small class="text-muted">Plan Includes</small>
+                    <div class="mt-1">
+                      <span class="badge badge-pill badge-light mr-1">
+                        <i class="feather-check-circle text-success"></i> {{ membership.effective_pt_sessions }} PT Sessions
+                      </span>
+                      <span class="badge badge-pill badge-light">
+                        <i class="feather-check-circle text-success"></i> {{ membership.effective_diet_plans }} Diet Plans
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-2">
+                    <small class="text-muted">Total Amount</small>
+                    <div class="h5 font-weight-bold">{{ membership.custom_price|default:membership.plan.price|floatformat:2 }}</div>
+                  </div>
+                  <div class="mb-2">
+                    <small class="text-muted">Paid</small>
+                    <div class="text-success">{{ membership.total_paid_amount|floatformat:2 }}</div>
+                  </div>
+                  <div class="mb-3">
+                    <small class="text-muted">Balance</small>
+                    <div class="h6 {% if membership.balance_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                      {{ membership.balance_amount|floatformat:2 }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% if membership.notes %}
+                <div class="alert alert-light small mt-2 mb-0">
+                  <i class="feather-info mr-1"></i> {{ membership.notes }}
+                </div>
+              {% endif %}
+              {% with latest_receipt=membership.receipts.first %}
+                {% if latest_receipt %}
+                  <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                    <small class="text-muted">
+                      Last payment: {{ latest_receipt.date|date:"M d, Y" }} ({{ latest_receipt.get_method_display }})
+                    </small>
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                      <i class="feather-file-text"></i> Receipt #{{ latest_receipt.receipt_number }}
+                    </a>
+                  </div>
+                {% endif %}
+              {% endwith %}
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-between">
+              <button class="btn btn-sm btn-outline-secondary">
+                <i class="feather-edit-2"></i> Edit
+              </button>
+              {% if membership.balance_amount > 0 %}
+                <button class="btn btn-sm btn-primary">
+                  <i class="feather-dollar-sign"></i> Make Payment
+                </button>
+              {% else %}
+                <button class="btn btn-sm btn-success" disabled>
+                  <i class="feather-check"></i> Fully Paid
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <div class="text-muted mb-3">
+              <i class="feather-info" style="font-size: 2rem;"></i>
+              <div class="mt-2">No memberships found</div>
+            </div>
+            <button class="btn btn-outline-primary btn-sm">
+              <i class="feather-plus"></i> Add Membership
+            </button>
+          </div>
         </div>
-      </div>
+      {% endif %}
     </div>
   </div>
 {% endblock content %}

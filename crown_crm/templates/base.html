@@ -223,9 +223,13 @@
           e.detail.shouldSwap = false
         }
       })
+      htmx.on("lead_create_success", (e) => {
+        $('#modal-container').modal('hide');
+        e.detail.shouldswap = false
+      })
       htmx.on("service_update_success", (e) => {
         $('#modal-container').modal('hide');
-        e.detail.shouldSwap = false
+        e.detail.shouldswap = false
       })
       htmx.on("product_update_success", (e) => {
         $('#modal-container').modal('hide');
