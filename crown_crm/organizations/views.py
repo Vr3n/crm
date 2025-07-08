@@ -1,5 +1,10 @@
 import json
 from uuid import UUID
+
+from datetime import datetime, timedelta
+from django.db.models import Count, Sum
+from django.utils import timezone
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import QuerySet
 from django.forms.models import modelformset_factory
@@ -111,32 +116,64 @@ def hx_organization_create_view(request: OrgHttpRequest) -> HttpResponse:
 @login_required
 @organization_slug_required
 def organization_dashboard_view(request: OrgHttpRequest) -> HttpResponse:
-
-
-    lead_count = LeadMaster.objects.filter(
-        organization=request.organization).count()
-
-    client_count = ClientMaster.objects.filter(
-        organization=request.organization).count()
-
+    # Basic counts
+    lead_count = LeadMaster.objects.filter(organization=request.organization).count()
+    
+    # Get leads created in the last 30 days
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    recent_lead_count = LeadMaster.objects.filter(
+        organization=request.organization,
+        created_at__gte=thirty_days_ago
+    ).count()
+    
+    # Get membership sales data for the chart
+    sales_data = MembershipSale.objects.filter(
+        organization=request.organization,
+        created_at__gte=timezone.now() - timedelta(days=30)
+    ).values('created_at__date').annotate(
+        count=Count('uuid')
+    ).order_by('created_at__date')
+    
+    # Get recent leads and sales
     recent_leads = LeadMaster.objects.filter(
-        organization=request.organization).order_by('-created_at')[:5]
-
-    recent_clients = ClientMaster.objects.filter(
-        organization=request.organization).order_by('-created_at')[:5]
-
+        organization=request.organization
+    ).order_by('-created_at')[:5]
+    
     membership_expirations = MembershipSale.objects.filter(
         organization=request.organization,
     )
-
-
+    
+    # Prepare chart data
+    sales_dates = []
+    sales_counts = []
+    
+    # Initialize last 7 days data with zeros
+    for i in range(7, 0, -1):
+        date = (timezone.now() - timedelta(days=i)).date()
+        sales_dates.append(date.strftime('%b %d'))
+        sales_counts.append(0)
+    
+    # Fill in actual sales data
+    for sale in sales_data:
+        date_str = sale['created_at__date'].strftime('%b %d')
+        if date_str in sales_dates:
+            idx = sales_dates.index(date_str)
+            sales_counts[idx] = sale['count']
+    
+    # Prepare chart data for template
+    chart_data = {
+        'sales_dates': sales_dates,
+        'sales_trend': sales_counts[-7:],  # Last 7 days
+        'lead_trend': [max(0, min(5, recent_lead_count - i)) for i in range(7)],
+    }
+    
     context = {
         'lead_count': lead_count,
-        'client_count': client_count,
-        'recent_clients': recent_clients,
+        'recent_lead_count': recent_lead_count,
         'recent_leads': recent_leads,
         'membership_expirations': membership_expirations,
-        'recent_sales': membership_expirations.order_by('-created_at')
+        'recent_sales': membership_expirations.order_by('-created_at')[:5],
+        'chart_data': chart_data
     }
 
     return render(request, "organizations/dashboard.html", context=context)

@@ -16,19 +16,21 @@
     <a href="{% url 'sale-create' slug=request.organization.slug %}"
        class="btn btn-warning">+ Add New Sale</a>
   </div>
-  <br />
+  <!-- Chart Data (Hidden) -->
+  <div id="chartData" style="display: none;">{{ chart_data|json_script:""|safe }}</div>
   <div class="row">
     <!-- Leads Card -->
     <div class="col-md-4 mb-4">
       <div class="metric-card">
         <div class="d-flex justify-content-between">
           <div>
-            <p class="text-muted">Leads</p>
-            <small class="text-muted">this week</small>
-            <div class="metric-value">3</div>
-            <div class="metric-change up">+20% ↑</div>
+            <p class="text-muted">Total Leads</p>
+            <div class="metric-value">{{ lead_count }}</div>
+            <div class="metric-change {% if recent_lead_count > 0 %}up{% else %}down{% endif %}">
+              {{ recent_lead_count }} this month
+            </div>
           </div>
-          <div id="leadsChart"></div>
+          <div id="leadsChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
@@ -38,23 +40,28 @@
         <div class="d-flex justify-content-between">
           <div>
             <p class="text-muted">Memberships Sold</p>
-            <div class="metric-value">3</div>
-            <div class="metric-change down">-10% ↓</div>
+            <div class="metric-value">{{ recent_sales.count }}</div>
+            <div class="metric-change {% if chart_data.sales_trend|last > chart_data.sales_trend|first|default:0 %}up{% else %}down{% endif %}">
+              {% with last_sale=chart_data.sales_trend|last previous_sale=chart_data.sales_trend|slice:"-2"|first|default:0 %}
+                {% if last_sale > previous_sale %}+{% endif %}
+                {{ last_sale|default:0 }} this week
+              {% endwith %}
+            </div>
           </div>
-          <div id="salesChart"></div>
+          <div id="salesChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
-    <!-- Followups Card -->
+    <!-- Followups Card (Placeholder) -->
     <div class="col-md-4 mb-4">
       <div class="metric-card">
         <div class="d-flex justify-content-between">
           <div>
             <p class="text-muted">Followups</p>
-            <div class="metric-value">6</div>
-            <div class="metric-change up">+8.3% ↑</div>
+            <div class="metric-value">0</div>
+            <div class="metric-change">Coming soon</div>
           </div>
-          <div id="followupChart"></div>
+          <div id="followupChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
