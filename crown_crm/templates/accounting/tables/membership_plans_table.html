@@ -3,8 +3,8 @@
     <thead>
       <tr>
         <th>Name</th>
-        <th>Duration</th>
         <th>Price</th>
+        <td>Sales</td>
         <th>PT Sessions</th>
         <th>Status</th>
         <th>View</th>
@@ -16,8 +16,8 @@
       {% for plan in plans %}
         <tr id="membershipplan-{{ plan.uuid }}">
           <td>{{ plan.name }}</td>
-          <td>{{ plan.get_duration_display }}</td>
           <td>₹{{ plan.price|floatformat:2 }}</td>
+          <td>{{ plan.sales.count }}</td>
           <td>{{ plan.pt_sessions }}</td>
           <td>
             <span class="badge badge-{{ plan.is_active|yesno:'success,danger' }}">

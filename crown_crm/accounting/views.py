@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 from django.db import transaction
+from django.db import models
 from django.db.models import Q
 from django.forms import model_to_dict
 from django.http import HttpResponse, JsonResponse
@@ -180,7 +181,13 @@ def membership_plan_detail_view(request: OrgHttpRequest, uuid: UUID) -> HttpResp
     plan = get_object_or_404(
         MembershipPlan, uuid=uuid, organization=request.organization
     )
-    context = {"plan": plan}
+
+    sales = MembershipSale.objects.filter(
+        plan=plan, organization=request.organization
+    ).order_by("-created_at")
+
+    context = {"plan": plan, "sales": sales}
+
     return render(
         request, "accounting/membership_plan_detail.html", context
     )
@@ -728,11 +735,7 @@ def hx_member_types_table(request: OrgHttpRequest) -> HttpResponse:
 @organization_slug_required
 def sales_view(request: OrgHttpRequest) -> HttpResponse:
     """Display the membership sales list page."""
-    sales = (
-        MembershipSale.objects.filter(organization=request.organization)
-        .select_related("lead", "plan")
-        .order_by("-created_at")
-    )
+    sales = MembershipSale.objects.filter(organization=request.organization).select_related("lead", "plan").order_by("-created_at")
     return render(request, "accounting/sales.html", {"sales": sales})
 
 
