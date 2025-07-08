@@ -1,80 +1,40 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
-
-{% block title %}Payment Receipts - {{ block.super }}{% endblock %}
-
+{% block title %}
+  Payment Receipts - {{ block.super }}
+{% endblock title %}
 {% block content %}
-<div class="container-fluid">
+  <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Payment Receipts</h1>
+      <h1 class="h3 mb-0 text-gray-800">Payment Receipts</h1>
     </div>
-
     <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">All Receipts</h6>
-            <div class="dropdown no-arrow">
-                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
-                    aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                    aria-labelledby="dropdownMenuLink">
-                    <a class="dropdown-item" href="#">Export</a>
-                </div>
-            </div>
+      <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">All Receipts</h6>
+        <div class="dropdown no-arrow">
+          <a class="dropdown-toggle"
+             href="#"
+             role="button"
+             id="dropdownMenuLink"
+             data-toggle="dropdown"
+             aria-haspopup="true"
+             aria-expanded="false">
+            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+          </a>
+          <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+               aria-labelledby="dropdownMenuLink">
+            <a class="dropdown-item" href="#">Export</a>
+          </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                {% include 'accounting/tables/receipts_table.html' %}
-            </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive"
+             hx-get="{% url 'hx-receipts-table' slug=request.organization.slug %}"
+             hx-swap="innerHTML"
+             hx-trigger="payment_receipt_create_success from:body, payment_receipt_update_success from:body, receipt_delete_success from:body">
+          {% include "accounting/tables/receipts_table.html" %}
         </div>
+      </div>
     </div>
-</div>
-
-<!-- Receipt Detail Modal -->
-<div class="modal fade" id="receiptModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content" id="modal-container">
-            <!-- HTMX will load content here -->
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block custom_js %}
-<script>
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-    // Handle modal show/hide
-    if (evt.detail.target.id === 'modal-container') {
-        $('#receiptModal').modal('show');
-    }
-});
-
-// Handle modal close
-$('#receiptModal').on('hidden.bs.modal', function () {
-    // Clear modal content when hidden
-    $('#modal-container').empty();
-});
-
-// Handle receipt deletion
-htmx.on('htmx:afterSwap', function(evt) {
-    if (evt.detail.trigger === 'payment_receipt_delete_success') {
-        // Refresh the receipts table
-        htmx.trigger('#receipts-table', 'refresh');
-        // Show success message
-        showToast('success', 'Receipt deleted successfully');
-    }
-});
-
-// Refresh table on create/update
-htmx.on('payment_receipt_create_success', function() {
-    htmx.trigger('#receipts-table', 'refresh');
-    showToast('success', 'Receipt created successfully');    
-});
-
-htmx.on('payment_receipt_update_success', function() {
-    htmx.trigger('#receipts-table', 'refresh');
-    showToast('success', 'Receipt updated successfully');
-});
-</script>
-{% endblock %}
+  </div>
+{% endblock content %}

@@ -33,9 +33,26 @@ class PaymentReceiptForm(forms.ModelForm):
 
 class CreatePaymentReceiptForm(forms.ModelForm):
     """Form for paying Balance amount."""
+    balance_amount = forms.DecimalField(
+        label="Balance Amount",
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0.01',
+            'disabled': True,
+            'readonly': True,
+        }),
+    )
+
     class Meta:
         model = PaymentReceipt
-        fields = ['sale', 'amount', 'method', 'reference', 'notes']
+        fields = [
+            'sale', 'amount', 'method',
+            'notes', 'balance_amount', 'closing_balance',
+            'opening_balance'
+        ]
+
         widgets = {
             'sale': forms.HiddenInput(),
             'amount': forms.NumberInput(attrs={
@@ -44,12 +61,15 @@ class CreatePaymentReceiptForm(forms.ModelForm):
                 'min': '0.01'
             }),
             'method': forms.Select(attrs={'class': 'form-select'}),
-            'reference': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 2
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 
 class MemberTypeForm(forms.ModelForm):

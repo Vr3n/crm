@@ -99,6 +99,7 @@ urlpatterns = [
     
     # Payment Receipt URLs
     path("receipts/", views.receipt_list, name="receipts"),
+    path("receipts/table/", views.hx_receipt_table, name="hx-receipts-table"),
     path("receipts/<uuid:uuid>/", views.receipt_detail, name="receipt-detail"),
     path("hx/receipts/<uuid:uuid>/create/", views.hx_create_payment_receipt, name="hx-create-payment-receipt"),
     path("hx/receipts/<uuid:uuid>/edit/", views.hx_edit_receipt, name="hx-edit-receipt"),

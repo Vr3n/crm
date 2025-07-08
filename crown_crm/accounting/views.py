@@ -873,6 +873,16 @@ def receipt_list(request: OrgHttpRequest) -> HttpResponse:
 
 @login_required
 @organization_slug_required
+def hx_receipt_table(request: OrgHttpRequest) -> HttpResponse:
+    """Return partial table rows for receipts list."""
+    receipts = PaymentReceipt.objects.filter(
+        organization=request.organization
+    ).select_related('sale').order_by('-date', '-closing_balance')
+    return render(request, "accounting/tables/receipts_table.html", {"receipts": receipts})
+
+
+@login_required
+@organization_slug_required
 def receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     """Display details of a specific receipt."""
     receipt = get_object_or_404(
@@ -898,9 +908,10 @@ def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpRespon
     )
 
     sale = receipt.sale
+    sale_balance_amount = sale.balance_amount
 
-    if sale.balance_amount <= 0:
-        response = HttpResponse(status=400)
+    if sale_balance_amount <= 0:
+        response = HttpResponse(status=204)
         return trigger_client_event(
             response,
             "message",
@@ -916,17 +927,18 @@ def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpRespon
             receipt = form.save(commit=False)
             receipt.organization = request.organization
             receipt.save()
-            response = HttpResponse(status=400)
+            response = HttpResponse(status=204)
             response = trigger_client_event(
                 response,
                 "message",
                 {
-                    "message": "Payment receipt created successfully!",
+                    "level": "success",
+                    "message": "Payment processed successfully!",
                 },
             )
             response = trigger_client_event(
                 response,
-                "payment_balance_success",
+                "payment_receipt_create_success",
             )
             return response
         else:
@@ -944,7 +956,12 @@ def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpRespon
             )
             return response
 
-    form = CreatePaymentReceiptForm()
+    form = CreatePaymentReceiptForm(
+        initial={
+        "sale": sale, 
+        'balance_amount': sale_balance_amount,
+        'amount': receipt.closing_balance
+    })
     return render(request, "accounting/forms/receipt_form.html", {
         "form": form,
         "sale": sale,
