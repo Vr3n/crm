@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from django.db import models
 from django.core.validators import RegexValidator
+from django.conf import settings
+from django.utils import timezone
 
 from crown_crm.organizations.models import OrganizationMaster
 from crown_crm.utils.models import BaseModel
@@ -224,3 +226,50 @@ class LeadSourceMaster(BaseModel):
             str: Lead's name followed by the source information.
         """
         return f"{self.lead.full_name} from {self.source}"
+
+
+class LeadFollowUp(models.Model):
+    """
+    Represents a single follow-up action for a lead.
+    Tracks communication touchpoint, scheduled time, outcome, and notes.
+    """
+
+    class Channel(models.TextChoices):
+        PHONE = 'phone', 'Phone'
+        WHATSAPP = 'whatsapp', 'WhatsApp'
+        SMS = 'sms', 'SMS'
+        EMAIL = 'email', 'Email'
+        SOCIAL = 'social', 'Social Media'
+        IN_PERSON = 'in_person', 'In Person'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        COMPLETED = 'completed', 'Completed'
+        SKIPPED = 'skipped', 'Skipped'
+        FAILED = 'failed', 'Failed'
+
+    lead = models.ForeignKey("leads.LeadMaster", on_delete=models.CASCADE, related_name="followups")
+    scheduled_for = models.DateTimeField(help_text="When to follow up")
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    outcome = models.TextField(blank=True, null=True, help_text="What happened during the follow-up?")
+    notes = models.TextField(blank=True, null=True, help_text="CRM user's personal observations")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-scheduled_for']
+        verbose_name = "Lead Follow-Up"
+        verbose_name_plural = "Lead Follow-Ups"
+
+    def mark_completed(self, outcome: str = "") -> None:
+        """Mark the follow-up as completed."""
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.outcome = outcome
+        self.save(update_fields=["status", "completed_at", "outcome"])
+
+    def __str__(self) -> str:
+        return f"{self.lead.full_name} - {self.channel} on {self.scheduled_for.strftime('%d-%m-%Y %H:%M')}"

@@ -104,4 +104,5 @@ urlpatterns = [
     path("hx/receipts/<uuid:uuid>/create/", views.hx_create_payment_receipt, name="hx-create-payment-receipt"),
     path("hx/receipts/<uuid:uuid>/edit/", views.hx_edit_receipt, name="hx-edit-receipt"),
     path("hx/receipts/<uuid:uuid>/delete/", views.hx_delete_receipt, name="hx-delete-receipt"),
+    path("receipts/<uuid:uuid>/download/", views.receipt_pdf, name="receipt-pdf"),
 ]

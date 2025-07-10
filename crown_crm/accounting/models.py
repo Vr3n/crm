@@ -254,7 +254,7 @@ class MembershipSale(BaseModel):
         """
         with transaction.atomic():
             # Get all receipts ordered by date
-            receipts = self.receipts.order_by("date", "id")  # type: ignore[attr-defined]
+            receipts = self.receipts.order_by("date")  # type: ignore[attr-defined]
             running_balance = self.custom_price
 
             # Update each receipt's balances in order

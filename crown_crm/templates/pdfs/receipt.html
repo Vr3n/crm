@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Membership Receipt - {{ sale.lead.get_full_name }}</title>
+    <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      margin: 40px;
+      color: #000;
+    }
+    .receipt-container {
+      border: 2px solid #000;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+    .logo img {
+      margin-right: 10px;
+    }
+    .org-name,
+    .org-name-only {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .header .contact {
+      text-align: right;
+      font-size: 12px;
+    }
+    h2 {
+      text-align: center;
+      text-decoration: underline;
+      margin-top: 15px;
+      font-size: 18px;
+    }
+    .section {
+      margin-top: 20px;
+    }
+    .flex-row {
+      display: flex;
+      justify-content: space-between;
+    }
+    .flex-row .item {
+      width: 48%;
+    }
+    .label {
+      font-weight: bold;
+    }
+    .terms {
+      margin-top: 20px;
+      font-size: 12px;
+    }
+    .signature {
+      margin-top: 40px;
+      text-align: right;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    img {
+      height: 120px;
+      width: 120px;
+      margin: 0 auto;
+     }
+    </style>
+  </head>
+  <body>
+    <div class="receipt-container">
+      <div class="header">
+        <div class="logo">
+          {% if organization.logo %}
+            <img src="{{ logo_url }}" width="30" height="30" />
+            <br>
+          {% endif %}
+        </div>
+        <p class="org-name-only">{{ organization.name }}</p>
+        <div class="contact">
+          {{ organization.addresses.first.address_line_1 }}
+          <br>
+          {{ organization.addresses.first.address_line_2 }}
+          <br>
+          phone: {{ organization.mobile_numbers.first.mobile_number }}
+          <br>
+          e-mail: {{ organization.email_addresses.first.email }}
+        </div>
+      </div>
+      <h2>Membership Receipt Voucher</h2>
+      <div class="section flex-row">
+        <div class="item">
+          <span class="label">Receipt:</span> {{ receipt.receipt_number|default:sale.pk }}
+        </div>
+        <div class="item" style="text-align:right">
+          <span class="label">Date:</span> {{ receipt.date|date:"d-m-Y" }}
+        </div>
+      </div>
+      <div class="section">
+        <div>
+          <span class="label">Name:</span> {{ lead.full_name }}
+        </div>
+        <div>
+          <span class="label">Mobile:</span> {{ lead.mobile_numbers.first.mobile_number }}
+        </div>
+      </div>
+      <div class="section">
+        <div class="item">
+          <span class="label">A Sum of Rupees:</span> {{ sale.custom_price }}
+        </div>
+        <div class="item">
+          <span class="label">Paid Amount:</span> {{ receipt.amount }}
+        </div>
+        <div>
+          <span class="label">Programme:</span> {{ sale.plan.name }}
+        </div>
+      </div>
+      <div class="section flex-row">
+        <div class="item">
+          <span class="label">Start Date:</span> {{ sale.membership_start_date|date:"d-m-Y" }}
+        </div>
+        <div class="item" style="text-align:right">
+          <span class="label">Expiry Date:</span> {{ sale.membership_end_date|date:"d-m-Y" }}
+        </div>
+      </div>
+      <div class="section">
+        <div>
+          <span class="label">Mode of Payment:</span> {{ receipt.method|default:"--" }}
+        </div>
+      </div>
+      <div class="terms">
+        <strong>Terms and Conditions:</strong>
+        <br>
+        {% for line in terms_list %}
+          {{ forloop.counter }}: {{ line }}
+          <br>
+        {% endfor %}
+      </div>
+      <div class="signature">{{ signature_label|default:"Member Signatory" }}</div>
+    </div>
+  </body>
+</html>

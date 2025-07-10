@@ -1,6 +1,7 @@
 <form hx-post="{% url 'hx-create-membership-sale' slug=request.organization.slug %}"
       hx-target="this"
       hx-swap="innerHTML"
+      hx-disabled-elt="button#submitBtn"
       class="needs-validation">
   {% csrf_token %}
   {% if form.non_field_errors %}
@@ -221,5 +222,9 @@
     </div>
   </div>
   <!-- Payment Process Card -->
-  <button type="submit" class="btn btn-primary">Submit</button>
+  <button type="submit" id="submitBtn" class="btn btn-primary">
+    Submit <span class="htmx-indicator spinner-border spinner-border-sm"
+       role="status"
+       aria-hidden="true"></span>
+  </button>
 </form>

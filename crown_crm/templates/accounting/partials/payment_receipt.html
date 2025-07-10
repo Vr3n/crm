@@ -47,8 +47,9 @@
     {% endif %}
   </div>
   <div class="card-footer text-center bg-white">
-    <button class="btn btn-outline-secondary" onclick="window.print()">
+    <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=receipt.uuid %}"
+       class="btn btn-outline-secondary receipt-print-btn">
       <i class="feather icon-printer"></i>Print
-    </button>
+    </a>
   </div>
 </div>

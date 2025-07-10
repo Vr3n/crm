@@ -10,11 +10,12 @@
       <div>
         <a href="{% url "receipts" slug=request.organization.slug %}"
            class="btn btn-secondary">
-          <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Receipts
+          <i data-feather="arrow-left" class="feather-sm text-white-50 mr-1"></i> Back to Receipts
         </a>
-        <button onclick="window.print()" class="btn btn-primary">
-          <i class="fas fa-print fa-sm text-white-50"></i> Print Receipt
-        </button>
+        <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=receipt.uuid %}"
+           class="btn btn-primary receipt-download-btn">
+          <i data-feather="file-text" class="feather-sm text-white-50 mr-1"></i> Download Receipt
+        </a>
       </div>
     </div>
     <div class="row">
@@ -30,7 +31,7 @@
                  data-toggle="dropdown"
                  aria-haspopup="true"
                  aria-expanded="false">
-                <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                <i data-feather="more-vertical" class="feather-sm text-gray-400"></i>
               </a>
             </div>
           </div>
@@ -80,11 +81,11 @@
                 <br>
                 <strong>Start Date:</strong> {{ receipt.sale.membership_start_date|date:"M j, Y" }}
                 <br>
-                {% comment %} <strong>End Date:</strong> {{ receipt.sale.membership_end_date|date:"M j, Y" }} {% endcomment %}
+                <strong>End Date:</strong> {{ receipt.sale.membership_end_date|date:"M j, Y" }}
               </p>
             </div>
             <div class="alert alert-info">
-              <i class="fas fa-info-circle mr-2"></i>
+              <i data-feather="info" class="mr-2"></i>
               This receipt was generated on {{ receipt.created_at|date:"F j, Y \a\t g:i A" }}
             </div>
           </div>
@@ -93,12 +94,3 @@
     </div>
   </div>
 {% endblock content %}
-{% block custom_js %}
-  <script>
-// Initialize tooltips
-$(function () {
-    $('[data-toggle="tooltip"]').tooltip();
-});
-
-  </script>
-{% endblock custom_js %}

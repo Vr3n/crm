@@ -1,4 +1,5 @@
 import logging
+import os
 from uuid import UUID
 from django.db import transaction
 from django.db import models
@@ -11,6 +12,9 @@ from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST, require_http_methods
 from django_htmx.http import trigger_client_event
 from django.contrib.auth.decorators import login_required
+from django.template.loader import get_template
+
+from weasyprint import HTML
 
 from crown_crm.leads.models import LeadMaster
 from crown_crm.utils.decorators import organization_slug_required
@@ -1159,3 +1163,43 @@ def hx_edit_receipt(
         "accounting/forms/receipt_form.html", 
         {"form": form}
     )
+
+@login_required
+@organization_slug_required
+def receipt_pdf(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    receipt = get_object_or_404(
+        PaymentReceipt,
+        uuid=uuid,
+        organization=request.organization
+    )
+    terms_list = [
+        "NO Refund / Membership Cancellation",
+        "Please read, understand and comply with these rules",
+        "Right of enrollment and entry is reserved by management",
+        "Transfer fees of 1000/- will be charged under conditions",
+        "Clients may not participate in workout independently or under personal trainer unless authorized",
+        "Clients are required to carry and change their footwear outside in shoe closet."
+    ]
+
+    organization = request.organization
+    sale = receipt.sale
+    lead = receipt.sale.lead
+
+    context = {
+        'terms_list': terms_list,
+        'organization': organization,
+        'receipt': receipt,
+        'sale': sale,
+        'lead': lead,
+        "logo_url": organization.logo.url
+    }
+
+    file_name = f"receipt-{lead.full_name}-{receipt.receipt_number}"
+
+    template = get_template('pdfs/receipt.html')
+    html = template.render(context)
+    pdf = HTML(string=html, base_url=request.build_absolute_uri()).write_pdf()
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment;filename="{file_name}.pdf"'
+    response["Access-Control-Expose-Headers"] = "Content-Disposition"
+    return response
