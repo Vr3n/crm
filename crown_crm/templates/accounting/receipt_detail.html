@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}
+  Receipt #{{ receipt.receipt_number }} - {{ block.super }}
+{% endblock title %}
+{% block content %}
+  <div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+      <h1 class="h3 mb-0 text-gray-800">{{ receipt.sale.lead.full_name }}</h1>
+      <div>
+        <a href="{% url "receipts" slug=request.organization.slug %}"
+           class="btn btn-secondary">
+          <i data-feather="arrow-left" class="feather-sm text-white-50 mr-1"></i> Back to Receipts
+        </a>
+        <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=receipt.uuid %}"
+           class="btn btn-primary receipt-download-btn">
+          <i data-feather="file-text" class="feather-sm text-white-50 mr-1"></i> Download Receipt
+        </a>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="card shadow mb-4">
+          <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Receipt Details</h6>
+            <div class="dropdown no-arrow">
+              <a class="dropdown-toggle"
+                 href="#"
+                 role="button"
+                 id="dropdownMenuLink"
+                 data-toggle="dropdown"
+                 aria-haspopup="true"
+                 aria-expanded="false">
+                <i data-feather="more-vertical" class="feather-sm text-gray-400"></i>
+              </a>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <p class="mb-1">
+                  <strong>{{ receipt.sale.lead.full_name }}</strong>
+                </p>
+              </div>
+              <div class="col-md-6 text-md-right">
+                <p class="mb-1">
+                  <strong>Receipt #:</strong> {{ receipt.receipt_number }}
+                  <br>
+                  <strong>Date:</strong> {{ receipt.date|date:"F j, Y" }}
+                  <br>
+                  <strong>Status:</strong> <span class="badge badge-success">Paid</span>
+                </p>
+              </div>
+            </div>
+            <div class="table-responsive">{% include "accounting/partials/payment_receipt.html" with receipt=receipt %}</div>
+            {% if receipt.notes %}
+              <div class="mt-4">
+                <h6>Notes</h6>
+                <div class="border rounded p-3 bg-light">{{ receipt.notes|linebreaks }}</div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card shadow mb-4">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Payment Information</h6>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <h6>Payment Method</h6>
+              <p class="mb-0">{{ receipt.method }}</p>
+            </div>
+            <div class="mb-3">
+              <h6>Membership Details</h6>
+              <p class="mb-1">
+                <strong>Plan:</strong> {{ receipt.sale.plan }}
+                <br>
+                <strong>Duration:</strong> {{ receipt.sale.duration }}
+                <br>
+                <strong>Start Date:</strong> {{ receipt.sale.membership_start_date|date:"M j, Y" }}
+                <br>
+                <strong>End Date:</strong> {{ receipt.sale.membership_end_date|date:"M j, Y" }}
+              </p>
+            </div>
+            <div class="alert alert-info">
+              <i data-feather="info" class="mr-2"></i>
+              This receipt was generated on {{ receipt.created_at|date:"F j, Y \a\t g:i A" }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

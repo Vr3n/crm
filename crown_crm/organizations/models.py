@@ -57,7 +57,7 @@ class OrganizationMaster(BaseModel):
 
 class OrganizationAddressMaster(BaseModel):
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE)
+        OrganizationMaster, on_delete=models.CASCADE, related_name="addresses")
     address_line_1 = models.TextField()
     address_line_2 = models.TextField()
     address_line_3 = models.TextField()
@@ -72,7 +72,7 @@ class OrganizationAddressMaster(BaseModel):
 
 class OrganizationMobileNumberMaster(BaseModel):
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE)
+        OrganizationMaster, on_delete=models.CASCADE, related_name="mobile_numbers")
     mobile_number = models.CharField(max_length=10)
 
     def __str__(self) -> str:
@@ -81,7 +81,7 @@ class OrganizationMobileNumberMaster(BaseModel):
 
 class OrganizationEmailMaster(BaseModel):
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE)
+        OrganizationMaster, on_delete=models.CASCADE, related_name="email_addresses")
     email = models.EmailField()
 
     def __str__(self) -> str:

@@ -2,7 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 
-from .models import Service, Product, CategorySP
+from .models import Service, Product
 
 class ServiceCreateForm(forms.ModelForm):
     """Form for creating new services."""
@@ -14,7 +14,10 @@ class ServiceCreateForm(forms.ModelForm):
             'code',
             'description',
             'price',
-            'category'
+            'category',
+            'type',
+            'sessions_count',
+            'subscription_type'
         ]
         widgets = {
             'organization': forms.HiddenInput(),
@@ -22,7 +25,10 @@ class ServiceCreateForm(forms.ModelForm):
             'code': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'category': forms.SelectMultiple(attrs={'class': 'form-control select2'})
+            'category': forms.SelectMultiple(attrs={'class': 'form-control select2'}),
+            'type': forms.Select(attrs={'class': 'form-control'}),
+            'sessions_count': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'subscription_type': forms.Select(attrs={'class': 'form-control'})
         }
 
     def __init__(self, *args, **kwargs):

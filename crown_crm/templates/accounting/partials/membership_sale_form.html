@@ -1,0 +1,230 @@
+<form hx-post="{% url 'hx-create-membership-sale' slug=request.organization.slug %}"
+      hx-target="this"
+      hx-swap="innerHTML"
+      hx-disabled-elt="button#submitBtn"
+      class="needs-validation">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+  {% endif %}
+  <input type="hidden"
+         name="organization"
+         value="{{ request.organization.slug }}">
+  <!-- Lead Card -->
+  <div class="card mb-2">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">Lead</h3>
+      <button hx-get="{% url 'hx-quick-create-lead' slug=request.organization.slug %}"
+              hx-target="#modal-form"
+              class="btn btn-outline-danger">+ Create New Lead</button>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label for="leadSearch" class="form-label">Search Your Lead</label>
+        <small class="text-muted">Type to search lead, or create new lead</small>
+        <div class="input-group">
+          <input type="search"
+                 name="leadSearch"
+                 id="leadSearch"
+                 placeholder="Search Lead"
+                 class="form-control"
+                 autocomplete="off"
+                 hx-get="{% url 'search-lead' slug=request.organization.slug %}"
+                 hx-trigger="keyup changed delay:550ms"
+                 hx-target="#leadSearchResults"
+                 hx-swap="innerHTML">
+        </div>
+        <div class="list-group list-group-flush" id="leadSearchResults">
+          {% include "leads/partials/search_results.html" %}
+        </div>
+      </div>
+      <input type="hidden"
+             name="lead"
+             required
+             value="{{ form.lead.uuid }}"
+             id="lead">
+      <div id="leadSelection"></div>
+    </div>
+  </div>
+  <!-- Lead Card -->
+  <!-- Membership Plan Card -->
+  <div class="card mb-2">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">Membership Plan</h3>
+      <button hx-get="{% url 'hx-create-membership-plan' slug=request.organization.slug %}"
+              hx-target="#modal-form"
+              class="btn btn-outline-danger">+ Create New Membership Plan</button>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label for="membershipPlanSearch" class="form-label">Search Your Membership Plan</label>
+        <small class="text-muted">Type to search membership plan, or create new membership plan</small>
+        <div class="input-group">
+          <input type="search"
+                 name="membership_query"
+                 id="membershipPlanSearch"
+                 placeholder="Search Membership Plan"
+                 class="form-control"
+                 autocomplete="off"
+                 hx-get="{% url 'search-membership-plan' slug=request.organization.slug %}"
+                 hx-trigger="keyup changed delay:550ms"
+                 hx-target="#membershipPlanSearchResults"
+                 hx-swap="innerHTML">
+        </div>
+        <div class="list-group list-group-flush" id="membershipPlanSearchResults">
+          {% include "accounting/partials/membership_plan_search_results.html" %}
+        </div>
+      </div>
+      <input type="hidden"
+             name="plan"
+             required
+             value="{{ form.plan.uuid }}"
+             id="plan">
+      <div id="membershipPlanSelection"></div>
+      <!-- Customization Section -->
+      <div id="customizationSection" class="mt-4" style="display: none;">
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row mb-3">
+              <!-- First Row - 2 columns -->
+              <div class="col-md-6 mb-3">
+                <label for="customPtSessions" class="form-label">PT Sessions</label>
+                <div class="input-group">
+                  <input type="number"
+                         id="customPtSessions"
+                         name="custom_pt_sessions"
+                         class="form-control"
+                         min="0">
+                  <span class="input-group-text">sessions</span>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="customDietPlans" class="form-label">Diet Plans</label>
+                <div class="input-group">
+                  <input type="number"
+                         id="customDietPlans"
+                         name="custom_diet_plans"
+                         class="form-control"
+                         min="0">
+                  <span class="input-group-text">plans</span>
+                </div>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3">
+                <label for="duration" class="form-label">Duration</label>
+                <select id="duration" name="duration" class="form-select">
+                  <option value="yearly" selected>Yearly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="6months">6 Months</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="id_membership_start_date" class="form-label">Membership Start Date</label>
+                <input type="date"
+                       id="id_membership_start_date"
+                       name="membership_start_date"
+                       class="form-control"
+                       required>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Membership Plan Card -->
+  <!-- Payment Process Card -->
+  <div class="card mb-2">
+    <div class="card-header">
+      <h3 class="card-title mb-0">Payment Details</h3>
+    </div>
+    <div class="card-body">
+      <!-- Pricing Section -->
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Base Price</label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <input type="number"
+                   id="decidedAmount"
+                   name="decided_amount"
+                   class="form-control bg-light"
+                   readonly>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="customPrice" class="form-label">Selling Price</label>
+          <div class="input-group">
+            <span class="input-group-text">₹</span>
+            <input type="number"
+                   id="customPrice"
+                   value="{{ form.custom_price.value }}"
+                   name="custom_price"
+                   class="form-control"
+                   step="0.01"
+                   min="0"
+                   onchange="updateBalance()">
+          </div>
+          <div id="discountInfo"
+               class="form-text text-success"
+               style="display: none">
+            <i class="feather icon-tag"></i> <span id="discountPercentage">0</span>% discount applied
+          </div>
+        </div>
+      </div>
+      <!-- Payment Section -->
+      <div class="border-top pt-3">
+        <h6 class="mb-3">Payment Information</h6>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="payment_amount" class="form-label">Amount Paid</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number"
+                     id="payment_amount"
+                     name="payment_amount"
+                     value="{{ form.payment_amount.value }}"
+                     class="form-control"
+                     step="0.01"
+                     min="0"
+                     oninput="updateBalance()"
+                     required>
+            </div>
+            <small class="form-text text-muted">
+              Balance: ₹<span id="balanceAmount">0.00</span>
+            </small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="paymentMethod" class="form-label">Payment Method</label>
+            <select name="payment_method" id="paymentMethod" class="form-select" required>
+              <option value="" {% if not form.payment_method.value %}selected{% endif %}>Select payment method...</option>
+              <option value="cash"
+                      {% if form.payment_method.value == 'cash' %}selected{% endif %}>Cash</option>
+              <option value="card"
+                      {% if form.payment_method.value == 'card' %}selected{% endif %}>Card</option>
+              <option value="upi"
+                      {% if form.payment_method.value == 'upi' %}selected{% endif %}>UPI</option>
+              <option value="bank"
+                      {% if form.payment_method.value == 'bank' %}selected{% endif %}>Bank Transfer</option>
+              <option value="other"
+                      {% if form.payment_method.value == 'other' %}selected{% endif %}>Other</option>
+            </select>
+            {% if form.payment_method.errors %}
+              <div class="invalid-feedback d-block">{{ form.payment_method.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Payment Process Card -->
+  <button type="submit" id="submitBtn" class="btn btn-primary">
+    Submit <span class="htmx-indicator spinner-border spinner-border-sm"
+       role="status"
+       aria-hidden="true"></span>
+  </button>
+</form>

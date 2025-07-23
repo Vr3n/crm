@@ -3,11 +3,13 @@ from crown_crm.utils.models import BaseModel
 
 # Create your models here.
 
+
 class CategorySP(BaseModel):
     category = models.CharField(max_length=255)
 
     def __str__(self) -> str:
         return self.category
+
 
 class ServiceProductAbstract(BaseModel):
     class Meta:
@@ -44,20 +46,78 @@ class Service(ServiceProductAbstract):
         status (str): Current status of the service.
         is_active (bool): Whether the service is currently active.
     """
+
+    class ServiceType(models.TextChoices):
+        SESSIONS = "sessions", "Sessions"
+        SUBSCRIPTION = "subscription", "Subscription"
+
+    class SubscriptionType(models.TextChoices):
+        MONTHLY = "monthly", "Monthly"
+        QUARTERLY = "quarterly", "Quarterly"
+        SIX_MONTHS = "6_months", "6 Months"
+        YEARLY = "yearly", "Yearly"
+
+    type = models.CharField(
+        max_length=20,
+        choices=ServiceType.choices,
+        default=ServiceType.SESSIONS,
+        help_text="Type of service: sessions or subscription.",
+    )
+    sessions_count = models.PositiveIntegerField(
+        blank=True, null=True, help_text="Number of sessions (if type is sessions)"
+    )
+    subscription_type = models.CharField(
+        max_length=20,
+        choices=SubscriptionType.choices,
+        blank=True,
+        null=True,
+        help_text="Subscription duration (if type is subscription)",
+    )
+
     code = models.CharField(
-        max_length=255,
-        unique=True,
-        help_text="Unique identifier for this service"
+        max_length=255, unique=True, help_text="Unique identifier for this service"
     )
     is_active = models.BooleanField(
-        default=True,
-        help_text="Whether this service is currently available"
+        default=True, help_text="Whether this service is currently available"
     )
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.type == self.ServiceType.SESSIONS:
+            # Validate sessions type
+            if self.sessions_count is None:
+                raise ValidationError(
+                    {
+                        "sessions_count": "Number of sessions is required when type is sessions."
+                    }
+                )
+            if self.subscription_type is not None:
+                raise ValidationError(
+                    {
+                        "subscription_type": "Subscription type should not be set when type is sessions."
+                    }
+                )
+
+        elif self.type == self.ServiceType.SUBSCRIPTION:
+            # Validate subscription type
+            if not self.subscription_type:
+                raise ValidationError(
+                    {
+                        "subscription_type": "Subscription type is required when type is subscription."
+                    }
+                )
+            if self.sessions_count is not None:
+                raise ValidationError(
+                    {
+                        "sessions_count": "Sessions count should not be set when type is subscription."
+                    }
+                )
 
     class Meta:
         verbose_name = "Service"
         verbose_name_plural = "Services"
-        ordering = ['-updated_at', '-created_at']
+        ordering = ["-updated_at", "-created_at"]
 
     def __str__(self):
         """Returns string representation of the service."""
@@ -75,11 +135,11 @@ class Service(ServiceProductAbstract):
 class Product(ServiceProductAbstract):
     sku = models.CharField(max_length=100, unique=True)
     hsn = models.CharField(max_length=6, null=True, blank=True)
-    
+
     class Meta:
         verbose_name = "Product"
         verbose_name_plural = "Products"
-        ordering = ['-updated_at', '-created_at']
+        ordering = ["-updated_at", "-created_at"]
 
 
 class Inventory(BaseModel):

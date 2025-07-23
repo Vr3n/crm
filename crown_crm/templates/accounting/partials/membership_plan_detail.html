@@ -1,0 +1,81 @@
+<div class="container-fluid"
+     hx-swap-oob="true"
+     hx-trigger="membershipplan_update_success from:body"
+     id="membership_plan_details">
+  <a href="{% url 'membership-plans' slug=request.organization.slug %}"
+     class="my-4 btn btn-secondary">
+    <i data-feather="arrow-left" class="icon-sm"></i> Back to Plans
+  </a>
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">{{ plan.name }}</h1>
+    <div>
+      <button class="btn btn-primary"
+              hx-get="{% url 'hx-edit-membership-plan' slug=request.organization.slug uuid=plan.uuid %}"
+              hx-target="#modal-form"
+              data-toggle="modal"
+              data-target="#modal">
+        <i data-feather="edit" class="icon-sm"></i> Edit
+      </button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Plan Details</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h5 class="font-weight-bold">Price</h5>
+            <p>${{ plan.price|floatformat:2 }}</p>
+          </div>
+          <div class="mb-3">
+            <h5 class="font-weight-bold">PT Sessions</h5>
+            <p>{{ plan.pt_sessions }}</p>
+          </div>
+          <div class="mb-3">
+            <h5 class="font-weight-bold">Diet Plans</h5>
+            <p>{{ plan.diet_plans }}</p>
+          </div>
+          {% if plan.perks %}
+            <div class="mb-3">
+              <h5 class="font-weight-bold">Perks</h5>
+              <ul class="mb-0">
+                {% for perk in plan.perks.split %}<li>{{ perk }}</li>{% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          {% if plan.description %}
+            <div class="mb-3">
+              <h5 class="font-weight-bold">Description</h5>
+              <p class="text-muted">{{ plan.description|linebreaksbr }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Plan Information</h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h5 class="font-weight-bold">Status</h5>
+            <span class="badge badge-{{ plan.is_active|yesno:'success,danger' }}">
+              {{ plan.is_active|yesno:"Active,Inactive" }}
+            </span>
+          </div>
+          <div class="mb-3">
+            <h5 class="font-weight-bold">Created</h5>
+            <p>{{ plan.created_at|date:"M d, Y H:i" }}</p>
+          </div>
+          <div class="mb-3">
+            <h5 class="font-weight-bold">Last Updated</h5>
+            <p>{{ plan.updated_at|date:"M d, Y H:i" }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

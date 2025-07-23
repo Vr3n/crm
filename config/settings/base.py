@@ -48,9 +48,9 @@ LOCALE_PATHS = [str(BASE_DIR / "locale")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 # DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -91,7 +91,6 @@ THIRD_PARTY_APPS = [
     "django_htmx",
     "drf_spectacular",
     "django_browser_reload",
-
 ]
 
 LOCAL_APPS = [
@@ -209,6 +208,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "crown_crm.users.context_processors.allauth_settings",
             ],
+            "libraries": {"model_extras": "crown_crm.templatetags.model_extras"},
         },
     },
 ]
@@ -288,11 +288,11 @@ if USE_TZ:
     # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = REDIS_URL
+CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672/"
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#redis-backend-use-ssl
 CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE} if REDIS_SSL else None
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_backend
-CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_RESULT_BACKEND = "rpc://"
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#redis-backend-use-ssl
 CELERY_REDIS_BACKEND_USE_SSL = CELERY_BROKER_USE_SSL
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-extended

@@ -1,0 +1,46 @@
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Lead</th>
+        <th>Receipt&nbsp;No.</th>
+        <th>Plan</th>
+        <th>Start&nbsp;Date</th>
+        <th>Amount&nbsp;(₹)</th>
+        <th>View</th>
+        <th>Delete</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sale in sales %}
+        <tr id="sale-{{ sale.uuid }}">
+          <td>{{ sale.lead.full_name }}</td>
+          <td>{{ sale.receipts.last.receipt_number }}</td>
+          <td>{{ sale.plan.name }}</td>
+          <td>{{ sale.membership_start_date|date:"d M Y" }}</td>
+          <td>{{ sale.custom_price }}</td>
+          <td class="text-nowrap">
+            <a href="{% url 'sale-detail' slug=request.organization.slug uuid=sale.uuid %}"
+               class="btn btn-sm btn-primary">
+              <i data-feather="eye" class="icon-sm"></i> View
+            </a>
+          </td>
+          <td class="text-nowrap">
+            <button hx-trigger="confirmed"
+                    hx-target="#sale-{{ sale.uuid }}"
+                    hx-swap="outerHTML"
+                    onClick="Swal.fire({'icon': 'warning', title: 'Confirm', text:'Delete this sale?', 'showDenyButton': true, 'denyButtonText': 'No'}).then((r)=>{if(r.isConfirmed){htmx.trigger(this, 'confirmed');}})"
+                    hx-delete="{% url 'hx-sale-delete' slug=request.organization.slug uuid=sale.uuid %}"
+                    class="btn btn-sm btn-danger">
+              <i data-feather="trash-2" class="icon-sm"></i> Delete
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-3">No sales yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

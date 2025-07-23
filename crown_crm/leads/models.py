@@ -1,8 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from django.db import models
 from django.core.validators import RegexValidator
+from django.conf import settings
+from django.utils import timezone
 
 from crown_crm.organizations.models import OrganizationMaster
 from crown_crm.utils.models import BaseModel
+
+if TYPE_CHECKING:
+    from crown_crm.accounting.models import MembershipSale
 
 
 # Create your models here.
@@ -20,14 +28,19 @@ class LeadMaster(BaseModel):
         gender (str, optional): Lead's gender, chosen from GENDER_CHOICES.
 
    Methods:
-        get_full_name -> str: Lead's Full name.
+        full_name -> str: Lead's Full name.
 
     """
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('T', 'Transgender'),
-    ]
+    class Gender(models.TextChoices):
+        MALE = 'M', 'Male'
+        FEMALE = 'F', 'Female'
+        TRANSGENDER = 'T', 'Transgender'
+
+    class Status(models.TextChoices):
+        NEW = 'NEW', 'New'
+        INTERESTED = 'INTERESTED', 'Interested'
+        CONVERTED = 'CONVERTED', 'Converted'
+        DROPPED = 'DROPPED', 'Dropped'
 
     organization = models.ForeignKey(
         OrganizationMaster, on_delete=models.CASCADE, related_name='leads')
@@ -35,9 +48,13 @@ class LeadMaster(BaseModel):
     middle_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=50)
     gender = models.CharField(
-        max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+        max_length=10, choices=Gender.choices, blank=True, null=True)
+    status = models.CharField(
+        max_length=15, choices=Status.choices, default=Status.NEW,
+        help_text='Current status of the lead')
 
-    def get_full_name(self) -> str:
+    @property
+    def full_name(self) -> str:
         """Constructs the full name of the lead.
 
         Returns:
@@ -51,7 +68,15 @@ class LeadMaster(BaseModel):
         Returns:
             str: Full name of the lead.
         """
-        return self.get_full_name()
+        return self.full_name
+
+    # mypy typecheking.
+    mobile_numbers: models.QuerySet["LeadMobileNumberMaster"] 
+    emails: models.QuerySet["LeadEmailAddressMaster"] 
+    addresses: models.QuerySet["LeadAddressMaster"] 
+    discussions: models.QuerySet["LeadDiscussionHistory"] 
+    sources: models.QuerySet["LeadSourceMaster"]
+    memberships: models.QuerySet["MembershipSale"]
 
     class Meta:
         verbose_name = 'Lead'
@@ -71,7 +96,6 @@ class LeadMobileNumberMaster(BaseModel):
     lead = models.ForeignKey(
         LeadMaster, on_delete=models.CASCADE, related_name="mobile_numbers")
     mobile_number = models.CharField(
-        unique=True,
         max_length=10,
         validators=[RegexValidator(
             r'^\d{10}$', message="Enter a valid 10-digit mobile number.")]
@@ -87,7 +111,7 @@ class LeadMobileNumberMaster(BaseModel):
         Returns:
             str: Lead's full name followed by their mobile number.
         """
-        return f"{self.lead.get_full_name()} - {self.mobile_number}"
+        return f"{self.lead.full_name} - {self.mobile_number}"
 
 
 class LeadEmailAddressMaster(BaseModel):
@@ -102,7 +126,7 @@ class LeadEmailAddressMaster(BaseModel):
     """
     lead = models.ForeignKey(
         LeadMaster, on_delete=models.CASCADE, related_name="emails")
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
 
     class Meta:
         verbose_name = 'Lead Email address'
@@ -114,7 +138,7 @@ class LeadEmailAddressMaster(BaseModel):
         Returns:
             str: Lead's full name followed by their email address.
         """
-        return f"{self.lead.get_full_name()} - {self.email}"
+        return f"{self.lead.full_name} - {self.email}"
 
 
 class LeadAddressMaster(BaseModel):
@@ -150,7 +174,7 @@ class LeadAddressMaster(BaseModel):
         Returns:
             str: Lead's full name followed by 'address'.
         """
-        return f"{self.lead.get_full_name()} address"
+        return f"{self.lead.full_name} address"
 
 
 class LeadDiscussionHistory(BaseModel):
@@ -173,7 +197,7 @@ class LeadDiscussionHistory(BaseModel):
         Returns:
             str: Descriptive text indicating this is discussion history for the lead.
         """
-        return f"Discussion history for {self.lead.get_full_name()}"
+        return f"Discussion history for {self.lead.full_name}"
 
 
 class LeadSourceMaster(BaseModel):
@@ -201,4 +225,51 @@ class LeadSourceMaster(BaseModel):
         Returns:
             str: Lead's name followed by the source information.
         """
-        return f"{self.lead} from {self.source}"
+        return f"{self.lead.full_name} from {self.source}"
+
+
+class LeadFollowUp(models.Model):
+    """
+    Represents a single follow-up action for a lead.
+    Tracks communication touchpoint, scheduled time, outcome, and notes.
+    """
+
+    class Channel(models.TextChoices):
+        PHONE = 'phone', 'Phone'
+        WHATSAPP = 'whatsapp', 'WhatsApp'
+        SMS = 'sms', 'SMS'
+        EMAIL = 'email', 'Email'
+        SOCIAL = 'social', 'Social Media'
+        IN_PERSON = 'in_person', 'In Person'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        COMPLETED = 'completed', 'Completed'
+        SKIPPED = 'skipped', 'Skipped'
+        FAILED = 'failed', 'Failed'
+
+    lead = models.ForeignKey("leads.LeadMaster", on_delete=models.CASCADE, related_name="followups")
+    scheduled_for = models.DateTimeField(help_text="When to follow up")
+    completed_at = models.DateTimeField(blank=True, null=True)
+
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    outcome = models.TextField(blank=True, null=True, help_text="What happened during the follow-up?")
+    notes = models.TextField(blank=True, null=True, help_text="CRM user's personal observations")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-scheduled_for']
+        verbose_name = "Lead Follow-Up"
+        verbose_name_plural = "Lead Follow-Ups"
+
+    def mark_completed(self, outcome: str = "") -> None:
+        """Mark the follow-up as completed."""
+        self.status = self.Status.COMPLETED
+        self.completed_at = timezone.now()
+        self.outcome = outcome
+        self.save(update_fields=["status", "completed_at", "outcome"])
+
+    def __str__(self) -> str:
+        return f"{self.lead.full_name} - {self.channel} on {self.scheduled_for.strftime('%d-%m-%Y %H:%M')}"

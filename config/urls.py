@@ -4,8 +4,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
-from django.urls import include
-from django.urls import path
+from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
 from django.contrib.auth.decorators import login_required
@@ -13,6 +12,12 @@ from django.contrib.auth.decorators import login_required
 from drf_spectacular.views import SpectacularAPIView
 from drf_spectacular.views import SpectacularSwaggerView
 from rest_framework.authtoken.views import obtain_auth_token
+
+from crown_crm.organizations.views import (
+    hx_organization_create_view,
+    organizations_list_view,
+    organizations_navbar_list_view,
+)
 
 
 @login_required
@@ -33,7 +38,21 @@ urlpatterns = [
     path("users/", include("crown_crm.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
-    path("organizations/", include("crown_crm.organizations.urls")),
+    path("<slug:slug>/", include("crown_crm.organizations.urls")),
+
+    # ORGANIZATION LIST VIEW #
+    path("organizations/", organizations_list_view, name="organizations-list"),
+    # ORGANIZATION HTMX VIEWS #
+    path(
+        "organizations/hx/nav-list/", 
+        organizations_navbar_list_view, 
+        name="hx-nav-organizations-list"
+    ),
+    path(
+        "organizations/hx/create/", 
+        hx_organization_create_view, 
+        name="organizations-hx-create"
+    ),
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]
@@ -76,7 +95,6 @@ if settings.DEBUG:
     if "debug_toolbar" in settings.INSTALLED_APPS:
         import debug_toolbar
 
-        urlpatterns = [
-            path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
+        urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
 
     urlpatterns += [path("__reload__/", include("django_browser_reload.urls"))]

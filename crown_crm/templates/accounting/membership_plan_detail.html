@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}
+  {{ plan.name }} - {{ block.super }}
+{% endblock title %}
+{% block content %}
+  {% include "accounting/partials/membership_plan_detail.html" %}
+  <hr>
+  {% include "accounting/partials/membership_sales_plan.html" %}
+{% endblock content %}

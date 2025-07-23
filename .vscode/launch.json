@@ -14,6 +14,32 @@
             "django": true,
             "autoStartBrowser": false,
             "program": "${workspaceFolder}\\manage.py"
+        },
+        {
+            "name": "Python Debugger: Celery",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "celery",
+            "args": [
+                "-A",
+                "config.celery_app",
+                "worker",
+                "-l",
+                "info",
+                "-P",
+                "solo"
+            ],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Django + Celery",
+            "configurations": [
+                "Python Debugger: Django",
+                "Python Debugger: Celery"
+            ]
         }
     ]
 }

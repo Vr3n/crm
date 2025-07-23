@@ -1,101 +1,217 @@
-{% extends 'base.html' %} 
+{% extends "base.html" %}
+{% load static %}
 <!-- -->
 {% block content %}
-<h4>
-  Welcome, to <span class="text-primary">{{ request.organization.name }}</span>
-</h4>
-<br />
-<div class="my-3">
-  <a href="#" class="btn btn-primary">+ Add Lead</a>
-  <a href="#" class="btn btn-success">+ Add Order</a>
-  <a href="#" class="btn btn-warning">+ Add Purchase</a>
-</div>
-<br />
-<div class="row">
-  <div class="col-md-3">
-    <div class="metric-card bg-c-blue">
-      <div class="card-block">
-        <h3>Leads <span class="float-right">{{ lead_count }}</span></h3>
-      </div>
-    </div>
+  <h4>
+    Welcome, to <span class="text-primary">{{ request.organization.name }}</span>
+  </h4>
+  <br />
+  <div class="my-3">
+    <button type="button"
+            hx-get="{% url 'hx-create-lead' slug=request.organization.slug %}"
+            hx-target="#modal-form"
+            class="btn btn-primary">
+      <i data-feather="plus" class="icon-sm"></i> Add Lead
+    </button>
+    <a href="{% url 'sale-create' slug=request.organization.slug %}"
+       class="btn btn-warning">+ Add New Sale</a>
   </div>
-  <div class="col-md-3">
-    <div class="metric-card bg-c-green">
-      <div class="card-block">
-        <h3>Orders <span class="float-right">3</span></h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="metric-card bg-c-teal">
-      <div class="card-block">
-        <h3>Purchases <span class="float-right">2</span></h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="metric-card bg-c-yellow">
-      <div class="card-block">
-        <h3>Followups <span class="float-right">6</span></h3>
-      </div>
-    </div>
-  </div>
-</div>
-<hr />
-<div class="row">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Leads</h5>
-        </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+  <!-- Chart Data (Hidden) -->
+  <div id="chartData" style="display: none;">{{ chart_data|json_script:""|safe }}</div>
+  <div class="row">
+    <!-- Leads Card -->
+    <div class="col-md-4 mb-4">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <p class="text-muted">Total Leads</p>
+            <div class="metric-value">{{ lead_count }}</div>
+            <div class="metric-change {% if recent_lead_count > 0 %}up{% else %}down{% endif %}">
+              {{ recent_lead_count }} this month
+            </div>
+          </div>
+          <div id="leadsChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Orders</h5>
+    <!-- Membership Sales Card -->
+    <div class="col-md-4 mb-4">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <p class="text-muted">Memberships Sold</p>
+            <div class="metric-value">{{ recent_sales.count }}</div>
+            <div class="metric-change {% if chart_data.sales_trend|last > chart_data.sales_trend|first|default:0 %}up{% else %}down{% endif %}">
+              {% with last_sale=chart_data.sales_trend|last previous_sale=chart_data.sales_trend|slice:"-2"|first|default:0 %}
+                {% if last_sale > previous_sale %}+{% endif %}
+                {{ last_sale|default:0 }} this week
+              {% endwith %}
+            </div>
+          </div>
+          <div id="salesChart" style="min-width: 100px;"></div>
         </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+      </div>
+    </div>
+    <!-- Followups Card (Placeholder) -->
+    <div class="col-md-4 mb-4">
+      <div class="metric-card">
+        <div class="d-flex justify-content-between">
+          <div>
+            <p class="text-muted">Followups</p>
+            <div class="metric-value">0</div>
+            <div class="metric-change">Coming soon</div>
+          </div>
+          <div id="followupChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-<div class="row mt-4">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Purchases</h5>
+  <hr />
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Recent Leads</h5>
+          </div>
+          <div class="table-responsive">{% include "leads/tables/leads.html" with leads=recent_leads %}</div>
         </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title d-flex justify-content-between align-items-center">
+            <h5 class="text-danger">Upcoming Membership Expirations.</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Lead Name</th>
+                  <th>Membership Plan</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Days Left</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for membership in membership_expirations %}
+                  <tr>
+                    <td>{{ membership.lead.full_name }}</td>
+                    <td>{{ membership.plan.name }}</td>
+                    <td>{{ membership.membership_start_date }}</td>
+                    <td>{{ membership.membership_end_date }}</td>
+                    <td>{{ membership.days_left }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title">
-          <h5 class="text-danger">Recent Followups</h5>
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Lead Followups</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Lead Name</th>
+                  <th>Followup Date</th>
+                  <th>Followup Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Alex Johnson</td>
+                  <td>2025-07-03</td>
+                  <td>Call</td>
+                  <td>
+                    <span class="badge badge-warning">Pending</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Maria Garcia</td>
+                  <td>2025-07-04</td>
+                  <td>Email</td>
+                  <td>
+                    <span class="badge badge-info">Scheduled</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Robert Chen</td>
+                  <td>2025-07-05</td>
+                  <td>Meeting</td>
+                  <td>
+                    <span class="badge badge-primary">Confirmed</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Sarah Wilson</td>
+                  <td>2025-07-03</td>
+                  <td>Call</td>
+                  <td>
+                    <span class="badge badge-danger">Overdue</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>James Taylor</td>
+                  <td>2025-07-06</td>
+                  <td>Demo</td>
+                  <td>
+                    <span class="badge badge-success">Completed</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="table-responsive">
-          {% include 'leads/tables/leads.html' with leads=recent_leads %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">
+            <h5 class="text-danger">Recent Membership Sales</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Lead Name</th>
+                  <th>Membership Plan</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for sale in recent_sales|slice:":5" %}
+                  <tr>
+                    <td>{{ sale.lead.full_name }}</td>
+                    <td>{{ sale.plan.name }} (₹{{ sale.custom_price|default:sale.plan.price }})</td>
+                    <td>{{ sale.created_at|date:"d-m-Y" }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-center">No recent sales found</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 {% endblock content %}
 <!-- -->
+{% block custom_js %}
+  <script src="{% static 'js/appjs/dashboard.js' %}"></script>
+{% endblock custom_js %}

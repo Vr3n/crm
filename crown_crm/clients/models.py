@@ -25,11 +25,11 @@ class ClientMaster(BaseModel):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
     is_deleted = models.BooleanField(default=False)
 
-    def get_full_name(self) -> str:
+    def full_name(self) -> str:
         return f"{self.first_name} {self.middle_name if self.middle_name else ''} {self.last_name}"  # noqa
 
     def __str__(self):
-        return self.get_full_name()
+        return self.full_name()
 
     objects = ClientQuerySet.as_manager()
 
