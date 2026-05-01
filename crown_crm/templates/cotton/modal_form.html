@@ -1,0 +1,90 @@
+{% comment %}
+c-modal-form: Bootstrap 4 modal with HTMX form
+
+IMPORTANT DESIGN DECISIONS:
+- Form targets ITSELF (hx-target="this") with outerHTML swap
+- On 422: Only the form is re-rendered with errors, modal stays open
+- On 204: Modal MUST be closed via JS event handler (see Phase 6)
+- data-backdrop="static" prevents accidental closure during form entry
+- Does NOT accept {{ attrs }} - hx attributes are fixed for modal behavior
+
+Args:
+  title: Modal title (required)
+  action: Form action URL (required)
+  method: HTTP method - post, put, patch (default: post)
+  submit_label: Submit button text (default: "Save")
+  close_label: Close button text (default: "Cancel")
+  size: Modal size - sm, lg, xl (default: empty for medium)
+  id: Modal ID (optional, auto-generated if empty)
+{% endcomment %}
+
+<c-vars
+  title
+  action
+  method="post"
+  submit_label="Save"
+  close_label="Cancel"
+  size=""
+  id=""
+/>
+
+{% with modal_id=id|default:"modal-"|add:action|slugify %}
+<div
+  class="modal fade"
+  id="{{ modal_id }}"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="{{ modal_id }}-label"
+  aria-hidden="true"
+  data-backdrop="static"
+  data-keyboard="true"
+>
+  <div
+    class="modal-dialog modal-dialog-centered {% if size %}modal-{{ size }}{% endif %}"
+    role="document"
+  >
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="{{ modal_id }}-label">{{ title }}</h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form
+          id="{{ modal_id }}-form"
+          hx-{{ method }}="{{ action }}"
+          hx-target="this"
+          hx-swap="outerHTML"
+        >
+          {% csrf_token %}
+          {{ slot }}
+
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              {{ close_label }}
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <span
+                class="spinner-border spinner-border-sm mr-2 htmx-indicator"
+                style="display:none;"
+              ></span>
+              {{ submit_label }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endwith %}

@@ -1,0 +1,116 @@
+<div class="table-responsive">
+  <table class="table table-hover table-sm mb-0" id="lead-select-table">
+    <thead>
+      <tr>
+        <th class="pt-0"><i class="feather icon-user"></i> Name</th>
+        <th class="pt-0"><i class="feather icon-phone"></i> Mobile</th>
+        <th class="pt-0"><i class="feather icon-mail"></i> Email</th>
+        <th class="pt-0">Select</th>
+      </tr>
+    </thead>
+    <tbody class="table-group-divider">
+      {% for lead in leads %}
+      <tr
+        class="lead-row"
+        data-lead-id="{{ lead.pk }}"
+        data-lead-name="{{ lead.full_name }}"
+        data-lead-mobile="{% firstof lead.mobile_numbers.first.mobile_number 'N/A' %}"
+        data-lead-email="{% firstof lead.emails.first.email 'N/A' %}"
+      >
+        <td>{{ lead.full_name }}</td>
+        <td>
+          {% if lead.mobile_numbers.first %}
+            {{ lead.mobile_numbers.first.mobile_number }}
+          {% else %}
+            <span class="text-muted">N/A</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if lead.emails.first %}
+            {{ lead.emails.first.email }}
+          {% else %}
+            <span class="text-muted">N/A</span>
+          {% endif %}
+        </td>
+        <td>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            onclick="selectLeadFromTable(this, event)"
+          >
+            <i class="feather icon-check-circle"></i> Select
+          </button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="text-center py-3">
+          {% if query %}
+            No leads found matching "{{ query }}"
+          {% else %}
+            No leads available
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Pagination - only if more than 1 page #}
+{% if paginator.num_pages > 1 %}
+<nav aria-label="Lead search pagination" class="mt-2">
+  <ul class="pagination justify-content-center mb-0">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <button class="page-link"
+                hx-get="{% url 'search-lead' slug=request.organization.slug %}?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}"
+                hx-target="#leadTableContainer">
+          <i class="feather icon-chevron-left"></i> Previous
+        </button>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link"><i class="feather icon-chevron-left"></i> Previous</span>
+      </li>
+    {% endif %}
+
+    {% for i in paginator.page_range %}
+      {% if page_obj.number == i %}
+        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+      {% else %}
+        <li class="page-item">
+          <button class="page-link"
+                  hx-get="{% url 'search-lead' slug=request.organization.slug %}?q={{ query|urlencode }}&page={{ i }}"
+                  hx-target="#leadTableContainer">{{ i }}</button>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <button class="page-link"
+                hx-get="{% url 'search-lead' slug=request.organization.slug %}?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}"
+                hx-target="#leadTableContainer">
+          Next <i class="feather icon-chevron-right"></i>
+        </button>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Next <i class="feather icon-chevron-right"></i></span>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{# Show create lead button when no results #}
+{% if not leads and query %}
+<div class="text-center mt-2">
+  <button class="btn btn-outline-primary btn-sm"
+          hx-get="{% url 'hx-quick-create-lead' slug=request.organization.slug %}"
+          hx-target="#modal-form">
+    <i class="feather icon-plus"></i> Create New Lead
+  </button>
+</div>
+{% endif %}

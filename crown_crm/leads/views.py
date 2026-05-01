@@ -1,14 +1,23 @@
+import logging
+
 from django.db.models import Prefetch, Q
 from django.forms import inlineformset_factory, model_to_dict
 from django.http import HttpResponse, JsonResponse
+from django.db.models.functions import TruncDate
+from django.db.models import Count
+from datetime import timedelta
+from django.utils import timezone
 from django.shortcuts import get_object_or_404, render
-
 from django.template.loader import render_to_string
+from django.template.response import TemplateResponse
 from django_htmx.http import trigger_client_event
 from django.contrib.auth.decorators import login_required
+from django.views import View
 from django.views.decorators.http import require_http_methods
+from django.utils.decorators import method_decorator
 from typing import Any, cast
 
+from crown_crm.core.mixins import HtmxFormMixin, HtmxDeleteMixin, HtmxFormsetMixin
 from crown_crm.utils.decorators import organization_slug_required
 from crown_crm.utils.types import OrgHttpRequest
 
@@ -25,6 +34,8 @@ from .models import (
     LeadMobileNumberMaster,
     LeadEmailAddressMaster,
 )
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -48,48 +59,38 @@ def search_results_view(request: OrgHttpRequest) -> HttpResponse:
     Returns:
         HttpResponse: Rendered template with search results.
     """
-    query = request.GET.get("leadSearch", "").strip()
+    from django.core.paginator import Paginator
 
-    if query == "":
-        return render(request, "leads/partials/search_results.html")
+    query = request.GET.get("q", "").strip()
 
-    # Base queryset for the current organization
     leads = LeadMaster.objects.filter(organization=request.organization)
 
     if query:
-        # Create a Q object to combine multiple search conditions
-        search_conditions = Q()
-
-        # Search in name fields
-        name_conditions = (
+        search_conditions = (
             Q(first_name__icontains=query)
             | Q(last_name__icontains=query)
             | Q(middle_name__icontains=query)
+            | Q(mobile_numbers__mobile_number__icontains=query)
+            | Q(emails__email__icontains=query)
         )
-
-        # Search in mobile numbers (through related model)
-        mobile_condition = Q(mobile_numbers__mobile_number__icontains=query)
-
-        # Search in email addresses (through related model)
-        email_condition = Q(emails__email__icontains=query)
-
-        # Combine all conditions with OR
-        search_conditions = name_conditions | mobile_condition | email_condition
-
-        # Apply the search conditions and remove duplicates
         leads = leads.filter(search_conditions).distinct()
 
-    # Prefetch related data to avoid N+1 queries
     leads = leads.prefetch_related(
         "mobile_numbers",
         "emails",
     ).order_by("first_name", "last_name")
 
+    per_page = 5
+    paginator = Paginator(leads, per_page)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+
     context = {
-        "leads": leads,
-        "count": leads.count(),
+        "leads": page_obj.object_list,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "query": query,
     }
-    return render(request, "leads/partials/search_results.html", context)
+    return render(request, "leads/partials/search_results_table.html", context)
 
 
 MobileNumberFormSet = inlineformset_factory(
@@ -200,7 +201,7 @@ def hx_create_lead_frm_membership(request: OrgHttpRequest) -> HttpResponse:
             )
             res = trigger_client_event(
                 res,
-                "lead_create_success",
+                "lead-created",
                 model_to_dict(lead),
             )
             return res
@@ -278,7 +279,7 @@ def hx_create_lead(request: OrgHttpRequest) -> HttpResponse:
             )
             res = trigger_client_event(
                 res,
-                "lead_create_success",
+                "lead-created",
             )
             return res
         else:
@@ -387,6 +388,32 @@ def hx_leads_table(request: OrgHttpRequest) -> HttpResponse:
     context = {"leads": leads}
 
     return render(request, "leads/tables/leads.html", context=context)
+
+
+@login_required
+@organization_slug_required
+def hx_lead_chart_data(request: OrgHttpRequest) -> JsonResponse:
+    """Returns lead chart data as JSON for HTMX chart updates."""
+    today = timezone.now().date()
+    dates = [(today - timedelta(days=i)).strftime("%b %d") for i in range(6, -1, -1)]
+    
+    leads_by_day = (
+        LeadMaster.objects.filter(organization=request.organization)
+        .annotate(day=TruncDate('created_at'))
+        .values('day')
+        .annotate(count=Count('uuid'))
+        .order_by('day')
+    )
+    
+    trend = []
+    for i in range(6, -1, -1):
+        target = today - timedelta(days=i)
+        count = next((l['count'] for l in leads_by_day if l['day'] == target), 0)
+        trend.append(count)
+    
+    lead_count = LeadMaster.objects.filter(organization=request.organization).count()
+    
+    return JsonResponse({'lead_trend': trend, 'sales_dates': dates, 'lead_count': lead_count})
 
 
 @login_required
@@ -628,7 +655,7 @@ def hx_quick_create_lead(request: OrgHttpRequest) -> HttpResponse:
             )
             res = trigger_client_event(
                 res,
-                "lead_create_success",
+                "lead-created",
                 model_to_dict(lead),
             )
             return res
@@ -689,3 +716,145 @@ def hx_add_email_formset_input(request: OrgHttpRequest):
         "leads/forms/email_form_row.html", {"form": form, "form_id": form_id}
     )
     return HttpResponse(html)
+
+
+# =============================================================================
+# Class-Based HTMX Views (using mixins)
+# =============================================================================
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(organization_slug_required, name='dispatch')
+class HxCreateLeadView(HtmxFormsetMixin, View):
+    """Create lead with mobile/email formsets using HtmxFormsetMixin."""
+
+    template_name = "leads/forms/lead_create.html"
+    form_class = LeadCreateForm
+    formset_classes = {
+        'mobile': MobileNumberFormSet,
+        'email': EmailFormSet,
+    }
+    success_event = "lead-created"
+    context_object_name = "lead_form"
+    permission_required = "leads.add_leadmaster"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['address_form'] = kwargs.get('address_form') or LeadAddressForm(
+            self.request.POST or None
+        )
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['initial'] = {'organization': self.request.organization}
+        return kwargs
+
+    def form_valid(self, form):
+        logger.debug(f"[HxCreateLeadView] form_valid called")
+        lead = form.save()
+
+        for name, fs in self.formsets.items():
+            fs.instance = lead
+            fs.save()
+
+        address_form = LeadAddressForm(self.request.POST)
+        logger.debug(f"[HxCreateLeadView] address_form.is_valid: {address_form.is_valid()}")
+        if not address_form.is_valid():
+            logger.debug(f"[HxCreateLeadView] address_form errors: {address_form.errors}")
+
+        if address_form.is_valid():
+            address_form.instance = lead
+            address_form.save()
+
+        self._object = lead
+        return self.htmx_success()
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(organization_slug_required, name='dispatch')
+class HxEditLeadView(HtmxFormsetMixin, View):
+    """Edit lead with mobile/email formsets using HtmxFormsetMixin."""
+
+    template_name = "leads/forms/lead_form.html"
+    form_class = LeadCreateForm
+    formset_classes = {
+        'mobile': MobileNumberFormSet,
+        'email': EmailFormSet,
+    }
+    success_event = "lead-updated"
+    context_object_name = "lead_form"
+    permission_required = "leads.change_leadmaster"
+
+    def get_object(self):
+        return get_object_or_404(
+            LeadMaster,
+            pk=self.kwargs['pk'],
+            organization=self.request.organization
+        )
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['instance'] = self.get_object()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['address_form'] = kwargs.get('address_form') or LeadAddressForm(
+            self.request.POST or None,
+            instance=getattr(context.get('lead_form'), 'instance', None)
+        )
+        return context
+
+    def form_valid(self, form):
+        lead = form.save()
+
+        for name, fs in self.formsets.items():
+            fs.instance = lead
+            fs.save()
+
+        address_form = LeadAddressForm(self.request.POST, instance=lead)
+        if address_form.is_valid():
+            address_form.save()
+
+        self._object = lead
+        return self.htmx_success()
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(organization_slug_required, name='dispatch')
+class HxDeleteLeadView(HtmxDeleteMixin, View):
+    """Delete lead using HtmxDeleteMixin."""
+
+    model = LeadMaster
+    success_event = "lead-deleted"
+    event_id_key = "lead_id"
+    permission_required = "leads.delete_leadmaster"
+    pk_url_kwarg = 'pk'
+
+    def get_object(self):
+        return get_object_or_404(
+            self.model,
+            pk=self.kwargs[self.pk_url_kwarg],
+            organization=self.request.organization
+        )
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(organization_slug_required, name='dispatch')
+class HxQuickCreateLeadView(HtmxFormMixin, View):
+    """Quick create lead using HtmxFormMixin."""
+
+    template_name = "leads/forms/lead_create.html"
+    form_class = LeadCreateForm
+    success_event = "lead-created"
+    context_object_name = "lead_form"
+    permission_required = "leads.add_leadmaster"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['initial'] = {'organization': self.request.organization}
+        return kwargs
+
+    def get_success_event_params(self):
+        return {"lead_id": self._object.id, "quick": True}

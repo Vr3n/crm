@@ -7,10 +7,11 @@ urlpatterns = [
     path("<uuid:pk>/", views.lead_detail_view, name="lead-detail"),
     path("search/", views.search_results_view, name="search-lead"),
     # HTMX VIEWS HERE.
-    path("hx/create/", views.hx_create_lead, name="hx-create-lead"),
-    path("hx/quick-create/", views.hx_quick_create_lead, name="hx-quick-create-lead"),
-    path("hx/<uuid:pk>/delete/", views.hx_lead_delete_view, name="hx-delete-lead"),
+    path("hx/create/", views.HxCreateLeadView.as_view(), name="hx-create-lead"),
+    path("hx/quick-create/", views.HxQuickCreateLeadView.as_view(), name="hx-quick-create-lead"),
+    path("hx/<uuid:pk>/delete/", views.HxDeleteLeadView.as_view(), name="hx-delete-lead"),
     path("hx/all-leads/table/", views.hx_leads_table, name="hx-leads-table"),
+    path("hx/lead-chart-data/", views.hx_lead_chart_data, name="hx-lead-chart-data"),
     # HX Mobile views.
     path(
         "hx/mobile-numbers/table/<uuid:lead_id>/",

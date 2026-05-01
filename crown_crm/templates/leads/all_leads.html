@@ -88,7 +88,7 @@
 <!-- custom js for the page. -->
 {% block custom_js %}
 <script>
-  document.body.addEventListener("lead_create_success", function (event) {
+  document.body.addEventListener("lead-created", function (event) {
     $("#collapseExample").collapse("hide");
     document.getElementById("lead-create-form-partial").reset();
   });

@@ -16,9 +16,9 @@
         <tr id="sale-{{ sale.uuid }}">
           <td>{{ sale.lead.full_name }}</td>
           <td>{{ sale.receipts.last.receipt_number }}</td>
-          <td>{{ sale.plan.name }}</td>
+          <td>{{ sale.duration|title }}</td>
           <td>{{ sale.membership_start_date|date:"d M Y" }}</td>
-          <td>{{ sale.custom_price }}</td>
+          <td>{{ sale.price }}</td>
           <td class="text-nowrap">
             <a href="{% url 'sale-detail' slug=request.organization.slug uuid=sale.uuid %}"
                class="btn btn-sm btn-primary">

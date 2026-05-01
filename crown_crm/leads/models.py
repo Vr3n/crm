@@ -15,9 +15,10 @@ if TYPE_CHECKING:
 
 # Create your models here.
 class LeadMaster(BaseModel):
-    """Represents a lead in the system with basic personal information.
+    """
+    Represents a lead in the system with basic personal information.
 
-    This model stores core information about leads including their name, gender, and 
+    This model stores core information about leads including their name, gender, and
     organizational affiliation. It serves as the central model for lead management.
 
     Attributes:
@@ -27,31 +28,36 @@ class LeadMaster(BaseModel):
         last_name (str): Lead's last name.
         gender (str, optional): Lead's gender, chosen from GENDER_CHOICES.
 
-   Methods:
-        full_name -> str: Lead's Full name.
-
+    Methods:
+         full_name -> str: Lead's Full name.
     """
+
     class Gender(models.TextChoices):
-        MALE = 'M', 'Male'
-        FEMALE = 'F', 'Female'
-        TRANSGENDER = 'T', 'Transgender'
+        MALE = "M", "Male"
+        FEMALE = "F", "Female"
+        TRANSGENDER = "O", "Other"
 
     class Status(models.TextChoices):
-        NEW = 'NEW', 'New'
-        INTERESTED = 'INTERESTED', 'Interested'
-        CONVERTED = 'CONVERTED', 'Converted'
-        DROPPED = 'DROPPED', 'Dropped'
+        NEW = "NEW", "New"
+        INTERESTED = "INTERESTED", "Interested"
+        CONVERTED = "CONVERTED", "Converted"
+        DROPPED = "DROPPED", "Dropped"
 
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE, related_name='leads')
+        OrganizationMaster, on_delete=models.CASCADE, related_name="leads"
+    )
     first_name = models.CharField(max_length=50)
     middle_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=50)
     gender = models.CharField(
-        max_length=10, choices=Gender.choices, blank=True, null=True)
+        max_length=10, choices=Gender.choices, blank=True, null=True
+    )
     status = models.CharField(
-        max_length=15, choices=Status.choices, default=Status.NEW,
-        help_text='Current status of the lead')
+        max_length=15,
+        choices=Status.choices,
+        default=Status.NEW,
+        help_text="Current status of the lead",
+    )
 
     @property
     def full_name(self) -> str:
@@ -71,20 +77,21 @@ class LeadMaster(BaseModel):
         return self.full_name
 
     # mypy typecheking.
-    mobile_numbers: models.QuerySet["LeadMobileNumberMaster"] 
-    emails: models.QuerySet["LeadEmailAddressMaster"] 
-    addresses: models.QuerySet["LeadAddressMaster"] 
-    discussions: models.QuerySet["LeadDiscussionHistory"] 
+    mobile_numbers: models.QuerySet["LeadMobileNumberMaster"]
+    emails: models.QuerySet["LeadEmailAddressMaster"]
+    addresses: models.QuerySet["LeadAddressMaster"]
+    discussions: models.QuerySet["LeadDiscussionHistory"]
     sources: models.QuerySet["LeadSourceMaster"]
     memberships: models.QuerySet["MembershipSale"]
 
     class Meta:
-        verbose_name = 'Lead'
-        verbose_name_plural = 'Leads'
+        verbose_name = "Lead"
+        verbose_name_plural = "Leads"
 
 
 class LeadMobileNumberMaster(BaseModel):
-    """Stores mobile numbers associated with a lead.
+    """
+    Stores mobile numbers associated with a lead.
 
     This model maintains mobile contact information for leads, ensuring proper
     format validation for mobile numbers.
@@ -93,17 +100,20 @@ class LeadMobileNumberMaster(BaseModel):
         lead (ForeignKey): Reference to the associated lead.
         mobile_number (str): 10-digit mobile number, validated using regex.
     """
+
     lead = models.ForeignKey(
-        LeadMaster, on_delete=models.CASCADE, related_name="mobile_numbers")
+        LeadMaster, on_delete=models.CASCADE, related_name="mobile_numbers"
+    )
     mobile_number = models.CharField(
         max_length=10,
-        validators=[RegexValidator(
-            r'^\d{10}$', message="Enter a valid 10-digit mobile number.")]
+        validators=[
+            RegexValidator(r"^\d{10}$", message="Enter a valid 10-digit mobile number.")
+        ],
     )
 
     class Meta:
-        verbose_name = 'Lead Mobile Number'
-        verbose_name_plural = 'Lead Mobile Numbers'
+        verbose_name = "Lead Mobile Number"
+        verbose_name_plural = "Lead Mobile Numbers"
 
     def __str__(self) -> str:
         """Returns string representation of the lead's mobile number.
@@ -124,13 +134,15 @@ class LeadEmailAddressMaster(BaseModel):
         lead (ForeignKey): Reference to the associated lead.
         email (str): Valid email address.
     """
+
     lead = models.ForeignKey(
-        LeadMaster, on_delete=models.CASCADE, related_name="emails")
+        LeadMaster, on_delete=models.CASCADE, related_name="emails"
+    )
     email = models.EmailField()
 
     class Meta:
-        verbose_name = 'Lead Email address'
-        verbose_name_plural = 'Lead Email addresses'
+        verbose_name = "Lead Email address"
+        verbose_name_plural = "Lead Email addresses"
 
     def __str__(self) -> str:
         """Returns string representation of the lead's email address.
@@ -157,16 +169,22 @@ class LeadAddressMaster(BaseModel):
         city (str, optional): City name.
         pincode (str): 6-digit pincode, validated using regex.
     """
+
     lead = models.ForeignKey(
-        LeadMaster, on_delete=models.CASCADE, related_name="addresses")
+        LeadMaster, on_delete=models.CASCADE, related_name="addresses"
+    )
     flat_building = models.CharField(max_length=100)
     street = models.CharField(max_length=100)
     area = models.CharField(max_length=100)
     landmark = models.CharField(max_length=100, blank=True, null=True)
     state = models.CharField(max_length=100, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
-    pincode = models.CharField(max_length=6, validators=[RegexValidator(
-        r'^\d{6}$', message="Enter a valid 6-digit pincode.")])
+    pincode = models.CharField(
+        max_length=6,
+        validators=[
+            RegexValidator(r"^\d{6}$", message="Enter a valid 6-digit pincode.")
+        ],
+    )
 
     def __str__(self) -> str:
         """Returns string representation of the lead's address.
@@ -187,8 +205,10 @@ class LeadDiscussionHistory(BaseModel):
         lead (ForeignKey): Reference to the associated lead.
         discussion_notes (str): Detailed notes about the discussion or interaction.
     """
+
     lead = models.ForeignKey(
-        LeadMaster, on_delete=models.CASCADE, related_name="discussions")
+        LeadMaster, on_delete=models.CASCADE, related_name="discussions"
+    )
     discussion_notes = models.TextField()
 
     def __str__(self) -> str:
@@ -211,10 +231,9 @@ class LeadSourceMaster(BaseModel):
         source (str): Name or identifier of the lead source.
         description (str, optional): Detailed description of the lead source.
     """
+
     lead = models.ForeignKey(
-        LeadMaster,
-        on_delete=models.CASCADE,
-        related_name='sources'
+        LeadMaster, on_delete=models.CASCADE, related_name="sources"
     )
     source = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
@@ -235,32 +254,42 @@ class LeadFollowUp(models.Model):
     """
 
     class Channel(models.TextChoices):
-        PHONE = 'phone', 'Phone'
-        WHATSAPP = 'whatsapp', 'WhatsApp'
-        SMS = 'sms', 'SMS'
-        EMAIL = 'email', 'Email'
-        SOCIAL = 'social', 'Social Media'
-        IN_PERSON = 'in_person', 'In Person'
+        PHONE = "phone", "Phone"
+        WHATSAPP = "whatsapp", "WhatsApp"
+        SMS = "sms", "SMS"
+        EMAIL = "email", "Email"
+        SOCIAL = "social", "Social Media"
+        IN_PERSON = "in_person", "In Person"
 
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pending'
-        COMPLETED = 'completed', 'Completed'
-        SKIPPED = 'skipped', 'Skipped'
-        FAILED = 'failed', 'Failed'
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        SKIPPED = "skipped", "Skipped"
+        FAILED = "failed", "Failed"
 
-    lead = models.ForeignKey("leads.LeadMaster", on_delete=models.CASCADE, related_name="followups")
+    lead = models.ForeignKey(
+        "leads.LeadMaster", on_delete=models.CASCADE, related_name="followups"
+    )
     scheduled_for = models.DateTimeField(help_text="When to follow up")
     completed_at = models.DateTimeField(blank=True, null=True)
 
     channel = models.CharField(max_length=20, choices=Channel.choices)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
-    outcome = models.TextField(blank=True, null=True, help_text="What happened during the follow-up?")
-    notes = models.TextField(blank=True, null=True, help_text="CRM user's personal observations")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    outcome = models.TextField(
+        blank=True, null=True, help_text="What happened during the follow-up?"
+    )
+    notes = models.TextField(
+        blank=True, null=True, help_text="CRM user's personal observations"
+    )
 
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
+    )
 
     class Meta:
-        ordering = ['-scheduled_for']
+        ordering = ["-scheduled_for"]
         verbose_name = "Lead Follow-Up"
         verbose_name_plural = "Lead Follow-Ups"
 

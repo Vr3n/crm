@@ -91,6 +91,7 @@ THIRD_PARTY_APPS = [
     "django_htmx",
     "drf_spectacular",
     "django_browser_reload",
+    "django_cotton",
 ]
 
 LOCAL_APPS = [
