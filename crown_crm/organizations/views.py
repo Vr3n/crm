@@ -128,6 +128,7 @@ def hx_organization_create_view(request: OrgHttpRequest) -> HttpResponse:
 @login_required
 @organization_slug_required
 def organization_dashboard_view(request: OrgHttpRequest) -> HttpResponse:
+
     # Basic counts
     lead_count = LeadMaster.objects.filter(organization=request.organization).count()
 
@@ -146,15 +147,6 @@ def organization_dashboard_view(request: OrgHttpRequest) -> HttpResponse:
         .values("created_at__date")
         .annotate(count=Count("uuid"))
         .order_by("created_at__date")
-    )
-
-    # Get recent leads and sales
-    recent_leads = LeadMaster.objects.filter(
-        organization=request.organization
-    ).order_by("-created_at")[:5]
-
-    membership_expirations = MembershipSale.objects.filter(
-        organization=request.organization,
     )
 
     # Prepare chart data
@@ -184,10 +176,9 @@ def organization_dashboard_view(request: OrgHttpRequest) -> HttpResponse:
     context = {
         "lead_count": lead_count,
         "recent_lead_count": recent_lead_count,
-        "recent_leads": recent_leads,
-        "membership_expirations": membership_expirations,
-        "recent_sales": membership_expirations.order_by("-created_at")[:5],
         "chart_data": chart_data,
+        "htmx_url": request.path,
+        "per_page_options": [5, 10, 25, 50, 100],
     }
 
     return render(request, "organizations/dashboard.html", context=context)

@@ -11,6 +11,7 @@ from django.views import View
 from django.utils.decorators import method_decorator
 from django_htmx.http import trigger_client_event
 from django.contrib.auth.decorators import login_required
+from django_tables2 import RequestConfig
 from django.template.loader import get_template
 from django.template.response import TemplateResponse
 
@@ -28,6 +29,7 @@ from .forms import (
 )
 
 from .models import MembershipSale, PaymentReceipt
+from .tables import MembershipSaleTable, PaymentReceiptTable
 
 
 # -----------------------------------------------------------------------------
@@ -134,13 +136,34 @@ def hx_create_membership_sale(request: OrgHttpRequest) -> HttpResponse:
 @login_required
 @organization_slug_required
 def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
-    """Return partial table rows for sales list."""
+    """
+    HTMX endpoint: returns paginated sales table.
+    """
+    VALID_PER_PAGE = {5, 10, 25, 50, 100}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
     sales = (
         MembershipSale.objects.filter(organization=request.organization)
         .select_related("lead", "organization")
+        .prefetch_related("receipts")
         .order_by("-created_at")
     )
-    return render(request, "accounting/tables/sales_table.html", {"sales": sales})
+
+    table = MembershipSaleTable(sales, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "htmx_url": request.path,
+        "htmx_target": "#sales-table",
+        "per_page_options": [5, 10, 25, 50, 100],
+        "per_page": per_page,
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
 
 
 @login_required
@@ -159,15 +182,33 @@ def receipt_list(request: OrgHttpRequest) -> HttpResponse:
 @login_required
 @organization_slug_required
 def hx_receipt_table(request: OrgHttpRequest) -> HttpResponse:
-    """Return partial table rows for receipts list."""
+    """
+    HTMX endpoint: returns paginated receipts table.
+    """
+    VALID_PER_PAGE = {5, 10, 25, 50, 100}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
     receipts = (
         PaymentReceipt.objects.filter(organization=request.organization)
-        .select_related("sale")
-        .order_by("-date", "-closing_balance")
+        .select_related("sale", "sale__lead")
+        .order_by("-date")
     )
-    return render(
-        request, "accounting/tables/receipts_table.html", {"receipts": receipts}
-    )
+
+    table = PaymentReceiptTable(receipts, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "htmx_url": request.path,
+        "htmx_target": "#receipts-table",
+        "per_page_options": [5, 10, 25, 50, 100],
+        "per_page": per_page,
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
 
 
 @login_required

@@ -20,10 +20,13 @@
           <h6 class="m-0 font-weight-bold text-primary">Recent Sales</h6>
         </div>
         <div class="card-body">
-          <div id="sales-table"
+          <div class="table-responsive"
+               id="sales-table"
+               hx-trigger="load, membership-sale-created from:body, sale-updated from:body, sale-deleted from:body"
                hx-get="{% url 'hx-sales-table' slug=request.organization.slug %}"
-               hx-trigger="sale_create_success from:body, sale_update_success from:body, sale_delete_success from:body">
-            {% include "accounting/tables/sales_table.html" %}
+               hx-swap="innerHTML"
+               hx-target="#sales-table">
+            <p class="text-muted">Loading sales...</p>
           </div>
         </div>
       </div>

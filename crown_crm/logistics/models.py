@@ -10,6 +10,9 @@ class CategorySP(BaseModel):
     def __str__(self) -> str:
         return self.category
 
+    def get_absolute_url(self):
+        return None
+
 
 class ServiceProductAbstract(BaseModel):
     class Meta:
@@ -29,6 +32,9 @@ class ServiceProductAbstract(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return None
 
 
 class Service(ServiceProductAbstract):
@@ -123,6 +129,9 @@ class Service(ServiceProductAbstract):
         """Returns string representation of the service."""
         return f"{self.name} - {self.code}"
 
+    def get_absolute_url(self):
+        return None
+
     def get_status_display(self):
         """Returns the human-readable status of the service."""
         return "Active" if self.is_active else "Inactive"
@@ -158,3 +167,9 @@ class Inventory(BaseModel):
     class Meta:
         verbose_name = "Inventory"
         verbose_name_plural = "Inventories"
+
+    def __str__(self):
+        return f"Inventory for {self.product.name}"
+
+    def get_absolute_url(self):
+        return None

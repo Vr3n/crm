@@ -30,7 +30,7 @@
     <div class="card">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-baseline mb-2">
-          <h6 class="card-title mb-0">Leads</h6>
+          <h6 class="card-title mb-0">All Leads</h6>
           <div class="dropdown mb-2">
             <button
               class="btn p-0"
@@ -71,12 +71,13 @@
         </div>
         <div
           class="table-responsive"
-          hx-trigger="lead_create_success from:body"
+          hx-trigger="load, lead-created from:body, lead-updated from:body, lead-deleted from:body"
           hx-swap="innerHTML"
-          hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
+          hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}?per_page=25"
+          hx-target="#all-leads-table"
           id="all-leads-table"
         >
-          {% include 'leads/tables/leads.html' %}
+          <p>Loading the leads... Please Wait!</p>
         </div>
       </div>
     </div>

@@ -76,11 +76,11 @@
             <h5 class="text-danger">Recent Leads</h5>
           </div>
           <div class="table-responsive"
-               hx-trigger="lead-created from:body, lead-updated from:body"
-               hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
-               hx-swap="innerHTML"
-               hx-target="this">
-            {% include "leads/tables/leads.html" with leads=recent_leads %}
+                id="all-leads-table"
+                hx-trigger="lead-created from:body, lead-updated from:body, load"
+                hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
+                hx-swap="innerHTML"
+                hx-target="#all-leads-table">
           </div>
         </div>
       </div>

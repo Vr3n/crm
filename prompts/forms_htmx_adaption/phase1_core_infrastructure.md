@@ -361,25 +361,17 @@ document.body.addEventListener("lead-deleted", function (evt) {
 ### Implementation
 
 ```html
-{% comment %}
-c-modal-form: Bootstrap 4 modal with HTMX form
-
-IMPORTANT DESIGN DECISIONS:
-- Form targets ITSELF (hx-target="this") with outerHTML swap
-- On 422: Only the form is re-rendered with errors, modal stays open
-- On 204: Modal MUST be closed via JS event handler (see Phase 6)
-- data-backdrop="static" prevents accidental closure during form entry
-- Does NOT accept {{ attrs }} - hx attributes are fixed for modal behavior
-
-Args:
-  title: Modal title (required)
-  action: Form action URL (required)
-  method: HTTP method - post, put, patch (default: post)
-  submit_label: Submit button text (default: "Save")
-  close_label: Close button text (default: "Cancel")
-  size: Modal size - sm, lg, xl (default: empty for medium)
-  id: Modal ID (optional, auto-generated if empty)
-{% endcomment %}
+{% comment %} c-modal-form: Bootstrap 4 modal with HTMX form IMPORTANT DESIGN
+DECISIONS: - Form targets ITSELF (hx-target="this") with outerHTML swap - On
+422: Only the form is re-rendered with errors, modal stays open - On 204: Modal
+MUST be closed via JS event handler (see Phase 6) - data-backdrop="static"
+prevents accidental closure during form entry - Does NOT accept {{ attrs }} - hx
+attributes are fixed for modal behavior Args: title: Modal title (required)
+action: Form action URL (required) method: HTTP method - post, put, patch
+(default: post) submit_label: Submit button text (default: "Save") close_label:
+Close button text (default: "Cancel") size: Modal size - sm, lg, xl (default:
+empty for medium) id: Modal ID (optional, auto-generated if empty) {% endcomment
+%}
 
 <c-vars
   title
@@ -425,7 +417,9 @@ Args:
         endcomment %}
         <form
           id="{{ modal_id }}-form"
-          hx-{{ method }}="{{ action }}"
+          hx-{{
+          method
+          }}="{{ action }}"
           hx-target="this"
           hx-swap="outerHTML"
         >
@@ -495,6 +489,6 @@ Before moving to Phase 2, verify:
 | 4   | POST with valid data                                    | 204, `HX-Trigger` header present                   |
 | 5   | `HxLeadDeleteView` DELETE                               | 204, event with `{lead_id: 123}` (predictable key) |
 | 6   | Modal form 422 error                                    | Only form swaps, modal header/footer preserved     |
-| 7   | Modal form doesn't allow custom hx attributes           | Design constraint - build custom form if needed   |
+| 7   | Modal form doesn't allow custom hx attributes           | Design constraint - build custom form if needed    |
 | 8   | User without permission                                 | 403 Forbidden                                      |
 | 9   | View with `redirect_url` set                            | HX-Redirect header present in 204 response         |

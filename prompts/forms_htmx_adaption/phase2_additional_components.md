@@ -274,7 +274,7 @@ class HxCreateLeadView(HtmxFormsetMixin, View):
 | `HxCreateClientView`         | clients/views.py       | `client:create_success`          | `client-created`                        |
 | `HxDeleteClientView`         | clients/views.py       | `client:delete_success`          | `client-deleted`                        |
 | `HxCreateOrganizationView`   | organizations/views.py | `organization:create_success`    | `organization-created`                  |
-| `HxUpdateOrganizationView`   | organizations/views.py | `organization:update_success`   | `organization-updated`                  |
+| `HxUpdateOrganizationView`   | organizations/views.py | `organization:update_success`    | `organization-updated`                  |
 
 **Note on Quick Create:** `HxQuickCreateLeadView` uses `lead-created` with `{quick: true}` in event params. JS handler checks `evt.detail.quick` to distinguish:
 

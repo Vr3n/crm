@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.db import models
 from django.db.models import Sum
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from django.utils import timezone
 from django.db import transaction
 
@@ -160,6 +161,9 @@ class MembershipSale(BaseModel):
     def __str__(self) -> str:
         """Return a string representation of the membership sale."""
         return f"Sale: {self.lead.full_name} - {self.duration} - {self.created_at}"
+
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.organization.slug, "pk": self.lead.pk})
 
 
 class PaymentReceipt(BaseModel):
@@ -321,3 +325,6 @@ class PaymentReceipt(BaseModel):
         return (
             f"Receipt: {self.sale.lead.full_name} - {self.amount} - {self.date.date()}"
         )
+
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.sale.organization.slug, "pk": self.sale.lead.pk})

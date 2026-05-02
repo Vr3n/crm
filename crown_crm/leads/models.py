@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from django.db import models
 from django.core.validators import RegexValidator
 from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 
 from crown_crm.organizations.models import OrganizationMaster
@@ -76,6 +77,9 @@ class LeadMaster(BaseModel):
         """
         return self.full_name
 
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.organization.slug, "pk": self.pk})
+
     # mypy typecheking.
     mobile_numbers: models.QuerySet["LeadMobileNumberMaster"]
     emails: models.QuerySet["LeadEmailAddressMaster"]
@@ -123,6 +127,9 @@ class LeadMobileNumberMaster(BaseModel):
         """
         return f"{self.lead.full_name} - {self.mobile_number}"
 
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.lead.organization.slug, "pk": self.lead.pk})
+
 
 class LeadEmailAddressMaster(BaseModel):
     """Stores email addresses associated with a lead.
@@ -151,6 +158,9 @@ class LeadEmailAddressMaster(BaseModel):
             str: Lead's full name followed by their email address.
         """
         return f"{self.lead.full_name} - {self.email}"
+
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.lead.organization.slug, "pk": self.lead.pk})
 
 
 class LeadAddressMaster(BaseModel):
@@ -194,6 +204,9 @@ class LeadAddressMaster(BaseModel):
         """
         return f"{self.lead.full_name} address"
 
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.lead.organization.slug, "pk": self.lead.pk})
+
 
 class LeadDiscussionHistory(BaseModel):
     """Tracks discussion history and notes for each lead.
@@ -218,6 +231,9 @@ class LeadDiscussionHistory(BaseModel):
             str: Descriptive text indicating this is discussion history for the lead.
         """
         return f"Discussion history for {self.lead.full_name}"
+
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.lead.organization.slug, "pk": self.lead.pk})
 
 
 class LeadSourceMaster(BaseModel):
@@ -245,6 +261,9 @@ class LeadSourceMaster(BaseModel):
             str: Lead's name followed by the source information.
         """
         return f"{self.lead.full_name} from {self.source}"
+
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.lead.organization.slug, "pk": self.lead.pk})
 
 
 class LeadFollowUp(models.Model):
@@ -302,3 +321,6 @@ class LeadFollowUp(models.Model):
 
     def __str__(self) -> str:
         return f"{self.lead.full_name} - {self.channel} on {self.scheduled_for.strftime('%d-%m-%Y %H:%M')}"
+
+    def get_absolute_url(self):
+        return reverse("lead-detail", kwargs={"slug": self.lead.organization.slug, "pk": self.lead.pk})

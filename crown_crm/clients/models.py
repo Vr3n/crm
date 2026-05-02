@@ -1,5 +1,6 @@
 from django.core.validators import RegexValidator
 from django.db import models
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from crown_crm.organizations.models import OrganizationMaster
@@ -31,6 +32,9 @@ class ClientMaster(BaseModel):
     def __str__(self):
         return self.full_name()
 
+    def get_absolute_url(self):
+        return reverse("client-detail", kwargs={"slug": self.organization.slug, "pk": self.pk})
+
     objects = ClientQuerySet.as_manager()
 
 
@@ -43,6 +47,9 @@ class ClientMobileNumberMaster(models.Model):
     def __str__(self):
         return self.mobile_number
 
+    def get_absolute_url(self):
+        return reverse("client-detail", kwargs={"slug": self.client.organization.slug, "pk": self.client.pk})
+
 
 class ClientEmailMaster(models.Model):
     client = models.ForeignKey(
@@ -52,6 +59,9 @@ class ClientEmailMaster(models.Model):
 
     def __str__(self):
         return self.email
+
+    def get_absolute_url(self):
+        return reverse("client-detail", kwargs={"slug": self.client.organization.slug, "pk": self.client.pk})
 
 
 class ClientBodyMeasurementMaster(BaseModel):
@@ -67,6 +77,9 @@ class ClientBodyMeasurementMaster(BaseModel):
 
     def __str__(self):
         return f"Measurements for {self.client.first_name} {self.client.last_name}"  # noqa
+
+    def get_absolute_url(self):
+        return reverse("client-detail", kwargs={"slug": self.client.organization.slug, "pk": self.client.pk})
 
 
 class ClientBodyStatusMaster(BaseModel):
@@ -105,6 +118,9 @@ class ClientBodyStatusMaster(BaseModel):
     def __str__(self):
         return f"Body Status for {self.client.first_name} {self.client.last_name}"  # noqa
 
+    def get_absolute_url(self):
+        return reverse("client-detail", kwargs={"slug": self.client.organization.slug, "pk": self.client.pk})
+
 
 class ClientAddressMaster(BaseModel):
     client = models.ForeignKey(
@@ -118,3 +134,9 @@ class ClientAddressMaster(BaseModel):
     pincode = models.CharField(max_length=6, validators=[RegexValidator(
         r'^\d{6}$', message="Enter a valid 6-digit pincode.")],
         blank=True, null=True)
+
+    def __str__(self):
+        return f"Address for {self.client.first_name} {self.client.last_name}"
+
+    def get_absolute_url(self):
+        return reverse("client-detail", kwargs={"slug": self.client.organization.slug, "pk": self.client.pk})

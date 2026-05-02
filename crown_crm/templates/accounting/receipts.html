@@ -29,10 +29,12 @@
       </div>
       <div class="card-body">
         <div class="table-responsive"
+             id="receipts-table"
+             hx-trigger="load, receipt-created from:body, receipt-updated from:body, receipt-deleted from:body"
              hx-get="{% url 'hx-receipts-table' slug=request.organization.slug %}"
              hx-swap="innerHTML"
-             hx-trigger="payment_receipt_create_success from:body, payment_receipt_update_success from:body, receipt_delete_success from:body">
-          {% include "accounting/tables/receipts_table.html" %}
+             hx-target="#receipts-table">
+          <p class="text-muted">Loading receipts...</p>
         </div>
       </div>
     </div>
