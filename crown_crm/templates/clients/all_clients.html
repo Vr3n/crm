@@ -88,7 +88,7 @@
 <!-- custom js for the page. -->
 {% block custom_js %}
 <script>
-  document.body.addEventListener("client_create_success", function (event) {
+  document.body.addEventListener("client-created", function (event) {
     $("#collapseExample").collapse("hide");
     document.getElementById("client-create-form-partial").reset();
   });

@@ -141,4 +141,38 @@ document.addEventListener("DOMContentLoaded", function() {
       followupChart.updateOptions({});
     }, 200);
   });
+
+  // Export chart instance globally for HTMX events
+  window.leadsChart = leadsChart;
+
+  // Listen for lead-created/lead-updated events and update chart
+  document.body.addEventListener("lead-created", function(evt) {
+    var orgSlug = document.querySelector('input[name="org_slug"]')?.value || 
+                window.location.pathname.split('/')[1] || 'crown-vitality';
+    fetch('/' + orgSlug + '/leads/hx/lead-chart-data/')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        leadsChart.updateSeries([{ name: 'Leads', data: data.lead_trend }]);
+        // Also update the number display
+        var countEl = document.querySelector('#leadsChart').parentElement.querySelector('.metric-value');
+        if (countEl && data.lead_count !== undefined) {
+          countEl.textContent = data.lead_count;
+        }
+      });
+  });
+
+  document.body.addEventListener("lead-updated", function(evt) {
+    var orgSlug = document.querySelector('input[name="org_slug"]')?.value || 
+                window.location.pathname.split('/')[1] || 'crown-vitality';
+    fetch('/' + orgSlug + '/leads/hx/lead-chart-data/')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        leadsChart.updateSeries([{ name: 'Leads', data: data.lead_trend }]);
+        // Also update the number display
+        var countEl = document.querySelector('#leadsChart').parentElement.querySelector('.metric-value');
+        if (countEl && data.lead_count !== undefined) {
+          countEl.textContent = data.lead_count;
+        }
+      });
+  });
 });

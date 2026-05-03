@@ -104,7 +104,7 @@ def hx_create_client(request: HttpRequest):
                     'message': 'Client saved succesfully!'
                 })
             response = trigger_client_event(
-                response, "client_create_success"
+                response, "client-created"
             )
 
             return response

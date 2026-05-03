@@ -47,7 +47,7 @@ def service_detail_edit_view(request: OrgHttpRequest, uuid: UUID) -> HttpRespons
                 "message",
                 {"level": "success", "message": "Service updated successfully!"},
             )
-            response = trigger_client_event(response, "service_update_success")
+            response = trigger_client_event(response, "service-updated")
             return response
         else:
             response = render(
@@ -101,7 +101,7 @@ def hx_create_service(request: OrgHttpRequest) -> HttpResponse:
                 "message",
                 {"level": "success", "message": "Service created successfully!"},
             )
-            response = trigger_client_event(response, "service_create_success")
+            response = trigger_client_event(response, "service-created")
             return response
         else:
             response = render(
@@ -139,7 +139,7 @@ def hx_edit_service(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
                 "message",
                 {"level": "success", "message": "Service updated successfully!"},
             )
-            response = trigger_client_event(response, "service_update_success")
+            response = trigger_client_event(response, "service-updated")
             return response
         else:
             response = render(
@@ -237,7 +237,7 @@ def product_detail_edit_view(request: OrgHttpRequest, uuid: UUID) -> HttpRespons
                 "message",
                 {"level": "success", "message": "Product updated successfully!"},
             )
-            response = trigger_client_event(response, "product_update_success")
+            response = trigger_client_event(response, "product-updated")
             return response
         else:
             response = render(
@@ -280,7 +280,7 @@ def hx_create_product(request: OrgHttpRequest) -> HttpResponse:
                 "message",
                 {"level": "success", "message": "Product created successfully!"},
             )
-            response = trigger_client_event(response, "product_create_success")
+            response = trigger_client_event(response, "product-created")
             return response
         else:
             response = render(
@@ -318,7 +318,7 @@ def hx_edit_product(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
                 "message",
                 {"level": "success", "message": "Product updated successfully!"},
             )
-            response = trigger_client_event(response, "product_update_success")
+            response = trigger_client_event(response, "product-updated")
             return response
         else:
             response = render(

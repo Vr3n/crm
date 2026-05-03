@@ -18,6 +18,7 @@
   </div>
   <!-- Chart Data (Hidden) -->
   <div id="chartData" style="display: none;">{{ chart_data|json_script:""|safe }}</div>
+  <input type="hidden" name="org_slug" value="{{ request.organization.slug }}" />
   <div class="row">
     <!-- Leads Card -->
     <div class="col-md-4 mb-4">
@@ -74,7 +75,13 @@
           <div class="card-title">
             <h5 class="text-danger">Recent Leads</h5>
           </div>
-          <div class="table-responsive">{% include "leads/tables/leads.html" with leads=recent_leads %}</div>
+          <div class="table-responsive"
+                id="all-leads-table"
+                hx-trigger="lead-created from:body, lead-updated from:body, load"
+                hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
+                hx-swap="innerHTML"
+                hx-target="#all-leads-table">
+          </div>
         </div>
       </div>
     </div>

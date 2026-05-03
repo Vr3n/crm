@@ -10,11 +10,7 @@ class OrganizationQuerySet(models.QuerySet):
         (owner, admin, or member)
         """
 
-        return self.filter(
-            Q(owner=user) |
-            Q(admins=user) |
-            Q(members=user)
-        )
+        return self.filter(Q(owner=user) | Q(admins=user) | Q(members=user))
 
     def owned_by(self, user):
         """
@@ -50,13 +46,13 @@ class OrganizationQuerySet(models.QuerySet):
 
         queries = []
 
-        if 'owner' in roles:
+        if "owner" in roles:
             queries.append(Q(owner=user))
 
-        if 'admin' in roles:
+        if "admin" in roles:
             queries.append(Q(admins=user))
 
-        if 'member' in roles:
+        if "member" in roles:
             queries.append(Q(members=user))
 
         query = queries.pop()
@@ -64,3 +60,4 @@ class OrganizationQuerySet(models.QuerySet):
             query |= item
 
         return self.filter(query).distinct()
+

@@ -1,4 +1,3 @@
-
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
@@ -46,6 +45,8 @@ class User(AbstractUser):
             QuerySet: organizations.
         """
 
-        return (self.organizationmaster_set.all() |
-                self.admin_in_organizations.all() |
-                self.organizations.all()).distinct()
+        return (
+            self.organizationmaster_set.all()
+            | self.admin_in_organizations.all()
+            | self.organizations.all()
+        ).distinct()

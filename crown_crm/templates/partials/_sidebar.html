@@ -62,28 +62,6 @@
             <span class="link-title">Receipts</span>
           </a>
         </li>
-        <li class="nav-item nav-category">Masters</li>
-        <li class="nav-item">
-          <a href="{% url 'membership-plans' request.organization.slug %}"
-             class="nav-link">
-            <i class="link-icon" data-feather="trello"></i>
-            <span class="link-title">Membership Plans</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'member-types' request.organization.slug %}"
-             class="nav-link">
-            <i class="link-icon" data-feather="tag"></i>
-            <span class="link-title">Member Types</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="{% url 'products' request.organization.slug %}"
-             class="nav-link">
-            <i class="link-icon" data-feather="box"></i>
-            <span class="link-title">Products</span>
-          </a>
-        </li>
         {% if request.user == request.organization.owner or request.user in request.organizations.admins.all %}
           <li class="nav-item nav-category">Organization</li>
           <li class="nav-item">

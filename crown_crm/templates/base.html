@@ -99,6 +99,7 @@
   <!-- endinject -->
   <!-- plugin js for this page -->
   <script src="{% static 'vendors/htmx.min.js' %}"></script>
+  <script src="{% static 'js/validation.js' %}"></script>
   <script src="{% static 'vendors/sweetalert2/sweetalert2.min.js' %}"></script>
   <script src="{% static 'vendors/select2/select2.min.js' %}"></script>
   <script src="{% static 'vendors/chartjs/Chart.min.js' %}"></script>
@@ -208,41 +209,92 @@
       </div>
     </div>
     <script>
+      // Single notifiq instance for all toasts
+      const notifiq = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer);
+          toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+      });
+
+      // Global toast helper
+      window.showToast = function(message, level = 'info') {
+        const iconMap = {
+          'debug': 'info',
+          'info': 'info',
+          'success': 'success',
+          'warning': 'warning',
+          'error': 'error'
+        };
+        notifiq.fire({
+          icon: iconMap[level] || 'info',
+          title: message
+        });
+      };
+
+      // HTMX 2.0: Allow swapping on 422/400 validation errors
+      document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        const status = evt.detail.xhr.status;
+
+        // Allow 422/400 responses to swap (form errors)
+        if (status === 422 || status === 400) {
+          evt.detail.shouldSwap = true;
+          evt.detail.isError = false;
+        }
+
+        // Modal close on 204 (no content) - but only for modal target
+        if (status === 204 && evt.detail.target.id === 'modal-form') {
+          $('#modal-container').modal('hide');
+          evt.detail.shouldSwap = false;
+        }
+      });
+
+      // Open modal when form loaded into modal-form
       htmx.on("htmx:afterSwap", (e) => {
         if (e.detail.target.id === "modal-form") {
           $("#modal-container").modal({
             show: true,
-            keyboard: false
-          })
+            keyboard: false,
+            backdrop: 'static'
+          });
         }
-      })
+      });
 
-      htmx.on("htmx:beforeSwap", (e) => {
-        if (e.detail.target.id == "modal-form" && !e.detail.xhr.response) {
+      // Close modal and show toast on success events (kebab-case)
+      const successEvents = [
+        'lead-created', 'lead-updated', 'lead-deleted',
+        'membership-sale-created', 'receipt-created', 'receipt-updated', 'receipt-deleted',
+        'sale-updated', 'sale-deleted',
+        'service-created', 'service-updated', 'service-deleted',
+        'product-created', 'product-updated', 'product-deleted',
+        'client-created', 'client-deleted',
+        'organization-created', 'organization-updated'
+      ];
+
+      successEvents.forEach((eventName) => {
+        document.body.addEventListener(eventName, (e) => {
           $('#modal-container').modal('hide');
-          e.detail.shouldSwap = false
-        }
-      })
-      htmx.on("lead_create_success", (e) => {
-        $('#modal-container').modal('hide');
-        e.detail.shouldswap = false
-      })
-      htmx.on("service_update_success", (e) => {
-        $('#modal-container').modal('hide');
-        e.detail.shouldswap = false
-      })
-      htmx.on("product_update_success", (e) => {
-        $('#modal-container').modal('hide');
-        e.detail.shouldSwap = false
-      })
-      htmx.on("organization_update_success", (e) => {
-        $('#modal-container').modal('hide');
-        e.detail.shouldSwap = false
-      })
 
+          // Show toast - derive action from event name
+          const action = eventName.split('-').pop();
+          const level = action === 'deleted' ? 'info' : 'success';
+          const title = eventName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          notifiq.fire({ icon: level, title });
+        });
+      });
+
+      // Cleanup modal content after close
       htmx.on("hidden.bs.modal", () => {
         document.getElementById("modal-form").innerHTML = "";
-      })
+      });
+
+      // Refresh feather icons after HTMX swaps
       document.addEventListener('htmx:afterSwap', function(evt) {
         feather.replace();
       });

@@ -11,10 +11,7 @@ from crown_crm.utils.models import BaseModel
 
 class OrganizationMaster(BaseModel):
     name = models.CharField(max_length=255)
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
-    )
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     admins = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -23,16 +20,12 @@ class OrganizationMaster(BaseModel):
     )
 
     members = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name="organizations",
-        blank=True
+        settings.AUTH_USER_MODEL, related_name="organizations", blank=True
     )
 
     description = models.TextField(blank=True)
 
-    logo = models.ImageField(upload_to="organizations/logos/",
-                             blank=True,
-                             null=True)
+    logo = models.ImageField(upload_to="organizations/logos/", blank=True, null=True)
 
     slug = models.SlugField(null=False, unique=True)
 
@@ -49,7 +42,7 @@ class OrganizationMaster(BaseModel):
         """
         Gives organization Dashboard url.
         """
-        return reverse('organizations-dashboard', kwargs={'slug': self.slug})
+        return reverse("organizations-dashboard", kwargs={"slug": self.slug})
 
     def __str__(self) -> str:
         return self.name
@@ -57,7 +50,8 @@ class OrganizationMaster(BaseModel):
 
 class OrganizationAddressMaster(BaseModel):
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE, related_name="addresses")
+        OrganizationMaster, on_delete=models.CASCADE, related_name="addresses"
+    )
     address_line_1 = models.TextField()
     address_line_2 = models.TextField()
     address_line_3 = models.TextField()
@@ -72,7 +66,8 @@ class OrganizationAddressMaster(BaseModel):
 
 class OrganizationMobileNumberMaster(BaseModel):
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE, related_name="mobile_numbers")
+        OrganizationMaster, on_delete=models.CASCADE, related_name="mobile_numbers"
+    )
     mobile_number = models.CharField(max_length=10)
 
     def __str__(self) -> str:
@@ -81,7 +76,8 @@ class OrganizationMobileNumberMaster(BaseModel):
 
 class OrganizationEmailMaster(BaseModel):
     organization = models.ForeignKey(
-        OrganizationMaster, on_delete=models.CASCADE, related_name="email_addresses")
+        OrganizationMaster, on_delete=models.CASCADE, related_name="email_addresses"
+    )
     email = models.EmailField()
 
     def __str__(self) -> str:

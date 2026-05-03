@@ -1,0 +1,39 @@
+{% comment %}
+c-formset: Django formset wrapper with management form
+
+Django formsets allow handling multiple forms in one view. Common use cases:
+- Lead has multiple mobile numbers
+- Lead has multiple email addresses
+- Order has multiple line items
+
+IMPORTANT: This component does NOT use a slot. Fields must be rendered directly
+in the parent template inside the {% for form in formset %} loop. This is a
+limitation of django-cotton's slot implementation.
+
+Args:
+  formset: The formset instance (required)
+
+Usage:
+  <c-formset :formset="mobile_formset" />
+
+  {# In parent template - render fields directly after the formset component #}
+  {% for form in mobile_formset %}
+    <c-form-input :field="form.mobile_number" />
+  {% endfor %}
+{% endcomment %}
+
+<c-vars formset />
+
+{# Management form - required for Django formsets #}
+<div style="display: none;">
+  {{ formset.management_form }}
+</div>
+
+{# Non-form errors (e.g., "Cannot delete last item") #}
+{% if formset.non_form_errors %}
+<div class="alert alert-danger">
+  {% for error in formset.non_form_errors %}
+  <div>{{ error }}</div>
+  {% endfor %}
+</div>
+{% endif %}
