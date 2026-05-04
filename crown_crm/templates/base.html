@@ -81,6 +81,8 @@
         href="{% static 'fonts/feather-font/css/iconfont.css' %}">
   <link rel="stylesheet"
         href="{% static 'vendors/flag-icon-css/css/flag-icon.min.css' %}">
+  <link rel="stylesheet"
+        href="{% static 'vendors/font-awesome/css/font-awesome.min.css' %}">
   <!-- endinject -->
   <!-- Layout styles -->
   <link rel="stylesheet" href="{% static 'css/demo_1/style.css' %}">
@@ -203,7 +205,7 @@
          aria-labelledby="modalLabel"
          aria-hidden="true">
       <div class="modal-dialog modal-lg">
-        <div class="modal-content" id="modal-form" hx-target="this">
+        <div class="modal-content" id="modal-form" hx-swap="innerHTML" hx-target="this">
           <!-- Modal content will be loaded here via HTMX -->
         </div>
       </div>
@@ -294,12 +296,53 @@
         document.getElementById("modal-form").innerHTML = "";
       });
 
+      // Initialize feather icons on page load
+      feather.replace();
+
       // Refresh feather icons after HTMX swaps
       document.addEventListener('htmx:afterSwap', function(evt) {
         feather.replace();
       });
     </script>
   {% endblock modal %}
+  <!-- Details Modal -->
+  <div class="modal fade"
+       id="details-modal"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="detailsModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detailsModalLabel">Membership Details</h5>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="$('#details-modal').modal('hide')">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="details-modal-body" hx-target="this">
+          <!-- Content loaded via HTMX -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Show modal when details content is loaded
+    htmx.on("htmx:afterSwap", function(evt) {
+      if (evt.detail.target.id === "details-modal-body") {
+        $("#details-modal").modal({
+          show: true,
+          keyboard: true,
+          backdrop: true
+        });
+      }
+    });
+
+    // Close modal and clear content on close
+    $("#details-modal").on("hidden.bs.modal", function() {
+      document.getElementById("details-modal-body").innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Loading...</div>';
+    });
+  </script>
   {% block custom_js %}
   {% endblock custom_js %}
 </body>
