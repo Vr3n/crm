@@ -128,6 +128,7 @@ class OutstandingPaymentsTable(tables.Table):
         verbose_name="Total (₹)",
     )
     paid = tables.Column(
+        accessor="total_paid_amount",
         verbose_name="Paid (₹)",
         orderable=False,
     )
@@ -150,8 +151,6 @@ class OutstandingPaymentsTable(tables.Table):
         model = MembershipSale
         template_name = "tables/hx-bootstrap4.html"
         fields = ("lead_name", "start_date", "total", "paid", "outstanding", "view")
-        attrs = {"class": "table table-sm table-hover"}
-        fields = ("lead_name", "amount", "duration", "created_at")
         attrs = {"class": "table table-sm table-hover"}
 
 

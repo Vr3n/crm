@@ -110,7 +110,7 @@
           <div class="card-title">
             <h6 class="text-danger mb-0">Outstanding Payment Amounts</h6>
           </div>
-          <div class="table-responsive-sm">
+          <div class="table-wrapper" style="overflow-x: auto; max-width: 100%;">
             <div class="table-container"
                  id="outstanding-payments-table"
                  hx-get="{% url 'hx-outstanding-payments' slug=request.organization.slug %}"
@@ -130,7 +130,7 @@
           <div class="card-title">
             <h6 class="text-danger mb-0">Recent Membership Sales</h6>
           </div>
-          <div class="table-responsive-sm">
+          <div class="table-wrapper" style="overflow-x: auto; max-width: 100%;">
             <div class="table-container"
                id="recent-membership-sales-table"
                hx-get="{% url 'hx-recent-membership-sales' slug=request.organization.slug %}"
