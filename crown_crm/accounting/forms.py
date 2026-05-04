@@ -112,6 +112,7 @@ class MembershipSaleForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop("organization", None)
         super().__init__(*args, **kwargs)
         self.fields["membership_start_date"].initial = timezone.now().date()
 

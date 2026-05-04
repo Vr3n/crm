@@ -758,6 +758,7 @@ class HxCreateLeadView(HtmxFormsetMixin, View):
         context["address_form"] = kwargs.get("address_form") or LeadAddressForm(
             self.request.POST or None
         )
+        context["full_obj"] = self.request.GET.get("fullObj", "")
         return context
 
     def get_form_kwargs(self):
@@ -765,8 +766,22 @@ class HxCreateLeadView(HtmxFormsetMixin, View):
         kwargs["initial"] = {"organization": self.request.organization}
         return kwargs
 
+    def get_success_event_params(self):
+        # Check both GET (for initial modal open) and POST (for form submission)
+        full_obj = self.request.GET.get("fullObj") or self.request.POST.get("fullObj")
+        if full_obj:
+            return {
+                "lead_id": str(self._object.pk),
+                "first_name": self._object.first_name,
+                "middle_name": self._object.middle_name or "",
+                "last_name": self._object.last_name or "",
+                "mobile": self._object.mobile_numbers.first().mobile_number if self._object.mobile_numbers.first() else "",
+                "email": self._object.emails.first().email if self._object.emails.first() else "",
+            }
+        return {"lead_id": str(self._object.pk)}
+
     def form_valid(self, form):
-        logger.debug(f"[HxCreateLeadView] form_valid called")
+        logger.debug("[HxCreateLeadView] form_valid called")
         lead = form.save()
 
         for name, fs in self.formsets.items():

@@ -144,7 +144,7 @@ class HtmxDeleteMixin(DeletionMixin):
 
     def delete(self, request, *args, **kwargs):
         obj = self.get_object()
-        obj_id = obj.id
+        obj_id = obj.pk
         obj.delete()
 
         response = HttpResponse(status=204)

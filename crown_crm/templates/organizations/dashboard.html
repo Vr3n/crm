@@ -77,7 +77,7 @@
           </div>
           <div class="table-responsive"
                 id="all-leads-table"
-                hx-trigger="lead-created from:body, lead-updated from:body, load"
+                hx-trigger="lead-created from:body, lead-updated from:body, lead-deleted from:body, load"
                 hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
                 hx-swap="innerHTML"
                 hx-target="#all-leads-table">

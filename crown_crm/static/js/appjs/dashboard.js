@@ -162,7 +162,22 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   document.body.addEventListener("lead-updated", function(evt) {
-    var orgSlug = document.querySelector('input[name="org_slug"]')?.value || 
+    var orgSlug = document.querySelector('input[name="org_slug"]')?.value ||
+                window.location.pathname.split('/')[1] || 'crown-vitality';
+    fetch('/' + orgSlug + '/leads/hx/lead-chart-data/')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        leadsChart.updateSeries([{ name: 'Leads', data: data.lead_trend }]);
+        // Also update the number display
+        var countEl = document.querySelector('#leadsChart').parentElement.querySelector('.metric-value');
+        if (countEl && data.lead_count !== undefined) {
+          countEl.textContent = data.lead_count;
+        }
+      });
+  });
+
+  document.body.addEventListener("lead-deleted", function(evt) {
+    var orgSlug = document.querySelector('input[name="org_slug"]')?.value ||
                 window.location.pathname.split('/')[1] || 'crown-vitality';
     fetch('/' + orgSlug + '/leads/hx/lead-chart-data/')
       .then(function(r) { return r.json(); })
