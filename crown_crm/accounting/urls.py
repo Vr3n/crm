@@ -23,6 +23,26 @@ urlpatterns = [
     ),
     path("hx/sales/table/", views.hx_sales_table, name="hx-sales-table"),
     path("hx/sales/<uuid:uuid>/", views.hx_sale_detail, name="hx-sale-detail"),
+    path(
+        "hx/membership-expirations/",
+        views.hx_membership_expirations_table,
+        name="hx-membership-expirations",
+    ),
+    path(
+        "hx/recent-membership-sales/",
+        views.hx_recent_membership_sales_table,
+        name="hx-recent-membership-sales",
+    ),
+    path(
+        "hx/outstanding-payments/",
+        views.hx_outstanding_payments_table,
+        name="hx-outstanding-payments",
+    ),
+    path(
+        "hx/membership/<uuid:uuid>/detail/",
+        views.hx_membership_detail_drawer,
+        name="hx-membership-detail-drawer",
+    ),
     # Payment Receipt URLs
     path("receipts/", views.receipt_list, name="receipts"),
     path("receipts/table/", views.hx_receipt_table, name="hx-receipts-table"),

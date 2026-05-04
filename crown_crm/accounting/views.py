@@ -1,8 +1,10 @@
 import logging
 import os
+from datetime import timedelta
 from uuid import UUID
 from django.db import transaction
 from django.db import models
+from django.utils import timezone
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
@@ -29,7 +31,7 @@ from .forms import (
 )
 
 from .models import MembershipSale, PaymentReceipt
-from .tables import MembershipSaleTable, PaymentReceiptTable
+from .tables import MembershipSaleTable, PaymentReceiptTable, MembershipExpirationTable
 
 
 # -----------------------------------------------------------------------------
@@ -164,6 +166,149 @@ def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
     }
 
     return render(request, "tables/hx-bootstrap4.html", context)
+
+
+MEMBERSHIP_EXPIRATION_DAYS = 60
+
+
+@login_required
+@organization_slug_required
+def hx_membership_expirations_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated upcoming membership expirations table.
+    """
+    VALID_PER_PAGE = {5, 10}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    cutoff_date = timezone.now().date() + timedelta(days=MEMBERSHIP_EXPIRATION_DAYS)
+
+    memberships = (
+        MembershipSale.objects.filter(
+            organization=request.organization,
+            membership_end_date__gte=timezone.now().date(),
+            membership_end_date__lte=cutoff_date,
+        )
+        .select_related("lead")
+        .order_by("membership_end_date")
+    )
+
+    table = MembershipExpirationTable(memberships, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10],
+        "per_page": per_page,
+        "hx_target": "#membership-expirations-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_recent_membership_sales_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated recent membership sales table.
+    """
+    VALID_PER_PAGE = {5, 10}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    sales = (
+        MembershipSale.objects.filter(organization=request.organization)
+        .select_related("lead")
+        .order_by("-created_at")
+    )
+
+    from .tables import RecentMembershipSalesTable
+    table = RecentMembershipSalesTable(sales, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10],
+        "per_page": per_page,
+        "hx_target": "#recent-membership-sales-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_outstanding_payments_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated outstanding payments table.
+    Sorted by membership start date (ascending).
+    """
+    from django.db.models import Sum, F, Value, DecimalField, OuterRef
+    from django.db.models.functions import Coalesce, Cast
+
+    VALID_PER_PAGE = {5, 10}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    total_paid_subquery = PaymentReceipt.objects.filter(
+        sale_id=OuterRef('pk')
+    ).values('sale_id').annotate(
+        total=Sum('amount')
+    ).values('total')
+
+    memberships = (
+        MembershipSale.objects.filter(
+            organization=request.organization,
+            price__isnull=False,
+        )
+        .select_related("lead")
+        .annotate(
+            total_paid=Coalesce(
+                Cast(total_paid_subquery, DecimalField(max_digits=10, decimal_places=2)),
+                Value(0, output_field=DecimalField(max_digits=10, decimal_places=2))
+            ),
+            balance=F('price') - Coalesce(
+                Cast(total_paid_subquery, DecimalField(max_digits=10, decimal_places=2)),
+                Value(0, output_field=DecimalField(max_digits=10, decimal_places=2))
+            )
+        )
+        .exclude(balance=0)
+        .order_by("membership_start_date")
+    )
+
+    from .tables import OutstandingPaymentsTable
+    table = OutstandingPaymentsTable(memberships, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10],
+        "per_page": per_page,
+        "hx_target": "#outstanding-payments-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_membership_detail_drawer(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """
+    HTMX endpoint: returns membership detail for drawer/offcanvas.
+    """
+    membership = get_object_or_404(
+        MembershipSale.objects.select_related("lead").prefetch_related("lead__mobile_numbers", "lead__emails", "receipts"),
+        uuid=uuid,
+        organization=request.organization,
+    )
+
+    return render(request, "accounting/partials/membership_detail_drawer.html", {"membership": membership})
 
 
 @login_required
