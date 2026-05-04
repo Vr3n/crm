@@ -7,6 +7,13 @@
 
   {% csrf_token %}
 
+  {% if form.errors %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    There was a problem during form submission. Please fix the errors below.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endif %}
+
   {# SECTION 1: LEAD SELECTION #}
   <div class="card mb-3 border-primary">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -23,17 +30,20 @@
       {# Hidden input - preserve value on HTMX re-render #}
       <input type="hidden" name="lead" id="id_lead" value="{{ selected_lead.pk|default:'' }}" />
       <div class="mb-3">
-        <label for="leadSearch" class="form-label">Search Lead</label>
+        <label for="leadSearch" class="form-label{% if form.lead.errors %} text-danger{% endif %}">Search Lead</label>
         <input type="text"
                id="leadSearch"
-               class="form-control"
+               class="form-control{% if form.lead.errors %} is-invalid{% endif %}"
                placeholder="Search lead by name or phone..."
                hx-get="{% url 'search-lead' slug=request.organization.slug %}"
                hx-trigger="input delay:400ms"
                hx-target="#leadTableCardBody"
                hx-swap="innerHTML"
-               name="q"
-                autocomplete="off">
+name="q"
+                 autocomplete="off">
+        {% if form.lead.errors %}
+        <div class="invalid-feedback">{{ form.lead.errors.0 }}</div>
+        {% endif %}
       </div>
 
       {# Pre-existing table container - loads all leads via HTMX on page load #}
@@ -80,10 +90,6 @@
         </div>
         {% endif %}
       </div>
-
-      {% if form.lead.errors %}
-      <div class="text-danger small mt-1">{{ form.lead.errors.0 }}</div>
-      {% endif %}
     </div>
   </div>
 
@@ -93,24 +99,27 @@
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-4 col-sm-12">
-          <label for="id_duration_preset" class="form-label">Duration</label>
+          <label for="id_duration_preset" class="form-label{% if form.duration_preset.errors %} text-danger{% endif %}">Duration</label>
           {{ form.duration_preset }}
+          {% if form.duration_preset.errors %}
+            <div class="invalid-feedback d-block">{{ form.duration_preset.errors.0 }}</div>
+          {% endif %}
           <div class="form-text text-muted">Preset auto-fills end date. Choose "Custom" for manual entry.</div>
         </div>
 
         <div class="col-md-4 col-sm-12">
-          <label for="id_membership_start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+          <label for="id_membership_start_date" class="form-label{% if form.membership_start_date.errors %} text-danger{% endif %}">Start Date <span class="text-danger">*</span></label>
           {{ form.membership_start_date }}
           {% if form.membership_start_date.errors %}
-            <div class="text-danger small">{{ form.membership_start_date.errors.0 }}</div>
+            <div class="invalid-feedback d-block">{{ form.membership_start_date.errors.0 }}</div>
           {% endif %}
         </div>
 
         <div class="col-md-4 col-sm-12">
-          <label for="id_membership_end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+          <label for="id_membership_end_date" class="form-label{% if form.membership_end_date.errors %} text-danger{% endif %}">End Date <span class="text-danger">*</span></label>
           {{ form.membership_end_date }}
           {% if form.membership_end_date.errors %}
-            <div class="text-danger small">{{ form.membership_end_date.errors.0 }}</div>
+            <div class="invalid-feedback d-block">{{ form.membership_end_date.errors.0 }}</div>
           {% endif %}
         </div>
       </div>
@@ -123,7 +132,7 @@
     <div class="card-body">
       <div class="row g-3 align-items-end">
         <div class="col-md-4 col-sm-12">
-          <label for="{{ form.base_price.id_for_label }}" class="form-label">
+          <label for="{{ form.base_price.id_for_label }}" class="form-label{% if form.base_price.errors %} text-danger{% endif %}">
             Base Price (₹) <span class="text-muted small fw-normal">— list price</span>
           </label>
           <div class="input-group">
@@ -131,12 +140,12 @@
             {{ form.base_price }}
           </div>
           {% if form.base_price.errors %}
-            <div class="text-danger small">{{ form.base_price.errors.0 }}</div>
+            <div class="invalid-feedback d-block">{{ form.base_price.errors.0 }}</div>
           {% endif %}
         </div>
 
         <div class="col-md-4 col-sm-12">
-          <label for="{{ form.price.id_for_label }}" class="form-label">
+          <label for="{{ form.price.id_for_label }}" class="form-label{% if form.price.errors %} text-danger{% endif %}">
             Selling Price (₹) <span class="text-muted small fw-normal">— charged to member</span>
           </label>
           <div class="input-group">
@@ -144,7 +153,7 @@
             {{ form.price }}
           </div>
           {% if form.price.errors %}
-            <div class="text-danger small">{{ form.price.errors.0 }}</div>
+            <div class="invalid-feedback d-block">{{ form.price.errors.0 }}</div>
           {% endif %}
         </div>
 
@@ -165,23 +174,23 @@
     <div class="card-header"><h5 class="mb-0"><i class="feather icon-credit-card mr-2"></i>4. Initial Payment</h5></div>
     <div class="card-body">
       <div class="row g-3 align-items-end">
-        <div class="col-md-4 col-sm-12">
-          <label for="id_payment_amount" class="form-label">Amount Paid Now (₹)</label>
+        <div class="col-md-4 col-sm-12" id="paymentAmountContainer">
+          <label for="id_payment_amount" class="form-label{% if form.payment_amount.errors %} text-danger{% endif %}">Amount Paid Now (₹)<span class="text-danger fw-bold">*</span></label>
           <div class="input-group">
             <span class="input-group-text">₹</span>
             {{ form.payment_amount }}
           </div>
           {% if form.payment_amount.errors %}
-            <div class="text-danger small">{{ form.payment_amount.errors.0 }}</div>
+            <div class="invalid-feedback d-block">{{ form.payment_amount.errors.0 }}</div>
           {% endif %}
-          <div class="form-text text-muted">Leave 0 if no payment today.</div>
+          <div class="form-text text-muted" id="paymentHelperText">Leave 0 if no payment today.</div>
         </div>
 
         <div class="col-md-4 col-sm-12">
-          <label for="id_payment_method" class="form-label">Payment Method</label>
+          <label for="id_payment_method" class="form-label{% if form.payment_method.errors %} text-danger{% endif %}">Payment Method</label>
           {{ form.payment_method }}
           {% if form.payment_method.errors %}
-            <div class="text-danger small">{{ form.payment_method.errors.0 }}</div>
+            <div class="invalid-feedback d-block">{{ form.payment_method.errors.0 }}</div>
           {% endif %}
         </div>
 
@@ -276,6 +285,9 @@ function syncEndDate() {
     }
   }
   /* For custom/empty, leave end date editable for manual entry */
+
+  /* Validate: end date cannot be less than start date */
+  validateEndDate();
 }
 
 /** When end date is manually edited, reset duration to blank (Custom) */
@@ -294,6 +306,7 @@ function updateDiscountDisplay() {
   const base = parseFloat(baseInput.value) || 0;
   const price = parseFloat(priceInput.value) || 0;
 
+  // Update discount display
   if (base > 0 && price >= 0 && price < base) {
     const pct = ((base - price) / base * 100).toFixed(1);
     display.textContent = `${pct}% off`;
@@ -313,6 +326,8 @@ function updateDiscountDisplay() {
 }
 
 /* Balance display — price minus payment */
+let paymentShakeInterval = null;
+
 function updateBalanceDisplay() {
   const priceInput = document.getElementById("id_price");
   const paymentInput = document.getElementById("id_payment_amount");
@@ -320,15 +335,49 @@ function updateBalanceDisplay() {
   if (!priceInput || !paymentInput || !balanceDisplay) return;
 
   const price = parseFloat(priceInput.value) || 0;
-  const paid = parseFloat(paymentInput.value) || 0;
+  const paidStr = paymentInput.value.trim();
+  const paid = paidStr === '' ? 0 : (parseFloat(paymentInput.value) || 0);
   const balance = Math.max(0, price - paid);
+
+  const paymentLabel = document.querySelector('label[for="id_payment_amount"]');
+  const paymentHelper = document.getElementById('paymentHelperText');
+  const paymentContainer = document.getElementById('paymentAmountContainer');
 
   balanceDisplay.textContent = balance.toFixed(2);
 
-  if (paid > price) {
+  // Clear any existing shake interval
+  if (paymentShakeInterval) {
+    clearInterval(paymentShakeInterval);
+    paymentShakeInterval = null;
+  }
+
+  // When empty or 0 (with selling price > 0) → red + periodic shake
+  if ((paid === 0 || paidStr === '') && price > 0) {
     paymentInput.classList.add("is-invalid");
+    if (paymentLabel) paymentLabel.classList.add("text-danger", "fw-bold");
+    if (paymentHelper) paymentHelper.classList.add("text-danger", "fw-bold");
+    if (paymentContainer) {
+      paymentContainer.classList.add("animate__shakeX");
+      paymentShakeInterval = setInterval(() => {
+        paymentContainer.classList.remove("animate__shakeX");
+        void paymentContainer.offsetWidth;
+        paymentContainer.classList.add("animate__shakeX");
+      }, 2000);
+    }
+  } else if (paid > price) {
+    paymentInput.classList.add("is-invalid");
+    if (paymentLabel) paymentLabel.classList.add("text-danger", "fw-bold");
+    if (paymentHelper) paymentHelper.classList.add("text-danger", "fw-bold");
+    if (paymentContainer) {
+      paymentContainer.classList.remove("animate__shakeX");
+    }
   } else {
     paymentInput.classList.remove("is-invalid");
+    if (paymentLabel) paymentLabel.classList.remove("text-danger", "fw-bold");
+    if (paymentHelper) paymentHelper.classList.remove("text-danger", "fw-bold");
+    if (paymentContainer) {
+      paymentContainer.classList.remove("animate__shakeX");
+    }
   }
 
   paymentInput.max = price;
@@ -463,8 +512,20 @@ function initForm() {
   const priceInput = document.getElementById("id_price");
   const paymentInput = document.getElementById("id_payment_amount");
 
-  if (baseInput) baseInput.addEventListener("input", updateDiscountDisplay);
-  if (priceInput) priceInput.addEventListener("input", updateDiscountDisplay);
+  if (baseInput) {
+    baseInput.addEventListener("input", () => {
+      priceInput.value = baseInput.value;
+      updateDiscountDisplay();
+    });
+  }
+  if (priceInput) {
+    priceInput.addEventListener("input", () => {
+      const base = parseFloat(baseInput.value) || 0;
+      const price = parseFloat(priceInput.value) || 0;
+      if (price > base) priceInput.value = base;
+      updateDiscountDisplay();
+    });
+  }
   if (paymentInput) paymentInput.addEventListener("input", updateBalanceDisplay);
 
   // Recalculate displays
@@ -500,4 +561,149 @@ document.body.addEventListener("lead-created", function (evt) {
   const res = document.getElementById("leadSearchResults");
   if (res) res.innerHTML = "";
 });
+
+/* Auto-dismiss alert after submission */
+document.addEventListener("htmx:afterRequest", function (e) {
+  const alertDiv = document.querySelector(".alert");
+  if (alertDiv) {
+    setTimeout(function () {
+      alertDiv.classList.remove("show");
+      setTimeout(function () {
+        alertDiv.remove();
+      }, 300);
+    }, 10000);
+  }
+});
+
+/* ===== VALIDATION FUNCTIONS ===== */
+
+/* Lead selection validation (Rule #1) */
+function validateLeadSelection() {
+  const leadId = document.getElementById("id_lead").value;
+  const leadSearch = document.getElementById("leadSearch");
+  const label = document.querySelector('label[for="leadSearch"]');
+
+  if (!leadId) {
+    if (leadSearch) {
+      leadSearch.classList.add("is-invalid");
+      leadSearch.parentElement.classList.add("text-danger");
+    }
+    if (label) label.classList.add("text-danger");
+    return false;
+  } else {
+    if (leadSearch) {
+      leadSearch.classList.remove("is-invalid");
+      leadSearch.parentElement.classList.remove("text-danger");
+    }
+    if (label) label.classList.remove("text-danger");
+    return true;
+  }
+}
+
+/* End date validation (Rule #2) */
+function validateEndDate() {
+  const startInput = document.getElementById("id_membership_start_date");
+  const endInput = document.getElementById("id_membership_end_date");
+
+  if (!startInput || !endInput) return true;
+
+  if (startInput.value && endInput.value && endInput.value < startInput.value) {
+    endInput.classList.add("is-invalid");
+    return false;
+  } else {
+    endInput.classList.remove("is-invalid");
+    return true;
+  }
+}
+
+/* Payment method validation (Rule #6) */
+function validatePaymentMethod() {
+  const methodSelect = document.getElementById("id_payment_method");
+  if (methodSelect && !methodSelect.value) {
+    methodSelect.classList.add("is-invalid");
+    return false;
+  }
+  if (methodSelect) methodSelect.classList.remove("is-invalid");
+  return true;
+}
+
+/* Master validation function */
+function validateForm() {
+  let isValid = true;
+  isValid = validateLeadSelection() && isValid;
+  isValid = validateEndDate() && isValid;
+  isValid = validatePaymentMethod() && isValid;
+  return isValid;
+}
+
+/* Hook submit to validation - also runs on initial load */
+document.addEventListener("DOMContentLoaded", function () {
+  attachFormValidation();
+  addErrorClassesToFields();
+});
+
+document.addEventListener("htmx:afterSwap", function (evt) {
+  attachFormValidation();
+});
+
+/* Add is-invalid class to fields that have error message divs */
+function addErrorClassesToFields() {
+  const errorDivs = document.querySelectorAll('.invalid-feedback');
+  errorDivs.forEach(function(div) {
+    let field = div.previousElementSibling;
+    
+    // If previous sibling is an input/select, add class directly
+    if (field && (field.tagName === 'INPUT' || field.tagName === 'SELECT')) {
+      field.classList.add('is-invalid');
+      return;
+    }
+    
+    // If previous sibling is a div (input-group), look inside for input
+    if (field && field.classList && field.classList.contains('input-group')) {
+      const input = field.querySelector('input, select');
+      if (input) input.classList.add('is-invalid');
+    }
+  });
+}
+
+function attachFormValidation() {
+  const form = document.getElementById("membershipSaleForm");
+  if (form && !form.hasAttribute("data-validation-attached")) {
+    form.setAttribute("data-validation-attached", "true");
+    form.addEventListener("submit", function(e) {
+      if (!validateForm()) {
+        e.preventDefault();
+        Swal.fire({
+          icon: 'error',
+          title: 'Validation Error',
+          text: 'Please fix the errors above before submitting.',
+          timer: 5000,
+          timerProgressBar: true
+        });
+      }
+    });
+  }
+}
 </script>
+
+{% if form.errors %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const errors = [
+      {% for field, errors_list in form.errors.items %}
+      {% for error in errors_list %}"{{ error|escapejs }}",
+      {% endfor %}
+      {% endfor %}
+    ];
+    errors.forEach(function(errorMsg) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: errorMsg,
+        timer: 10000,
+        timerProgressBar: true
+      });
+    });
+  });
+</script>
+{% endif %}
