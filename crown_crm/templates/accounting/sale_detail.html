@@ -3,12 +3,11 @@
   <!-- Sale Information Section -->
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-light">
-      <h5 class="mb-0">Sale Information</h5>
+      <h5 class="mb-0">{{ sale.duration|title }} Membership for: {{ sale.lead.full_name }}</h5>
     </div>
     <div class="card-body">
       <div class="row">
         <div class="col-md-6">
-          <h5 class="card-title">{{ sale.plan.name }}</h5>
           <p class="card-text mb-1">
             <strong>Lead:</strong> {{ sale.lead.full_name }}
           </p>
@@ -16,13 +15,16 @@
             <strong>Start Date:</strong> {{ sale.membership_start_date|date:"d M Y" }}
           </p>
           <p class="card-text mb-1">
-            <strong>Duration:</strong> {{ sale.duration }}
+            <strong>End Date:</strong> {{ sale.membership_end_date|date:"d M Y" }}
+          </p>
+          <p class="card-text mb-1">
+            <strong>Duration:</strong> {{ sale.get_duration_display }}
           </p>
         </div>
         <div class="col-md-6">
           <div class="card bg-light border-0 p-3">
             <p class="mb-1">
-              <strong>Total Amount:</strong> ₹ {{ sale.custom_price }}
+              <strong>Total Amount:</strong> ₹ {{ sale.price|default:sale.base_price|default:"0.00" }}
             </p>
             <p class="mb-1">
               <strong>Paid Amount:</strong> ₹ {{ sale.total_paid_amount|default:"0.00" }}
@@ -32,11 +34,13 @@
             </p>
             <div class="mt-2">
               {% if sale.balance_amount == 0 %}
-                <span class="badge">Paid</span>
+                <span class="badge badge-success">Paid</span>
               {% else %}
                 <button class="btn btn-sm btn-primary"
                         hx-get="{% url 'hx-create-payment-receipt' slug=request.organization.slug uuid=sale.uuid %}"
-                        hx-target="#modal-form">Add Payment (₹ {{ sale.balance_amount }})</button>
+                        hx-target="#modal-form">
+                  <i class="feather-dollar-sign"></i> Add Payment (₹ {{ sale.balance_amount }})
+                </button>
               {% endif %}
             </div>
           </div>
@@ -66,7 +70,9 @@
               </div>
               <div class="timeline-content">
                 <div class="d-flex justify-content-between">
-                  <h6>Receipt #{{ receipt.receipt_number }}</h6>
+                  <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=receipt.uuid %}" target="_blank" class="text-decoration-none">
+                    <h6 class="mb-0 text-primary">Receipt #{{ receipt.receipt_number }} <i data-feather="download" class="feather-sm"></i></h6>
+                  </a>
                   <span class="text-muted small">{{ receipt.date|date:"d M Y" }}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
