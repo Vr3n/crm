@@ -222,11 +222,16 @@ class MembershipSaleCreateForm(MembershipSaleForm):
             sale.save()
 
             if payment_amount > 0:
+                # Calculate opening and closing balance for the first receipt
+                opening_balance = sale.price  # Initial balance is the full sale price
+                closing_balance = opening_balance - payment_amount
                 PaymentReceipt.objects.create(
                     sale=sale,
                     organization=organization,
                     amount=payment_amount,
                     method=payment_method,
+                    opening_balance=opening_balance,
+                    closing_balance=closing_balance,
                 )
 
         return sale

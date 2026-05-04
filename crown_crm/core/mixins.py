@@ -46,6 +46,7 @@ class HtmxFormMixin(FormMixin):
 
     def dispatch(self, request, *args, **kwargs):
         """Enforce HTMX-only access."""
+        logger.debug(f"[HtmxFormMixin] dispatch called, method={request.method}, htmx={getattr(request, 'htmx', False)}")
         if not getattr(request, "htmx", False):
             return HttpResponseBadRequest("HTMX request required")
         return super().dispatch(request, *args, **kwargs)

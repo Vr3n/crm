@@ -490,7 +490,7 @@ def receipt_pdf(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
         "receipt": receipt,
         "sale": sale,
         "lead": lead,
-        "logo_url": organization.logo.url,
+        "logo_url": organization.logo.url if organization.logo else None,
     }
 
     file_name = f"receipt-{lead.full_name}-{receipt.receipt_number}"
@@ -509,6 +509,9 @@ def receipt_pdf(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
 # =============================================================================
 
 
+logger = logging.getLogger(__name__)
+
+
 @method_decorator(login_required, name='dispatch')
 @method_decorator(organization_slug_required, name='dispatch')
 class HxCreateMembershipSaleView(HtmxFormMixin, View):
@@ -519,12 +522,24 @@ class HxCreateMembershipSaleView(HtmxFormMixin, View):
     success_event = "membership-sale-created"
     success_status = 200
     context_object_name = "form"
-    permission_required = "accounting.add_membershipsale"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         return kwargs
+
+    def get(self, request, *args, **kwargs):
+        logger.debug("[HxCreateMembershipSaleView] GET called")
+        form = self.get_form()
+        return self.render_form(form)
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("[HxCreateMembershipSaleView] POST called")
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
     def form_valid(self, form):
         sale = form.save_and_create_receipt(self.request.organization)
