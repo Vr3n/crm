@@ -1,4 +1,6 @@
 {% if request.organization %}
+{% with request.resolver_match.url_name|default:"" as url_name %}
+{% with request.path|default:"" as path %}
   <nav class="sidebar">
     <div class="sidebar-header">
       <a href="{{ request.organization.get_dashboard_url }}"
@@ -21,52 +23,40 @@
     <div class="sidebar-body">
       <ul class="nav">
         <li class="nav-item nav-category">Main</li>
-        <li class="nav-item active">
+        <li class="nav-item {% if url_name == 'organizations-dashboard' or path|slice:":13" == '/dashboard/' %}active{% endif %}">
           <a href="{{ request.organization.get_dashboard_url }}"
-             class="nav-link active">
+             class="nav-link {% if url_name == 'organizations-dashboard' or path|slice:":13" == '/dashboard/' %}active{% endif %}">
             <i class="link-icon" data-feather="box"></i>
             <span class="link-title">Dashboard</span>
           </a>
         </li>
         <li class="nav-item nav-category">Leads</li>
-        <li class="nav-item">
+        <li class="nav-item {% if url_name == 'all-leads' or url_name == 'lead-detail' or url_name == 'search-lead' or '/leads/' in path %}active{% endif %}">
           <a href="{% url 'all-leads' request.organization.slug %}"
-             class="nav-link">
+             class="nav-link {% if url_name == 'all-leads' or url_name == 'lead-detail' or url_name == 'search-lead' or '/leads/' in path %}active{% endif %}">
             <i class="link-icon" data-feather="users"></i>
             <span class="link-title">All Leads</span>
           </a>
         </li>
-        {% comment %} <li class="nav-item">
-          <a href="#" class="nav-link">
-            <i class="link-icon" data-feather="calendar"></i>
-            <span class="link-title">Lead Followups</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="#" class="nav-link">
-            <i class="link-icon" data-feather="message-square"></i>
-            <span class="link-title">Lead Discussion History</span>
-          </a>
-        </li> {% endcomment %}
         <li class="nav-item nav-category">Sale</li>
-        <li class="nav-item">
-          <a href="{% url 'sales' request.organization.slug %}" class="nav-link">
+        <li class="nav-item {% if url_name == 'sales' or url_name == 'sale-create' or url_name == 'sale-detail' or '/sales/' in path %}active{% endif %}">
+          <a href="{% url 'sales' request.organization.slug %}" class="nav-link {% if url_name == 'sales' or url_name == 'sale-create' or url_name == 'sale-detail' or '/sales/' in path %}active{% endif %}">
             <i class="link-icon" data-feather="dollar-sign"></i>
             <span class="link-title">Membership Sales</span>
           </a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item {% if url_name == 'receipts' or url_name == 'receipt-detail' or '/receipts/' in path %}active{% endif %}">
           <a href="{% url 'receipts' request.organization.slug %}"
-             class="nav-link">
+             class="nav-link {% if url_name == 'receipts' or url_name == 'receipt-detail' or '/receipts/' in path %}active{% endif %}">
             <i class="link-icon" data-feather="book-open"></i>
             <span class="link-title">Receipts</span>
           </a>
         </li>
         {% if request.user == request.organization.owner or request.user in request.organizations.admins.all %}
           <li class="nav-item nav-category">Organization</li>
-          <li class="nav-item">
+          <li class="nav-item {% if url_name == 'organizations-settings' or url_name == 'organizations-settings-update' or '/settings/' in path %}active{% endif %}">
             <a href="{% url 'organizations-settings' request.organization.slug %}"
-               class="nav-link">
+               class="nav-link {% if url_name == 'organizations-settings' or url_name == 'organizations-settings-update' or '/settings/' in path %}active{% endif %}">
               <i class="link-icon" data-feather="settings"></i>
               <span class="link-title">Settings</span>
             </a>
@@ -75,4 +65,6 @@
       </ul>
     </div>
   </nav>
+{% endwith %}
+{% endwith %}
 {% endif %}
