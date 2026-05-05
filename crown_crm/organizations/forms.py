@@ -18,15 +18,33 @@ class OrganizationCreateForm(forms.ModelForm):
     )
     mobile_number = forms.CharField(
         min_length=10,
+        max_length=10,
         validators=[
             RegexValidator(
-                r'((\+*)((0[ -]*)*|((91 )*))((\d{12})+|(\d{10})+))|\d{5}([- ]*)\d{6}',
-                message="Please enter correct mobile number!",
+                regex=r'^\d{10}$',
+                message="Enter a valid 10-digit mobile number (digits only)",
             )
         ],
-        required=False
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "inputmode": "numeric",
+                "maxlength": "10",
+                "pattern": r"\d{10}",
+                "placeholder": "10-digit mobile number",
+            }
+        ),
     )
-    email = forms.EmailField(required=False)
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "email@example.com",
+            }
+        ),
+    )
 
     class Meta:
         model = OrganizationMaster

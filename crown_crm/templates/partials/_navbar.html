@@ -38,14 +38,14 @@
                 <span class="ml-1">{{ org.name }}</span>
               </a>
             {% endfor %}
-            <button hx-get="{% url 'organizations-hx-create' %}"
-                    hx-target="#dialog"
-                    class="btn btn-outline-primary"
-                    role="button"
-                    tabindex="0">
+<button hx-get="{% url 'organizations-hx-create' %}"
+              hx-target="#modal-form"
+              class="btn btn-outline-primary btn-sm"
+              role="button"
+              tabindex="0">
               <i data-feather="plus-circle"></i>
-              <span>Create New Organization<span>
-              </button>
+              <span>Create New Organization</span>
+            </button>
             </div>
           </span>
         </li>

@@ -11,6 +11,7 @@ from django.forms.models import modelformset_factory
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from django.urls import reverse
 from django.utils.text import slugify
 from django_htmx.http import trigger_client_event
 
@@ -60,59 +61,80 @@ def hx_organization_create_view(request: OrgHttpRequest) -> HttpResponse:
     if request.method == "POST":
         org_form = OrganizationCreateForm(request.POST, request.FILES)
 
-        if org_form.is_valid():
-            cleaned_data = org_form.cleaned_data
-            name = cleaned_data.get("name")
-            org = org_form.save(commit=False)
+        if not org_form.is_valid():
+            context = {"form": org_form}
+            res = render(request, "organizations/forms/create-organization.html", context)
+            res = trigger_client_event(
+                res,
+                "message",
+                {"level": "error", "message": "Please fix the form errors."},
+            )
+            return res
 
-            # If name is not valid.
-            if name is None:
-                response = HttpResponse(status=400)
-                response = trigger_client_event(
-                    response,
-                    "message",
-                    {
-                        "message": "Organization Name is required!",
-                        "level": "error",
-                    },
-                )
-                return response
+        cleaned_data = org_form.cleaned_data
+        name = cleaned_data.get("name")
+        org = org_form.save(commit=False)
 
-            org.slug = slugify(name)
-            org.owner = request.user
-            org.save()
-
-            mobile = request.POST.get("mobile_number")
-            email = request.POST.get("email")
-
-            if mobile is not None or mobile != "":
-                mobile_form = OrganizationMobileForm({"mobile_number": mobile})
-                if mobile_form.is_valid():
-                    mobile_obj = mobile_form.save(commit=False)
-                    mobile_obj.organization = org
-                    mobile_obj.save()
-
-            if email is not None or email != "":
-                email_form = OrganizationEmailForm({"email": email})
-                if email_form.is_valid():
-                    email_obj = email_form.save(commit=False)
-                    email_obj.organization = org
-                    email_obj.save()
-
-            return HttpResponse(
-                status=204,
-                headers={
-                    "HX-Trigger": json.dumps(
-                        {
-                            "organizationsListChanged": "organizationChnages",
-                            "message": {
-                                "message": "Organization Created Successfully!",
-                                "level": "success",
-                            },
-                        }
-                    )
+        if name is None:
+            response = HttpResponse(status=400)
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "message": "Organization Name is required!",
+                    "level": "error",
                 },
             )
+            return response
+
+        org.slug = slugify(name)
+        org.owner = request.user
+        org.save()
+
+        mobile = cleaned_data.get("mobile_number")
+        email = cleaned_data.get("email")
+
+        if mobile:
+            existing_mobile = OrganizationMobileNumberMaster.objects.filter(
+                organization=org
+            ).first()
+            if existing_mobile:
+                existing_mobile.mobile_number = mobile
+                existing_mobile.save()
+            else:
+                OrganizationMobileNumberMaster.objects.create(
+                    organization=org,
+                    mobile_number=mobile
+                )
+
+        if email:
+            existing_email = OrganizationEmailMaster.objects.filter(
+                organization=org
+            ).first()
+            if existing_email:
+                existing_email.email = email
+                existing_email.save()
+            else:
+                OrganizationEmailMaster.objects.create(
+                    organization=org,
+                    email=email
+                )
+
+        return HttpResponse(
+            status=204,
+            headers={
+                "HX-Trigger": json.dumps(
+                    {
+                        "organizationsListChanged": "organizationChnages",
+                        "organization-created": "",
+                        "message": {
+                            "message": "Organization Created Successfully!",
+                            "level": "success",
+                        },
+                    }
+                )
+            },
+        )
     else:
         org_form = OrganizationCreateForm()
 
@@ -205,9 +227,38 @@ def organization_settings_update_view(
         form = OrganizationCreateForm(request.POST, request.FILES, instance=org)
         if form.is_valid():
             form.save()
-            response = render(
-                request, "organizations/partials/settings.html", {"organization": org}
-            )
+
+            cleaned_data = form.cleaned_data
+            mobile = cleaned_data.get("mobile_number")
+            email = cleaned_data.get("email")
+
+            if mobile:
+                existing_mobile = OrganizationMobileNumberMaster.objects.filter(
+                    organization=org
+                ).first()
+                if existing_mobile:
+                    existing_mobile.mobile_number = mobile
+                    existing_mobile.save()
+                else:
+                    OrganizationMobileNumberMaster.objects.create(
+                        organization=org,
+                        mobile_number=mobile
+                    )
+
+            if email:
+                existing_email = OrganizationEmailMaster.objects.filter(
+                    organization=org
+                ).first()
+                if existing_email:
+                    existing_email.email = email
+                    existing_email.save()
+                else:
+                    OrganizationEmailMaster.objects.create(
+                        organization=org,
+                        email=email
+                    )
+
+            response = HttpResponse(status=204)
             response = trigger_client_event(
                 response,
                 "message",
@@ -215,11 +266,18 @@ def organization_settings_update_view(
             )
             response = trigger_client_event(response, "organization-updated")
             return response
+            return response
         else:
             response = render(
                 request,
                 "organizations/forms/create-organization.html",
-                {"form": form},
+                {
+                    "form": form,
+                    "action_url": reverse(
+                        "organizations-settings-update",
+                        kwargs={"slug": request.organization.slug, "uuid": uuid},
+                    ),
+                },
             )
             response = trigger_client_event(
                 response,
@@ -231,7 +289,24 @@ def organization_settings_update_view(
             )
             return response
 
-    form = OrganizationCreateForm(instance=org)
+    existing_mobile = OrganizationMobileNumberMaster.objects.filter(
+        organization=org
+    ).first()
+    existing_email = OrganizationEmailMaster.objects.filter(organization=org).first()
+
+    initial_data = {}
+    if existing_mobile:
+        initial_data["mobile_number"] = existing_mobile.mobile_number
+    if existing_email:
+        initial_data["email"] = existing_email.email
+
+    form = OrganizationCreateForm(instance=org, initial=initial_data)
+    action_url = reverse(
+        "organizations-settings-update",
+        kwargs={"slug": request.organization.slug, "uuid": uuid},
+    )
     return render(
-        request, "organizations/forms/create-organization.html", {"form": form}
+        request,
+        "organizations/forms/create-organization.html",
+        {"form": form, "action_url": action_url},
     )
