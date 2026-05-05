@@ -89,11 +89,11 @@
             <h6 class="text-danger mb-0">Upcoming Membership Expirations.</h6>
           </div>
           <div class="table-responsive-sm">
-            <div class="table-container"
-               id="membership-expirations-table"
-               hx-get="{% url 'hx-membership-expirations' slug=request.organization.slug %}"
-               hx-trigger="load"
-               hx-swap="outerHTML">
+<div class="table-container"
+                id="membership-expirations-table"
+                hx-get="{% url 'hx-membership-expirations' slug=request.organization.slug %}"
+                hx-trigger="load, lead-deleted from:body"
+                hx-swap="outerHTML">
               <div class="text-center py-3">
                 <span class="spinner-border spinner-border-sm"></span> Loading...
               </div>
@@ -114,7 +114,7 @@
             <div class="table-container"
                  id="outstanding-payments-table"
                  hx-get="{% url 'hx-outstanding-payments' slug=request.organization.slug %}"
-                 hx-trigger="load"
+                 hx-trigger="load, lead-deleted from:body"
                  hx-swap="outerHTML">
               <div class="text-center py-3">
                 <span class="spinner-border spinner-border-sm"></span> Loading...
@@ -134,7 +134,7 @@
             <div class="table-container"
                id="recent-membership-sales-table"
                hx-get="{% url 'hx-recent-membership-sales' slug=request.organization.slug %}"
-               hx-trigger="load"
+               hx-trigger="load, lead-deleted from:body"
                hx-swap="outerHTML">
               <div class="text-center py-3">
                 <span class="spinner-border spinner-border-sm"></span> Loading...

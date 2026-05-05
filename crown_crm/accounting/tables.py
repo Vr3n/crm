@@ -169,7 +169,12 @@ class PaymentReceiptTable(tables.Table):
         template_code="""
             <a href="{% url 'receipt-detail' slug=request.organization.slug uuid=record.uuid %}"
                class="btn btn-sm btn-primary">
-                <i data-feather="eye" class="icon-sm"></i> View
+             <i data-feather="eye" class="icon-sm"></i> View
+            </a>
+<a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=record.uuid %}"
+               class="btn btn-sm btn-success"
+               download>
+             <i class="fa fa-download mr-1"></i> Download
             </a>
             {% if record.sale.balance_amount > 0 %}
             <button class="btn btn-sm btn-info"

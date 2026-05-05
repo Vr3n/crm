@@ -731,21 +731,12 @@ def receipt_pdf(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     receipt = get_object_or_404(
         PaymentReceipt, uuid=uuid, organization=request.organization
     )
-    terms_list = [
-        "NO Refund / Membership Cancellation",
-        "Please read, understand and comply with these rules",
-        "Right of enrollment and entry is reserved by management",
-        "Transfer fees of 1000/- will be charged under conditions",
-        "Clients may not participate in workout independently or under personal trainer unless authorized",
-        "Clients are required to carry and change their footwear outside in shoe closet.",
-    ]
 
     organization = request.organization
     sale = receipt.sale
     lead = receipt.sale.lead
 
     context = {
-        "terms_list": terms_list,
         "organization": organization,
         "receipt": receipt,
         "sale": sale,

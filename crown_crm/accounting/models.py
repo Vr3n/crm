@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.db import transaction
 
-from crown_crm.utils.models import BaseModel
+from crown_crm.utils.models import ActiveManager, BaseModel
 from crown_crm.leads.models import LeadMaster
 
 
@@ -158,6 +158,20 @@ class MembershipSale(BaseModel):
     # Type checking shenanigans.
     receipts: models.QuerySet["PaymentReceipt"]
 
+    # Custom managers
+    objects = ActiveManager()  # Returns only active (non-deleted) - default
+    all = models.Manager()     # Returns everything including deleted
+
+    def delete(self, *args, **kwargs):
+        """Soft delete the membership and related receipts."""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at"])
+
+        # Also soft delete related receipts
+        for receipt in self.receipts.all():
+            receipt.delete()
+
     def __str__(self) -> str:
         """Return a string representation of the membership sale."""
         return f"Sale: {self.lead.full_name} - {self.duration} - {self.created_at}"
@@ -249,6 +263,16 @@ class PaymentReceipt(BaseModel):
         ],
         default="none",
     )
+
+    # Custom managers
+    objects = ActiveManager()  # Returns only active (non-deleted) - default
+    all = models.Manager()     # Returns everything including deleted
+
+    def delete(self, *args, **kwargs):
+        """Soft delete the receipt."""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at"])
 
     class Meta:
         ordering = ["-date"]

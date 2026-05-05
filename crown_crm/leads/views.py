@@ -131,33 +131,6 @@ def lead_detail_view(request: OrgHttpRequest, pk: str):
 
 @login_required
 @organization_slug_required
-def hx_lead_delete_view(request: OrgHttpRequest, pk: int):
-    lead_obj = LeadMaster.objects.filter(pk=pk)
-
-    if not lead_obj.exists():
-        res = HttpResponse()
-        res = trigger_client_event(
-            res,
-            "message",
-            {"level": "error", "message": "Cannot find the lead number."},
-        )
-        return res
-
-    lead_obj = lead_obj.first()
-    lead_obj.delete()  # type: ignore
-
-    context = {"leads": LeadMaster.objects.filter(organization=request.organization)}
-
-    res = render(request, "leads/tables/leads.html", context)
-    res = trigger_client_event(
-        res, "message", {"level": "success", "message": "Deleted Lead Successfully!"}
-    )
-
-    return res
-
-
-@login_required
-@organization_slug_required
 def hx_create_lead_frm_membership(request: OrgHttpRequest) -> HttpResponse:
     """
     Handles the creation of new lead, along with associated mobile numbers,
@@ -943,7 +916,7 @@ class HxDeleteLeadView(HtmxDeleteMixin, View):
     model = LeadMaster
     success_event = "lead-deleted"
     event_id_key = "lead_id"
-    permission_required = "leads.delete_leadmaster"
+    # permission_required = "leads.delete_leadmaster"
     pk_url_kwarg = "pk"
 
     def get_object(self):

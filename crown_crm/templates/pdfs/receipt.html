@@ -219,6 +219,7 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
+        margin-top: 8px;
       }
       .footer-thanks {
         font-size: 12px;
@@ -264,7 +265,6 @@
           </div>
           <div>
             <div class="org-name">{{ organization.name }}</div>
-            <div class="org-sub">Premium Fitness Studio</div>
           </div>
         </div>
         <div class="header-contact">
@@ -351,18 +351,9 @@
         </div>
       </div>
 
-      <!-- Terms -->
-      <div class="section terms-section">
-        <div class="section-label">Terms &amp; conditions</div>
-        <ul class="terms-list">
-          {% for line in terms_list %}
-          <li>{{ forloop.counter }}. {{ line }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-
       <!-- Footer -->
       <div class="footer">
+        <div></div>
         <div>
           <div class="sig-line"></div>
           <div class="sig-label">
