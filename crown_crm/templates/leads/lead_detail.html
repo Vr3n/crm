@@ -124,7 +124,7 @@
                   <small class="text-muted">
                     Last payment: {{ latest_receipt.date|date:"M d, Y" }} ({{ latest_receipt.get_method_display }})
                   </small>
-                  <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=latest_receipt.uuid %}" class="btn btn-sm btn-outline-primary" target="_blank">
+                  <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=latest_receipt.uuid %}" class="btn btn-sm btn-outline-primary">
                     <i class="feather-file-text"></i> View Receipt #{{ latest_receipt.receipt_number }}
                   </a>
                 </div>

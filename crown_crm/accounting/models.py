@@ -163,7 +163,9 @@ class MembershipSale(BaseModel):
         return f"Sale: {self.lead.full_name} - {self.duration} - {self.created_at}"
 
     def get_absolute_url(self):
-        return reverse("lead-detail", kwargs={"slug": self.organization.slug, "pk": self.lead.pk})
+        return reverse(
+            "lead-detail", kwargs={"slug": self.organization.slug, "pk": self.lead.pk}
+        )
 
 
 class PaymentReceipt(BaseModel):
@@ -227,6 +229,25 @@ class PaymentReceipt(BaseModel):
         max_digits=10,
         decimal_places=2,
         help_text="Balance after this payment was applied",
+    )
+
+    # PDF generation fields
+    pdf_file = models.FileField(
+        upload_to="receipts/pdfs/",
+        blank=True,
+        null=True,
+    )
+    pdf_generated_at = models.DateTimeField(null=True, blank=True)
+    pdf_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("none", "None"),
+            ("pending", "Pending"),
+            ("generating", "Generating"),
+            ("ready", "Ready"),
+            ("failed", "Failed"),
+        ],
+        default="none",
     )
 
     class Meta:
@@ -327,4 +348,7 @@ class PaymentReceipt(BaseModel):
         )
 
     def get_absolute_url(self):
-        return reverse("lead-detail", kwargs={"slug": self.sale.organization.slug, "pk": self.sale.lead.pk})
+        return reverse(
+            "lead-detail",
+            kwargs={"slug": self.sale.organization.slug, "pk": self.sale.lead.pk},
+        )

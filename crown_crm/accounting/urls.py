@@ -17,12 +17,22 @@ urlpatterns = [
     path("hx/sales/table/", views.hx_sales_table, name="hx-sales-table"),
     path("hx/sales/<uuid:uuid>/delete/", views.hx_sale_delete, name="hx-sale-delete"),
     path(
-        "hx/sales/<uuid:uuid>/create-receipt/",
-        views.hx_create_payment_receipt,
-        name="hx-create-payment-receipt",
+        "hx/sales/<uuid:uuid>/pay-balance/",
+        views.hx_pay_balance,
+        name="hx-sale-pay-balance",
     ),
     path("hx/sales/table/", views.hx_sales_table, name="hx-sales-table"),
     path("hx/sales/<uuid:uuid>/", views.hx_sale_detail, name="hx-sale-detail"),
+    path(
+        "hx/sales/<uuid:uuid>/payment-history/",
+        views.hx_sale_payment_history,
+        name="hx-sale-payment-history",
+    ),
+    path(
+        "hx/sales/<uuid:uuid>/payment-summary/",
+        views.hx_sale_payment_summary,
+        name="hx-sale-payment-summary",
+    ),
     path(
         "hx/membership-expirations/",
         views.hx_membership_expirations_table,

@@ -368,6 +368,88 @@ def receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
 
 @login_required
 @organization_slug_required
+def hx_pay_balance(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """
+    Show payment form for a sale (pay balance).
+    """
+    sale = get_object_or_404(
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
+    )
+    sale_balance_amount = sale.balance_amount
+
+    if sale_balance_amount <= 0:
+        response = HttpResponse(status=204)
+        return trigger_client_event(
+            response,
+            "message",
+            {
+                "level": "info",
+                "message": "The membership sale is already fully paid.",
+            },
+        )
+
+    if request.method == "POST":
+        form = CreatePaymentReceiptForm(request.POST)
+        if form.is_valid():
+            receipt = form.save(commit=False)
+            receipt.organization = request.organization
+            receipt.save()
+            response = HttpResponse(status=204)
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "success",
+                    "message": "Payment processed successfully!",
+                },
+            )
+            response = trigger_client_event(
+                response,
+                "receipt-created",
+            )
+            return response
+        else:
+            response = render(
+                request,
+                "accounting/forms/receipt_form.html",
+                {
+                    "form": form,
+                    "sale": sale,
+                },
+            )
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "error",
+                    "message": "Invalid form submission.",
+                },
+            )
+            return response
+
+    form = CreatePaymentReceiptForm(
+        initial={
+            "sale": sale,
+            "balance_amount": sale_balance_amount,
+            "amount": sale_balance_amount,
+            "closing_balance": 0,
+            "opening_balance": sale_balance_amount,
+        }
+    )
+    return render(
+        request,
+        "accounting/forms/receipt_form.html",
+        {
+            "form": form,
+            "sale": sale,
+        },
+    )
+
+
+@login_required
+@organization_slug_required
 def hx_create_payment_receipt(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     """
     Pay the balance amount remaining for the sale.
@@ -485,6 +567,39 @@ def hx_sale_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
         organization=request.organization,
     )
     return render(request, "accounting/partials/sale_detail.html", {"sale": sale})
+
+
+@login_required
+@organization_slug_required
+def hx_sale_payment_history(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """Return payment history timeline for a sale."""
+    sale = get_object_or_404(
+        MembershipSale.objects.prefetch_related("receipts"),
+        uuid=uuid,
+        organization=request.organization,
+    )
+    receipts = sale.receipts.order_by("-date")
+    return render(
+        request,
+        "accounting/partials/sale_payment_history.html",
+        {"sale": sale, "receipts": receipts},
+    )
+
+
+@login_required
+@organization_slug_required
+def hx_sale_payment_summary(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """Return payment summary card for a sale."""
+    sale = get_object_or_404(
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
+    )
+    return render(
+        request,
+        "accounting/partials/sale_payment_summary.html",
+        {"sale": sale},
+    )
 
 
 @login_required
