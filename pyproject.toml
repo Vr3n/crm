@@ -49,7 +49,7 @@ dependencies = [
     "rcssmin==1.1.2",
     "redis==5.2.1",
     "ruff==0.9.7",
-    "sphinx==8.2.0",
+    "sphinx==9.1.0",
     "sphinx-autobuild==2024.10.3",
     "watchfiles==1.0.4",
     "werkzeug[watchdog]==3.1.3",
