@@ -46,7 +46,7 @@ dependencies = [
     "pytest-django==4.10.0",
     "pytest-sugar==1.0.0",
     "python-slugify==8.0.4",
-    "rcssmin==1.1.2",
+    "rcssmin==1.2.2",
     "redis==5.2.1",
     "ruff==0.9.7",
     "sphinx==8.2.0",
