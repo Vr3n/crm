@@ -25,6 +25,45 @@
   ></div>
 </div>
 
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="text-primary mb-2">Leads without Membership</h6>
+        <div class="table-responsive-sm">
+          <div class="table-container"
+               id="leads-without-membership-table"
+               hx-get="{% url 'hx-leads-without-membership-table' slug=request.organization.slug %}"
+               hx-trigger="load"
+               hx-swap="outerHTML">
+            <div class="text-center py-3">
+              <span class="spinner-border spinner-border-sm"></span> Loading...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="text-primary mb-2">Leads with Membership</h6>
+        <div class="table-responsive-sm">
+          <div class="table-container"
+               id="leads-with-membership-table"
+               hx-get="{% url 'hx-leads-with-membership-table' slug=request.organization.slug %}"
+               hx-trigger="load"
+               hx-swap="outerHTML">
+            <div class="text-center py-3">
+              <span class="spinner-border spinner-border-sm"></span> Loading...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row">
   <div class="col-lg-12 col-xl-12 stretch-card">
     <div class="card">

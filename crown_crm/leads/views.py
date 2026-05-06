@@ -2,7 +2,7 @@ import logging
 import pdb
 
 from django_tables2 import RequestConfig, SingleTableView
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Exists, OuterRef
 from django.forms import inlineformset_factory, model_to_dict
 from django.http import HttpResponse, JsonResponse
 from django.db.models.functions import TruncDate
@@ -36,7 +36,8 @@ from .models import (
     LeadMobileNumberMaster,
     LeadEmailAddressMaster,
 )
-from .tables import LeadTable
+from .tables import LeadTable, LeadsWithoutMembershipTable, LeadsWithMembershipTable
+from crown_crm.accounting.models import MembershipSale
 
 
 logger = logging.getLogger(__name__)
@@ -126,33 +127,6 @@ def lead_detail_view(request: OrgHttpRequest, pk: str):
     context = {"lead": lead}
 
     return render(request, "leads/lead_detail.html", context=context)
-
-
-@login_required
-@organization_slug_required
-def hx_lead_delete_view(request: OrgHttpRequest, pk: int):
-    lead_obj = LeadMaster.objects.filter(pk=pk)
-
-    if not lead_obj.exists():
-        res = HttpResponse()
-        res = trigger_client_event(
-            res,
-            "message",
-            {"level": "error", "message": "Cannot find the lead number."},
-        )
-        return res
-
-    lead_obj = lead_obj.first()
-    lead_obj.delete()  # type: ignore
-
-    context = {"leads": LeadMaster.objects.filter(organization=request.organization)}
-
-    res = render(request, "leads/tables/leads.html", context)
-    res = trigger_client_event(
-        res, "message", {"level": "success", "message": "Deleted Lead Successfully!"}
-    )
-
-    return res
 
 
 @login_required
@@ -396,8 +370,89 @@ def hx_leads_table(request: OrgHttpRequest) -> HttpResponse:
         "table": table,
         "htmx_url": request.path,
         "htmx_target": "#all-leads-table",
+        "hx_target": "#all-leads-table",
         "per_page_options": [5, 10, 25, 50, 100],
         "per_page": per_page,
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_leads_without_membership_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated leads without membership table.
+    """
+    VALID_PER_PAGE = {5, 10, 25, 50, 100}
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    leads = (
+        LeadMaster.objects.filter(organization=request.organization)
+        .annotate(
+            has_membership=Exists(
+                MembershipSale.objects.filter(
+                    lead_id=OuterRef('pk'),
+                    organization=request.organization
+                )
+            )
+        )
+        .filter(has_membership=False)
+        .prefetch_related(
+            Prefetch(
+                "mobile_numbers",
+                queryset=LeadMobileNumberMaster.objects.order_by("created_at"),
+                to_attr="first_mobile",
+            ),
+            Prefetch(
+                "emails",
+                queryset=LeadEmailAddressMaster.objects.order_by("created_at"),
+                to_attr="first_email",
+            ),
+        )
+        .order_by("-created_at")
+    )
+
+    table = LeadsWithoutMembershipTable(leads, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10, 25, 50, 100],
+        "per_page": per_page,
+        "hx_target": "#leads-without-membership-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_leads_with_membership_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated leads with membership table.
+    """
+    VALID_PER_PAGE = {5, 10, 25, 50, 100}
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    memberships = (
+        MembershipSale.objects.filter(organization=request.organization)
+        .select_related("lead")
+        .order_by("-created_at")
+    )
+
+    table = LeadsWithMembershipTable(memberships, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10, 25, 50, 100],
+        "per_page": per_page,
+        "hx_target": "#leads-with-membership-table",
     }
 
     return render(request, "tables/hx-bootstrap4.html", context)
@@ -758,6 +813,7 @@ class HxCreateLeadView(HtmxFormsetMixin, View):
         context["address_form"] = kwargs.get("address_form") or LeadAddressForm(
             self.request.POST or None
         )
+        context["full_obj"] = self.request.GET.get("fullObj", "")
         return context
 
     def get_form_kwargs(self):
@@ -765,8 +821,22 @@ class HxCreateLeadView(HtmxFormsetMixin, View):
         kwargs["initial"] = {"organization": self.request.organization}
         return kwargs
 
+    def get_success_event_params(self):
+        # Check both GET (for initial modal open) and POST (for form submission)
+        full_obj = self.request.GET.get("fullObj") or self.request.POST.get("fullObj")
+        if full_obj:
+            return {
+                "lead_id": str(self._object.pk),
+                "first_name": self._object.first_name,
+                "middle_name": self._object.middle_name or "",
+                "last_name": self._object.last_name or "",
+                "mobile": self._object.mobile_numbers.first().mobile_number if self._object.mobile_numbers.first() else "",
+                "email": self._object.emails.first().email if self._object.emails.first() else "",
+            }
+        return {"lead_id": str(self._object.pk)}
+
     def form_valid(self, form):
-        logger.debug(f"[HxCreateLeadView] form_valid called")
+        logger.debug("[HxCreateLeadView] form_valid called")
         lead = form.save()
 
         for name, fs in self.formsets.items():
@@ -846,7 +916,7 @@ class HxDeleteLeadView(HtmxDeleteMixin, View):
     model = LeadMaster
     success_event = "lead-deleted"
     event_id_key = "lead_id"
-    permission_required = "leads.delete_leadmaster"
+    # permission_required = "leads.delete_leadmaster"
     pk_url_kwarg = "pk"
 
     def get_object(self):

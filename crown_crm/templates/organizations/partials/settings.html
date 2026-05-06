@@ -1,4 +1,8 @@
-<div class="col-lg-8" hx-swap-oob="true" id="organization-settings">
+<div class="col-lg-8"
+     hx-get="{% url 'organizations-settings' slug=request.organization.slug %}"
+     hx-trigger="organization-updated from:body"
+     hx-swap="outerHTML"
+     id="organization-settings">
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-white py-3">
       <div class="d-flex justify-content-between align-items-center">
@@ -45,9 +49,9 @@
             </div>
             <div>
               <h6 class="mb-1 text-muted">Email</h6>
-              {% with emails=organization.organizationemailmaster_set.all %}
-                {% if emails %}
-                  {% for email in emails %}<p class="mb-1">{{ email.email }}</p>{% endfor %}
+              {% with email=organization.email_addresses.first %}
+                {% if email %}
+                  <p class="mb-1">{{ email.email }}</p>
                 {% else %}
                   <p class="text-muted mb-1">No email added</p>
                 {% endif %}
@@ -62,9 +66,9 @@
             </div>
             <div>
               <h6 class="mb-1 text-muted">Phone</h6>
-              {% with phones=organization.organizationmobilenumbermaster_set.all %}
-                {% if phones %}
-                  {% for phone in phones %}<p class="mb-1">{{ phone.mobile_number }}</p>{% endfor %}
+              {% with phone=organization.mobile_numbers.first %}
+                {% if phone %}
+                  <p class="mb-1">{{ phone.mobile_number }}</p>
                 {% else %}
                   <p class="text-muted mb-1">No phone number added</p>
                 {% endif %}

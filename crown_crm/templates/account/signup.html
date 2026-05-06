@@ -93,9 +93,9 @@
                   <div class="col-md-12 p-2">
                     <div class="auth-form-wrapper px-4 py-5">
                       {% block content %}
-                        {% element h1 %}
-                            {% trans "Sign Up" %}
-                        {% endelement %}
+                        <h3>
+                          {% trans "Sign Up" %}
+                        </h3>
                         {% setvar link %}
                             <a href="{{ login_url }}">
                             {% endsetvar %}

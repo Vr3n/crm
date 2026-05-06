@@ -1,0 +1,51 @@
+{% load static %}
+<div class="card shadow-sm sticky-top" style="top: 80px; z-index: 1;"
+     hx-trigger="receipt-created from:body, sale-updated from:body"
+     hx-get="{% url 'hx-sale-payment-summary' slug=request.organization.slug uuid=sale.uuid %}"
+     hx-swap="innerHTML"
+     hx-target="this">
+  <div class="card-header bg-white border-bottom-0">
+    <h5 class="mb-0"><i class="fa fa-wallet mr-2 text-muted"></i>Payment Summary</h5>
+  </div>
+  <div class="card-body">
+    <div class="mb-3">
+      <small class="text-muted d-block">Total Amount</small>
+      <div class="h3 mb-0">₹ {{ sale.price|default:sale.base_price|default:"0"|floatformat:2 }}</div>
+    </div>
+    <div class="mb-3">
+      <small class="text-muted d-block">Amount Paid</small>
+      <div class="h5 mb-0 text-success">₹ {{ sale.total_paid_amount|floatformat:2 }}</div>
+    </div>
+    <div class="mb-3">
+      <small class="text-muted d-block">Balance Due</small>
+      <div class="h4 mb-0 {% if sale.balance_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+        ₹ {{ sale.balance_amount|floatformat:2 }}
+      </div>
+    </div>
+    <hr>
+    <div class="d-grid gap-2">
+      {% if sale.balance_amount == 0 %}
+        <div class="alert alert-success mb-0 py-2">
+          <i class="fa fa-check-circle mr-1"></i> Fully Paid
+        </div>
+      {% else %}
+        <button class="btn btn-lg btn-info w-100"
+                hx-get="{% url 'hx-sale-pay-balance' slug=request.organization.slug uuid=sale.uuid %}"
+                hx-target="#modal-form">
+          <i data-feather="credit-card" class="icon-sm mr-1"></i> Pay Balance (₹ {{ sale.balance_amount|floatformat:2 }})
+        </button>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card-footer bg-light">
+    <small class="text-muted d-block mb-2">Quick Actions</small>
+    <div class="d-flex gap-2">
+      <a href="{% url 'receipts' slug=request.organization.slug %}" class="btn btn-sm btn-outline-secondary flex-fill">
+        <i class="fa fa-receipt mr-1"></i>All Receipts
+      </a>
+      <a href="{% url 'sales' slug=request.organization.slug %}" class="btn btn-sm btn-outline-secondary flex-fill">
+        <i class="fa fa-list mr-1"></i>All Sales
+      </a>
+    </div>
+  </div>
+</div>

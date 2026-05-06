@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from crown_crm.organizations.models import OrganizationMaster
-from crown_crm.utils.models import BaseModel
+from crown_crm.utils.models import ActiveManager, BaseModel
 
 if TYPE_CHECKING:
     from crown_crm.accounting.models import MembershipSale
@@ -88,6 +88,22 @@ class LeadMaster(BaseModel):
     sources: models.QuerySet["LeadSourceMaster"]
     memberships: models.QuerySet["MembershipSale"]
 
+    # Custom managers
+    objects = ActiveManager()  # Returns only active (non-deleted) - default
+    all = models.Manager()     # Returns everything including deleted
+
+    def delete(self, *args, **kwargs):
+        """Soft delete the lead and all related membership sales."""
+        from crown_crm.accounting.models import MembershipSale
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at"])
+
+        # Also soft delete related memberships
+        for sale in self.memberships.all():
+            sale.delete()
+
     class Meta:
         verbose_name = "Lead"
         verbose_name_plural = "Leads"
@@ -120,11 +136,6 @@ class LeadMobileNumberMaster(BaseModel):
         verbose_name_plural = "Lead Mobile Numbers"
 
     def __str__(self) -> str:
-        """Returns string representation of the lead's mobile number.
-
-        Returns:
-            str: Lead's full name followed by their mobile number.
-        """
         return f"{self.lead.full_name} - {self.mobile_number}"
 
     def get_absolute_url(self):

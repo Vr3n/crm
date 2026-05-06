@@ -174,5 +174,16 @@ LOGGING = {
 SPECTACULAR_SETTINGS["SERVERS"] = [
     {"url": "https://crowncrm.com", "description": "Production server"},
 ]
+
+# CELERY
+# -------------------------------------------------------------------------------
+# Use Redis as broker and result backend in production
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+
+# Disable eager mode - use async workers
+CELERY_TASK_ALWAYS_EAGER = False
+CELERY_TASK_EAGER_PROPAGATES = False
+
 # Your stuff...
 # ------------------------------------------------------------------------------

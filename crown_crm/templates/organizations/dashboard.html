@@ -17,10 +17,9 @@
        class="btn btn-warning">+ Add New Sale</a>
   </div>
   <!-- Chart Data (Hidden) -->
-  <div id="chartData" style="display: none;">{{ chart_data|json_script:""|safe }}</div>
+  <!-- <div id="chartData" style="display: none;">{{ chart_data|json_script:""|safe }}</div> -->
   <input type="hidden" name="org_slug" value="{{ request.organization.slug }}" />
-  <div class="row">
-    <!-- Leads Card -->
+  <!-- <div class="row">
     <div class="col-md-4 mb-4">
       <div class="metric-card">
         <div class="d-flex justify-content-between">
@@ -31,11 +30,9 @@
               {{ recent_lead_count }} this month
             </div>
           </div>
-          <div id="leadsChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
-    <!-- Membership Sales Card -->
     <div class="col-md-4 mb-4">
       <div class="metric-card">
         <div class="d-flex justify-content-between">
@@ -49,11 +46,9 @@
               {% endwith %}
             </div>
           </div>
-          <div id="salesChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
-    <!-- Followups Card (Placeholder) -->
     <div class="col-md-4 mb-4">
       <div class="metric-card">
         <div class="d-flex justify-content-between">
@@ -62,58 +57,47 @@
             <div class="metric-value">0</div>
             <div class="metric-change">Coming soon</div>
           </div>
-          <div id="followupChart" style="min-width: 100px;"></div>
         </div>
       </div>
     </div>
   </div>
-  <hr />
+  <hr /> -->
   <div class="row">
     <div class="col-md-6">
       <div class="card">
         <div class="card-body">
           <div class="card-title">
-            <h5 class="text-danger">Recent Leads</h5>
+            <h6 class="text-danger mb-0">Recent Leads</h6>
           </div>
-          <div class="table-responsive"
-                id="all-leads-table"
-                hx-trigger="lead-created from:body, lead-updated from:body, load"
-                hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
-                hx-swap="innerHTML"
-                hx-target="#all-leads-table">
+          <div class="table-responsive-sm">
+            <div class="table-container">
+              <div id="all-leads-table"
+                   hx-trigger="lead-created from:body, lead-updated from:body, lead-deleted from:body, load"
+                   hx-get="{% url 'hx-leads-table' slug=request.organization.slug %}"
+                   hx-swap="innerHTML"
+                   hx-target="#all-leads-table">
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div class="col-md-6">
-      <div class="card">
+      <div class="card border-danger">
         <div class="card-body">
           <div class="card-title d-flex justify-content-between align-items-center">
-            <h5 class="text-danger">Upcoming Membership Expirations.</h5>
+            <h6 class="text-danger mb-0">Upcoming Membership Expirations.</h6>
           </div>
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Lead Name</th>
-                  <th>Membership Plan</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Days Left</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for membership in membership_expirations %}
-                  <tr>
-                    <td>{{ membership.lead.full_name }}</td>
-                    <td>{{ membership.plan.name }}</td>
-                    <td>{{ membership.membership_start_date }}</td>
-                    <td>{{ membership.membership_end_date }}</td>
-                    <td>{{ membership.days_left }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="table-responsive-sm">
+<div class="table-container"
+                id="membership-expirations-table"
+                hx-get="{% url 'hx-membership-expirations' slug=request.organization.slug %}"
+                hx-trigger="load, lead-deleted from:body"
+                hx-swap="outerHTML">
+              <div class="text-center py-3">
+                <span class="spinner-border spinner-border-sm"></span> Loading...
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -124,61 +108,18 @@
       <div class="card">
         <div class="card-body">
           <div class="card-title">
-            <h5 class="text-danger">Lead Followups</h5>
+            <h6 class="text-danger mb-0">Outstanding Payment Amounts</h6>
           </div>
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Lead Name</th>
-                  <th>Followup Date</th>
-                  <th>Followup Type</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Alex Johnson</td>
-                  <td>2025-07-03</td>
-                  <td>Call</td>
-                  <td>
-                    <span class="badge badge-warning">Pending</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Maria Garcia</td>
-                  <td>2025-07-04</td>
-                  <td>Email</td>
-                  <td>
-                    <span class="badge badge-info">Scheduled</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Robert Chen</td>
-                  <td>2025-07-05</td>
-                  <td>Meeting</td>
-                  <td>
-                    <span class="badge badge-primary">Confirmed</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Sarah Wilson</td>
-                  <td>2025-07-03</td>
-                  <td>Call</td>
-                  <td>
-                    <span class="badge badge-danger">Overdue</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>James Taylor</td>
-                  <td>2025-07-06</td>
-                  <td>Demo</td>
-                  <td>
-                    <span class="badge badge-success">Completed</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="table-wrapper" style="overflow-x: auto; max-width: 100%;">
+            <div class="table-container"
+                 id="outstanding-payments-table"
+                 hx-get="{% url 'hx-outstanding-payments' slug=request.organization.slug %}"
+                 hx-trigger="load, lead-deleted from:body"
+                 hx-swap="outerHTML">
+              <div class="text-center py-3">
+                <span class="spinner-border spinner-border-sm"></span> Loading...
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -187,31 +128,18 @@
       <div class="card">
         <div class="card-body">
           <div class="card-title">
-            <h5 class="text-danger">Recent Membership Sales</h5>
+            <h6 class="text-danger mb-0">Recent Membership Sales</h6>
           </div>
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Lead Name</th>
-                  <th>Membership Plan</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for sale in recent_sales|slice:":5" %}
-                  <tr>
-                    <td>{{ sale.lead.full_name }}</td>
-                    <td>{{ sale.plan.name }} (₹{{ sale.custom_price|default:sale.plan.price }})</td>
-                    <td>{{ sale.created_at|date:"d-m-Y" }}</td>
-                  </tr>
-                {% empty %}
-                  <tr>
-                    <td colspan="3" class="text-center">No recent sales found</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="table-wrapper" style="overflow-x: auto; max-width: 100%;">
+            <div class="table-container"
+               id="recent-membership-sales-table"
+               hx-get="{% url 'hx-recent-membership-sales' slug=request.organization.slug %}"
+               hx-trigger="load, lead-deleted from:body"
+               hx-swap="outerHTML">
+              <div class="text-center py-3">
+                <span class="spinner-border spinner-border-sm"></span> Loading...
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -220,5 +148,5 @@
 {% endblock content %}
 <!-- -->
 {% block custom_js %}
-  <script src="{% static 'js/appjs/dashboard.js' %}"></script>
+  <!-- <script src="{% static 'js/appjs/dashboard.js' %}"></script> -->
 {% endblock custom_js %}

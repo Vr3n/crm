@@ -11,6 +11,16 @@ urlpatterns = [
     path("hx/quick-create/", views.HxQuickCreateLeadView.as_view(), name="hx-quick-create-lead"),
     path("hx/<uuid:pk>/delete/", views.HxDeleteLeadView.as_view(), name="hx-delete-lead"),
     path("hx/all-leads/table/", views.hx_leads_table, name="hx-leads-table"),
+    path(
+        "hx/leads/without-membership/table/",
+        views.hx_leads_without_membership_table,
+        name="hx-leads-without-membership-table",
+    ),
+    path(
+        "hx/leads/with-membership/table/",
+        views.hx_leads_with_membership_table,
+        name="hx-leads-with-membership-table",
+    ),
     path("hx/lead-chart-data/", views.hx_lead_chart_data, name="hx-lead-chart-data"),
     # HX Mobile views.
     path(

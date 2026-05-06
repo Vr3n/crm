@@ -1,8 +1,10 @@
 import logging
 import os
+from datetime import timedelta
 from uuid import UUID
 from django.db import transaction
 from django.db import models
+from django.utils import timezone
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
@@ -29,7 +31,7 @@ from .forms import (
 )
 
 from .models import MembershipSale, PaymentReceipt
-from .tables import MembershipSaleTable, PaymentReceiptTable
+from .tables import MembershipSaleTable, PaymentReceiptTable, MembershipExpirationTable
 
 
 # -----------------------------------------------------------------------------
@@ -166,6 +168,149 @@ def hx_sales_table(request: OrgHttpRequest) -> HttpResponse:
     return render(request, "tables/hx-bootstrap4.html", context)
 
 
+MEMBERSHIP_EXPIRATION_DAYS = 60
+
+
+@login_required
+@organization_slug_required
+def hx_membership_expirations_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated upcoming membership expirations table.
+    """
+    VALID_PER_PAGE = {5, 10}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    cutoff_date = timezone.now().date() + timedelta(days=MEMBERSHIP_EXPIRATION_DAYS)
+
+    memberships = (
+        MembershipSale.objects.filter(
+            organization=request.organization,
+            membership_end_date__gte=timezone.now().date(),
+            membership_end_date__lte=cutoff_date,
+        )
+        .select_related("lead")
+        .order_by("membership_end_date")
+    )
+
+    table = MembershipExpirationTable(memberships, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10],
+        "per_page": per_page,
+        "hx_target": "#membership-expirations-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_recent_membership_sales_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated recent membership sales table.
+    """
+    VALID_PER_PAGE = {5, 10}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    sales = (
+        MembershipSale.objects.filter(organization=request.organization)
+        .select_related("lead")
+        .order_by("-created_at")
+    )
+
+    from .tables import RecentMembershipSalesTable
+    table = RecentMembershipSalesTable(sales, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10],
+        "per_page": per_page,
+        "hx_target": "#recent-membership-sales-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_outstanding_payments_table(request: OrgHttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint: returns paginated outstanding payments table.
+    Sorted by membership start date (ascending).
+    """
+    from django.db.models import Sum, F, Value, DecimalField, OuterRef
+    from django.db.models.functions import Coalesce, Cast
+
+    VALID_PER_PAGE = {5, 10}
+
+    per_page = int(request.GET.get("per_page", 5))
+    if per_page not in VALID_PER_PAGE:
+        per_page = 5
+
+    total_paid_subquery = PaymentReceipt.objects.filter(
+        sale_id=OuterRef('pk')
+    ).values('sale_id').annotate(
+        total=Sum('amount')
+    ).values('total')
+
+    memberships = (
+        MembershipSale.objects.filter(
+            organization=request.organization,
+            price__isnull=False,
+        )
+        .select_related("lead")
+        .annotate(
+            total_paid=Coalesce(
+                Cast(total_paid_subquery, DecimalField(max_digits=10, decimal_places=2)),
+                Value(0, output_field=DecimalField(max_digits=10, decimal_places=2))
+            ),
+            balance=F('price') - Coalesce(
+                Cast(total_paid_subquery, DecimalField(max_digits=10, decimal_places=2)),
+                Value(0, output_field=DecimalField(max_digits=10, decimal_places=2))
+            )
+        )
+        .exclude(balance=0)
+        .order_by("membership_start_date")
+    )
+
+    from .tables import OutstandingPaymentsTable
+    table = OutstandingPaymentsTable(memberships, request=request)
+    RequestConfig(request, paginate={"per_page": per_page}).configure(table)
+
+    context = {
+        "table": table,
+        "per_page_options": [5, 10],
+        "per_page": per_page,
+        "hx_target": "#outstanding-payments-table",
+    }
+
+    return render(request, "tables/hx-bootstrap4.html", context)
+
+
+@login_required
+@organization_slug_required
+def hx_membership_detail_drawer(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """
+    HTMX endpoint: returns membership detail for drawer/offcanvas.
+    """
+    membership = get_object_or_404(
+        MembershipSale.objects.select_related("lead").prefetch_related("lead__mobile_numbers", "lead__emails", "receipts"),
+        uuid=uuid,
+        organization=request.organization,
+    )
+
+    return render(request, "accounting/partials/membership_detail_drawer.html", {"membership": membership})
+
+
 @login_required
 @organization_slug_required
 def receipt_list(request: OrgHttpRequest) -> HttpResponse:
@@ -219,6 +364,88 @@ def receipt_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
         PaymentReceipt, uuid=uuid, organization=request.organization
     )
     return render(request, "accounting/receipt_detail.html", {"receipt": receipt})
+
+
+@login_required
+@organization_slug_required
+def hx_pay_balance(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """
+    Show payment form for a sale (pay balance).
+    """
+    sale = get_object_or_404(
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
+    )
+    sale_balance_amount = sale.balance_amount
+
+    if sale_balance_amount <= 0:
+        response = HttpResponse(status=204)
+        return trigger_client_event(
+            response,
+            "message",
+            {
+                "level": "info",
+                "message": "The membership sale is already fully paid.",
+            },
+        )
+
+    if request.method == "POST":
+        form = CreatePaymentReceiptForm(request.POST)
+        if form.is_valid():
+            receipt = form.save(commit=False)
+            receipt.organization = request.organization
+            receipt.save()
+            response = HttpResponse(status=204)
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "success",
+                    "message": "Payment processed successfully!",
+                },
+            )
+            response = trigger_client_event(
+                response,
+                "receipt-created",
+            )
+            return response
+        else:
+            response = render(
+                request,
+                "accounting/forms/receipt_form.html",
+                {
+                    "form": form,
+                    "sale": sale,
+                },
+            )
+            response = trigger_client_event(
+                response,
+                "message",
+                {
+                    "level": "error",
+                    "message": "Invalid form submission.",
+                },
+            )
+            return response
+
+    form = CreatePaymentReceiptForm(
+        initial={
+            "sale": sale,
+            "balance_amount": sale_balance_amount,
+            "amount": sale_balance_amount,
+            "closing_balance": 0,
+            "opening_balance": sale_balance_amount,
+        }
+    )
+    return render(
+        request,
+        "accounting/forms/receipt_form.html",
+        {
+            "form": form,
+            "sale": sale,
+        },
+    )
 
 
 @login_required
@@ -340,6 +567,39 @@ def hx_sale_detail(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
         organization=request.organization,
     )
     return render(request, "accounting/partials/sale_detail.html", {"sale": sale})
+
+
+@login_required
+@organization_slug_required
+def hx_sale_payment_history(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """Return payment history timeline for a sale."""
+    sale = get_object_or_404(
+        MembershipSale.objects.prefetch_related("receipts"),
+        uuid=uuid,
+        organization=request.organization,
+    )
+    receipts = sale.receipts.order_by("-date")
+    return render(
+        request,
+        "accounting/partials/sale_payment_history.html",
+        {"sale": sale, "receipts": receipts},
+    )
+
+
+@login_required
+@organization_slug_required
+def hx_sale_payment_summary(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
+    """Return payment summary card for a sale."""
+    sale = get_object_or_404(
+        MembershipSale,
+        uuid=uuid,
+        organization=request.organization,
+    )
+    return render(
+        request,
+        "accounting/partials/sale_payment_summary.html",
+        {"sale": sale},
+    )
 
 
 @login_required
@@ -471,26 +731,17 @@ def receipt_pdf(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
     receipt = get_object_or_404(
         PaymentReceipt, uuid=uuid, organization=request.organization
     )
-    terms_list = [
-        "NO Refund / Membership Cancellation",
-        "Please read, understand and comply with these rules",
-        "Right of enrollment and entry is reserved by management",
-        "Transfer fees of 1000/- will be charged under conditions",
-        "Clients may not participate in workout independently or under personal trainer unless authorized",
-        "Clients are required to carry and change their footwear outside in shoe closet.",
-    ]
 
     organization = request.organization
     sale = receipt.sale
     lead = receipt.sale.lead
 
     context = {
-        "terms_list": terms_list,
         "organization": organization,
         "receipt": receipt,
         "sale": sale,
         "lead": lead,
-        "logo_url": organization.logo.url,
+        "logo_url": organization.logo.url if organization.logo else None,
     }
 
     file_name = f"receipt-{lead.full_name}-{receipt.receipt_number}"
@@ -509,6 +760,9 @@ def receipt_pdf(request: OrgHttpRequest, uuid: UUID) -> HttpResponse:
 # =============================================================================
 
 
+logger = logging.getLogger(__name__)
+
+
 @method_decorator(login_required, name='dispatch')
 @method_decorator(organization_slug_required, name='dispatch')
 class HxCreateMembershipSaleView(HtmxFormMixin, View):
@@ -519,12 +773,24 @@ class HxCreateMembershipSaleView(HtmxFormMixin, View):
     success_event = "membership-sale-created"
     success_status = 200
     context_object_name = "form"
-    permission_required = "accounting.add_membershipsale"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization'] = self.request.organization
         return kwargs
+
+    def get(self, request, *args, **kwargs):
+        logger.debug("[HxCreateMembershipSaleView] GET called")
+        form = self.get_form()
+        return self.render_form(form)
+
+    def post(self, request, *args, **kwargs):
+        logger.debug("[HxCreateMembershipSaleView] POST called")
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
 
     def form_valid(self, form):
         sale = form.save_and_create_receipt(self.request.organization)

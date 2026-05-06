@@ -46,6 +46,7 @@ class HtmxFormMixin(FormMixin):
 
     def dispatch(self, request, *args, **kwargs):
         """Enforce HTMX-only access."""
+        logger.debug(f"[HtmxFormMixin] dispatch called, method={request.method}, htmx={getattr(request, 'htmx', False)}")
         if not getattr(request, "htmx", False):
             return HttpResponseBadRequest("HTMX request required")
         return super().dispatch(request, *args, **kwargs)
@@ -144,7 +145,7 @@ class HtmxDeleteMixin(DeletionMixin):
 
     def delete(self, request, *args, **kwargs):
         obj = self.get_object()
-        obj_id = obj.id
+        obj_id = obj.pk
         obj.delete()
 
         response = HttpResponse(status=204)

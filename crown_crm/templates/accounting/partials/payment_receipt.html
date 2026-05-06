@@ -1,55 +1,112 @@
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-light d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">Payment Receipt</h5>
-    <small class="text-muted">{{ receipt.date|date:"d M Y H:i" }}</small>
+<div class="card shadow-sm border-success">
+  <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="feather icon-check-circle mr-2"></i>Payment Receipt</h5>
+    <small>{{ receipt.date|date:"d M Y H:i" }}</small>
   </div>
-  <div class="card-body">
-    <div class="mb-2">
-      <h4>{{ request.organization.name }}</h4>
-    </div>
-    <div class="mb-2 d-flex justify-content-between">
-      <p>
-        <strong>Receipt&nbsp;#:</strong> {{ receipt.receipt_number }}
-      </p>
-      <small class="text-muted">{{ receipt.date|date:"d M Y H:i" }}</small>
-    </div>
-    <div class="mb-2">
-      <strong>Name:</strong> {{ receipt.sale.lead.full_name }}
-    </div>
-    <div class="mb-2">
-      <strong>Membership Plan:</strong> {{ receipt.sale.plan.name }}
-      <p>
-        <small>starting from: {{ receipt.sale.membership_start_date|date:"d M Y" }}</small>
-      </p>
-    </div>
-    <hr>
-    <div class="row mb-2">
-      <div class="col-6">Amount Paid</div>
-      <div class="col-6 text-end">₹ {{ receipt.amount }}</div>
-    </div>
-    <div class="row mb-2">
-      <div class="col-6">Balance</div>
-      <div class="col-6 text-end">₹ {{ receipt.closing_balance }}</div>
-    </div>
-    <hr>
-    <div class="mb-2">
-      <strong>Payment Method:</strong> {{ receipt.method }}
-    </div>
-    {% if receipt.reference %}
-      <div class="mb-2">
-        <strong>Reference:</strong> {{ receipt.reference }}
+  <div class="card-body p-0">
+    <!-- Lead Details Card -->
+    <div class="card mb-2 border-primary">
+      <div class="card-header bg-primary text-white py-1">
+        <h6 class="mb-0"><i class="feather icon-user mr-2"></i>Lead Details</h6>
       </div>
-    {% endif %}
-    {% if receipt.notes %}
-      <div class="mb-2">
-        <strong>Notes:</strong> {{ receipt.notes }}
+      <div class="card-body py-2">
+        <div class="row">
+          <div class="col-6">
+            <small class="text-muted d-block">Name</small>
+            <strong>{{ receipt.sale.lead.full_name }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Mobile</small>
+            <span>{{ receipt.sale.lead.mobile_numbers.first.mobile_number|default:"N/A" }}</span>
+          </div>
+        </div>
       </div>
-    {% endif %}
+    </div>
+
+    <!-- Membership Details Card -->
+    <div class="card mb-2 border-success">
+      <div class="card-header bg-success text-white py-1">
+        <h6 class="mb-0"><i class="feather icon-calendar mr-2"></i>Membership Details</h6>
+      </div>
+      <div class="card-body py-2">
+        <div class="row">
+          <div class="col-6">
+            <small class="text-muted d-block">Plan</small>
+            <strong>{{ receipt.sale.get_duration_display }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Start Date</small>
+            <span>{{ receipt.sale.membership_start_date|date:"d M Y" }}</span>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-6">
+            <small class="text-muted d-block">Base Price</small>
+            <span class="text-muted">₹ {{ receipt.sale.base_price|default:0 }}</span>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">End Date</small>
+            <span>{{ receipt.sale.membership_end_date|date:"d M Y" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Details Card -->
+    <div class="card mb-2 border-info">
+      <div class="card-header bg-info text-white py-1">
+        <h6 class="mb-0"><i class="feather icon-credit-card mr-2"></i>Payment Details</h6>
+      </div>
+      <div class="card-body py-2">
+        <div class="row">
+          <div class="col-6">
+            <small class="text-muted d-block">Amount Paid</small>
+            <strong class="text-success">₹ {{ receipt.amount|floatformat:2 }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Balance</small>
+            <strong class="{% if receipt.closing_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+              ₹ {{ receipt.closing_balance|floatformat:2 }}
+            </strong>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-6">
+            <small class="text-muted d-block">Method</small>
+            <span>{{ receipt.get_method_display }}</span>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Receipt #</small>
+            <span>{{ receipt.receipt_number }}</span>
+          </div>
+        </div>
+        {% if receipt.reference %}
+        <div class="row mt-2">
+          <div class="col-12">
+            <small class="text-muted d-block">Reference</small>
+            <span>{{ receipt.reference }}</span>
+          </div>
+        </div>
+        {% endif %}
+        {% if receipt.notes %}
+        <div class="row mt-2">
+          <div class="col-12">
+            <small class="text-muted d-block">Notes</small>
+            <span>{{ receipt.notes }}</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
   </div>
   <div class="card-footer text-center bg-white">
     <a href="{% url 'receipt-pdf' slug=request.organization.slug uuid=receipt.uuid %}"
-       class="btn btn-outline-secondary receipt-print-btn">
-      <i class="feather icon-printer"></i>Print
+       class="btn btn-outline-primary">
+      <i class="feather icon-printer"></i> Print Receipt
+    </a>
+    <a href="{% url 'sales' slug=request.organization.slug %}"
+       class="btn btn-success">
+      <i class="feather icon-arrow-right"></i> View Sales
     </a>
   </div>
 </div>

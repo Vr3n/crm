@@ -70,6 +70,59 @@ cd crown_crm
 celery -A config.celery_app worker -B -l info
 ```
 
+#### Celery with PDF Queue
+
+The app uses a dedicated `pdf` queue for receipt PDF generation:
+
+```bash
+cd crown_crm
+celery -A config.celery_app worker -l info -Q default,pdf --concurrency=2
+```
+
+---
+
+## Development Setup
+
+### Quick Start (with tmux)
+
+```bash
+./start-dev.sh
+```
+
+This script:
+1. Starts Redis if not running
+2. Creates tmux session `crm-dev`
+3. Splits into 2 panes (Django server + Celery worker)
+4. Attaches to the session
+
+**tmux shortcuts:**
+- `Ctrl+b d` — detach
+- `Ctrl+b c` — new window
+- `Ctrl+b x` — kill pane
+- `tmux kill-session -t crm-dev` — stop all
+
+### Manual Start (two terminals)
+
+**Terminal 1 — Django:**
+```bash
+uv run python manage.py runserver 0.0.0.0:8000
+```
+
+**Terminal 2 — Celery:**
+```bash
+uv run celery -A config.celery_app worker -l info -Q default,pdf --concurrency=2
+```
+
+### Required Services
+
+1. **Redis** — must be running:
+   ```bash
+   redis-server --daemonize yes
+   redis-cli ping  # Should return PONG
+   ```
+
+---
+
 ## Deployment
 
 The following details how to deploy this application.

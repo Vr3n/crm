@@ -93,9 +93,11 @@
                   <div class="col-md-12 p-2">
                     <div class="auth-form-wrapper px-4 py-5">
                       {% block content %}
-                        {% element h1 %}
+
+                        <h3>
                           {% trans "Sign In" %}
-                        {% endelement %}
+                        </h3>
+                        </br>
                         {% if not SOCIALACCOUNT_ONLY %}
                           {% setvar link %}
                             <a href="{{ signup_url }}">
@@ -103,9 +105,6 @@
                             {% setvar end_link %}
                             </a>
                           {% endsetvar %}
-                          {% element p %}
-                              {% blocktranslate %}If you have not created an account yet, then please {{ link }}sign up{{ end_link }} first.{% endblocktranslate %}
-                          {% endelement %}
                           {% url 'account_login' as login_url %}
                           {% element form form=form method="post" action=login_url tags="entrance,login" %}
                             {% slot body %}
@@ -140,6 +139,10 @@
                         {% if SOCIALACCOUNT_ENABLED %}
                           {% include "socialaccount/snippets/login.html" with page_layout="entrance" %}
                         {% endif %}
+                        </br>
+                        {% element p %}
+                            {% blocktranslate %}If you have not created an account yet, then please {{ link }}sign up{{ end_link }} first.{% endblocktranslate %}
+                        {% endelement %}
                       {% endblock content %}
                     </div>
                   </div>

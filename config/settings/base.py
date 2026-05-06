@@ -291,11 +291,12 @@ if USE_TZ:
     # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672/"
+# Use Redis as broker (overridden in local.py with AMQP fallback in base)
+CELERY_BROKER_URL = REDIS_URL
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#redis-backend-use-ssl
 CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE} if REDIS_SSL else None
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_backend
-CELERY_RESULT_BACKEND = "rpc://"
+CELERY_RESULT_BACKEND = REDIS_URL
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#redis-backend-use-ssl
 CELERY_REDIS_BACKEND_USE_SSL = CELERY_BROKER_USE_SSL
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-extended
@@ -325,6 +326,12 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-hijack-root-logger
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+
+# Route PDF generation to dedicated queue
+CELERY_TASK_ROUTES = {
+    "crown_crm.accounting.tasks.generate_receipt_pdf": {"queue": "pdf"},
+}
+
 # django-allauth
 # ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)

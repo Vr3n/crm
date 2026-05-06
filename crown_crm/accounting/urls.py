@@ -17,12 +17,42 @@ urlpatterns = [
     path("hx/sales/table/", views.hx_sales_table, name="hx-sales-table"),
     path("hx/sales/<uuid:uuid>/delete/", views.hx_sale_delete, name="hx-sale-delete"),
     path(
-        "hx/sales/<uuid:uuid>/create-receipt/",
-        views.hx_create_payment_receipt,
-        name="hx-create-payment-receipt",
+        "hx/sales/<uuid:uuid>/pay-balance/",
+        views.hx_pay_balance,
+        name="hx-sale-pay-balance",
     ),
     path("hx/sales/table/", views.hx_sales_table, name="hx-sales-table"),
     path("hx/sales/<uuid:uuid>/", views.hx_sale_detail, name="hx-sale-detail"),
+    path(
+        "hx/sales/<uuid:uuid>/payment-history/",
+        views.hx_sale_payment_history,
+        name="hx-sale-payment-history",
+    ),
+    path(
+        "hx/sales/<uuid:uuid>/payment-summary/",
+        views.hx_sale_payment_summary,
+        name="hx-sale-payment-summary",
+    ),
+    path(
+        "hx/membership-expirations/",
+        views.hx_membership_expirations_table,
+        name="hx-membership-expirations",
+    ),
+    path(
+        "hx/recent-membership-sales/",
+        views.hx_recent_membership_sales_table,
+        name="hx-recent-membership-sales",
+    ),
+    path(
+        "hx/outstanding-payments/",
+        views.hx_outstanding_payments_table,
+        name="hx-outstanding-payments",
+    ),
+    path(
+        "hx/membership/<uuid:uuid>/detail/",
+        views.hx_membership_detail_drawer,
+        name="hx-membership-detail-drawer",
+    ),
     # Payment Receipt URLs
     path("receipts/", views.receipt_list, name="receipts"),
     path("receipts/table/", views.hx_receipt_table, name="hx-receipts-table"),
