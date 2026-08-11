@@ -1,0 +1,21 @@
+appId: com.crowncrm.desktop
+productName: Crown CRM
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!tests/*"
+  - "!docs/*"
+asar: true
+win:
+  target:
+    - nsis
+  arch:
+    - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+npmRebuild: true
