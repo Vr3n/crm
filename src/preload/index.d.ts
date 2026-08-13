@@ -29,6 +29,12 @@ export interface LoginInput {
   password: string
 }
 
+export interface OrganizationExistenceInput {
+  name: string
+  ownerEmail: string
+  mobileNumber: string
+}
+
 export interface CreateStaffMemberInput {
   fullName: string
   email: string
@@ -46,6 +52,7 @@ declare global {
         session: () => Promise<SessionContext | null>
         status: () => Promise<'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'>
         createStaff: (input: CreateStaffMemberInput) => Promise<{ userId: number }>
+        checkOrganizationExists: (input: OrganizationExistenceInput) => Promise<boolean>
         logout: () => Promise<boolean>
       }
     }

@@ -116,6 +116,14 @@ lives.
 
 - **`getAuthStatus()`** — derives `SETUP_REQUIRED` / `LOGIN_REQUIRED` / `AUTHENTICATED` from
   org count + session. Drives the renderer's first screen.
+- **`checkOrganizationExists(input)`** — a pure read used by the setup screen to pre-validate
+  the org name. Returns `true` when an organization exists under the same name AND (the owner
+  email matches OR the organization mobile matches). No session/`requirePermission` required
+  (runs pre-login); it normalizes email (lowercase) and mobile (`IndianMobileNumber.tryParse`)
+  before delegating to `organizationRepo.existsWithOwnerCredentials`. Mirrors the app-level,
+  code-enforced uniqueness style used elsewhere in the module. Note: v1 is single-install, so
+  in practice an existing org sends the setup screen to LOGIN_REQUIRED; the check is groundwork
+  for multi-tenant and a friendly error path.
 - **`setupOrganization(input)`** — validates (name/owner/password ≥8, slug format, and the
   required mobile number via `IndianMobileNumber.parse`), then in
   one `withTransaction`: guards single-org (`count > 0` ⇒ reject), creates the org,
@@ -166,6 +174,11 @@ Thin data access with explicit row → entity mappers (`mapOrg`, `mapUser`, `map
 - **`staffRepo.findActiveMembership(orgId, userId)`** — the single joined query backing the
   restore path (see "Session Persistence"). Filters `os.status`, `u.status`, and `o.status`
   all `= 'ACTIVE'` in one statement.
+- **`organizationRepo.existsWithOwnerCredentials({ name, email, mobile })`** — one query for the
+  setup-screen "organization already exists" check: an org row where `name` matches AND
+  (`mobile_number` matches OR an `organization_staff` member whose role is super (`is_super = 1`,
+  i.e. Owner/Admin) has the matching email, case-insensitive). `is_super` is the owner proxy;
+  non-owner staff emails do not satisfy it.
 - **`staffRepo.findActiveForLogin`** — this query uses **explicit column aliases** (`u_id`,
   `r_id`, `u_status`, …) rather than `SELECT u.*, r.*`. That is a deliberate fix: `SELECT
   u.*, r.*` collides on shared column names (`id`, `status`), and node:sqlite's object
@@ -190,9 +203,55 @@ Thin data access with explicit row → entity mappers (`mapOrg`, `mapUser`, `map
 
 - `src/renderer/src/components/AuthGate.tsx` — renders the setup form (no org) or login form
   (org, no session) via `window.api.identity.status()/setup()/login()`, then reveals the app.
+- `src/renderer/src/main.tsx` — creates a `QueryClient` (defaults `retry: false`,
+  `refetchOnWindowFocus: false`) and wraps the app in `QueryClientProvider`; this is the app's
+  first TanStack Query integration.
+- `src/renderer/src/components/AuthGate.tsx` — server state is managed with TanStack Query, not
+  manual effects. `status` and `session` are dependent queries (`session` runs only when
+  `status === 'AUTHENTICATED'`); a minimal effect just forwards a resolved session to the parent
+  (`onAuthenticated`). The screen (`setup`/`login`) is derived from the status query, with a tiny
+  `manualPhase` override for the "Sign in" / "Set up this machine" toggle (reset on remount via
+  logout). `orgExists` is `status === 'LOGIN_REQUIRED'` and hides the setup toggle.
+- The two forms are built on `@tanstack/react-form`.
+  A small `AuthField` wrapper wires each field to a reactive `<Input>`: it derives
+  `invalid = validate(value) && evaluated` and `valid = !validate(value) && evaluated`, then sets
+  `aria-invalid` / `data-valid` **directly on the input**. `evaluated` is true once the user has
+  blurred, submitted, **or** the value is complete enough to judge live (`completeWhen`, e.g. a
+  10-digit mobile), so borders react the moment a value is committed or complete without ever
+  flashing red mid-typing of incomplete free-text. Every field shows a specific, actionable error
+  (e.g. mobile → "Indian mobile numbers start with 6, 7, 8, or 9"), a realistic placeholder
+  (`Jane Doe`, `jane@example.com`), success (green border + check), a live 10-digit mobile counter,
+  and a live password-strength meter plus an "At least 8 characters" requirement tick. On successful
+  submit the button flips to a green success state (`LoadingButton` `success`), announces via an
+  `aria-live` region, and waits ~700 ms before revealing the app — so completion is actually seen.
+  Two additional guards keep setup honest:
+  - **"Organization already exists" check** — a debounced (`useDebouncedValue`, ~500 ms)
+    `useQuery` on the org name + owner email + mobile calls `identity.checkOrganizationExists`,
+    gated by `enabled` so it only fires when all three are complete/valid. The query key carries
+    the debounced inputs, so a fetch only runs when they change; `isFetching` tracks pending and
+    `isSuccess && data` sets `existsError` ("An organization with this name already exists"),
+    surfaced under the org-name field via the `extraError` prop and gating submission. No manual
+    timers or cancellation — TanStack Query owns the lifecycle.
+  - **Submit disabled until valid** — the `LoadingButton` on *both* forms is `disabled` until the
+    form is genuinely valid (`setupValid`/`loginValid` derived from each field's `completeWhen` +
+    validator, plus `!existsError && !checkingExists` for setup). TanStack's `canSubmit` alone was
+    insufficient: it is true while a form is still untouched (empty), which contradicts
+    "disabled by default". The "Set up this machine" toggle is hidden when an organization already
+    exists (`orgExists` from the status query), so the user can never reach setup again.
+- `src/renderer/src/components/ui/field.tsx` — shadcn-style `Field` family (`Field`,
+  `FieldLabel`, `FieldDescription`, `FieldError`, `FieldGroup`). Follows the shadcn convention:
+  the caller owns the control and sets `aria-invalid`/`data-valid` on it directly (no
+  `cloneElement`), while `Field` renders the label and a reserved helper line so error/hint swaps
+  never shift the layout. `FieldError` accepts the TanStack `errors` array shape.
+- `src/renderer/src/components/ui/input-group.tsx` — `InputGroup` + `InputGroupAddon` for
+  leading icons, the mobile counter, and the password visibility toggle.
+- `src/renderer/src/components/ui/input.tsx` — adds a `data-valid` success variant (green border
+  + green focus ring) alongside the existing `aria-invalid` destructive variant.
+- `src/renderer/src/components/ui/password-strength.tsx` — live 3-segment Weak/Okay/Strong meter.
 - `src/renderer/src/App.tsx` — gates the main UI behind `AuthGate`.
 - `src/renderer/src/components/Sidebar.tsx` — shows the signed-in user/role and a working
   sign-out that calls `window.api.identity.logout()`.
 
-These were kept minimal; the focus of this pass was the main-process correctness that a
-React skin would otherwise mask.
+Note: the pre-existing scaffold `Input` (double-quote style, missing explicit return type) still
+carries the one remaining ESLint error in `src/renderer/src/components/ui/`; it is not introduced
+by this pass.

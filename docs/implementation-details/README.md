@@ -42,3 +42,13 @@ npm run dev              # launch the Electron app
 - Coverage on the auth/RBAC logic: **92.75% statements / 97.87% lines** (see `tests-and-quality.md`).
 - Persisted **remembered login**: after first setup or login the app auto-restores the session
   on launch (no login-screen flash); signing out clears it.
+- **Reactive auth forms**: the setup/login forms react to input with shadcn-style field state —
+  inputs show red (error) / green (success) borders + icons, granular per-field error messages
+  (e.g. mobile "starts with 6–9"), realistic placeholders, a live 10-digit mobile counter, a live
+  password-strength meter + requirement tick, and a green submit-success moment before navigation.
+  Borders evaluate live once a field is committed or complete, not only after blur. Server state
+  uses TanStack Query (`QueryClientProvider` in `main.tsx`): a debounced `useQuery` checks the
+  backend for an existing organization (name + owner email/mobile) and shows "organization already
+  exists" under the name; the submit button on both forms stays **disabled until the form is
+  valid**, and the "Set up this machine" toggle is hidden once an organization exists. (See
+  `identity-module.md` → Renderer.)

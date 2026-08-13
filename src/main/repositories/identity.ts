@@ -142,6 +142,37 @@ export const organizationRepo = {
 
   count(): number {
     return (getDb().prepare('SELECT COUNT(*) AS n FROM organizations').get() as { n: number }).n
+  },
+
+  /**
+   * True when an organization already exists under this name AND (the given
+   * email belongs to its owner/super member OR the given mobile matches the
+   * organization's stored mobile). Backs the setup screen's "organization
+   * already exists" validation. `email` should be lowercased and `mobile` a
+   * bare 10-digit string by the caller. Like other uniqueness rules in this
+   * module it is enforced in code, not by a DB constraint.
+   */
+  existsWithOwnerCredentials(input: { name: string; email: string; mobile: string }): boolean {
+    const row = getDb()
+      .prepare(
+        `SELECT 1 AS x
+         FROM organizations o
+         WHERE o.name = ?
+           AND (
+             o.mobile_number = ?
+             OR EXISTS (
+               SELECT 1
+               FROM organization_staff os
+               JOIN users u ON u.id = os.user_id
+               JOIN roles r ON r.id = os.role_id
+               WHERE os.organization_id = o.id
+                 AND lower(u.email) = lower(?)
+                 AND r.is_super = 1
+             )
+           )`
+      )
+      .get(input.name, input.mobile, input.email) as { x: number } | undefined
+    return Boolean(row)
   }
 }
 

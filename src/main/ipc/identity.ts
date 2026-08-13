@@ -4,9 +4,11 @@ import {
   createStaffMember,
   getAuthStatus,
   logout,
+  checkOrganizationExists,
   SetupOrganizationInput,
   LoginInput,
-  CreateStaffMemberInput
+  CreateStaffMemberInput,
+  OrganizationExistenceInput
 } from '../application/identity'
 import { getSession } from '../auth/session'
 import { SessionContext } from '../domain/identity'
@@ -22,6 +24,10 @@ export function registerIdentityIpc(): void {
   handle('identity:status', () => getAuthStatus())
 
   handle('identity:createStaff', (input: CreateStaffMemberInput) => createStaffMember(input))
+
+  handle('identity:checkOrganizationExists', (input: OrganizationExistenceInput) =>
+    checkOrganizationExists(input)
+  )
 
   handle('identity:logout', () => {
     logout()

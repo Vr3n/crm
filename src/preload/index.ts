@@ -28,6 +28,8 @@ const api = {
       call('identity:status'),
     createStaff: (input: unknown): Promise<{ userId: number }> =>
       call('identity:createStaff', input),
+    checkOrganizationExists: (input: unknown): Promise<boolean> =>
+      call('identity:checkOrganizationExists', input),
     logout: (): Promise<boolean> => call('identity:logout')
   }
 }

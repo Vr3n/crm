@@ -40,6 +40,12 @@ export interface LoginInput {
   password: string
 }
 
+export interface OrganizationExistenceInput {
+  name: string
+  ownerEmail: string
+  mobileNumber: string
+}
+
 export interface CreateStaffMemberInput {
   fullName: string
   email: string
@@ -137,6 +143,23 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
     rememberLogin(org.id, user.id)
     return session
   })
+}
+
+/**
+ * Reports whether an organization already exists under the given name with the
+ * given owner credentials (owner email OR organization mobile). Used by the
+ * setup screen for a friendly "already exists" validation. A pure read with no
+ * session requirement, so it runs pre-login; it mirrors the (org-scoped,
+ * app-level) uniqueness style used across this module.
+ */
+export function checkOrganizationExists(input: OrganizationExistenceInput): boolean {
+  const name = input.name.trim()
+  const email = input.ownerEmail.trim().toLowerCase()
+  let mobile = input.mobileNumber.trim()
+  const parsed = IndianMobileNumber.tryParse(mobile)
+  if (parsed) mobile = parsed.value
+
+  return organizationRepo.existsWithOwnerCredentials({ name, email, mobile })
 }
 
 /**
