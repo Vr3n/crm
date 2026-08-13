@@ -17,7 +17,13 @@ const navItems = [
   { label: 'Trainers', icon: Settings }
 ]
 
-export function Sidebar(): React.JSX.Element {
+interface SidebarProps {
+  userEmail: string
+  roleName: string
+  onSignOut: () => void
+}
+
+export function Sidebar({ userEmail, roleName, onSignOut }: SidebarProps): React.JSX.Element {
   return (
     <aside className="flex h-full w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2 border-b px-4 py-4">
@@ -45,7 +51,14 @@ export function Sidebar(): React.JSX.Element {
       </nav>
 
       <div className="border-t p-3">
-        <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground">
+        <div className="mb-2 px-3 text-xs text-muted-foreground">
+          <div className="truncate font-medium text-foreground">{userEmail}</div>
+          <div className="truncate">{roleName}</div>
+        </div>
+        <button
+          onClick={onSignOut}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+        >
           <LogOut className="size-4" />
           Sign out
         </button>

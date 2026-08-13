@@ -1,16 +1,24 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { SessionContext } from '../main/domain/identity'
 
 // Custom APIs for renderer
 const api = {
+  identity: {
+    setup: (input: unknown): Promise<SessionContext> => ipcRenderer.invoke('identity:setup', input),
+    login: (input: unknown): Promise<SessionContext> => ipcRenderer.invoke('identity:login', input),
+    session: (): Promise<SessionContext | null> => ipcRenderer.invoke('identity:session'),
+    status: (): Promise<'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'> =>
+      ipcRenderer.invoke('identity:status'),
+    createStaff: (input: unknown): Promise<{ userId: number }> =>
+      ipcRenderer.invoke('identity:createStaff', input),
+    logout: (): Promise<boolean> => ipcRenderer.invoke('identity:logout')
+  },
   db: {
     getDashboard: (): Promise<unknown> => ipcRenderer.invoke('db:getDashboard')
   }
 }
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)

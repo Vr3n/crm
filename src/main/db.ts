@@ -1,6 +1,4 @@
-import { DatabaseSync } from 'node:sqlite'
-import { join } from 'path'
-import { app } from 'electron'
+import { getDb } from './db/connection'
 
 export interface DashboardStats {
   totalMembers: number
@@ -39,73 +37,28 @@ const SEED_MEMBERS = [
   { name: 'Ananya Das', email: 'ananya@example.com', plan: 'Monthly Basic' }
 ]
 
-let db: DatabaseSync | null = null
+/**
+ * Demo-only seeding. TODO(Sprint-2): replace with the real Catalog/Offers modules.
+ */
+export function seedDemoData(): void {
+  const db = getDb()
 
-export function getDb(): DatabaseSync {
-  if (!db) {
-    throw new Error('Database not initialized')
-  }
-  return db
-}
-
-export function initDb(): void {
-  const dbPath = join(app.getPath('userData'), 'gym-crm.db')
-  db = new DatabaseSync(dbPath)
-
-  db.exec('PRAGMA journal_mode = WAL;')
-  db.exec('PRAGMA foreign_keys = ON;')
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS plans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      price REAL NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS members (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      phone TEXT,
-      plan_id INTEGER NOT NULL REFERENCES plans(id),
-      status TEXT NOT NULL DEFAULT 'active',
-      joined_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      member_id INTEGER NOT NULL REFERENCES members(id),
-      amount REAL NOT NULL,
-      paid_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS checkins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      member_id INTEGER NOT NULL REFERENCES members(id),
-      checked_in_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `)
-
-  seed()
-}
-
-function seed(): void {
-  const planCount = db!.prepare('SELECT COUNT(*) AS n FROM plans').get() as { n: number }
+  const planCount = db.prepare('SELECT COUNT(*) AS n FROM plans').get() as { n: number }
   if (planCount.n === 0) {
-    const insertPlan = db!.prepare('INSERT INTO plans (name, price) VALUES (?, ?)')
+    const insertPlan = db.prepare('INSERT INTO plans (name, price) VALUES (?, ?)')
     for (const plan of SEED_PLANS) {
       insertPlan.run(plan.name, plan.price)
     }
   }
 
-  const memberCount = db!.prepare('SELECT COUNT(*) AS n FROM members').get() as { n: number }
+  const memberCount = db.prepare('SELECT COUNT(*) AS n FROM members').get() as { n: number }
   if (memberCount.n === 0) {
-    const getPlanId = db!.prepare('SELECT id FROM plans WHERE name = ?')
-    const insertMember = db!.prepare(
+    const getPlanId = db.prepare('SELECT id FROM plans WHERE name = ?')
+    const insertMember = db.prepare(
       'INSERT INTO members (name, email, plan_id, status, joined_at) VALUES (?, ?, ?, ?, ?)'
     )
-    const insertCheckin = db!.prepare(
-      'INSERT INTO checkins (member_id, checked_in_at) VALUES (?, datetime(\'now\'))'
+    const insertCheckin = db.prepare(
+      "INSERT INTO checkins (member_id, checked_in_at) VALUES (?, datetime('now'))"
     )
 
     for (const m of SEED_MEMBERS) {
@@ -132,12 +85,16 @@ export function getDashboardData(): DashboardData {
     ).n,
     monthlyRevenue: (
       db
-        .prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE paid_at >= datetime('now', 'start of month')")
+        .prepare(
+          "SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE paid_at >= datetime('now', 'start of month')"
+        )
         .get() as { total: number }
     ).total,
     checkinsToday: (
       db
-        .prepare("SELECT COUNT(*) AS n FROM checkins WHERE checked_in_at >= datetime('now', 'start of day')")
+        .prepare(
+          "SELECT COUNT(*) AS n FROM checkins WHERE checked_in_at >= datetime('now', 'start of day')"
+        )
         .get() as { n: number }
     ).n
   }
