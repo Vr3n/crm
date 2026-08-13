@@ -14,6 +14,7 @@ setupTestDb()
 
 const VALID = {
   name: 'FitZone Aurangabad',
+  mobileNumber: '+919876543210',
   ownerFullName: 'Neha',
   ownerEmail: 'neha@fitzone.com',
   ownerPassword: 'supersecret123'
@@ -39,6 +40,14 @@ describe('setupOrganization', () => {
     expect(session.isSuper).toBe(true)
     expect(session.permissions.length).toBeGreaterThan(0)
     expect(getSession()?.userId).toBe(session.userId)
+  })
+
+  it('persists the organization mobile number normalized to 10 digits', () => {
+    setupOrganization(VALID)
+    const row = getDb().prepare('SELECT mobile_number FROM organizations').get() as {
+      mobile_number: string
+    }
+    expect(row.mobile_number).toBe('9876543210')
   })
 
   it('creates exactly one organization and one Owner staff membership', () => {
@@ -84,6 +93,22 @@ describe('setupOrganization', () => {
 
   it('rejects an invalid slug', () => {
     expect(() => setupOrganization({ ...VALID, slug: 'bad slug!' })).toThrow(ValidationError)
+    expect(
+      (getDb().prepare('SELECT COUNT(*) AS n FROM organizations').get() as { n: number }).n
+    ).toBe(0)
+  })
+
+  it('rejects a missing mobile number without creating anything', () => {
+    expect(() => setupOrganization({ ...VALID, mobileNumber: '' })).toThrow(ValidationError)
+    expect(
+      (getDb().prepare('SELECT COUNT(*) AS n FROM organizations').get() as { n: number }).n
+    ).toBe(0)
+  })
+
+  it('rejects an invalid mobile number (first digit not 6-9)', () => {
+    expect(() => setupOrganization({ ...VALID, mobileNumber: '5123456789' })).toThrow(
+      ValidationError
+    )
     expect(
       (getDb().prepare('SELECT COUNT(*) AS n FROM organizations').get() as { n: number }).n
     ).toBe(0)

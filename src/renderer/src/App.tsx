@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Sidebar } from './components/layout/Sidebar'
-import { DashboardPage } from './components/dashboard/DashboardPage'
+import { HomePage } from './components/home/HomePage'
 import { AuthGate } from './components/auth/AuthGate'
 
 type SessionContext = Awaited<ReturnType<typeof window.api.identity.session>>
@@ -20,11 +20,17 @@ function App(): React.JSX.Element {
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <Sidebar
-        userEmail={session.userEmail}
+        userFullName={session.userFullName}
         roleName={session.roleName}
         onSignOut={handleSignOut}
       />
-      <DashboardPage />
+      <HomePage
+        organizationName={session.organizationName}
+        userFullName={session.userFullName}
+        userEmail={session.userEmail}
+        roleName={session.roleName}
+        isSuper={session.isSuper}
+      />
     </div>
   )
 }

@@ -19,9 +19,12 @@ discover surprises. None of these block the current single-org, local, offline s
 3. **No password-complexity or reset/forgot-password flow.** v1 ships with ≥8-char minimums
    only. Owner password recovery is out of scope for a local install (delete the DB to reset).
 
-4. **Session is in-memory and lost on restart** (`src/main/auth/session.ts`). Accepted for a
-   desktop tool; a token/session persistence layer is a future option, but keeping auth state
-   volatile is the simpler and arguably safer default.
+4. **Session persistence is minimal (remembered-login, no token/expiry).** v1 persists a
+   remembered login (`{ organizationId, userId }` in `app_meta`) and re-derives a fresh
+   `SessionContext` on launch; `logout` clears it. There is no opaque session token, expiry,
+   or multi-session support. For a single-org, offline, single-machine install this is
+   right-sized; a token-based `sessions` table with revocation/expiry is a future option if
+   the app grows shared or multi-user state.
 
 5. **`requireSession` throws `ForbiddenError('user.view')` for an *unauthenticated* caller.**
    This is semantically an authentication failure masquerading as an authorization code. It
@@ -60,5 +63,4 @@ discover surprises. None of these block the current single-org, local, offline s
   layered + `withTransaction` + `requirePermission` pattern established here.
 - Extend the `permissions` catalog and per-role grants as Modules 02–13 go live, so role
   permissions stay data-driven.
-- Build the org-scoped multi-tenant queries on the demo tables (Module 08) once domains
-  beyond identity exist.
+- Build the org-scoped multi-tenant queries (Module 08) once domains beyond identity exist.

@@ -19,15 +19,15 @@ were made, the trade-offs accepted, the test strategy, and the known gaps.
 The foundation for one local, offline install: first-run **organization setup**, **login**,
 **RBAC** (User → OrganizationStaff → single Role → Permission set), and the typed IPC +
 preload bridge that lets the renderer drive these flows. It implements Modules 14 and 15
-only. Modules 01–13 remain designed-but-not-built; the demo tables from the scaffold are
-retained unchanged.
+only. Modules 01–13 remain designed-but-not-built; the scaffold's demo tables and demo
+dashboard were removed so the codebase contains only the real application.
 
 ## How to run and verify
 
 ```bash
 npm install              # installs deps incl. vitest + @vitest/coverage-v8
 npm run typecheck        # tsc on node + web projects
-npm test                 # vitest run (50 tests)
+npm test                 # vitest run (78 tests)
 npm run test:coverage    # vitest with v8 coverage (target: auth/RBAC logic)
 npm run lint             # eslint (scaffold ui/*.tsx files still warn on return types — not ours)
 npx electron-vite build  # production build of main/preload/renderer
@@ -36,7 +36,9 @@ npm run dev              # launch the Electron app
 
 ## Status
 
-- 50/50 tests passing.
+- 78/78 tests passing.
 - `typecheck` clean (node + web).
 - ESLint clean on all new/modified code and tests (pre-existing scaffold warnings remain in `src/renderer/src/components/ui/*.tsx`).
 - Coverage on the auth/RBAC logic: **92.75% statements / 97.87% lines** (see `tests-and-quality.md`).
+- Persisted **remembered login**: after first setup or login the app auto-restores the session
+  on launch (no login-screen flash); signing out clears it.

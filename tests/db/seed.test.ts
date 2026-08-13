@@ -31,7 +31,12 @@ describe('seedPermissions', () => {
 
 describe('seedRolesForOrganization', () => {
   function seedOrg(): number {
-    const org = organizationRepo.create({ slug: 'test-gym', name: 'Test Gym', currency: 'INR' })
+    const org = organizationRepo.create({
+      slug: 'test-gym',
+      name: 'Test Gym',
+      mobileNumber: '9876543210',
+      currency: 'INR'
+    })
     seedRolesForOrganization(org.id)
     return org.id
   }

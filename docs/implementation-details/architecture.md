@@ -128,10 +128,14 @@ A `SessionContext` (`src/main/domain/identity.ts:52`) is the fully-resolved, den
 it in the in-memory session store (`src/main/auth/session.ts`). This avoids re-querying the
 role/permission join on every IPC call.
 
-- It is **not** a JWT and is **not** persisted — v1 is a single local process. A module-level
-  variable holds the current session. `identity:logout` clears it (`src/main/ipc/identity.ts:27`).
-- Trade-off: in-memory state is lost on window/app restart (user must log in again), which is
-  acceptable for a desktop admin tool and keeps the security posture simple (no tokens on disk).
+- It is **not** a JWT. The in-memory `SessionContext` is re-derived on every launch from a
+  remembered login (`{ organizationId, userId }` in the `app_meta` table) via
+  `restoreRememberedLogin` before the window loads, so the renderer's first `identity.status`
+  already reports `AUTHENTICATED`. `identity:logout` clears both the in-memory session and the
+  remembered record.
+- Trade-off: only the identity *keys* are persisted, never the resolved context — the role/
+  permission join is re-queried on each startup, which keeps the snapshot from going stale if
+  Role→Permission mappings change.
 
 ## 6. Password handling (`src/main/auth/password.ts`)
 
@@ -156,8 +160,8 @@ role/permission join on every IPC call.
 ## 8. Renderer boundary and typed bridge
 
 - `src/preload/index.ts` uses `contextIsolation` + `contextBridge` to expose a narrow
-  `window.api.identity` surface (`setup/login/session/status/createStaff/logout`) and a
-  minimal `db.getDashboard`. No raw `ipcRenderer` is exposed to the renderer.
+  `window.api.identity` surface (`setup/login/session/status/createStaff/logout`). No raw
+  `ipcRenderer` is exposed to the renderer, and no other database surface exists yet.
 - `src/preload/index.d.ts` mirrors the input/output shapes (`SetupOrganizationInput`,
   `SessionContext`, etc.) so the React side is fully typed against the bridge. Note there are
   two `SessionContext` declarations (preload `.d.ts` and `src/main/domain/identity.ts`); they

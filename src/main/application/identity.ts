@@ -1,12 +1,20 @@
 import { withTransaction, getDb } from '../db/connection'
 import { seedRolesForOrganization } from '../db/seed'
 import { hashPassword, verifyPassword } from '../auth/password'
-import { requirePermission, currentOrganizationId } from '../auth/session'
-import { organizationRepo, userRepo, roleRepo, staffRepo } from '../repositories/identity'
-import { getSession, setSession } from '../auth/session'
+import { requirePermission, currentOrganizationId, setSession, getSession } from '../auth/session'
+import {
+  organizationRepo,
+  userRepo,
+  roleRepo,
+  staffRepo,
+  appMetaRepo
+} from '../repositories/identity'
 import { SessionContext } from '../domain/identity'
+import { IndianMobileNumber } from '../domain/phone'
 import { ValidationError, UnauthorizedError, NotFoundError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
+
+const REMEMBERED_SESSION_KEY = 'remembered_session'
 
 export type AuthStatus = 'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'
 
@@ -24,6 +32,7 @@ export interface SetupOrganizationInput {
   ownerFullName: string
   ownerEmail: string
   ownerPassword: string
+  mobileNumber: string
 }
 
 export interface LoginInput {
@@ -89,6 +98,7 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
   if (input.ownerPassword.length < 8) {
     throw new ValidationError('Password must be at least 8 characters')
   }
+  const mobileNumber = IndianMobileNumber.parse(input.mobileNumber)
 
   const slug = (input.slug ?? slugify(name)).trim().toLowerCase()
   if (!/^[a-z0-9-]+$/.test(slug)) {
@@ -103,6 +113,7 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
     const org = organizationRepo.create({
       slug,
       name,
+      mobileNumber: mobileNumber.value,
       currency: input.currency ?? 'INR',
       timezone: input.timezone ?? null,
       legalName: null,
@@ -122,7 +133,9 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
 
     staffRepo.create({ organizationId: org.id, userId: user.id, roleId: ownerRole.id })
 
-    return buildSessionContext(org.id, user.id)
+    const session = buildSessionContext(org.id, user.id)
+    rememberLogin(org.id, user.id)
+    return session
   })
 }
 
@@ -144,8 +157,64 @@ export function login(input: LoginInput): SessionContext {
   }
 
   const session = buildSessionContext(org.id, membership.user.id)
-  setSession(session)
+  rememberLogin(org.id, membership.user.id)
   return session
+}
+
+/**
+ * Persists the active login so it can be restored across app restarts. Stores
+ * only the identity keys ({ organizationId, userId }) — the SessionContext is
+ * re-derived from live DB data on restore, never snapshotted.
+ */
+function rememberLogin(organizationId: number, userId: number): void {
+  appMetaRepo.set(REMEMBERED_SESSION_KEY, JSON.stringify({ organizationId, userId }))
+}
+
+/**
+ * Clears the remembered login. Fire-and-forget safe: a persistence failure here
+ * must never break the current flow, so the worst outcome is a stale row that
+ * simply fails validation again next launch.
+ */
+function forgetLogin(): void {
+  try {
+    appMetaRepo.delete(REMEMBERED_SESSION_KEY)
+  } catch {
+    // Swallow: a stale remembered_login row degrades to a login screen next launch.
+  }
+}
+
+/**
+ * Rehydrates the in-memory session from a previously remembered login. Called at
+ * startup before the window is created, so the renderer's first `identity.status`
+ * already sees AUTHENTICATED (no login-screen flash). The single joined
+ * membership query re-validates that the organization, user, and membership are
+ * all still ACTIVE; any staleness forgets the login and falls back to login.
+ */
+export function restoreRememberedLogin(): SessionContext | null {
+  const raw = appMetaRepo.get(REMEMBERED_SESSION_KEY)
+  if (!raw) return null
+
+  let remembered: { organizationId: number; userId: number }
+  try {
+    remembered = JSON.parse(raw) as { organizationId: number; userId: number }
+  } catch {
+    forgetLogin()
+    return null
+  }
+
+  const membership = staffRepo.findActiveMembership(remembered.organizationId, remembered.userId)
+  if (!membership) {
+    forgetLogin()
+    return null
+  }
+
+  return buildSessionContext(remembered.organizationId, remembered.userId)
+}
+
+/** Ends the current session and clears any remembered login. */
+export function logout(): void {
+  setSession(null)
+  forgetLogin()
 }
 
 /** Builds (and stores) the SessionContext for a user within an organization. */

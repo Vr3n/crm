@@ -2,20 +2,33 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { SessionContext } from '../main/domain/identity'
 
+type IpcResult<T> = { ok: true; data: T } | { ok: false; message: string }
+
+/**
+ * Invokes an IPC channel and unwraps the `{ ok, data | message }` envelope.
+ * On failure it throws a clean `Error(message)` so the renderer never sees
+ * Electron's default serialization (channel name / internal error class).
+ */
+async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
+  const res = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>
+  if (res && typeof res === 'object' && 'ok' in res) {
+    if (res.ok) return res.data
+    throw new Error(res.message)
+  }
+  return res
+}
+
 // Custom APIs for renderer
 const api = {
   identity: {
-    setup: (input: unknown): Promise<SessionContext> => ipcRenderer.invoke('identity:setup', input),
-    login: (input: unknown): Promise<SessionContext> => ipcRenderer.invoke('identity:login', input),
-    session: (): Promise<SessionContext | null> => ipcRenderer.invoke('identity:session'),
+    setup: (input: unknown): Promise<SessionContext> => call('identity:setup', input),
+    login: (input: unknown): Promise<SessionContext> => call('identity:login', input),
+    session: (): Promise<SessionContext | null> => call('identity:session'),
     status: (): Promise<'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'> =>
-      ipcRenderer.invoke('identity:status'),
+      call('identity:status'),
     createStaff: (input: unknown): Promise<{ userId: number }> =>
-      ipcRenderer.invoke('identity:createStaff', input),
-    logout: (): Promise<boolean> => ipcRenderer.invoke('identity:logout')
-  },
-  db: {
-    getDashboard: (): Promise<unknown> => ipcRenderer.invoke('db:getDashboard')
+      call('identity:createStaff', input),
+    logout: (): Promise<boolean> => call('identity:logout')
   }
 }
 

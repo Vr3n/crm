@@ -14,6 +14,7 @@ interface OrgRow {
   name: string
   legal_name: string | null
   billing_email: string | null
+  mobile_number: string
   timezone: string | null
   currency: string
   status: OrgStatus
@@ -55,6 +56,7 @@ function mapOrg(row: OrgRow): Organization {
     name: row.name,
     legalName: row.legal_name,
     billingEmail: row.billing_email,
+    mobileNumber: row.mobile_number,
     timezone: row.timezone,
     currency: row.currency,
     status: row.status,
@@ -100,6 +102,7 @@ export const organizationRepo = {
   create(input: {
     slug: string
     name: string
+    mobileNumber: string
     legalName?: string | null
     billingEmail?: string | null
     timezone?: string | null
@@ -108,12 +111,14 @@ export const organizationRepo = {
     const db = getDb()
     const result = db
       .prepare(
-        `INSERT INTO organizations (slug, name, legal_name, billing_email, timezone, currency)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO organizations
+           (slug, name, mobile_number, legal_name, billing_email, timezone, currency)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         input.slug,
         input.name,
+        input.mobileNumber,
         input.legalName ?? null,
         input.billingEmail ?? null,
         input.timezone ?? null,
@@ -181,6 +186,28 @@ export const roleRepo = {
       )
       .all(roleId) as { code: string }[]
     return rows.map((r) => r.code)
+  }
+}
+
+/** Simple key/value store for app-level settings (e.g. the remembered login). */
+export const appMetaRepo = {
+  get(key: string): string | null {
+    const row = getDb().prepare('SELECT value FROM app_meta WHERE key = ?').get(key) as
+      { value: string } | undefined
+    return row ? row.value : null
+  },
+
+  set(key: string, value: string): void {
+    getDb()
+      .prepare(
+        `INSERT INTO app_meta (key, value) VALUES (?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+      )
+      .run(key, value)
+  },
+
+  delete(key: string): void {
+    getDb().prepare('DELETE FROM app_meta WHERE key = ?').run(key)
   }
 }
 
@@ -275,5 +302,39 @@ export const staffRepo = {
         description: row.r_description
       }
     }
+  },
+
+  /**
+   * The ACTIVE membership for a specific (organization, user) pair — used to
+   * restore a remembered login. One joined query: it only returns a row when the
+   * organization, the user, AND the membership are all ACTIVE. A single query
+   * avoids the TOCTOU gap of separate lookups and degrades gracefully to `null`
+   * whether a row is disabled or deleted outright.
+   */
+  findActiveMembership(
+    organizationId: number,
+    userId: number
+  ): {
+    roleId: number
+    roleName: string
+    isSuper: boolean
+  } | null {
+    const row = getDb()
+      .prepare(
+        `SELECT r.id AS roleId, r.name AS roleName, r.is_super AS isSuper
+         FROM organization_staff os
+         JOIN users u ON u.id = os.user_id
+         JOIN roles r ON r.id = os.role_id
+         JOIN organizations o ON o.id = os.organization_id
+         WHERE os.organization_id = ?
+           AND os.user_id = ?
+           AND os.status = 'ACTIVE'
+           AND u.status = 'ACTIVE'
+           AND o.status = 'ACTIVE'`
+      )
+      .get(organizationId, userId) as
+      { roleId: number; roleName: string; isSuper: number } | undefined
+    if (!row) return null
+    return { roleId: row.roleId, roleName: row.roleName, isSuper: row.isSuper === 1 }
   }
 }

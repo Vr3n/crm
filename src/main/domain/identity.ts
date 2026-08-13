@@ -10,6 +10,7 @@ export interface Organization {
   name: string
   legalName: string | null
   billingEmail: string | null
+  mobileNumber: string
   timezone: string | null
   currency: string
   status: OrgStatus

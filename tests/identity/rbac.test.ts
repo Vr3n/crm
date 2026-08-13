@@ -15,6 +15,7 @@ const PASSWORD = 'supersecret123'
 function setupWithStaff(): SessionContext {
   const ownerSession = setupOrganization({
     name: 'FitZone',
+    mobileNumber: '+919876543210',
     ownerFullName: OWNER.fullName,
     ownerEmail: OWNER.email,
     ownerPassword: OWNER.password

@@ -15,40 +15,6 @@ interface Migration {
 const migrations: Migration[] = [
   {
     version: 1,
-    name: 'demo_tables',
-    sql: `
-      CREATE TABLE plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        price REAL NOT NULL
-      );
-
-      CREATE TABLE members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT,
-        plan_id INTEGER NOT NULL REFERENCES plans(id),
-        status TEXT NOT NULL DEFAULT 'active',
-        joined_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        member_id INTEGER NOT NULL REFERENCES members(id),
-        amount REAL NOT NULL,
-        paid_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE checkins (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        member_id INTEGER NOT NULL REFERENCES members(id),
-        checked_in_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-    `
-  },
-  {
-    version: 2,
     name: 'identity_tenancy',
     sql: `
       CREATE TABLE organizations (
@@ -57,6 +23,7 @@ const migrations: Migration[] = [
         name TEXT NOT NULL,
         legal_name TEXT,
         billing_email TEXT,
+        mobile_number TEXT NOT NULL,
         timezone TEXT,
         currency TEXT NOT NULL DEFAULT 'INR',
         status TEXT NOT NULL DEFAULT 'ACTIVE',
@@ -107,6 +74,16 @@ const migrations: Migration[] = [
 
       CREATE INDEX idx_staff_org ON organization_staff (organization_id);
       CREATE INDEX idx_staff_user ON organization_staff (user_id);
+    `
+  },
+  {
+    version: 2,
+    name: 'app_meta',
+    sql: `
+      CREATE TABLE app_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
     `
   }
 ]

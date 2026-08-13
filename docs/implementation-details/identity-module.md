@@ -32,10 +32,12 @@ uniqueness within one outer transaction.
 Versioned migrations as inline TS strings. A `schema_migrations` table tracks applied
 versions; `runMigrations` skips already-applied versions and is idempotent.
 
-- **Migration 1** (`demo_tables`): retained scaffold tables (`plans`, `members`, `payments`,
-  `checkins`). Untouched so Module 02+ can evolve them.
-- **Migration 2** (`identity_tenancy`): `organizations`, `users`, `roles`, `permissions`,
-  `role_permissions`, `organization_staff`.
+- **Migration 1** (`identity_tenancy`): `organizations`, `users`, `roles`, `permissions`,
+  `role_permissions`, `organization_staff`. The scaffold's demo tables were removed rather
+  than carried forward.
+- **Migration 2** (`app_meta`): a minimal `key TEXT PRIMARY KEY, value TEXT` store for
+  app-level settings. v1 uses it to hold the remembered login (`remembered_session`), keeping
+  session persistence inside the SQLite file rather than a loose file on disk.
 
 Notable schema decisions:
 - `users` has **no** `organization_id` — a User is global; the org binding lives in
@@ -82,18 +84,52 @@ In-memory session store + guards:
 - `requirePermission(code)` — the enforcement point; super short-circuits.
 - `currentOrganizationId()` — session-sourced org stamp.
 
+### Session Persistence (remembered login)
+
+The session store is in-memory, so by itself a restart loses the login. To avoid forcing a
+re-login on every launch, the app persists a *remembered login* and rehydrates it at startup:
+
+- **DB shape** — `app_meta.remembered_session` holds a small JSON record, `{ organizationId,
+  userId }`. Only the identity *keys* are stored; the `SessionContext` is **never snapshotted**.
+- **Re-derive, don't snapshot** — on startup the context is rebuilt from live DB data via
+  `buildSessionContext`. Because Role→Permission mappings are editable data, rebuilding each
+  launch means a revoked permission cannot silently persist across restarts until the next
+  login.
+- **Re-validation rule** — restore succeeds only when the single joined membership query
+  (`staffRepo.findActiveMembership`) returns a row, i.e. the **organization, user, AND
+  membership are all `ACTIVE`**. One query (not three lookups) avoids a TOCTOU gap and
+  degrades to `null` whether a row is disabled or deleted. Any failure → `forgetLogin()` →
+  login screen.
+- **`logout()`** clears the in-memory session and the remembered record, so the app only
+  auto-logins for users who did not sign out.
+- **Startup ordering** — `restoreRememberedLogin()` runs in `main/index.ts` *before*
+  `createWindow()` (awaited in the async `whenReady` sequence, after migrations + permission
+  seeds). The renderer's first `identity.status()` therefore already sees `AUTHENTICATED` —
+  no login-screen flash. `forgetLogin()` swallows its own errors so a persistence failure can
+  never crash startup (worst case: a stale row that simply fails validation again).
+
 ## Application layer
 
 ### `src/main/application/identity.ts`
-The four commands. This is where the bulk of reviewable logic lives.
+The commands plus the session-persistence helpers. This is where the bulk of reviewable logic
+lives.
 
 - **`getAuthStatus()`** — derives `SETUP_REQUIRED` / `LOGIN_REQUIRED` / `AUTHENTICATED` from
   org count + session. Drives the renderer's first screen.
-- **`setupOrganization(input)`** — validates (name/owner/password ≥8, slug format), then in
+- **`setupOrganization(input)`** — validates (name/owner/password ≥8, slug format, and the
+  required mobile number via `IndianMobileNumber.parse`), then in
   one `withTransaction`: guards single-org (`count > 0` ⇒ reject), creates the org,
   `seedRolesForOrganization`, looks up the `Owner` role, creates the Owner user, creates the
   staff membership, and returns a fully-built `SessionContext`. The single-org guard **inside**
   the transaction prevents a race where two setup calls both pass the pre-check.
+
+### `src/main/domain/phone.ts` — `IndianMobileNumber`
+A domain value object that validates and normalizes the required organization mobile number
+to a bare 10-digit form (`9876543210`). Per TRAI/DoT allocation a valid number is exactly 10
+digits with a leading `6-9`; `parse` accepts optional country-code prefixes (`+91`, `91`,
+`0091`, `0`) and formatting separators (space/hyphen/parens), strips them, and throws
+`ValidationError` on blank or invalid input. `tryParse` returns `null` instead of throwing.
+Stored value is always the 10-digit form.
 - **`login(input)`** — lowercases email, resolves the single org, calls
   `staffRepo.findActiveForLogin`, verifies the password with constant-time compare, builds +
   stores the session. Unknown email and wrong password both raise `UnauthorizedError` (no
@@ -101,6 +137,10 @@ The four commands. This is where the bulk of reviewable logic lives.
 - **`createStaffMember(input)`** — the concrete vertical-escalation test: gated by
   `requirePermission(USER_CREATE)`. Validates, checks org-scoped email uniqueness, resolves
   the role by name, then atomically creates user + staff in one transaction.
+- **`rememberLogin`/`forgetLogin`/`restoreRememberedLogin`/`logout`** — the session-persistence
+  commands (see "Session Persistence" above). `setupOrganization` and `login` call
+  `rememberLogin` after building the context; `logout` clears both the in-memory session and
+  the remembered record.
 
 Helper `buildSessionContext` (lines 152–176) materializes the session; `getStaffRow` is a
 private read used by it.
@@ -121,6 +161,11 @@ Thin data access with explicit row → entity mappers (`mapOrg`, `mapUser`, `map
 
 - **`roleRepo.findPermissionCodes(roleId)`** — the super short-circuit: for an `is_super`
   role it returns every code from `permissions`; otherwise it joins `role_permissions`.
+- **`appMetaRepo`** — tiny `get`/`set`/`delete` over `app_meta`; `set` uses an upsert so the
+  remembered login is idempotent.
+- **`staffRepo.findActiveMembership(orgId, userId)`** — the single joined query backing the
+  restore path (see "Session Persistence"). Filters `os.status`, `u.status`, and `o.status`
+  all `= 'ACTIVE'` in one statement.
 - **`staffRepo.findActiveForLogin`** — this query uses **explicit column aliases** (`u_id`,
   `r_id`, `u_status`, …) rather than `SELECT u.*, r.*`. That is a deliberate fix: `SELECT
   u.*, r.*` collides on shared column names (`id`, `status`), and node:sqlite's object
@@ -130,13 +175,16 @@ Thin data access with explicit row → entity mappers (`mapOrg`, `mapUser`, `map
 ## IPC + preload + main entry
 
 - **`src/main/ipc/identity.ts`** — thin `ipcMain.handle` registrations for `identity:*`
-  channels; `identity:logout` clears the session.
+  channels; `identity:logout` calls the application `logout()` (clears session + remembered
+  login). All handlers go through `src/main/ipc/handle.ts`, which returns a `{ ok, data |
+  message }` envelope so errors never leak channel names / error classes to the renderer.
 - **`src/main/preload/index.ts`** — `contextBridge`-exposed `window.api.identity`.
 - **`src/main/preload/index.d.ts`** — typed surface for the renderer.
 - **`src/main/index.ts`** — app bootstrap: `openDatabase(userData path)` →
-  `runMigrations()` → `seedPermissions()` → `seedDemoData()` → `registerIdentityIpc()`.
-  Order matters: migrations must precede seeding; permissions must be seeded before any org
-  setup (so role→permission links resolve).
+  `runMigrations()` → `seedPermissions()` → `await restoreRememberedLogin()` →
+  `registerIdentityIpc()`. Order matters: migrations precede seeding; permissions are seeded
+  before any org setup (so role→permission links resolve); the remembered login is restored
+  before the window loads so the first `identity.status()` already reports `AUTHENTICATED`.
 
 ## Renderer (auth gate)
 

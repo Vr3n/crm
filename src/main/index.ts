@@ -1,12 +1,12 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { openDatabase } from './db/connection'
 import { runMigrations } from './db/migrations'
 import { seedPermissions } from './db/seed'
-import { seedDemoData, getDashboardData } from './db'
 import { registerIdentityIpc } from './ipc/identity'
+import { restoreRememberedLogin } from './application/identity'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -37,7 +37,7 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.gymcrm.app')
 
   app.on('browser-window-created', (_, window) => {
@@ -48,12 +48,15 @@ app.whenReady().then(() => {
   openDatabase(join(app.getPath('userData'), 'gym-crm.db'))
   runMigrations()
   seedPermissions()
-  seedDemoData()
+
+  // Restore any remembered login BEFORE the window loads, so the renderer's first
+  // identity.status() already reports AUTHENTICATED (no login-screen flash).
+  // Ordering matters: seedPermissions() must run first because the session context
+  // resolves Role -> Permission mappings that live in the seeded permissions table.
+  await restoreRememberedLogin()
 
   // IPC (channels are the only way the renderer touches the database)
-  ipcMain.on('ping', () => console.log('pong'))
   registerIdentityIpc()
-  ipcMain.handle('db:getDashboard', () => getDashboardData())
 
   createWindow()
 

@@ -21,6 +21,7 @@ export interface SetupOrganizationInput {
   ownerFullName: string
   ownerEmail: string
   ownerPassword: string
+  mobileNumber: string
 }
 
 export interface LoginInput {
@@ -35,28 +36,6 @@ export interface CreateStaffMemberInput {
   roleName: string
 }
 
-export interface DashboardStats {
-  totalMembers: number
-  activeMembers: number
-  monthlyRevenue: number
-  checkinsToday: number
-}
-
-export interface Member {
-  id: number
-  name: string
-  email: string
-  plan: string
-  planPrice: number
-  status: string
-  joinedAt: string
-}
-
-export interface DashboardData {
-  stats: DashboardStats
-  recentMembers: Member[]
-}
-
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -68,9 +47,6 @@ declare global {
         status: () => Promise<'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'>
         createStaff: (input: CreateStaffMemberInput) => Promise<{ userId: number }>
         logout: () => Promise<boolean>
-      }
-      db: {
-        getDashboard: () => Promise<DashboardData>
       }
     }
   }

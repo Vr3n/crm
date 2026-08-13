@@ -39,6 +39,9 @@ targeted cases if 100% is desired.
 
 - `tests/auth/password.test.ts` — hashing format (`salt:hash`), round-trip verify, wrong
   password rejection, malformed stored value rejection.
+- `tests/domain/phone.test.ts` — `IndianMobileNumber`: valid formats (bare / `+91` / `91` /
+  `0091` / `0` / separated), normalization to 10 digits, invalid first digit, wrong lengths,
+  non-digits, non-Indian prefix, blank; `tryParse` and `toString`.
 - `tests/auth/session.test.ts` — session lifecycle; `requireSession` throws when null;
   `requirePermission` grants/denies; **super short-circuits every code**; `currentOrganizationId`
   requires a session. (The `beforeEach`/`afterEach` session reset is registered at file scope —
@@ -56,6 +59,11 @@ targeted cases if 100% is desired.
   (Manager/Sales/Front Desk/unauth all blocked from `createStaffMember`; Owner allowed); the
   command-layer guard (`requirePermission`) honors view-vs-create-vs-manage; org-scoped email
   uniqueness.
+- `tests/identity/session-persistence.test.ts` — remembered-login lifecycle: setup/login
+  remember, logout forgets; restore succeeds when org+user+membership are all ACTIVE; restore
+  returns `null` and forgets when the org is suspended, the user is disabled, the membership
+  row is removed, or the remembered user row is deleted entirely; nothing is restored before
+  first setup; a malformed remembered record is forgotten.
 
 ## Bugs the suite caught (and the fixes)
 
@@ -86,7 +94,7 @@ These are the strongest justification for the tests. Three real defects were fou
 ## Quality gates (all green)
 
 - `npm run typecheck` — `tsc --noEmit` for both `tsconfig.node.json` and `tsconfig.web.json`.
-- `npm test` — 50/50 passing.
+- `npm test` — 78/78 passing.
 - `npm run test:coverage` — coverage above.
 - ESLint on `src/main/**/*.ts`, `src/preload/**`, `tests/**/*.ts` — **0 errors** (prettier
   warnings auto-fixed). The remaining scaffold warnings are in
