@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, FormEvent } from 'react'
+import { useRef, useState, FormEvent } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
+import { toast } from 'sonner'
 import {
   ArrowRight,
   Building2,
@@ -39,7 +40,6 @@ type SessionContext = Awaited<ReturnType<typeof window.api.identity.session>>
 type Phase = 'loading' | 'setup' | 'login'
 
 const MOBILE_MAX = 10
-
 const validators = {
   name: organizationNameError,
   mobileNumber: mobileError,
@@ -62,28 +62,20 @@ const completeWhen = {
 }
 
 interface AuthGateProps {
+  /** Boot-time identity status (owned by the app's identity queries). */
+  status: 'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED' | undefined
+  /** True while the status query is still resolving on first load. */
+  statusPending: boolean
+  /** Called with the session once setup/login succeeds. */
   onAuthenticated: (session: SessionContext) => void
 }
 
-export function AuthGate({ onAuthenticated }: AuthGateProps): React.JSX.Element {
+export function AuthGate({ status, statusPending, onAuthenticated }: AuthGateProps): React.JSX.Element {
   const [manualPhase, setManualPhase] = useState<'setup' | 'login' | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
-
-  const statusQuery = useQuery({
-    queryKey: ['identity', 'status'],
-    queryFn: () => window.api.identity.status(),
-    retry: false
-  })
-
-  const sessionQuery = useQuery({
-    queryKey: ['identity', 'session'],
-    queryFn: () => window.api.identity.session(),
-    enabled: statusQuery.data === 'AUTHENTICATED',
-    retry: false
-  })
 
   const setupForm = useForm({
     defaultValues: {
@@ -99,6 +91,9 @@ export function AuthGate({ onAuthenticated }: AuthGateProps): React.JSX.Element 
       try {
         const session = await window.api.identity.setup(value)
         setSubmitSuccess(true)
+        toast.success('Your workspace is ready', {
+          description: `Welcome, ${session.userFullName}`
+        })
         successTimer.current = window.setTimeout(() => onAuthenticated(session), 700)
       } catch (err) {
         setSubmitSuccess(false)
@@ -118,6 +113,9 @@ export function AuthGate({ onAuthenticated }: AuthGateProps): React.JSX.Element 
       try {
         const session = await window.api.identity.login(value)
         setSubmitSuccess(true)
+        toast.success('Signed in', {
+          description: `Welcome back, ${session.userFullName}`
+        })
         successTimer.current = window.setTimeout(() => onAuthenticated(session), 700)
       } catch (err) {
         setSubmitSuccess(false)
@@ -167,15 +165,11 @@ export function AuthGate({ onAuthenticated }: AuthGateProps): React.JSX.Element 
       : null
   const checkingExists = existsQuery.isFetching
 
-  useEffect(() => {
-    if (sessionQuery.data) onAuthenticated(sessionQuery.data)
-  }, [sessionQuery.data, onAuthenticated])
-
-  const orgExists = statusQuery.data === 'LOGIN_REQUIRED'
+  const orgExists = status === 'LOGIN_REQUIRED'
   const phase: Phase =
-    statusQuery.isPending || statusQuery.data === undefined || statusQuery.data === 'AUTHENTICATED'
+    statusPending || status === undefined || status === 'AUTHENTICATED'
       ? 'loading'
-      : (manualPhase ?? (statusQuery.data === 'SETUP_REQUIRED' ? 'setup' : 'login'))
+      : (manualPhase ?? (status === 'SETUP_REQUIRED' ? 'setup' : 'login'))
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault()

@@ -1,37 +1,39 @@
-import { useState } from 'react'
-import { Sidebar } from './components/layout/Sidebar'
-import { HomePage } from './components/home/HomePage'
+import { HashRouter } from 'react-router-dom'
+import { AppRoutes } from './AppRoutes'
 import { AuthGate } from './components/auth/AuthGate'
-
-type SessionContext = Awaited<ReturnType<typeof window.api.identity.session>>
+import { SessionProvider } from './context/session-context'
+import {
+  useIdentityStatus,
+  useIdentitySession,
+  useLogout,
+  useCommitSession
+} from './lib/identity-queries'
 
 function App(): React.JSX.Element {
-  const [session, setSession] = useState<SessionContext | null>(null)
+  const statusQuery = useIdentityStatus()
+  const authenticated = statusQuery.data === 'AUTHENTICATED'
+  const sessionQuery = useIdentitySession(authenticated)
+  const logout = useLogout()
+  const commitSession = useCommitSession()
 
-  const handleSignOut = async (): Promise<void> => {
-    await window.api.identity.logout()
-    setSession(null)
-  }
+  const session = authenticated ? (sessionQuery.data ?? null) : null
 
-  if (!session) {
-    return <AuthGate onAuthenticated={setSession} />
+  if (session) {
+    return (
+      <SessionProvider value={session} onSignOut={() => void logout.mutate()}>
+        <HashRouter>
+          <AppRoutes />
+        </HashRouter>
+      </SessionProvider>
+    )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <Sidebar
-        userFullName={session.userFullName}
-        roleName={session.roleName}
-        onSignOut={handleSignOut}
-      />
-      <HomePage
-        organizationName={session.organizationName}
-        userFullName={session.userFullName}
-        userEmail={session.userEmail}
-        roleName={session.roleName}
-        isSuper={session.isSuper}
-      />
-    </div>
+    <AuthGate
+      status={statusQuery.data}
+      statusPending={statusQuery.isPending}
+      onAuthenticated={commitSession}
+    />
   )
 }
 

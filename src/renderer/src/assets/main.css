@@ -3,9 +3,24 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/ibm-plex-sans";
 @import "@fontsource-variable/space-grotesk";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * CrownCRM design tokens — "cyan primary + pink accent" palette.
+ *
+ * Rules (shape-consistency + color-consistency locks):
+ *  - TWO accents that pair: cyan (hue ≈ 220–230) drives primary/actions, pink
+ *    (hue ≈ 4) drives secondary/hover emphasis. Green/red are reserved ONLY
+ *    for semantic money/status (paid, due, overdue, refund).
+ *  - ONE radius scale: cards/inputs ~10px, small controls ~8px. No mixed
+ *    corner systems.
+ *  - Money, dates and IDs use --font-mono (tabular-nums) so columns scan on a
+ *    single edge.
+ */
 :root {
   --radius: 0;
   --background: oklch(1 0 0);
@@ -16,29 +31,33 @@
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.52 0.105 223.128);
   --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.525 0.223 3.958);
+  --secondary-foreground: oklch(0.971 0.014 343.198);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.955 0.02 3.958);
+  --accent-foreground: oklch(0.21 0.02 4);
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.596 0.145 163.225);
+  --success-foreground: oklch(0.982 0.017 145.153);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.98 0.016 73.684);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.81 0.117 11.638);
-  --chart-2: oklch(0.645 0.246 16.439);
-  --chart-3: oklch(0.586 0.253 17.585);
-  --chart-4: oklch(0.514 0.222 16.935);
-  --chart-5: oklch(0.455 0.188 13.697);
+  --ring: oklch(0.608 0.126 221.723);
+  --chart-1: oklch(0.865 0.127 207.078);
+  --chart-2: oklch(0.715 0.143 215.221);
+  --chart-3: oklch(0.609 0.126 221.723);
+  --chart-4: oklch(0.52 0.105 223.128);
+  --chart-5: oklch(0.45 0.085 224.283);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.609 0.126 221.723);
   --sidebar-primary-foreground: oklch(0.984 0.019 200.873);
-  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.953 0.022 3.958);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.608 0.126 221.723);
 }
 
 .dark {
@@ -50,29 +69,33 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.45 0.085 224.283);
   --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.459 0.187 3.815);
+  --secondary-foreground: oklch(0.971 0.014 343.198);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: oklch(0.27 0.02 3.958);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --success: oklch(0.696 0.17 162.48);
+  --success-foreground: oklch(0.145 0 0);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.28 0.04 67.5);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.81 0.117 11.638);
-  --chart-2: oklch(0.645 0.246 16.439);
-  --chart-3: oklch(0.586 0.253 17.585);
-  --chart-4: oklch(0.514 0.222 16.935);
-  --chart-5: oklch(0.455 0.188 13.697);
+  --ring: oklch(0.55 0.09 224.283);
+  --chart-1: oklch(0.865 0.127 207.078);
+  --chart-2: oklch(0.715 0.143 215.221);
+  --chart-3: oklch(0.609 0.126 221.723);
+  --chart-4: oklch(0.52 0.105 223.128);
+  --chart-5: oklch(0.45 0.085 224.283);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.715 0.143 215.221);
   --sidebar-primary-foreground: oklch(0.302 0.056 229.695);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.27 0.02 3.958);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.55 0.09 224.283);
 }
 
 @theme inline {
@@ -91,6 +114,10 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -107,15 +134,16 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
   --font-sans: 'IBM Plex Sans Variable', sans-serif;
   --font-heading: 'Space Grotesk Variable', sans-serif;
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 @layer base {
@@ -127,5 +155,19 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Quiet scrollbars so dense data stays calm in the main process. */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
   }
 }
