@@ -1,6 +1,6 @@
-# Django Project
+Research about the topic on internet first, and only then you provide solutions.
 
-- Everytime you create a plan, make it detailed with code snippets and explanations so it is easier for senior developer reviews.
-- django skills usage is mandatory. Always use the skill for better code output and detailed plan.
+This is a electron.js application for Windows Computers. The stack is React, Shadcn, and Sqlite.
+Database we will use is `node:sqlite` package.
 
-Always use `uv run` commands. We are using `uv`.
+You should thoroughly plan everything.
