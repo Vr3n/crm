@@ -1,0 +1,100 @@
+{% load static %}
+<nav class="navbar">
+  <a href="#" class="sidebar-toggler">
+    <i data-feather="menu"></i>
+  </a>
+  <div class="navbar-content">
+    <form class="search-form">
+      <div class="input-group">
+        <div class="input-group-prepend">
+          <div class="input-group-text">
+            <i data-feather="search"></i>
+          </div>
+        </div>
+        <input type="text"
+               class="form-control"
+               id="navbarForm"
+               placeholder="Search here...">
+      </div>
+    </form>
+    <ul class="navbar-nav">
+      <li class="nav-item dropdown">
+        <span id="hx-org-list"
+              hx-swap="innerHTML"
+              hx-trigger="organizationsListChanged from:body"
+              hx-get="{% url 'hx-nav-organizations-list' %}">
+          <a class="nav-link dropdown-toggle"
+             href="#"
+             id="languageDropdown"
+             role="button"
+             data-toggle="dropdown"
+             aria-haspopup="true"
+             aria-expanded="false">
+            <i data-feather="briefcase" title="us"></i> <span class="font-weight-medium ml-1 mr-1 d-none d-md-inline-block">Organizations</span>
+          </a>
+          <div class="dropdown-menu" aria-labelledby="languageDropdown">
+            {% for org in request.user.get_organizations_queryset %}
+              <a href="{{ org.get_dashboard_url }}" class="dropdown-item py-2">
+                <span class="ml-1">{{ org.name }}</span>
+              </a>
+            {% endfor %}
+<button hx-get="{% url 'organizations-hx-create' %}"
+              hx-target="#modal-form"
+              class="btn btn-outline-primary btn-sm"
+              role="button"
+              tabindex="0">
+              <i data-feather="plus-circle"></i>
+              <span>Create New Organization</span>
+            </button>
+            </div>
+          </span>
+        </li>
+        <li class="nav-item dropdown nav-profile">
+          <a class="nav-link dropdown-toggle"
+             href="#"
+             id="profileDropdown"
+             role="button"
+             data-toggle="dropdown"
+             aria-haspopup="true"
+             aria-expanded="false">
+            <img src="{% static 'images/user_profile.png' %}" alt="profile">
+          </a>
+          <div class="dropdown-menu" aria-labelledby="profileDropdown">
+            <div class="dropdown-header d-flex flex-column align-items-center">
+              <div class="figure mb-3">
+                <img src="{% static 'images/user_profile.png' %}"
+                     alt="profile"
+                     width="80"
+                     height="80">
+              </div>
+              <div class="info text-center">
+                <p class="name font-weight-bold mb-0">{{ request.user.name }}</p>
+                <p class="email text-muted mb-3">{{ request.user.email }}</p>
+              </div>
+            </div>
+            <div class="dropdown-body">
+              <ul class="profile-nav p-0 pt-3">
+                <!-- <li class="nav-item"> -->
+                <!--   <a href="pages/general/profile.html" class="nav-link"> -->
+                <!--     <i data-feather="user"></i> -->
+                <!--     <span>Profile</span> -->
+                <!--   </a> -->
+                <!-- </li> -->
+                <li class="nav-item">
+                  <a hx-post="{% url 'account_logout' %}"
+                     hx-target="body"
+                     hx-push-url="true"
+                     hx-trigger='confirmed'
+                     onClick="Swal.fire({ title: 'Confirm Logout', text: 'Are you sure you want to logout?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes, Logout', }).then((result) => { if (result.isConfirmed) { htmx.trigger(this, 'confirmed'); } })"
+                     class="nav-link">
+                    <i data-feather="log-out"></i>
+                    <span>Log Out</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>

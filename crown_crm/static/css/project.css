@@ -1,0 +1,89 @@
+/* These styles are generated from project.scss. */
+
+.alert-debug {
+  color: black;
+  background-color: white;
+  border-color: #d6e9c6;
+}
+
+.alert-error {
+  color: #b94a48;
+  background-color: #f2dede;
+  border-color: #eed3d7;
+}
+
+.card-hover :hover {
+  -webkit-box-shadow: 4px 7px 47px -17px rgba(0,0,0,0.75);
+  -moz-box-shadow: 4px 7px 47px -17px rgba(0,0,0,0.75);
+  box-shadow: 4px 7px 47px -17px rgba(0,0,0,0.75);
+  transition-delay: 150ms;
+}
+
+.sidebar-brand {
+  font-size: 1.125rem;
+}
+
+/* Make form-select more visible (Bootstrap 4 compatible styling) */
+.form-select,
+select.form-select {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #495057;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Focus state */
+.form-select:focus,
+select.form-select:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Hover state */
+.form-select:hover,
+select.form-select:hover {
+  border-color: #adb5bd;
+}
+
+/* Disabled state */
+.form-select:disabled,
+select.form-select:disabled {
+  background-color: #e9ecef;
+  opacity: 0.65;
+}
+
+/* Invalid/error state */
+.form-select.is-invalid,
+select.form-select.is-invalid {
+  border-color: #dc3545;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3e%3ccircle cx='6' cy='6' r='4.5' stroke='%23dc3545'/%3e%3cpath stroke='%23dc3545' stroke-linecap='round' stroke-linejoin='round' d='M4.5 4.5l3 3m0-3l-3 3'/%3e%3cpath stroke='%23dc3545' stroke-linecap='round' stroke-linejoin='round' d='M7.5 4.5l-3 3m0-3l3 3'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px 12px;
+}
+
+.form-select.is-invalid:focus,
+select.form-select.is-invalid:focus {
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Shake animation for validation warning */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate__shakeX {
+  animation: shake 0.5s ease-in-out;
+}

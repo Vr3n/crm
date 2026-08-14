@@ -1,0 +1,177 @@
+<form
+  id="client-create-form-partial"
+  method="post"
+  hx-post="{% url 'hx-create-client' request.organization.slug %}"
+  hx-swap="none"
+>
+  <div class="card mb-3">
+    <div class="card-header">Client Details</div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-3">
+          <input type="hidden" name="organization" value="{{ request.organization.uuid }}">
+          <label>First Name</label>
+          {{ client_form.first_name}}
+          <!--errors -->
+          {% if client_form.first_name.errors %}
+          <div class="invalid-feedback d-block">
+            {{ client_form.first_name.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-3">
+          <label>Middle Name</label>
+          {{ client_form.middle_name}}
+          <!--errors -->
+          {% if client_form.middle_name.errors %}
+          <div class="invalid-feedback d-block">
+            {{ client_form.middle_name.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-3">
+          <label>Last Name</label>
+          {{ client_form.last_name}}
+          <!--errors -->
+          {% if client_form.last_name.errors %}
+          <div class="invalid-feedback d-block">
+            {{ client_form.last_name.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-3">
+          <label>Gender</label>
+          {{ client_form.gender}}
+          <!--errors -->
+          {% if client_form.gender.errors %}
+          <div class="invalid-feedback d-block">
+            {{ client_form.gender.errors }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-1 col-md-6">
+      <div class="card mb-3">
+        <div class="card-header">Mobile Numbers</div>
+        <div class="card-body">
+          {{ mobile_formset.management_form }}
+          <!-- -->
+          {% for form in mobile_formset %}
+          <div>
+            {{ form.mobile_number }}
+            <!-- errors -->
+            {% if mobile_formset.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in mobile_formset.errors %}
+              <p>{{ error.mobile_number }}</p>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-1 col-md-6">
+      <div class="card mb-3">
+        <div class="card-header">Email Addresses</div>
+        <div class="card-body">
+          {{ email_formset.management_form }}
+          <!-- -->
+          {% for form in email_formset %}
+          <div>
+            {{ form.email }}
+            <!-- errors -->
+            {% if email_formset.errors %}
+            <div class="invalid-feedback d-block">
+              {% for error in email_formset.errors %}
+              <p>{{ error.email }}</p>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Address Details</div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4">
+          <label>Flat/Building</label>
+          {{ address_form.flat_building }}
+        </div>
+        <div class="col-md-4">
+          <label>Landmark</label>
+          {{ address_form.landmark }}
+          <!-- errors -->
+          {% if address_form.landmark.errors %}
+          <div class="invalid-feedback d-block">
+            {{ address_form.landmark.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label>Area</label>
+          {{ address_form.area}}
+          <!-- errors -->
+          {% if address_form.area.errors %}
+          <div class="invalid-feedback d-block">
+            {{ address_form.area.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label>Street</label>
+          {{ address_form.street }}
+          <!-- errors -->
+          {% if address_form.street.errors %}
+          <div class="invalid-feedback d-block">
+            {{ address_form.street.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label>City</label>
+          {{ address_form.city }}
+          <!-- errors -->
+          {% if address_form.city.errors %}
+          <div class="invalid-feedback d-block">
+            {{ address_form.city.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label>State</label>
+          {{ address_form.state }}
+          <!-- errors -->
+          {% if address_form.state.errors %}
+          <div class="invalid-feedback d-block">
+            {{ address_form.state.errors }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label>Pincode</label>
+          {{ address_form.pincode }}
+          <!-- errors -->
+          {% if address_form.pincode.errors %}
+          <div class="invalid-feedback d-block">
+            {{ address_form.pincode.errors }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-success">Save Client</button>
+</form>

@@ -1,0 +1,99 @@
+{% load crispy_forms_tags %}
+{% url 'organizations-hx-create' as create_url %}{% with action_url|default:create_url as form_action %}<c-form-wrapper action="{{ form_action }}" method="post" hx-encoding="multipart/form-data">
+  <div class="card">
+    <div class="card-body">
+      {% if form.errors %}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        There was a problem during form submission.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endif %}
+
+      <div class="card mb-3">
+        <div class="card-header">Organization Details</div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <c-form-input :field="form.name" />
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">{{ form.logo.label }}</label>
+                <input type="file" name="logo" class="form-control" accept="image/*">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <c-form-input :field="form.description" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">Contact Information</div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <c-form-input :field="form.mobile_number" />
+            </div>
+            <div class="col-md-6">
+              <c-form-input :field="form.email" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 gap-4">
+        <c-submit-button label="Submit" />
+        <button type="button" class="btn btn-outline-danger" onclick="closeOrgModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</c-form-wrapper>{% endwith %}
+
+{% block custom_js %}
+<script>
+  document.addEventListener("htmx:afterRequest", function (e) {
+    const alertDiv = document.querySelector('.alert');
+    if (alertDiv) {
+      setTimeout(function() {
+        alertDiv.classList.remove('show');
+        setTimeout(function() { alertDiv.remove(); }, 300);
+      }, 10000);
+    }
+  });
+</script>
+{% if form.errors %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const errors = [
+      {% for field, errors_list in form.errors.items %}
+      {% for error in errors_list %}
+      "{{ error|escapejs }}",
+      {% endfor %}
+      {% endfor %}
+    ];
+    errors.forEach(function(errorMsg) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        text: errorMsg,
+        timer: 10000,
+        timerProgressBar: true
+      });
+    });
+  });
+</script>
+{% endif %}
+<script>
+  function closeOrgModal() {
+    var form = document.getElementById("organization-create-form-partial");
+    if (form) {
+      form.reset();
+    }
+    $('#modal-container').modal('hide');
+  }
+</script>
+{% endblock %}

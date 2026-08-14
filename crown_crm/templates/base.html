@@ -1,0 +1,349 @@
+{% load crispy_forms_tags %}
+{% load static i18n compress %}
+{% load model_extras %}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="keywords"
+          content="CRM, Customer Relationship Management, Business Management, Sales, Leads, Contacts, Crown CRM, Business Software" />
+    <!-- PWA Meta Tags -->
+    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="maximum-scale=5.0" />
+    <meta name="viewport" content="user-scalable=yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Crown CRM" />
+    <link rel="manifest" href="{% static 'manifest.json' %}" />
+    <link rel="apple-touch-icon"
+          href="{% static 'images/icons/icon-192x192.png' %}" />
+    <link rel="icon"
+          type="image/png"
+          sizes="192x192"
+          href="{% static 'images/icons/icon-192x192.png' %}" />
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/timeline.css' %}" />
+    <style>
+      .metric-card {
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        padding: 20px;
+        background-color: #fff;
+      }
+      .metric-card {
+        min-height: 100px;
+        display: flex;
+        align-items: center;
+      }
+      .metric-value {
+        font-size: 1.75rem;
+        font-weight: 600;
+      }
+      .metric-change.up {
+        color: #28a745;
+      }
+      .metric-change.down {
+        color: #dc3545;
+      }
+    </style>
+    {% block custom_styles %}
+      <!-- Your pagewise custom styling -->
+    {% endblock custom_styles %}
+    <title>
+      {% block title %}
+        crm
+      {% endblock title %}
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="The CRM for businesses." />
+    <meta name="author" content="Viren Suresh Ila Patel" />
+    <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
+    {% block css %}
+      <!-- Your stuff: Third-party CSS libraries go here -->
+      <!-- core:css -->
+      <link rel="stylesheet" href="{% static 'vendors/core/core.css' %}">
+      <!-- endinject -->
+      <!-- plugin css for this page -->
+      <link rel="stylesheet"
+            href="{% static 'vendors/bootstrap-datepicker/bootstrap-datepicker.min.css' %}">
+      <!-- end plugin css for this page -->
+      <link rel="stylesheet"
+            href="{% static 'vendors/sweetalert2/sweetalert2.min.css' %}"></link>
+    <link rel="stylesheet"
+          href="{% static 'vendors/select2/select2.min.css' %}"></link>
+  <!-- inject:css -->
+  <link rel="stylesheet"
+        href="{% static 'fonts/feather-font/css/iconfont.css' %}">
+  <link rel="stylesheet"
+        href="{% static 'vendors/flag-icon-css/css/flag-icon.min.css' %}">
+  <link rel="stylesheet"
+        href="{% static 'vendors/font-awesome/css/font-awesome.min.css' %}">
+  <!-- endinject -->
+  <!-- Layout styles -->
+  <link rel="stylesheet" href="{% static 'css/demo_1/style.css' %}">
+  <!-- This file stores project-specific CSS -->
+  {% compress css %}
+    <link href="{% static 'css/project.css' %}" rel="stylesheet" />
+  {% endcompress %}
+{% endblock css %}
+<!-- Le javascript
+    ================================================== -->
+{# Placed at the top of the document so pages load faster with defer #}
+{% block javascript %}
+  <!-- Your stuff: Third-party javascript libraries go here -->
+  <!-- core:js -->
+  <script src="{% static 'vendors/core/core.js' %}"></script>
+  <!-- endinject -->
+  <!-- plugin js for this page -->
+  <script src="{% static 'vendors/htmx.min.js' %}"></script>
+  <script src="{% static 'js/validation.js' %}"></script>
+  <script src="{% static 'vendors/sweetalert2/sweetalert2.min.js' %}"></script>
+  <script src="{% static 'vendors/select2/select2.min.js' %}"></script>
+  <script src="{% static 'vendors/chartjs/Chart.min.js' %}"></script>
+  <script src="{% static 'vendors/jquery.flot/jquery.flot.js' %}"></script>
+  <script src="{% static 'vendors/jquery.flot/jquery.flot.resize.js' %}"></script>
+  <script src="{% static 'vendors/bootstrap-datepicker/bootstrap-datepicker.min.js' %}"></script>
+  <script src="{% static 'vendors/apexcharts/apexcharts.min.js' %}"></script>
+  <script src="{% static 'vendors/progressbar.js/progressbar.min.js' %}"></script>
+  <!-- end plugin js for this page -->
+  <!-- inject:js -->
+  <script src="{% static 'vendors/feather-icons/feather.min.js' %}"></script>
+  <script src="{% static 'js/template.js' %}"></script>
+  <!-- endinject -->
+  <!-- custom js for this page -->
+  <script src="{% static 'js/dashboard.js' %}"></script>
+  <script src="{% static 'js/datepicker.js' %}"></script>
+  <!-- end custom js for this page -->
+  <!-- place project specific Javascript in this file -->
+  {% compress js %}
+    <script defer src="{% static 'js/project.js' %}"></script>
+  {% endcompress %}
+{% endblock javascript %}
+</head>
+<body class="{% block bodyclass %}{% endblock bodyclass %}">
+  {% block body %}
+    <div class="main-wrapper">
+      {% include "partials/_sidebar.html" %}
+      <div class="page-wrapper">
+        {% include "partials/_navbar.html" %}
+        <div class="page-content">
+          {% block content %}
+          {% endblock content %}
+        </div>
+        {% include "partials/_footer.html" %}
+      </div>
+    </div>
+  {% endblock body %}
+  <script>
+    window.addEventListener("DOMContentLoaded", (event) => {
+      document.body.addEventListener("htmx:configRequest", (event) => {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}'
+      })
+    })
+  </script>
+  <script>
+      htmx.onLoad(() => {
+        htmx.findAll(".toast").forEach((element) => {
+          element.toast('show');
+        })
+      })
+
+      document.addEventListener("message", event => {
+        const { message, level } = event.detail
+        const notifiq = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        })
+        notifiq.fire({
+          icon: level,
+          title: message
+        })
+      })
+
+
+  </script>
+  {% if messages %}
+    <script>
+      {% for message in messages %}
+        const notifiq = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        })
+        notifiq.fire({
+          icon: '{{ message.level_tag|safe }}',
+          title: '{{ message|safe }}'
+        })
+      {% endfor %}
+    </script>
+  {% endif %}
+  {% block modal %}
+    <div class="modal fade"
+         data-backdrop="static"
+         data-keyboard="false"
+         id="modal-container"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="modalLabel"
+         aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="modal-form" hx-swap="innerHTML" hx-target="this">
+          <!-- Modal content will be loaded here via HTMX -->
+        </div>
+      </div>
+    </div>
+    <script>
+      // Single notifiq instance for all toasts
+      const notifiq = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer);
+          toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+      });
+
+      // Global toast helper
+      window.showToast = function(message, level = 'info') {
+        const iconMap = {
+          'debug': 'info',
+          'info': 'info',
+          'success': 'success',
+          'warning': 'warning',
+          'error': 'error'
+        };
+        notifiq.fire({
+          icon: iconMap[level] || 'info',
+          title: message
+        });
+      };
+
+      // HTMX 2.0: Allow swapping on 422/400 validation errors
+      document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        const status = evt.detail.xhr.status;
+
+        // Allow 422/400 responses to swap (form errors)
+        if (status === 422 || status === 400) {
+          evt.detail.shouldSwap = true;
+          evt.detail.isError = false;
+        }
+
+        // Modal close on 204 (no content) - but only for modal target
+        if (status === 204 && evt.detail.target.id === 'modal-form') {
+          $('#modal-container').modal('hide');
+          evt.detail.shouldSwap = false;
+        }
+      });
+
+      // Open modal when form loaded into modal-form
+      htmx.on("htmx:afterSwap", (e) => {
+        if (e.detail.target.id === "modal-form") {
+          $("#modal-container").modal({
+            show: true,
+            keyboard: false,
+            backdrop: 'static'
+          });
+        }
+      });
+
+      // Close modal and show toast on success events (kebab-case)
+      const successEvents = [
+        'lead-created', 'lead-updated', 'lead-deleted',
+        'membership-sale-created', 'receipt-created', 'receipt-updated', 'receipt-deleted',
+        'sale-updated', 'sale-deleted',
+        'service-created', 'service-updated', 'service-deleted',
+        'product-created', 'product-updated', 'product-deleted',
+        'client-created', 'client-deleted',
+        'organization-created', 'organization-updated'
+      ];
+
+      successEvents.forEach((eventName) => {
+        document.body.addEventListener(eventName, (e) => {
+          $('#modal-container').modal('hide');
+
+          // Show toast - derive action from event name
+          const action = eventName.split('-').pop();
+          const level = action === 'deleted' ? 'info' : 'success';
+          const title = eventName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          notifiq.fire({ icon: level, title });
+        });
+      });
+
+      // Cleanup modal content after close
+      htmx.on("hidden.bs.modal", () => {
+        document.getElementById("modal-form").innerHTML = "";
+      });
+
+      // Initialize feather icons on page load
+      feather.replace();
+
+      // Refresh feather icons after HTMX swaps
+      document.addEventListener('htmx:afterSwap', function(evt) {
+        feather.replace();
+      });
+    </script>
+  {% endblock modal %}
+  <!-- Details Modal -->
+  <div class="modal fade"
+       id="details-modal"
+       tabindex="-1"
+       role="dialog"
+       aria-labelledby="detailsModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detailsModalLabel">Membership Details</h5>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="$('#details-modal').modal('hide')">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="details-modal-body" hx-target="this">
+          <!-- Content loaded via HTMX -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Show modal when details content is loaded
+    htmx.on("htmx:afterSwap", function(evt) {
+      if (evt.detail.target.id === "details-modal-body") {
+        $("#details-modal").modal({
+          show: true,
+          keyboard: true,
+          backdrop: true
+        });
+      }
+    });
+
+    // Close modal and clear content on close
+    $("#details-modal").on("hidden.bs.modal", function() {
+      document.getElementById("details-modal-body").innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Loading...</div>';
+    });
+  </script>
+  {% block custom_js %}
+  {% endblock custom_js %}
+</body>
+</html>

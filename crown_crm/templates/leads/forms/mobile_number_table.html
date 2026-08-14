@@ -1,0 +1,19 @@
+<form
+  hx-include="input#lead_id"
+  hx-post="{% url 'hx-leads-mobile-numbers' slug=request.organization.slug %}"
+  hx-target="this"
+>
+  <div class="form-group row">
+    <div class="col-sm-8">{{ form.mobile_number }}</div>
+    <div class="col-sm-4">
+      <button type="Submit" class="btn btn-sm btn-success">Submit</button>
+      <button
+        type="Cancel"
+        @click="console.log($event.target.parentNode.parentNode.parentNode.remove())"
+        class="btn btn-sm btn-danger"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</form>

@@ -1,0 +1,117 @@
+{% extends "django_tables2/bootstrap4.html" %}
+{% load i18n %}
+{% load django_tables2 %}
+
+<div class="table-container">
+{% block table.thead %}
+{% if table.show_header %}
+<thead {{ table.attrs.thead.as_html }}>
+<tr>
+  {% for column in table.columns %}
+  <th {{ column.attrs.th.as_html }} scope="col"
+      {% if column.orderable %}
+      hx-get="{% querystring_replace table.prefixed_order_by_field=column.order_by_alias.next %}"
+      hx-trigger="click"
+      hx-target="{{ hx_target|default:"div.table-container" }}"
+      hx-swap="innerHTML"
+      style="cursor: pointer;"
+      {% endif %}>
+    {% if column.orderable %}
+      <span class="d-flex align-items-center gap-1">
+        {{ column.header }}
+        <i data-feather="chevrons-up-down" style="width:14px; height:14px;" class="text-muted"></i>
+      </span>
+    {% else %}
+      {{ column.header }}
+    {% endif %}
+  </th>
+  {% endfor %}
+</tr>
+</thead>
+{% endif %}
+{% endblock table.thead %}
+
+{% block pagination %}
+{% if table.page and table.paginator.num_pages >= 1 %}
+<div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+
+  {# Per-page selector #}
+  <div class="d-flex align-items-center gap-2">
+    <label class="text-muted mb-0 small">Rows per page:</label>
+    <select class="form-select form-select-sm w-auto"
+            hx-get="{{ request.path_info }}"
+            hx-trigger="change"
+            hx-target="{{ hx_target|default:"div.table-container" }}"
+            hx-swap="innerHTML"
+            name="per_page">
+      {% for option in per_page_options %}
+      <option value="{{ option }}"
+              {% if option == per_page %}selected{% endif %}>
+        {{ option }}
+      </option>
+      {% endfor %}
+    </select>
+    <span class="text-muted small">
+      {% with start=table.page.start_index end=table.page.end_index total=table.page.paginator.count %}
+        {% blocktranslate %}{{ start }}–{{ end }} of {{ total }}{% endblocktranslate %}
+      {% endwith %}
+    </span>
+  </div>
+
+  {# Pagination buttons (NobleUI style) #}
+  <nav aria-label="Table pagination">
+    <ul class="pagination pagination-separated mb-0">
+
+      {# Previous #}
+      <li class="page-item {% if not table.page.has_previous %}disabled{% endif %}">
+        <a class="page-link"
+           {% if table.page.has_previous %}
+           hx-get="{{ request.path_info }}{% querystring_replace table.prefixed_page_field=table.page.previous_page_number per_page=per_page %}"
+           hx-trigger="click"
+           hx-target="{{ hx_target|default:"div.table-container" }}"
+           hx-swap="innerHTML"
+           role="button"
+           {% endif %}>
+           <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+
+      {# Page numbers #}
+      {% for page_num in table.paginator.page_range %}
+        {% if page_num == table.page.number %}
+          <li class="page-item active" aria-current="page">
+            <span class="page-link">{{ page_num }}</span>
+          </li>
+        {% elif page_num >= table.page.number|add:"-2" and page_num <= table.page.number|add:"2" %}
+          <li class="page-item">
+            <a class="page-link" role="button"
+               hx-get="{{ request.path_info }}{% querystring_replace table.prefixed_page_field=page_num per_page=per_page %}"
+               hx-trigger="click"
+               hx-target="{{ hx_target|default:"div.table-container" }}"
+               hx-swap="innerHTML">
+              {{ page_num }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {# Next #}
+      <li class="page-item {% if not table.page.has_next %}disabled{% endif %}">
+        <a class="page-link"
+           {% if table.page.has_next %}
+           hx-get="{{ request.path_info }}{% querystring_replace table.prefixed_page_field=table.page.next_page_number per_page=per_page %}"
+           hx-trigger="click"
+           hx-target="{{ hx_target|default:"div.table-container" }}"
+           hx-swap="innerHTML"
+           role="button"
+           {% endif %}>
+           <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+
+    </ul>
+  </nav>
+</div>
+{% endif %}
+{% endblock pagination %}
+</div>

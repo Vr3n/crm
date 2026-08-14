@@ -1,0 +1,88 @@
+<form hx-post="{{ action_url }}" hx-target="#modal-container" hx-swap="innerHTML">
+    {% csrf_token %}
+    
+    <div class="modal-header">
+        <h5 class="modal-title">
+            {% if form.instance.pk %}Edit{% else %}Create{% endif %} Payment Receipt
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    
+    <div class="modal-body">
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="{{ form.amount.id_for_label }}">Amount</label>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">₹</span>
+                </div>
+                {{ form.amount }}
+            </div>
+            {% if form.amount.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.amount.errors.0 }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.method.id_for_label }}">Payment Method</label>
+            {{ form.method }}
+            {% if form.method.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.method.errors.0 }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.transaction_id.id_for_label }}">Transaction ID</label>
+            {{ form.transaction_id }}
+            <small class="form-text text-muted">Leave blank for cash payments</small>
+            {% if form.transaction_id.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.transaction_id.errors.0 }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}">Notes</label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.notes.errors.0 }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            {% if form.instance.pk %}Update{% else %}Create{% endif %} Receipt
+        </button>
+    </div>
+</form>
+
+{% if form.errors %}
+<script>
+// Add is-invalid class to fields with errors
+$(document).ready(function() {
+    {% for field in form %}
+        {% if field.errors %}
+            $("#{{ field.id_for_label }}").addClass('is-invalid');
+        {% endif %}
+    {% endfor %}
+});
+</script>
+{% endif %}

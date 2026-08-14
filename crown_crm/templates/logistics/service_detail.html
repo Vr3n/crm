@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }} - {{ block.super }}{% endblock title %}
+{% block content %}
+  {% include "logistics/partials/service_detail.html" %}
+{% endblock content %}
