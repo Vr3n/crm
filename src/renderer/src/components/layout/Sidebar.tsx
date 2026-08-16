@@ -35,12 +35,19 @@ export function Sidebar(): React.JSX.Element {
       )}
     >
       {/* Brand */}
-      <div className={cn('flex h-14 items-center border-b', collapsed ? 'justify-center px-2' : 'gap-2.5 px-4')}>
+      <div
+        className={cn(
+          'flex h-14 items-center border-b',
+          collapsed ? 'justify-center px-2' : 'gap-2.5 px-4'
+        )}
+      >
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <Crown className="size-5" />
         </div>
         {!collapsed && (
-          <span className="font-heading text-lg font-semibold tracking-tight">CrownCRM</span>
+          <span className="min-w-0 truncate font-heading text-lg font-semibold tracking-tight">
+            {session.organizationName}
+          </span>
         )}
       </div>
 
@@ -79,13 +86,20 @@ export function Sidebar(): React.JSX.Element {
 
       {/* Identity */}
       <div className="border-t p-2">
-        <div className={cn('flex items-center gap-2.5 rounded-md px-2 py-2', collapsed && 'justify-center px-0')}>
+        <div
+          className={cn(
+            'flex items-center gap-2.5 rounded-md px-2 py-2',
+            collapsed && 'justify-center px-0'
+          )}
+        >
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary/10 font-heading text-sm font-semibold text-sidebar-primary">
             {initials(session.userFullName)}
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">{session.userFullName}</p>
+              <p className="truncate text-sm font-medium text-sidebar-foreground">
+                {session.userFullName}
+              </p>
               <p className="truncate text-xs text-sidebar-foreground/55">{session.roleName}</p>
             </div>
           )}
@@ -95,7 +109,13 @@ export function Sidebar(): React.JSX.Element {
   )
 }
 
-function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }): React.JSX.Element {
+function SidebarItem({
+  item,
+  collapsed
+}: {
+  item: NavItem
+  collapsed: boolean
+}): React.JSX.Element {
   const Icon = item.icon
   const link = (
     <NavLink

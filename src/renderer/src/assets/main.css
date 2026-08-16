@@ -1,11 +1,11 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/ibm-plex-sans";
-@import "@fontsource-variable/space-grotesk";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
-@import "@fontsource/ibm-plex-mono/600.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/ibm-plex-sans';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -42,6 +42,10 @@
   --success-foreground: oklch(0.982 0.017 145.153);
   --warning: oklch(0.769 0.188 70.08);
   --warning-foreground: oklch(0.98 0.016 73.684);
+  --info: oklch(0.55 0.19 257);
+  --info-foreground: oklch(0.985 0.015 257);
+  --violet: oklch(0.55 0.2 292);
+  --violet-foreground: oklch(0.985 0.02 292);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.608 0.126 221.723);
@@ -80,6 +84,10 @@
   --success-foreground: oklch(0.145 0 0);
   --warning: oklch(0.769 0.188 70.08);
   --warning-foreground: oklch(0.28 0.04 67.5);
+  --info: oklch(0.68 0.18 257);
+  --info-foreground: oklch(0.16 0.02 257);
+  --violet: oklch(0.68 0.19 292);
+  --violet-foreground: oklch(0.16 0.02 292);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.55 0.09 224.283);
@@ -118,6 +126,10 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-violet: var(--violet);
+  --color-violet-foreground: var(--violet-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

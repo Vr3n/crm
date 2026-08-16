@@ -1,9 +1,10 @@
 import { useSession } from '@/context/session-context'
 
 /**
- * Dashboard masthead. The Organization is the large title with the greeting
- * demoted to a small subtitle. The signed-in staff member's identity is already
- * shown in the sidebar chip, so it is not repeated here.
+ * Dashboard masthead. The organization name lives in the sidebar brand slot,
+ * so the page header greets the signed-in staff member instead of repeating
+ * it. The staff identity is also in the sidebar chip, so no identity is shown
+ * twice.
  */
 export function DashboardHeader(): React.JSX.Element {
   const session = useSession()
@@ -18,12 +19,9 @@ export function DashboardHeader(): React.JSX.Element {
 
   return (
     <div>
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">
-        {session.organizationName}
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <h1 className="text-sm text-muted-foreground">
         {greeting}, {firstName}.
-      </p>
+      </h1>
     </div>
   )
 }

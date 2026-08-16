@@ -3,7 +3,9 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
 function soon(title: string): void {
-  toast(title, { description: 'This arrives with the upcoming module — it\u2019s not wired up yet.' })
+  toast(title, {
+    description: 'This arrives with the upcoming module — it\u2019s not wired up yet.'
+  })
 }
 
 /**

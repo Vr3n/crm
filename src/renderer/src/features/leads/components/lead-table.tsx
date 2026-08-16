@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { PhoneCall, Mail } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -15,6 +16,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { SOURCES, STAGES, isTerminal } from '../constants'
 import { computeQuality } from '../data-quality'
 import { displayPhone, timeAgo } from '../format'
@@ -37,9 +39,23 @@ export function LeadTable({
   onStageChange: (lead: Lead, to: StageKey) => void
 }): React.JSX.Element {
   const all = leads
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+
+  const toggleRow = (id: string): void =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const toggleAll = (value: boolean): void =>
+    setSelected(value ? new Set(all.map((l) => l.id)) : new Set())
 
   const nextFollowUp = (lead: Lead): string => {
-    const open = lead.followUps.filter((f) => !f.completedAt).sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0]
+    const open = lead.followUps
+      .filter((f) => !f.completedAt)
+      .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0]
     return open ? timeAgo(open.dueAt) : '—'
   }
   const lastActivity = (lead: Lead): string => {
@@ -52,6 +68,19 @@ export function LeadTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            <TableHead className="w-10">
+              <Checkbox
+                checked={
+                  all.length > 0 && selected.size === all.length
+                    ? true
+                    : selected.size > 0
+                      ? 'indeterminate'
+                      : false
+                }
+                onCheckedChange={(value) => toggleAll(Boolean(value))}
+                aria-label="Select all leads"
+              />
+            </TableHead>
             <TableHead className="w-[22%]">Lead</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Source</TableHead>
@@ -69,14 +98,28 @@ export function LeadTable({
             return (
               <TableRow
                 key={lead.id}
-                className="group cursor-pointer"
+                data-state={selected.has(lead.id) ? 'selected' : undefined}
+                className="group cursor-pointer data-[state=selected]:bg-primary/5"
                 onClick={() => onOpen(lead)}
               >
+                <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selected.has(lead.id)}
+                    onCheckedChange={() => toggleRow(lead.id)}
+                    aria-label={`Select ${lead.name}`}
+                    className="group-hover:border-muted-foreground/60"
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2.5">
                     <Avatar size="sm">
                       <AvatarFallback>
-                        {lead.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                        {lead.name
+                          .split(' ')
+                          .map((p) => p[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
@@ -84,9 +127,7 @@ export function LeadTable({
                         <span className="truncate font-medium">{lead.name}</span>
                         <QualityDot quality={q} />
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {lead.goal || '—'}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{lead.goal || '—'}</span>
                     </div>
                   </div>
                 </TableCell>
@@ -126,7 +167,9 @@ export function LeadTable({
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm text-muted-foreground">{lead.owner?.name || 'Unassigned'}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {lead.owner?.name || 'Unassigned'}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">{nextFollowUp(lead)}</span>

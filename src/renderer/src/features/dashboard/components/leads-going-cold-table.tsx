@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Flame } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { timeAgo } from '@/features/leads/format'
@@ -37,6 +38,7 @@ function lastTouchedAt(lead: Lead): string {
  */
 export function LeadsGoingColdTable(): React.JSX.Element {
   const { data, isLoading } = useLeads()
+
   const rows = useMemo(() => {
     if (!data) return []
     return data
@@ -46,6 +48,19 @@ export function LeadsGoingColdTable(): React.JSX.Element {
       .sort((a, b) => b.since - a.since)
       .slice(0, MAX_ROWS)
   }, [data])
+
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+
+  const toggleRow = (id: string): void =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const toggleAll = (value: boolean): void =>
+    setSelected(value ? new Set(rows.map((r) => r.lead.id)) : new Set())
 
   return (
     <Card>
@@ -72,6 +87,19 @@ export function LeadsGoingColdTable(): React.JSX.Element {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-transparent">
+                <TableHead className={`${HEAD} w-10 pr-3`}>
+                  <Checkbox
+                    checked={
+                      rows.length > 0 && selected.size === rows.length
+                        ? true
+                        : selected.size > 0
+                          ? 'indeterminate'
+                          : false
+                    }
+                    onCheckedChange={(value) => toggleAll(Boolean(value))}
+                    aria-label="Select all leads"
+                  />
+                </TableHead>
                 <TableHead className={HEAD}>Lead</TableHead>
                 <TableHead className={HEAD}>Contact</TableHead>
                 <TableHead className={`${HEAD} text-right`}>Last follow-up / activity</TableHead>
@@ -79,7 +107,19 @@ export function LeadsGoingColdTable(): React.JSX.Element {
             </TableHeader>
             <TableBody>
               {rows.map(({ lead, since }) => (
-                <TableRow key={lead.id}>
+                <TableRow
+                  key={lead.id}
+                  data-state={selected.has(lead.id) ? 'selected' : undefined}
+                  className="group data-[state=selected]:bg-primary/5"
+                >
+                  <TableCell className={`${CELL} w-10 pr-3`}>
+                    <Checkbox
+                      checked={selected.has(lead.id)}
+                      onCheckedChange={() => toggleRow(lead.id)}
+                      aria-label={`Select ${lead.name}`}
+                      className="group-hover:border-muted-foreground/60"
+                    />
+                  </TableCell>
                   <TableCell className={CELL}>
                     <div className="flex flex-col">
                       <span className="font-medium">{lead.name}</span>

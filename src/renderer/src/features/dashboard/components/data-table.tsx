@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Inbox } from 'lucide-react'
+import { Inbox, X } from 'lucide-react'
 import {
   useTable,
   tableFeatures,
@@ -8,13 +8,16 @@ import {
   rowPaginationFeature,
   globalFilteringFeature,
   columnFilteringFeature,
+  rowSelectionFeature,
   createSortedRowModel,
   createPaginatedRowModel,
   createFilteredRowModel,
+  createColumnHelper,
   sortFns,
   filterFns,
   type ColumnDef,
   type RowData,
+  type RowSelectionState,
   type SortingState
 } from '@tanstack/react-table'
 import {
@@ -25,8 +28,10 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
+import { cn } from '@/lib/utils'
 import { SearchInput } from './search-input'
 import { useDebouncedValue } from './use-debounced-value'
 import { DataTablePagination } from './data-table-pagination'
@@ -46,6 +51,7 @@ const tableFeaturesInstance = tableFeatures({
   rowPaginationFeature,
   globalFilteringFeature,
   columnFilteringFeature,
+  rowSelectionFeature,
   sortedRowModel: createSortedRowModel(),
   paginatedRowModel: createPaginatedRowModel(),
   filteredRowModel: createFilteredRowModel(),
@@ -92,9 +98,39 @@ export function DataTable<TData extends RowData>({
 }: DataTableProps<TData>): React.JSX.Element {
   const [search, setSearch] = useState('')
   const globalFilter = useDebouncedValue(search, 300)
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
-  const columnDefs = useMemo(() => columns, [columns])
   const rowsData = useMemo(() => data, [data])
+
+  const columnDefs = useMemo<ColumnDef<DashboardFeatures, TData, unknown>[]>(() => {
+    const helper = createColumnHelper<DashboardFeatures, TData>()
+    const selectColumn = helper.display({
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected()
+              ? true
+              : table.getIsSomePageRowsSelected()
+                ? 'indeterminate'
+                : false
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
+          aria-label="Select all rows on this page"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
+          disabled={!row.getCanSelect()}
+          aria-label="Select row"
+          className="group-hover:border-muted-foreground/60"
+        />
+      )
+    })
+    return [selectColumn, ...columns]
+  }, [columns])
 
   const table = useTable({
     features: tableFeaturesInstance,
@@ -106,10 +142,11 @@ export function DataTable<TData extends RowData>({
       sorting: initialSorting,
       pagination: { pageIndex: 0, pageSize: initialPageSize }
     },
-    state: { globalFilter },
+    state: { globalFilter, rowSelection },
     onGlobalFilterChange: () => {
       // global filter is derived from the debounced search value
-    }
+    },
+    onRowSelectionChange: setRowSelection
   })
 
   if (isLoading) {
@@ -125,11 +162,23 @@ export function DataTable<TData extends RowData>({
   const rows = table.getRowModel().rows
   const total = table.getFilteredRowModel().rows.length
   const { pageIndex, pageSize } = table.state.pagination
+  const selectedCount = table.getSelectedRowIds().length
 
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         {toolbar}
+        {selectedCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => table.resetRowSelection(true)}
+            aria-label={`Clear selection of ${selectedCount} rows`}
+            className="flex h-8 animate-in items-center gap-1.5 rounded-md border border-primary/25 bg-primary/5 px-2.5 text-xs font-medium text-primary fade-in-0 transition-colors hover:bg-primary/10"
+          >
+            <span className="tabular-nums">{selectedCount} selected</span>
+            <X className="size-3" />
+          </button>
+        ) : null}
         <div className="ml-auto min-w-0 flex-1 sm:max-w-56">
           <SearchInput value={search} onChange={setSearch} placeholder={searchPlaceholder} />
         </div>
@@ -140,7 +189,10 @@ export function DataTable<TData extends RowData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className={HEAD}>
+                <TableHead
+                  key={header.id}
+                  className={cn(HEAD, header.id === 'select' && 'w-10 pr-3')}
+                >
                   {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </TableHead>
               ))}
@@ -150,9 +202,16 @@ export function DataTable<TData extends RowData>({
         <TableBody>
           {rows.length ? (
             rows.map((row) => (
-              <TableRow key={row.id} className="cursor-pointer transition-colors">
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() ? 'selected' : undefined}
+                className="group cursor-pointer transition-colors data-[state=selected]:bg-primary/5"
+              >
                 {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id} className={CELL}>
+                  <TableCell
+                    key={cell.id}
+                    className={cn(CELL, cell.column.id === 'select' && 'pr-3')}
+                  >
                     <table.FlexRender cell={cell} />
                   </TableCell>
                 ))}
@@ -160,7 +219,7 @@ export function DataTable<TData extends RowData>({
             ))
           ) : (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={columns.length} className="px-0 py-6">
+              <TableCell colSpan={columnDefs.length} className="px-0 py-6">
                 <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
               </TableCell>
             </TableRow>
