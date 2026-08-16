@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { Wallet } from 'lucide-react'
@@ -11,6 +11,7 @@ import type { PaymentDue } from '../types'
 import { DataTable, type DashboardFeatures } from './data-table'
 import { DateRangePicker, type DateRangePreset } from './date-range-picker'
 import { ContactCell } from './contact-cell'
+import { MemberDetailsSheet } from './member-details-sheet'
 import { NameCell } from './name-cell'
 import { PlanCell } from './plan-cell'
 import { RowActions } from './row-actions'
@@ -19,56 +20,62 @@ import { ExportExcelButton } from './export-excel-button'
 
 const helper = createColumnHelper<DashboardFeatures, PaymentDue>()
 
-const columns = helper.columns([
-  helper.accessor((row) => row.member.name, {
-    id: 'memberName',
-    header: ({ column }) => (
-      <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
-        Client
-      </SortButton>
-    ),
-    cell: ({ row }) => <NameCell name={row.original.member.name} />,
-    sortFn: 'alphanumeric'
-  }),
-  helper.accessor((row) => row.member, {
-    id: 'contact',
-    header: () => 'Contact',
-    enableSorting: false,
-    cell: ({ row }) => (
-      <ContactCell phone={row.original.member.phone} email={row.original.member.email} />
-    )
-  }),
-  helper.accessor('amountDue', {
-    header: ({ column }) => (
-      <SortButton
-        sorted={column.getIsSorted()}
-        onClick={() => column.toggleSorting()}
-        className="w-full justify-end"
-      >
-        Amount due
-      </SortButton>
-    ),
-    cell: ({ row }) => <AmountCell amountDue={row.original.amountDue} total={row.original.total} />,
-    sortFn: 'basic'
-  }),
-  helper.accessor((row) => row, {
-    id: 'plan',
-    header: () => <span className="block w-full text-right">Plan</span>,
-    enableSorting: false,
-    cell: ({ row }) => (
-      <PlanCell
-        className="items-end"
-        plan={row.original.plan}
-        purchasedAt={row.original.purchasedAt}
-      />
-    )
-  }),
-  helper.display({
-    id: 'actions',
-    header: () => null,
-    cell: ({ row }) => <RowActions memberName={row.original.member.name} />
-  })
-])
+function buildColumns(onView: (row: PaymentDue) => void): ReturnType<typeof helper.columns> {
+  return helper.columns([
+    helper.accessor((row) => row.member.name, {
+      id: 'memberName',
+      header: ({ column }) => (
+        <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
+          Client
+        </SortButton>
+      ),
+      cell: ({ row }) => <NameCell name={row.original.member.name} />,
+      sortFn: 'alphanumeric'
+    }),
+    helper.accessor((row) => row.member, {
+      id: 'contact',
+      header: () => 'Contact',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <ContactCell phone={row.original.member.phone} email={row.original.member.email} />
+      )
+    }),
+    helper.accessor('amountDue', {
+      header: ({ column }) => (
+        <SortButton
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting()}
+          className="w-full justify-end"
+        >
+          Amount due
+        </SortButton>
+      ),
+      cell: ({ row }) => (
+        <AmountCell amountDue={row.original.amountDue} total={row.original.total} />
+      ),
+      sortFn: 'basic'
+    }),
+    helper.accessor((row) => row, {
+      id: 'plan',
+      header: () => <span className="block w-full text-right">Plan</span>,
+      enableSorting: false,
+      cell: ({ row }) => (
+        <PlanCell
+          className="items-end"
+          plan={row.original.plan}
+          purchasedAt={row.original.purchasedAt}
+        />
+      )
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => null,
+      cell: ({ row }) => (
+        <RowActions memberName={row.original.member.name} onView={() => onView(row.original)} />
+      )
+    })
+  ])
+}
 
 /** Money cell, right-aligned, success tone, with the total as muted context. */
 function AmountCell({ amountDue, total }: { amountDue: number; total: number }): React.JSX.Element {
@@ -90,6 +97,14 @@ function AmountCell({ amountDue, total }: { amountDue: number; total: number }):
 export function PaymentsDueTable(): React.JSX.Element {
   const { data, isLoading } = usePaymentsDue()
   const [range, setRange] = useState<DateRange>()
+  const [row, setRow] = useState<PaymentDue | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const handleView = useCallback((selected: PaymentDue) => {
+    setRow(selected)
+    setOpen(true)
+  }, [])
+  const columns = useMemo(() => buildColumns(handleView), [handleView])
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()
@@ -113,41 +128,44 @@ export function PaymentsDueTable(): React.JSX.Element {
   }, [data, range])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-success/10 text-success">
-            <Wallet className="size-5" />
-          </span>
-          <span className="font-heading text-lg">Payments due</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <DataTable
-          columns={columns}
-          data={filtered}
-          getRowId={(row) => row.id}
-          isLoading={isLoading}
-          initialSorting={[{ id: 'amountDue', desc: true }]}
-          initialPageSize={6}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          toolbar={
-            <>
-              <DateRangePicker
-                presets={presets}
-                value={range}
-                onValueChange={setRange}
-                placeholder="Filter by purchase"
-              />
-              <ExportExcelButton />
-            </>
-          }
-          searchPlaceholder="Search members…"
-          emptyIcon={Wallet}
-          emptyTitle="Nothing outstanding"
-          emptyDescription="Members with unpaid dues in this range will appear here."
-        />
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-md bg-success/10 text-success">
+              <Wallet className="size-5" />
+            </span>
+            <span className="font-heading text-lg">Payments due</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            getRowId={(row) => row.id}
+            isLoading={isLoading}
+            initialSorting={[{ id: 'amountDue', desc: true }]}
+            initialPageSize={6}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            toolbar={
+              <>
+                <DateRangePicker
+                  presets={presets}
+                  value={range}
+                  onValueChange={setRange}
+                  placeholder="Filter by purchase"
+                />
+                <ExportExcelButton />
+              </>
+            }
+            searchPlaceholder="Search members…"
+            emptyIcon={Wallet}
+            emptyTitle="Nothing outstanding"
+            emptyDescription="Members with unpaid dues in this range will appear here."
+          />
+        </CardContent>
+      </Card>
+      <MemberDetailsSheet row={row} open={open} onOpenChange={setOpen} />
+    </>
   )
 }

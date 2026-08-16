@@ -1,4 +1,5 @@
-import type { MembershipExpiration, PaymentDue } from './types'
+import { buildMemberRecord, buildPaymentRecord } from './member-record'
+import type { MemberRecord, MembershipExpiration, PaymentDue } from './types'
 
 /**
  * In-memory read-model store for the dashboard.
@@ -28,6 +29,16 @@ class DashboardStore {
 
   listPaymentsDue(): PaymentDue[] {
     return [...this.paymentsDue].sort((a, b) => b.amountDue - a.amountDue)
+  }
+
+  memberRecord(expirationId: string): MemberRecord | undefined {
+    const found = this.expirations.find((e) => e.id === expirationId)
+    return found ? buildMemberRecord(found) : undefined
+  }
+
+  paymentRecord(paymentId: string): MemberRecord | undefined {
+    const found = this.paymentsDue.find((p) => p.id === paymentId)
+    return found ? buildPaymentRecord(found) : undefined
   }
 }
 

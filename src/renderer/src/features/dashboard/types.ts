@@ -38,3 +38,43 @@ export interface PaymentDue {
   amountDue: number
   total: number
 }
+
+/** Settlement state of a membership invoice. */
+export type InvoiceStatus = 'PAID' | 'OVERDUE'
+
+/** A single billing record within a membership term. */
+export interface MembershipInvoice {
+  id: string
+  invoiceNo: string
+  label: string
+  periodStart: string
+  periodEnd: string
+  amount: number
+  status: InvoiceStatus
+  paidAt?: string
+}
+
+/** Sales snapshot of a member — the lead they converted from (Module 01 → 02 link). */
+export interface MemberLeadContext {
+  source: string
+  owner: string
+  planInterest: string
+  goal: string
+  joinedAt: string
+}
+
+/** Membership context shown in the record drawer. */
+export interface MembershipDetails {
+  plan: string
+  purchasedAt: string
+  expiresAt: string
+  amountDue?: number
+  total?: number
+}
+
+/** Read model for the member record drawer (Membership → Lead → Invoices). */
+export interface MemberRecord {
+  membership: MembershipDetails
+  lead?: MemberLeadContext
+  invoices: MembershipInvoice[]
+}

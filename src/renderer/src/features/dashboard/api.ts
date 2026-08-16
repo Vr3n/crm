@@ -1,6 +1,6 @@
 import { DashboardStore } from './store'
 import { SEED_EXPIRATIONS, SEED_PAYMENTS_DUE } from './mock-data'
-import type { MembershipExpiration, PaymentDue } from './types'
+import type { MemberRecord, MembershipExpiration, PaymentDue } from './types'
 
 /**
  * Async facade over the in-memory dashboard store.
@@ -24,5 +24,13 @@ export const api = {
   async paymentsDue(): Promise<PaymentDue[]> {
     await delay()
     return store.listPaymentsDue()
+  },
+  async memberRecord(id: string): Promise<MemberRecord | undefined> {
+    await delay()
+    return store.memberRecord(id)
+  },
+  async paymentRecord(id: string): Promise<MemberRecord | undefined> {
+    await delay()
+    return store.paymentRecord(id)
   }
 }

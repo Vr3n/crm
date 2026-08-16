@@ -6,11 +6,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 /**
  * Row actions: icon-only View-details (Eye) + Follow-up (Bell), each a slightly
  * larger outlined button tinted with a brand accent so the actions are easy to
- * tell apart at a glance — cyan for viewing, pink for following up. Members live
- * in Module 02 which isn't built yet, so both give an honest toast pointing to
- * the upcoming module rather than faking a working flow.
+ * tell apart at a glance — cyan for viewing, pink for following up. When
+ * `onView` is given (expirations table) it opens the member record drawer;
+ * otherwise both give an honest toast pointing to the upcoming module.
  */
-export function RowActions({ memberName }: { memberName: string }): React.JSX.Element {
+export function RowActions({
+  memberName,
+  onView
+}: {
+  memberName: string
+  onView?: () => void
+}): React.JSX.Element {
   return (
     <div className="flex items-center justify-end gap-2">
       <Tooltip>
@@ -21,9 +27,11 @@ export function RowActions({ memberName }: { memberName: string }): React.JSX.El
             className="text-primary hover:bg-primary/10 hover:text-primary"
             aria-label={`View ${memberName} details`}
             onClick={() =>
-              toast('Member details', {
-                description: 'The Members module (Module 02) will open the full member record.'
-              })
+              onView
+                ? onView()
+                : toast('Member details', {
+                    description: 'The Members module (Module 02) will open the full member record.'
+                  })
             }
           >
             <Eye className="size-4" />

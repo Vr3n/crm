@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { addDays, endOfDay, startOfDay } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { CalendarClock } from 'lucide-react'
@@ -13,6 +13,7 @@ import type { MembershipExpiration } from '../types'
 import { DataTable, type DashboardFeatures } from './data-table'
 import { DateRangePicker, type DateRangePreset } from './date-range-picker'
 import { ContactCell } from './contact-cell'
+import { MemberDetailsSheet } from './member-details-sheet'
 import { NameCell } from './name-cell'
 import { PlanCell } from './plan-cell'
 import { RowActions } from './row-actions'
@@ -21,46 +22,54 @@ import { ExportExcelButton } from './export-excel-button'
 
 const helper = createColumnHelper<DashboardFeatures, MembershipExpiration>()
 
-const columns = helper.columns([
-  helper.accessor((row) => row.member.name, {
-    id: 'memberName',
-    header: ({ column }) => (
-      <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
-        Client
-      </SortButton>
-    ),
-    cell: ({ row }) => <NameCell name={row.original.member.name} />,
-    sortFn: 'alphanumeric'
-  }),
-  helper.accessor((row) => row.member, {
-    id: 'contact',
-    header: () => 'Contact',
-    enableSorting: false,
-    cell: ({ row }) => (
-      <ContactCell phone={row.original.member.phone} email={row.original.member.email} />
-    )
-  }),
-  helper.accessor('expiresAt', {
-    header: ({ column }) => (
-      <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
-        Expiration
-      </SortButton>
-    ),
-    cell: ({ row }) => <ExpiryCell expiresAt={row.original.expiresAt} />,
-    sortFn: 'datetime'
-  }),
-  helper.accessor((row) => row, {
-    id: 'plan',
-    header: () => 'Plan',
-    enableSorting: false,
-    cell: ({ row }) => <PlanCell plan={row.original.plan} purchasedAt={row.original.purchasedAt} />
-  }),
-  helper.display({
-    id: 'actions',
-    header: () => null,
-    cell: ({ row }) => <RowActions memberName={row.original.member.name} />
-  })
-])
+function buildColumns(
+  onView: (row: MembershipExpiration) => void
+): ReturnType<typeof helper.columns> {
+  return helper.columns([
+    helper.accessor((row) => row.member.name, {
+      id: 'memberName',
+      header: ({ column }) => (
+        <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
+          Client
+        </SortButton>
+      ),
+      cell: ({ row }) => <NameCell name={row.original.member.name} />,
+      sortFn: 'alphanumeric'
+    }),
+    helper.accessor((row) => row.member, {
+      id: 'contact',
+      header: () => 'Contact',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <ContactCell phone={row.original.member.phone} email={row.original.member.email} />
+      )
+    }),
+    helper.accessor('expiresAt', {
+      header: ({ column }) => (
+        <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
+          Expiration
+        </SortButton>
+      ),
+      cell: ({ row }) => <ExpiryCell expiresAt={row.original.expiresAt} />,
+      sortFn: 'datetime'
+    }),
+    helper.accessor((row) => row, {
+      id: 'plan',
+      header: () => 'Plan',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <PlanCell plan={row.original.plan} purchasedAt={row.original.purchasedAt} />
+      )
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => null,
+      cell: ({ row }) => (
+        <RowActions memberName={row.original.member.name} onView={() => onView(row.original)} />
+      )
+    })
+  ])
+}
 
 /** Blocky (0-radius) urgency chip with a simple date line below. */
 function ExpiryCell({ expiresAt }: { expiresAt: string }): React.JSX.Element {
@@ -90,6 +99,14 @@ function ExpiryCell({ expiresAt }: { expiresAt: string }): React.JSX.Element {
 export function MembershipExpirationsTable(): React.JSX.Element {
   const { data, isLoading } = useUpcomingExpirations()
   const [range, setRange] = useState<DateRange>()
+  const [member, setMember] = useState<MembershipExpiration | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const handleView = useCallback((row: MembershipExpiration) => {
+    setMember(row)
+    setOpen(true)
+  }, [])
+  const columns = useMemo(() => buildColumns(handleView), [handleView])
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()
@@ -113,41 +130,44 @@ export function MembershipExpirationsTable(): React.JSX.Element {
   }, [data, range])
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <CalendarClock className="size-5" />
-          </span>
-          <span className="font-heading text-lg">Membership expirations</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <DataTable
-          columns={columns}
-          data={filtered}
-          getRowId={(row) => row.id}
-          isLoading={isLoading}
-          initialSorting={[{ id: 'expiresAt', desc: false }]}
-          initialPageSize={6}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          toolbar={
-            <>
-              <DateRangePicker
-                presets={presets}
-                value={range}
-                onValueChange={setRange}
-                placeholder="Filter by expiry"
-              />
-              <ExportExcelButton />
-            </>
-          }
-          searchPlaceholder="Search members…"
-          emptyIcon={CalendarClock}
-          emptyTitle="No expirations due"
-          emptyDescription="Memberships renewing in this range will appear here."
-        />
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <CalendarClock className="size-5" />
+            </span>
+            <span className="font-heading text-lg">Membership expirations</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            getRowId={(row) => row.id}
+            isLoading={isLoading}
+            initialSorting={[{ id: 'expiresAt', desc: false }]}
+            initialPageSize={6}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            toolbar={
+              <>
+                <DateRangePicker
+                  presets={presets}
+                  value={range}
+                  onValueChange={setRange}
+                  placeholder="Filter by expiry"
+                />
+                <ExportExcelButton />
+              </>
+            }
+            searchPlaceholder="Search members…"
+            emptyIcon={CalendarClock}
+            emptyTitle="No expirations due"
+            emptyDescription="Memberships renewing in this range will appear here."
+          />
+        </CardContent>
+      </Card>
+      <MemberDetailsSheet row={member} open={open} onOpenChange={setOpen} />
+    </>
   )
 }
