@@ -46,7 +46,10 @@ export function LeadsPage(): React.JSX.Element {
   const [newOpen, setNewOpen] = useState(false)
   const [action, setAction] = useState<Action>(null)
 
-  const filtered = useMemo(() => (data ? sortLeads(filterLeads(data, filters)) : []), [data, filters])
+  const filtered = useMemo(
+    () => (data ? sortLeads(filterLeads(data, filters)) : []),
+    [data, filters]
+  )
 
   function openLead(lead: Lead): void {
     navigate(`/leads/${lead.id}`)
@@ -60,7 +63,7 @@ export function LeadsPage(): React.JSX.Element {
   }
 
   return (
-    <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-6 p-6">
       <PageHeader
         title="Leads"
         description={`${session.organizationName} · sales pipeline`}
@@ -71,6 +74,8 @@ export function LeadsPage(): React.JSX.Element {
           </Button>
         }
       />
+
+      <LeadMetrics leads={filtered} />
 
       <Filters filters={filters} onChange={setFilters} />
 
@@ -90,8 +95,6 @@ export function LeadsPage(): React.JSX.Element {
           </TabsList>
         </Tabs>
       </div>
-
-      <LeadMetrics leads={filtered} />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
