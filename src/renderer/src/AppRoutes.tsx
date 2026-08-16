@@ -1,8 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Search, Kanban, BellRing, PhoneCall, Users, CreditCard, Package, BadgePercent, Receipt, Landmark, Wallet, Undo2, BarChart3, UserCog, Building2 } from 'lucide-react'
+import { Search, BellRing, PhoneCall, Users, CreditCard, Package, BadgePercent, Receipt, Landmark, Wallet, Undo2, BarChart3, UserCog, Building2 } from 'lucide-react'
 import { AppLayout } from '@/layouts/AppLayout'
-import { Dashboard } from '@/pages/dashboard'
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { ModulePlaceholder } from '@/pages/module-placeholder'
+import { LeadsPage } from '@/features/leads/pages/LeadsPage'
+import { LeadDetailPage } from '@/features/leads/pages/LeadDetailPage'
 import { can, useSession } from '@/context/session-context'
 
 /** Route guard mirroring the nav gate: super OR the permission code. */
@@ -26,13 +28,6 @@ const MODULES: {
     description: 'Search customers and leads by name, phone, email, membership ID or invoice number.',
     scope: 'Module 09 · Customer 360',
     icon: Search
-  },
-  {
-    path: 'leads',
-    title: 'Sales pipeline',
-    description: 'Manage leads across their stages and log the activities that move them forward.',
-    scope: 'Module 01 · Sales',
-    icon: Kanban
   },
   {
     path: 'followups',
@@ -133,7 +128,9 @@ export function AppRoutes(): React.JSX.Element {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<Dashboard />} />
+        <Route index element={<DashboardPage />} />
+        <Route path="leads" element={<LeadsPage />} />
+        <Route path="leads/:id" element={<LeadDetailPage />} />
         {MODULES.map((m) => {
           const element = (
             <ModulePlaceholder title={m.title} description={m.description} scope={m.scope} icon={m.icon} />

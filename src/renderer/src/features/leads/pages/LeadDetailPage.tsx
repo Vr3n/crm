@@ -1,0 +1,113 @@
+import { useMemo, useState } from 'react'
+import { useNavigate, useParams, Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/empty-state'
+import { useLead } from '../queries'
+import { computeQuality } from '../data-quality'
+import { IdentityCard } from '../components/detail/identity-card'
+import { NextActionCard } from '../components/detail/next-action-card'
+import { StageHistory } from '../components/detail/stage-history'
+import { FollowUpPanel } from '../components/detail/follow-up-panel'
+import { Timeline } from '../components/detail/timeline'
+import { QuickActions, type QuickActionType } from '../components/detail/quick-actions'
+import { MoveStageDialog } from '../components/move-stage-dialog'
+import { MarkLostDialog } from '../components/mark-lost-dialog'
+import { ConvertDialog } from '../components/convert-dialog'
+import { LogActivityDialog } from '../components/log-activity-dialog'
+import { FollowUpDialog } from '../components/follow-up-dialog'
+
+/**
+ * Lead detail (bento layout, Module 01 §24). Identity + actions up top, then a
+ * bento of Next action / Stage history / Follow-ups, with the full Timeline as
+ * the anchor of the page. Every verb routes through its strict dialog.
+ */
+export function LeadDetailPage(): React.JSX.Element {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { data: lead, isLoading } = useLead(id)
+  const [action, setAction] = useState<QuickActionType | null>(null)
+
+  const quality = useMemo(() => (lead ? computeQuality(lead) : null), [lead])
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-[1400px] p-6">
+        <Skeleton className="mb-4 h-8 w-40" />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Skeleton className="h-56 xl:col-span-2" />
+          <Skeleton className="h-56" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-72 xl:col-span-3" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!lead) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <EmptyState
+          icon={ArrowLeft}
+          title="Lead not found"
+          description="This lead may have been removed."
+          action={
+            <Button onClick={() => navigate('/leads')}>
+              <ArrowLeft />
+              Back to leads
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">
+      <div className="flex items-center gap-2">
+        <Link to="/leads">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft />
+            Pipeline
+          </Button>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <IdentityCard lead={lead} quality={quality!} />
+        </div>
+        <QuickActions lead={lead} onAction={setAction} />
+
+        <NextActionCard lead={lead} />
+        <div className="xl:col-span-2">
+          <FollowUpPanel lead={lead} />
+        </div>
+        <StageHistory lead={lead} />
+
+        <div className="xl:col-span-3">
+          <Timeline lead={lead} />
+        </div>
+      </div>
+
+      {action === 'move' && (
+        <MoveStageDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
+      )}
+      {action === 'lost' && (
+        <MarkLostDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
+      )}
+      {action === 'convert' && (
+        <ConvertDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
+      )}
+      {action === 'activity' && (
+        <LogActivityDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
+      )}
+      {action === 'followup' && (
+        <FollowUpDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
+      )}
+    </div>
+  )
+}

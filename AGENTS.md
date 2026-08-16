@@ -4,3 +4,6 @@ This is a electron.js application for Windows Computers. The stack is React, Sha
 Database we will use is `node:sqlite` package.
 
 You should thoroughly plan everything.
+
+1. For UI/UX related queries its always mandatory to use the skills `design-taste-frontend`, `high-end-visual-design`.
+2. Implementing the React code it is mandatory to use the `react-patterns` skill with `tanstack` skills.

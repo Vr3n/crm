@@ -2,8 +2,8 @@
 
 This document describes the application shell and design system shipped on top of the
 identity/RBAC layer (Modules 14/15). It is written for a senior engineer reviewing the
-renderer, mirroring the tone of the other `implementation-details` docs: *what* was built,
-*why*, the trade-offs accepted, and the known gaps.
+renderer, mirroring the tone of the other `implementation-details` docs: _what_ was built,
+_why_, the trade-offs accepted, and the known gaps.
 
 ## Scope
 
@@ -32,7 +32,7 @@ values, so a theme is a token swap.
   is the vivid pink `oklch(0.525 0.223 3.958)` light / `oklch(0.459 0.187 3.815)` dark
   (hue ≈ 4) for the secondary button variant. `--accent` is a **light pink tint**
   (`oklch(0.955 0.02 3.958)` light / `oklch(0.27 0.02 3.958)` dark) used for subtle hover
-  fills on nav/ghost/dropdown items — the vivid pink is deliberately *not* used as a hover
+  fills on nav/ghost/dropdown items — the vivid pink is deliberately _not_ used as a hover
   background, which read as harsh. Charts use a cyan ramp (`--chart-1..5`).
 - **Radius — blocky.** All radius tokens (`--radius`, `--radius-sm/md/lg/xl/2xl/3xl/4xl`)
   are `0`, so every `rounded-*` utility renders square. `rounded-full` (avatars, pills, the
@@ -42,6 +42,37 @@ values, so a theme is a token swap.
   `font-variant-numeric: tabular-nums` so digits align.
 - **Semantic tokens.** `--success` / `--warning` / `--destructive` for status badges and
   toast tints (see the `success`/`warning`/`destructive` variants added to `ui/badge.tsx`).
+
+## Spacing & density (the spacing design language)
+
+Spacing is standardized on a **4px base unit**. Structural spacing (padding, margins,
+gaps between blocks, card insets, page gutters) must be multiples of 4; Tailwind's `1`–`6`
+steps are the working scale. This matches both the shadcn design language (whose Card
+component ships a `--card-spacing` token in 4px steps) and the guidance of data-dense
+design systems (Cloudscape, Maersk).
+
+| Token | Tailwind                 | Usage                                                          |
+| ----- | ------------------------ | -------------------------------------------------------------- |
+| 4px   | `gap-1` / `p-1` / `mt-1` | Tight hierarchy gaps, small captions                           |
+| 8px   | `gap-2` / `py-2` / `p-2` | Inline groups, table row/header vertical padding, toolbar gaps |
+| 12px  | `gap-3` / `px-3`         | Compact card inset (`size="sm"`), control inner padding        |
+| 16px  | `gap-4` / `px-4`         | Default card inset (`--card-spacing`), table↔toolbar gap       |
+| 24px  | `gap-6` / `p-6`          | Page gutters, section rhythm                                   |
+| 32px+ | `gap-8` / `p-8`          | Major layout breaks                                            |
+
+**Card spacing** is owned by the `--card-spacing` variable on `ui/card.tsx`: `default` =
+16px, `size="sm"` = 12px. Cards set their inset once on the root; header/content/footer
+read the same variable, so a card's spacing never drifts from its neighbours.
+
+**Allowed micro exceptions** — 2px (`gap-0.5`) for stacked cell sub-lines and icon-button
+clusters; 6px (`gap-1.5`) for icon↔text inside a single control. These are the only
+non-multiple-of-4 values permitted. **`2.5` steps (10px) are banned** in spacing (they are
+fine as icon _sizes_, e.g. `size-3.5`).
+
+**Table density** — rows are 36px (cell `py-2` + 20px text line), headers 40px (`h-10`).
+This sits in the "standard" density band (36–40px) recommended for daily-use operational
+dashboards; it is deliberately not the comfortable 48–52px band reserved for occasional
+glance cards.
 
 ## Layout architecture (`src/renderer/src/layouts/AppLayout.tsx`)
 
@@ -127,8 +158,9 @@ no `useState<session>`. The global query cache is the single source of truth:
 ## Placeholder & shared primitives
 
 - **`pages/module-placeholder.tsx`** — generic roadmap landing for every module route.
-- **`pages/dashboard.tsx`** — operational home: greeting, KPI row (five `StatCard`s), and
-  Follow-ups / Recent payments / Today's collection cards.
+- **`features/dashboard/`** — the operational dashboard (see `dashboard.md`): masthead,
+  quick actions, and expirations / dues / cold-leads tables. It replaces the old
+  `pages/dashboard.tsx`, which was deleted.
 - **`components/page-header.tsx`**, **`components/stat-card.tsx`**,
   **`components/empty-state.tsx`** — shared presentational primitives.
 
@@ -161,8 +193,10 @@ npm run dev                # launch the app, exercise collapse/palette/theme/rou
 
 ## Known gaps
 
-- **No real dashboard data.** KPIs and lists are placeholders; they light up when modules
-  02–13 wire real queries through the layered + `requirePermission` pattern.
+- **Member-facing dashboard rows are mock.** The dashboard's Membership Expirations and
+  Payments Due tables seed from `features/dashboard/mock-data` (Modules 02–05 not built yet);
+  they light up for real when those modules wire real queries through the layered +
+  `requirePermission` pattern. Leads Turning Cold is live from the leads store.
 - **Search is a stub.** `⌘K` navigates nav destinations; people/search results are not
   implemented.
 - **`ui/**` ESLint ignore** trades lint coverage for a clean gate; the vendored components
