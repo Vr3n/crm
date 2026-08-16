@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { initials } from '@/lib/validation'
 import { can, useSession } from '@/context/session-context'
 import { visibleGroups, type NavItem } from '@/lib/navigation'
+import { useOverdueFollowUpCount } from '@/features/followups/queries'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const SIDEBAR_KEY = 'crowncrm:sidebar-collapsed'
@@ -157,12 +158,17 @@ function SidebarItem({
 }
 
 /**
- * Operational count badge slot. Returns null until a real data source exists —
- * the shell deliberately avoids fake-precise numbers (no invented "5 overdue").
- * `kind` lets this become a subscribed query (e.g. overdue follow-ups count)
- * without changing the item config.
+ * Operational count badge. Renders only when a real data source exists — the
+ * shell deliberately avoids fake-precise numbers (no invented "5 overdue").
+ * `kind` selects the subscribed query; count 0 hides the badge.
  */
 function NavBadge({ kind }: { kind: NonNullable<NavItem['badge']> }): React.JSX.Element | null {
-  void kind
-  return null
+  const overdue = useOverdueFollowUpCount()
+  const count = kind === 'overdue-followups' ? overdue : 0
+  if (count <= 0) return null
+  return (
+    <span className="ml-auto shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive tabular-nums">
+      {count}
+    </span>
+  )
 }

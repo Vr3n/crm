@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,8 +26,13 @@ import { FollowUpDialog } from '../components/follow-up-dialog'
 export function LeadDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: lead, isLoading } = useLead(id)
   const [action, setAction] = useState<QuickActionType | null>(null)
+
+  const from = (location.state as { from?: string } | null)?.from ?? '/leads'
+  const backLabel =
+    from === '/followups' ? 'Follow-ups' : from === '/activities' ? 'Activities' : 'Pipeline'
 
   const quality = useMemo(() => (lead ? computeQuality(lead) : null), [lead])
 
@@ -55,9 +60,9 @@ export function LeadDetailPage(): React.JSX.Element {
           title="Lead not found"
           description="This lead may have been removed."
           action={
-            <Button onClick={() => navigate('/leads')}>
+            <Button onClick={() => navigate(from)}>
               <ArrowLeft />
-              Back to leads
+              Back to {backLabel.toLowerCase()}
             </Button>
           }
         />
@@ -68,10 +73,10 @@ export function LeadDetailPage(): React.JSX.Element {
   return (
     <div className="flex w-full flex-col gap-6 p-6">
       <div className="flex items-center gap-2">
-        <Link to="/leads">
+        <Link to={from}>
           <Button variant="ghost" size="sm">
             <ArrowLeft />
-            Pipeline
+            {backLabel}
           </Button>
         </Link>
       </div>

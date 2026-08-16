@@ -1,5 +1,13 @@
-import { Phone, Mail, UserRound, CalendarDays, Tag, Target, FileText, AlertTriangle } from 'lucide-react'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Phone,
+  Mail,
+  UserRound,
+  CalendarDays,
+  Tag,
+  Target,
+  FileText,
+  AlertTriangle
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { SOURCES, LOST_REASONS } from '../../constants'
@@ -29,27 +37,26 @@ function Row({
   )
 }
 
-export function IdentityCard({ lead, quality }: { lead: Lead; quality: LeadQuality }): React.JSX.Element {
+export function IdentityCard({
+  lead,
+  quality
+}: {
+  lead: Lead
+  quality: LeadQuality
+}): React.JSX.Element {
   const tier = qualityTier(quality)
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Avatar size="lg">
-              <AvatarFallback>
-                {lead.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="font-heading text-xl font-semibold tracking-tight">{lead.name}</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <StageBadge stage={lead.stage} />
-                <Badge variant="outline">{SOURCES[lead.source]}</Badge>
-                {lead.lostReason ? (
-                  <Badge variant="destructive">{LOST_REASONS[lead.lostReason]}</Badge>
-                ) : null}
-              </div>
+          <div>
+            <h2 className="font-heading text-xl font-semibold tracking-tight">{lead.name}</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <StageBadge stage={lead.stage} />
+              <Badge variant="outline">{SOURCES[lead.source]}</Badge>
+              {lead.lostReason ? (
+                <Badge variant="destructive">{LOST_REASONS[lead.lostReason]}</Badge>
+              ) : null}
             </div>
           </div>
           {tier !== 'clean' ? (

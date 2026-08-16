@@ -1,14 +1,35 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { Search, BellRing, PhoneCall, Users, CreditCard, Package, BadgePercent, Receipt, Landmark, Wallet, Undo2, BarChart3, UserCog, Building2 } from 'lucide-react'
+import {
+  Search,
+  Users,
+  CreditCard,
+  Package,
+  BadgePercent,
+  Receipt,
+  Landmark,
+  Wallet,
+  Undo2,
+  BarChart3,
+  UserCog,
+  Building2
+} from 'lucide-react'
 import { AppLayout } from '@/layouts/AppLayout'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { ModulePlaceholder } from '@/pages/module-placeholder'
 import { LeadsPage } from '@/features/leads/pages/LeadsPage'
 import { LeadDetailPage } from '@/features/leads/pages/LeadDetailPage'
+import { FollowUpsPage } from '@/features/followups/pages/FollowUpsPage'
+import { ActivitiesPage } from '@/features/activities/pages/ActivitiesPage'
 import { can, useSession } from '@/context/session-context'
 
 /** Route guard mirroring the nav gate: super OR the permission code. */
-function Protected({ code, children }: { code: string; children: React.ReactNode }): React.JSX.Element {
+function Protected({
+  code,
+  children
+}: {
+  code: string
+  children: React.ReactNode
+}): React.JSX.Element {
   const session = useSession()
   if (!can(session.permissions, session.isSuper, code)) return <Navigate to="/" replace />
   return <>{children}</>
@@ -25,23 +46,10 @@ const MODULES: {
   {
     path: 'search',
     title: 'Find a person',
-    description: 'Search customers and leads by name, phone, email, membership ID or invoice number.',
+    description:
+      'Search customers and leads by name, phone, email, membership ID or invoice number.',
     scope: 'Module 09 · Customer 360',
     icon: Search
-  },
-  {
-    path: 'followups',
-    title: 'Follow-ups',
-    description: 'See today\u2019s and overdue follow-ups, and complete the ones you\u2019ve handled.',
-    scope: 'Module 01 · Sales',
-    icon: BellRing
-  },
-  {
-    path: 'activities',
-    title: 'Activities',
-    description: 'A chronological history of every call, visit, tour and discussion with each person.',
-    scope: 'Module 01 · Sales',
-    icon: PhoneCall
   },
   {
     path: 'customers',
@@ -53,7 +61,8 @@ const MODULES: {
   {
     path: 'memberships',
     title: 'Memberships',
-    description: 'Every purchased entitlement period, including renewals, freezes and cancellations.',
+    description:
+      'Every purchased entitlement period, including renewals, freezes and cancellations.',
     scope: 'Module 02 · People',
     icon: CreditCard
   },
@@ -88,7 +97,8 @@ const MODULES: {
   {
     path: 'payments',
     title: 'Payments',
-    description: 'Money received, allocated across invoices, with refunds and credits kept separate.',
+    description:
+      'Money received, allocated across invoices, with refunds and credits kept separate.',
     scope: 'Module 05 · Finance',
     icon: Wallet
   },
@@ -131,9 +141,16 @@ export function AppRoutes(): React.JSX.Element {
         <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
         <Route path="leads/:id" element={<LeadDetailPage />} />
+        <Route path="followups" element={<FollowUpsPage />} />
+        <Route path="activities" element={<ActivitiesPage />} />
         {MODULES.map((m) => {
           const element = (
-            <ModulePlaceholder title={m.title} description={m.description} scope={m.scope} icon={m.icon} />
+            <ModulePlaceholder
+              title={m.title}
+              description={m.description}
+              scope={m.scope}
+              icon={m.icon}
+            />
           )
           return (
             <Route

@@ -52,7 +52,7 @@ export function LeadsPage(): React.JSX.Element {
   )
 
   function openLead(lead: Lead): void {
-    navigate(`/leads/${lead.id}`)
+    navigate(`/leads/${lead.id}`, { state: { from: '/leads' } })
   }
 
   /** Strict routing: WON/LOST go to their reason-requiring dialogs. */

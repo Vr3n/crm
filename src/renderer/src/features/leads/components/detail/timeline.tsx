@@ -1,59 +1,10 @@
-import {
-  ArrowRight,
-  BellRing,
-  CheckCircle2,
-  Dumbbell,
-  FileText,
-  History,
-  MapPin,
-  MessageCircle,
-  PhoneCall,
-  Tag,
-  Users,
-  XCircle
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { FileText, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ACTIVITY_ICONS, ACTIVITY_TONE } from '../../activity-visuals'
 import { ACTIVITY_LABELS } from '../../constants'
 import { formatDateTime, timeAgo } from '../../format'
-import type { ActivityTypeKey, Lead } from '../../types'
-
-const ICONS: Partial<Record<ActivityTypeKey, LucideIcon>> = {
-  LEAD_CREATED: Users,
-  PHONE_CALL: PhoneCall,
-  WALK_IN: MapPin,
-  WHATSAPP: MessageCircle,
-  GYM_TOUR: Dumbbell,
-  TRIAL: Dumbbell,
-  NO_SHOW: XCircle,
-  PRICE_DISCUSSION: Tag,
-  MEMBERSHIP_PROPOSAL: Tag,
-  STAGE_CHANGE: ArrowRight,
-  FOLLOW_UP_CREATED: BellRing,
-  FOLLOW_UP_DONE: CheckCircle2,
-  NOTE: FileText,
-  LOST: XCircle,
-  WON: CheckCircle2
-}
-
-const TONE: Record<ActivityTypeKey, string> = {
-  LEAD_CREATED: 'bg-muted text-muted-foreground',
-  PHONE_CALL: 'bg-primary/10 text-primary',
-  WALK_IN: 'bg-muted text-muted-foreground',
-  WHATSAPP: 'bg-primary/10 text-primary',
-  GYM_TOUR: 'bg-primary/10 text-primary',
-  TRIAL: 'bg-success/15 text-success',
-  NO_SHOW: 'bg-warning/15 text-warning',
-  PRICE_DISCUSSION: 'bg-muted text-muted-foreground',
-  MEMBERSHIP_PROPOSAL: 'bg-primary/10 text-primary',
-  STAGE_CHANGE: 'bg-muted text-muted-foreground',
-  FOLLOW_UP_CREATED: 'bg-muted text-muted-foreground',
-  FOLLOW_UP_DONE: 'bg-success/15 text-success',
-  NOTE: 'bg-muted text-muted-foreground',
-  LOST: 'bg-destructive/10 text-destructive',
-  WON: 'bg-success/15 text-success'
-}
+import type { Lead } from '../../types'
 
 /**
  * The lead's discussion history as a timeline (Module 01 §24) — every call,
@@ -80,7 +31,7 @@ export function Timeline({ lead }: { lead: Lead }): React.JSX.Element {
         ) : (
           <ol className="relative">
             {entries.map((act, i) => {
-              const Icon = ICONS[act.type] ?? FileText
+              const Icon = ACTIVITY_ICONS[act.type] ?? FileText
               const isLast = i === entries.length - 1
               return (
                 <li key={act.id} className={cn('relative flex gap-3', isLast ? 'pb-0' : 'pb-5')}>
@@ -93,7 +44,7 @@ export function Timeline({ lead }: { lead: Lead }): React.JSX.Element {
                   <span
                     className={cn(
                       'flex size-7 shrink-0 items-center justify-center rounded-md',
-                      TONE[act.type]
+                      ACTIVITY_TONE[act.type]
                     )}
                   >
                     <Icon className="size-3.5" />

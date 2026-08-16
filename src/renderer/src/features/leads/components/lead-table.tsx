@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { PhoneCall, Mail } from 'lucide-react'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Select,
   SelectContent,
@@ -67,7 +66,7 @@ export function LeadTable({
     <div className="rounded-lg border bg-card">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
+          <TableRow className="bg-primary/5 hover:bg-transparent">
             <TableHead className="w-10">
               <Checkbox
                 checked={
@@ -81,14 +80,14 @@ export function LeadTable({
                 aria-label="Select all leads"
               />
             </TableHead>
-            <TableHead className="w-[22%]">Lead</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Owner</TableHead>
-            <TableHead>Next follow-up</TableHead>
-            <TableHead>Plan interest</TableHead>
-            <TableHead className="text-right">Last activity</TableHead>
+            <TableHead className="w-[22%] text-primary">Lead</TableHead>
+            <TableHead className="text-primary">Contact</TableHead>
+            <TableHead className="text-primary">Source</TableHead>
+            <TableHead className="text-primary">Stage</TableHead>
+            <TableHead className="text-primary">Owner</TableHead>
+            <TableHead className="text-primary">Next follow-up</TableHead>
+            <TableHead className="text-primary">Plan interest</TableHead>
+            <TableHead className="text-right text-primary">Last activity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -111,24 +110,12 @@ export function LeadTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2.5">
-                    <Avatar size="sm">
-                      <AvatarFallback>
-                        {lead.name
-                          .split(' ')
-                          .map((p) => p[0])
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate font-medium">{lead.name}</span>
-                        <QualityDot quality={q} />
-                      </div>
-                      <span className="text-xs text-muted-foreground">{lead.goal || '—'}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-medium">{lead.name}</span>
+                      <QualityDot quality={q} />
                     </div>
+                    <span className="text-xs text-muted-foreground">{lead.goal || '—'}</span>
                   </div>
                 </TableCell>
                 <TableCell>

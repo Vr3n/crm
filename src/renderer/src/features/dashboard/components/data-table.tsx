@@ -62,9 +62,6 @@ const tableFeaturesInstance = tableFeatures({
 /** The exact feature set this table uses — bind column helpers to it. */
 export type DashboardFeatures = typeof tableFeaturesInstance
 
-const HEAD = 'px-0 py-2 align-middle whitespace-nowrap text-muted-foreground'
-const CELL = 'px-0 py-2 align-middle whitespace-nowrap'
-
 export interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DashboardFeatures, TData, unknown>[]
   data: TData[]
@@ -76,9 +73,17 @@ export interface DataTableProps<TData extends RowData> {
   pageSizeOptions?: number[]
   toolbar?: React.ReactNode
   searchPlaceholder?: string
+  /** Hide the built-in search input (e.g. when search lives in the page toolbar). */
+  showSearch?: boolean
   emptyIcon?: LucideIcon
   emptyTitle?: string
   emptyDescription?: string
+  /** Fired when a data row is clicked (navigation from list rows). */
+  onRowClick?: (row: TData) => void
+  /** Wrap the table in the standard card chrome (`rounded-lg border bg-card`). */
+  card?: boolean
+  /** Header tint: `muted` (dashboard cards) or `primary` (operational workbench tables). */
+  headerTone?: 'muted' | 'primary'
 }
 
 export function DataTable<TData extends RowData>({
@@ -92,9 +97,13 @@ export function DataTable<TData extends RowData>({
   pageSizeOptions = [6, 12, 24],
   toolbar,
   searchPlaceholder = 'Search…',
+  showSearch = true,
   emptyIcon = Inbox,
   emptyTitle = 'No results',
-  emptyDescription
+  emptyDescription,
+  onRowClick,
+  card = false,
+  headerTone = 'muted'
 }: DataTableProps<TData>): React.JSX.Element {
   const [search, setSearch] = useState('')
   const globalFilter = useDebouncedValue(search, 300)
@@ -158,12 +167,17 @@ export function DataTable<TData extends RowData>({
       </div>
     )
   }
-
   const rows = table.getRowModel().rows
   const total = table.getFilteredRowModel().rows.length
   const { pageIndex, pageSize } = table.state.pagination
   const selectedCount = table.getSelectedRowIds().length
-
+  const pad = card ? 'px-2 py-2' : 'px-0 py-2'
+  const headClass = cn(
+    'align-middle whitespace-nowrap',
+    pad,
+    headerTone === 'primary' ? 'text-primary' : 'text-muted-foreground'
+  )
+  const cellClass = cn('align-middle whitespace-nowrap', pad)
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -180,52 +194,66 @@ export function DataTable<TData extends RowData>({
           </button>
         ) : null}
         <div className="ml-auto min-w-0 flex-1 sm:max-w-56">
-          <SearchInput value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+          {showSearch ? (
+            <SearchInput value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+          ) : null}
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className={cn(HEAD, header.id === 'select' && 'w-10 pr-3')}
-                >
-                  {header.isPlaceholder ? null : <table.FlexRender header={header} />}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {rows.length ? (
-            rows.map((row) => (
+      <div className={cn(card && 'rounded-lg border bg-card')}>
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() ? 'selected' : undefined}
-                className="group cursor-pointer transition-colors data-[state=selected]:bg-primary/5"
+                key={headerGroup.id}
+                className={cn(
+                  headerTone === 'primary' ? 'bg-primary/5' : 'bg-muted/40',
+                  'hover:bg-transparent'
+                )}
               >
-                {row.getAllCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={cn(CELL, cell.column.id === 'select' && 'pr-3')}
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className={cn(
+                      headClass,
+                      header.id === 'select' && (card ? 'w-10' : 'w-10 pr-3')
+                    )}
                   >
-                    <table.FlexRender cell={cell} />
-                  </TableCell>
+                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))
-          ) : (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={columnDefs.length} className="px-0 py-6">
-                <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {rows.length ? (
+              rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? 'selected' : undefined}
+                  className="group cursor-pointer transition-colors data-[state=selected]:bg-primary/5"
+                  onClick={() => onRowClick?.(row.original)}
+                >
+                  {row.getAllCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className={cn(cellClass, cell.column.id === 'select' && !card && 'pr-3')}
+                    >
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columnDefs.length} className="px-0 py-6">
+                  <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <DataTablePagination
         pageIndex={pageIndex}
