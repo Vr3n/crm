@@ -33,15 +33,15 @@ export function LeadDetailPage(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-[1400px] p-6">
+      <div className="flex w-full flex-col gap-6 p-6">
         <Skeleton className="mb-4 h-8 w-40" />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <Skeleton className="h-56 xl:col-span-2" />
           <Skeleton className="h-56" />
           <Skeleton className="h-40" />
+          <Skeleton className="h-40 xl:col-span-2" />
           <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-72 xl:col-span-3" />
+          <Skeleton className="h-72 xl:col-span-2" />
         </div>
       </div>
     )
@@ -49,7 +49,7 @@ export function LeadDetailPage(): React.JSX.Element {
 
   if (!lead) {
     return (
-      <div className="mx-auto max-w-3xl p-6">
+      <div className="flex w-full items-center justify-center p-6">
         <EmptyState
           icon={ArrowLeft}
           title="Lead not found"
@@ -66,7 +66,7 @@ export function LeadDetailPage(): React.JSX.Element {
   }
 
   return (
-    <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-6 p-6">
       <div className="flex items-center gap-2">
         <Link to="/leads">
           <Button variant="ghost" size="sm">
@@ -87,8 +87,7 @@ export function LeadDetailPage(): React.JSX.Element {
           <FollowUpPanel lead={lead} />
         </div>
         <StageHistory lead={lead} />
-
-        <div className="xl:col-span-3">
+        <div className="xl:col-span-2">
           <Timeline lead={lead} />
         </div>
       </div>

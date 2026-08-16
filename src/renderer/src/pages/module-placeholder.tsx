@@ -20,7 +20,7 @@ export function ModulePlaceholder({
   scope: string
 }): React.JSX.Element {
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 p-6">
+    <div className="flex w-full flex-col gap-6 p-6">
       <PageHeader
         title={title}
         description={description}
