@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useLeads } from '@/features/leads/queries'
+import { useNow } from '@/lib/use-now'
 import { buildFollowUpRows } from './build'
 import type { FollowUpRow } from './types'
 
@@ -12,16 +12,6 @@ export function useFollowUpRows(): { rows: FollowUpRow[]; isLoading: boolean } {
   const { data, isLoading } = useLeads()
   const rows = data ? buildFollowUpRows(data) : []
   return { rows, isLoading }
-}
-
-/** Render-pure "now": state ticked by an interval, so no impure call during render. */
-function useNow(intervalMs = 60_000): number {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), intervalMs)
-    return () => window.clearInterval(id)
-  }, [intervalMs])
-  return now
 }
 
 /** Real "overdue follow-ups" count for the sidebar badge — 0 hides the badge. */
