@@ -4,6 +4,7 @@ import { setupOrganization, login, createStaffMember } from '../../src/main/appl
 import { getDb } from '../../src/main/db/connection'
 import { requirePermission, setSession } from '../../src/main/auth/session'
 import { PERMISSIONS } from '../../src/main/db/permissions'
+import { SEED_ROLES } from '../../src/main/db/seed'
 import { ForbiddenError, ValidationError } from '../../src/main/domain/errors'
 import type { SessionContext } from '../../src/main/domain/identity'
 
@@ -23,7 +24,8 @@ function setupWithStaff(): SessionContext {
   for (const [name, email, roleName] of [
     ['Manoj', 'manoj@fitzone.com', 'Manager'],
     ['Sana', 'sana@fitzone.com', 'Sales'],
-    ['Arjun', 'arjun@fitzone.com', 'Front Desk']
+    ['Arjun', 'arjun@fitzone.com', 'Front Desk'],
+    ['Kavita', 'kavita@fitzone.com', 'Finance']
   ] as const) {
     createStaffMember({ fullName: name, email, password: PASSWORD, roleName })
   }
@@ -34,12 +36,11 @@ function loginAs(email: string): SessionContext {
   return login({ email, password: PASSWORD })
 }
 
-// Expected permission sets per seeded role (see db/seed.ts).
-const EXPECTED_PERMISSIONS: Record<string, string[]> = {
-  Manager: ['org.view', 'role.view', 'user.view'],
-  Sales: ['user.view'],
-  'Front Desk': ['user.view']
-}
+// Expected permission sets per seeded role — derived from the seed data so the
+// matrix never drifts from `SEED_ROLES` (see db/seed.ts).
+const EXPECTED_PERMISSIONS: Record<string, string[]> = Object.fromEntries(
+  SEED_ROLES.filter((r) => !r.is_super).map((r) => [r.name, r.permissions])
+)
 
 describe('RBAC authorization matrix', () => {
   it('assigns each role exactly its configured permissions', () => {
@@ -47,7 +48,8 @@ describe('RBAC authorization matrix', () => {
     const roleEmails: Record<string, string> = {
       Manager: 'manoj@fitzone.com',
       Sales: 'sana@fitzone.com',
-      'Front Desk': 'arjun@fitzone.com'
+      'Front Desk': 'arjun@fitzone.com',
+      Finance: 'kavita@fitzone.com'
     }
     for (const [roleName, expected] of Object.entries(EXPECTED_PERMISSIONS)) {
       const session = loginAs(roleEmails[roleName])

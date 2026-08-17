@@ -41,3 +41,113 @@ _Avoid_: Wildcard, "all permissions"
 The Organization and Role active in the current session; every Command is scoped to
 it. Source of truth is the session, never a URL or request field.
 _Avoid_: Current tenant, active org (in code)
+
+## Sales
+
+**Person**:
+A human being known to the business, independent of any role. A Person is neither a
+Lead nor a Customer; the same Person is never duplicated when their lifecycle changes.
+_Avoid_: Contact, member, customer (in the identity sense)
+
+**Lead**:
+A sales opportunity for a Person who may become a paying customer. A Lead is not the
+customer itself; a Person may have multiple opportunities over time.
+_Avoid_: Prospect, enquiry, candidate
+
+**Lead Stage**:
+The current stage of the sales process. Stages are configurable data; application logic
+only reads the `is_won` / `is_lost` flags, never the literal stage name.
+_Avoid_: Lead status, pipeline column, stage name (as logic)
+
+**Lead Source**:
+Where an enquiry came from (Walk-in, Phone, Referral, Instagram, ...). Configurable
+data; it must survive conversion so revenue-by-source reporting works.
+_Avoid_: Channel, origin
+
+**Follow-up**:
+A future action someone intends to perform, with a due date, that gets marked done.
+_Avoid_: Reminder, to-do, note (a note is not a follow-up)
+
+**Lead Activity**:
+A record of an interaction or sales event that actually happened, retained as history.
+_Avoid_: Note, comment, log entry
+
+## Customer & Membership
+
+**Customer**:
+A Person who has entered a commercial relationship with the gym. A Customer is not an
+active member — an expired Customer still exists.
+_Avoid_: Member (when "currently holding an active membership" is meant), client, account
+
+**Membership**:
+One purchased entitlement period for a Customer, tied to a Plan. A new row is created on
+renewal, never an overwrite of the old one.
+_Avoid_: Subscription, membership record (for a single period), "the customer's plan"
+
+**Membership Plan**:
+A reusable commercial product definition (name, price, duration, billing frequency,
+tax, freeze/proration/cancellation policy). A Plan is not a Membership, and changing a
+Plan never alters existing Memberships.
+_Avoid_: Product, package, "the membership" (ambiguous)
+
+**Membership Freeze**:
+A business operation, not a status boolean. A Freeze records start, end, reason, fee,
+billing behavior, access behavior, and extension/credit days, and is policy-driven.
+_Avoid_: `is_frozen`, pause, hold
+
+**Proration**:
+How value is re-computed when a Membership's terms change mid-period (upgrade,
+downgrade, cancellation). Proration policy is per-Plan configurable data, not a global
+rule.
+_Avoid_: Split-billing, pro-rating (in code)
+
+## Catalog
+
+**Offer**:
+A commercial pricing rule applied at sale time (fixed amount, percentage, override
+price, free period). An Offer changes a sale but never a historical invoice.
+_Avoid_: Discount, promotion, coupon (too narrow)
+
+## Billing & Finance
+
+**Invoice**:
+An amount owed for goods/services, composed of Invoice Lines. A DRAFT invoice is
+editable; once finalized the financial values are immutable.
+_Avoid_: Bill, charge, "payment request"
+
+**Invoice Line**:
+A historical snapshot of one billable item (description, quantity, unit price, discount,
+tax rate, tax amount, line total) captured at creation. Never recomputed from the
+current catalog.
+_Avoid_: Line item, entry
+
+**Payment**:
+Money recorded as received, against one or more Invoices via Allocations. A Payment is a
+historical fact that is never edited or deleted.
+_Avoid_: Transaction, receipt, "invoice paid flag"
+
+**Payment Allocation**:
+The explicit link saying which part of which Payment covers which Invoice. Payments and
+Invoices are not one-to-one.
+_Avoid_: Payment-invoice link, settlement
+
+**Refund**:
+Money returned to the customer, layered on top of the original Payment (never deleting
+or editing it). A Refund is not a Credit.
+_Avoid_: Reversal, chargeback, "return"
+
+**Credit**:
+Value held inside the business, applicable against a future obligation. A Credit is not
+a Refund.
+_Avoid_: Store credit, account balance (in code), "money back"
+
+**Outstanding Balance**:
+A derived value (finalized obligations − allocated payments − applied credits), never a
+hand-maintained counter.
+_Avoid_: Due amount (as a stored counter), balance column (as source of truth)
+
+## Foundation
+
+**Money**:
+A value object of integer minor units plus a currency. Never a floating-point number.
+_Avoid_: Amount, price (untyped), "₹19,200.00" (formatted string)

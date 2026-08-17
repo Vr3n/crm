@@ -1,4 +1,14 @@
-import { getDb } from '../db/connection'
+import { and, count, eq, exists, or, sql } from 'drizzle-orm'
+import { getDrizzle } from '../db/connection'
+import {
+  appMeta,
+  organizationStaff,
+  organizations,
+  permissions,
+  rolePermissions,
+  roles,
+  users
+} from '../db/schema'
 import {
   Organization,
   User,
@@ -35,8 +45,8 @@ interface RoleRow {
   id: number
   organization_id: number
   name: string
-  is_system_role: number
-  is_super: number
+  is_system_role: boolean
+  is_super: boolean
   description: string | null
 }
 
@@ -81,8 +91,8 @@ function mapRole(row: RoleRow): Role {
     id: row.id,
     organizationId: row.organization_id,
     name: row.name,
-    isSystemRole: row.is_system_role === 1,
-    isSuper: row.is_super === 1,
+    isSystemRole: row.is_system_role,
+    isSuper: row.is_super,
     description: row.description
   }
 }
@@ -108,40 +118,47 @@ export const organizationRepo = {
     timezone?: string | null
     currency: string
   }): Organization {
-    const db = getDb()
-    const result = db
-      .prepare(
-        `INSERT INTO organizations
-           (slug, name, mobile_number, legal_name, billing_email, timezone, currency)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        input.slug,
-        input.name,
-        input.mobileNumber,
-        input.legalName ?? null,
-        input.billingEmail ?? null,
-        input.timezone ?? null,
-        input.currency
-      )
-    return this.findById(Number(result.lastInsertRowid))!
+    const db = getDrizzle()
+    const row = db
+      .insert(organizations)
+      .values({
+        slug: input.slug,
+        name: input.name,
+        mobile_number: input.mobileNumber,
+        legal_name: input.legalName ?? null,
+        billing_email: input.billingEmail ?? null,
+        timezone: input.timezone ?? null,
+        currency: input.currency
+      })
+      .returning()
+      .get()
+    return mapOrg(row as OrgRow)
   },
 
   findById(id: number): Organization | null {
-    const row = getDb().prepare('SELECT * FROM organizations WHERE id = ?').get(id) as
-      OrgRow | undefined
+    const row = getDrizzle()
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, id))
+      .get() as OrgRow | undefined
     return row ? mapOrg(row) : null
   },
 
   findAll(): Organization[] {
-    const rows = getDb()
-      .prepare('SELECT * FROM organizations ORDER BY id')
+    const rows = getDrizzle()
+      .select()
+      .from(organizations)
+      .orderBy(organizations.id)
       .all() as unknown as OrgRow[]
     return rows.map(mapOrg)
   },
 
   count(): number {
-    return (getDb().prepare('SELECT COUNT(*) AS n FROM organizations').get() as { n: number }).n
+    const row = getDrizzle()
+      .select({ n: count() })
+      .from(organizations)
+      .get()
+    return row?.n ?? 0
   },
 
   /**
@@ -153,69 +170,84 @@ export const organizationRepo = {
    * module it is enforced in code, not by a DB constraint.
    */
   existsWithOwnerCredentials(input: { name: string; email: string; mobile: string }): boolean {
-    const row = getDb()
-      .prepare(
-        `SELECT 1 AS x
-         FROM organizations o
-         WHERE o.name = ?
-           AND (
-             o.mobile_number = ?
-             OR EXISTS (
-               SELECT 1
-               FROM organization_staff os
-               JOIN users u ON u.id = os.user_id
-               JOIN roles r ON r.id = os.role_id
-               WHERE os.organization_id = o.id
-                 AND lower(u.email) = lower(?)
-                 AND r.is_super = 1
-             )
-           )`
+    const db = getDrizzle()
+    const superMember = db
+      .select({ id: organizationStaff.id })
+      .from(organizationStaff)
+      .innerJoin(users, eq(users.id, organizationStaff.user_id))
+      .innerJoin(roles, eq(roles.id, organizationStaff.role_id))
+      .where(
+        and(
+          eq(organizationStaff.organization_id, organizations.id),
+          eq(roles.is_super, true),
+          eq(sql`lower(${users.email})`, input.email)
+        )
       )
-      .get(input.name, input.mobile, input.email) as { x: number } | undefined
+
+    const row = db
+      .select({ x: sql`1` })
+      .from(organizations)
+      .where(
+        and(
+          eq(organizations.name, input.name),
+          or(eq(organizations.mobile_number, input.mobile), exists(superMember))
+        )
+      )
+      .get()
     return Boolean(row)
   }
 }
 
 export const userRepo = {
   create(input: { fullName: string; email: string; passwordHash: string }): User {
-    const db = getDb()
-    const result = db
-      .prepare('INSERT INTO users (full_name, email, password_hash) VALUES (?, ?, ?)')
-      .run(input.fullName, input.email, input.passwordHash)
-    return this.findById(Number(result.lastInsertRowid))!
+    const db = getDrizzle()
+    const row = db
+      .insert(users)
+      .values({
+        full_name: input.fullName,
+        email: input.email,
+        password_hash: input.passwordHash
+      })
+      .returning()
+      .get()
+    return mapUser(row as UserRow)
   },
 
   findById(id: number): User | null {
-    const row = getDb().prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined
+    const row = getDrizzle()
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .get() as UserRow | undefined
     return row ? mapUser(row) : null
   }
 }
 
 export const roleRepo = {
   findByName(organizationId: number, name: string): Role | null {
-    const row = getDb()
-      .prepare('SELECT * FROM roles WHERE organization_id = ? AND name = ?')
-      .get(organizationId, name) as RoleRow | undefined
+    const row = getDrizzle()
+      .select()
+      .from(roles)
+      .where(and(eq(roles.organization_id, organizationId), eq(roles.name, name)))
+      .get() as RoleRow | undefined
     return row ? mapRole(row) : null
   },
 
   /** Resolves the permission codes a role grants. Super roles return all known codes. */
   findPermissionCodes(roleId: number): string[] {
-    const db = getDb()
-    const role = db.prepare('SELECT * FROM roles WHERE id = ?').get(roleId) as RoleRow | undefined
+    const db = getDrizzle()
+    const role = db.select().from(roles).where(eq(roles.id, roleId)).get() as RoleRow | undefined
     if (!role) return []
-    if (role.is_super === 1) {
-      const rows = db.prepare('SELECT code FROM permissions').all() as { code: string }[]
+    if (role.is_super) {
+      const rows = db.select({ code: permissions.code }).from(permissions).all()
       return rows.map((r) => r.code)
     }
     const rows = db
-      .prepare(
-        `SELECT p.code
-         FROM permissions p
-         JOIN role_permissions rp ON rp.permission_id = p.id
-         WHERE rp.role_id = ?`
-      )
-      .all(roleId) as { code: string }[]
+      .select({ code: permissions.code })
+      .from(permissions)
+      .innerJoin(rolePermissions, eq(rolePermissions.permission_id, permissions.id))
+      .where(eq(rolePermissions.role_id, roleId))
+      .all()
     return rows.map((r) => r.code)
   }
 }
@@ -223,52 +255,67 @@ export const roleRepo = {
 /** Simple key/value store for app-level settings (e.g. the remembered login). */
 export const appMetaRepo = {
   get(key: string): string | null {
-    const row = getDb().prepare('SELECT value FROM app_meta WHERE key = ?').get(key) as
-      { value: string } | undefined
+    const row = getDrizzle()
+      .select({ value: appMeta.value })
+      .from(appMeta)
+      .where(eq(appMeta.key, key))
+      .get()
     return row ? row.value : null
   },
 
   set(key: string, value: string): void {
-    getDb()
-      .prepare(
-        `INSERT INTO app_meta (key, value) VALUES (?, ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value`
-      )
-      .run(key, value)
+    getDrizzle()
+      .insert(appMeta)
+      .values({ key, value })
+      .onConflictDoUpdate({
+        target: appMeta.key,
+        set: { value }
+      })
+      .run()
   },
 
   delete(key: string): void {
-    getDb().prepare('DELETE FROM app_meta WHERE key = ?').run(key)
+    getDrizzle().delete(appMeta).where(eq(appMeta.key, key)).run()
   }
 }
 
 export const staffRepo = {
   /** Uniqueness of (organization_id, email) is enforced here, per the spec. */
   emailExistsInOrganization(organizationId: number, email: string): boolean {
-    const row = getDb()
-      .prepare(
-        `SELECT 1 AS x
-         FROM organization_staff os
-         JOIN users u ON u.id = os.user_id
-         WHERE os.organization_id = ? AND lower(u.email) = lower(?)`
+    const row = getDrizzle()
+      .select({ x: sql`1` })
+      .from(organizationStaff)
+      .innerJoin(users, eq(users.id, organizationStaff.user_id))
+      .where(
+        and(
+          eq(organizationStaff.organization_id, organizationId),
+          eq(sql`lower(${users.email})`, email)
+        )
       )
-      .get(organizationId, email) as { x: number } | undefined
+      .get()
     return Boolean(row)
   },
 
   create(input: { organizationId: number; userId: number; roleId: number }): OrganizationStaff {
-    const db = getDb()
-    const result = db
-      .prepare(
-        'INSERT INTO organization_staff (organization_id, user_id, role_id) VALUES (?, ?, ?)'
-      )
-      .run(input.organizationId, input.userId, input.roleId)
-    return this.findById(Number(result.lastInsertRowid))!
+    const db = getDrizzle()
+    const row = db
+      .insert(organizationStaff)
+      .values({
+        organization_id: input.organizationId,
+        user_id: input.userId,
+        role_id: input.roleId
+      })
+      .returning()
+      .get()
+    return mapStaff(row as StaffRow)
   },
 
   findById(id: number): OrganizationStaff | null {
-    const row = getDb().prepare('SELECT * FROM organization_staff WHERE id = ?').get(id) as
-      StaffRow | undefined
+    const row = getDrizzle()
+      .select()
+      .from(organizationStaff)
+      .where(eq(organizationStaff.id, id))
+      .get() as StaffRow | undefined
     return row ? mapStaff(row) : null
   },
 
@@ -280,40 +327,33 @@ export const staffRepo = {
     user: User
     role: Role
   } | null {
-    const db = getDb()
-    // Explicit aliases: `SELECT u.*, r.*` would collide on shared column names
-    // (id, status), silently producing a wrong user/role mapping.
-    const row = db
-      .prepare(
-        `SELECT
-           u.id AS u_id, u.full_name AS u_full_name, u.email AS u_email,
-           u.password_hash AS u_password_hash, u.status AS u_status, u.created_at AS u_created_at,
-           r.id AS r_id, r.organization_id AS r_organization_id, r.name AS r_name,
-           r.is_system_role AS r_is_system_role, r.is_super AS r_is_super, r.description AS r_description
-         FROM organization_staff os
-         JOIN users u ON u.id = os.user_id
-         JOIN roles r ON r.id = os.role_id
-         WHERE os.organization_id = ?
-           AND os.status = 'ACTIVE'
-           AND u.status = 'ACTIVE'
-           AND lower(u.email) = lower(?)`
+    const row = getDrizzle()
+      .select({
+        u_id: users.id,
+        u_full_name: users.full_name,
+        u_email: users.email,
+        u_password_hash: users.password_hash,
+        u_status: users.status,
+        u_created_at: users.created_at,
+        r_id: roles.id,
+        r_organization_id: roles.organization_id,
+        r_name: roles.name,
+        r_is_system_role: roles.is_system_role,
+        r_is_super: roles.is_super,
+        r_description: roles.description
+      })
+      .from(organizationStaff)
+      .innerJoin(users, eq(users.id, organizationStaff.user_id))
+      .innerJoin(roles, eq(roles.id, organizationStaff.role_id))
+      .where(
+        and(
+          eq(organizationStaff.organization_id, organizationId),
+          eq(organizationStaff.status, 'ACTIVE'),
+          eq(users.status, 'ACTIVE'),
+          eq(sql`lower(${users.email})`, email)
+        )
       )
-      .get(organizationId, email) as
-      | {
-          u_id: number
-          u_full_name: string
-          u_email: string
-          u_password_hash: string
-          u_status: User['status']
-          u_created_at: string
-          r_id: number
-          r_organization_id: number
-          r_name: string
-          r_is_system_role: number
-          r_is_super: number
-          r_description: string | null
-        }
-      | undefined
+      .get()
     if (!row) return null
     return {
       user: {
@@ -321,15 +361,15 @@ export const staffRepo = {
         fullName: row.u_full_name,
         email: row.u_email,
         passwordHash: row.u_password_hash,
-        status: row.u_status,
+        status: row.u_status as UserStatus,
         createdAt: row.u_created_at
       },
       role: {
         id: row.r_id,
         organizationId: row.r_organization_id,
         name: row.r_name,
-        isSystemRole: row.r_is_system_role === 1,
-        isSuper: row.r_is_super === 1,
+        isSystemRole: row.r_is_system_role,
+        isSuper: row.r_is_super,
         description: row.r_description
       }
     }
@@ -350,22 +390,27 @@ export const staffRepo = {
     roleName: string
     isSuper: boolean
   } | null {
-    const row = getDb()
-      .prepare(
-        `SELECT r.id AS roleId, r.name AS roleName, r.is_super AS isSuper
-         FROM organization_staff os
-         JOIN users u ON u.id = os.user_id
-         JOIN roles r ON r.id = os.role_id
-         JOIN organizations o ON o.id = os.organization_id
-         WHERE os.organization_id = ?
-           AND os.user_id = ?
-           AND os.status = 'ACTIVE'
-           AND u.status = 'ACTIVE'
-           AND o.status = 'ACTIVE'`
+    const row = getDrizzle()
+      .select({
+        roleId: roles.id,
+        roleName: roles.name,
+        isSuper: roles.is_super
+      })
+      .from(organizationStaff)
+      .innerJoin(users, eq(users.id, organizationStaff.user_id))
+      .innerJoin(roles, eq(roles.id, organizationStaff.role_id))
+      .innerJoin(organizations, eq(organizations.id, organizationStaff.organization_id))
+      .where(
+        and(
+          eq(organizationStaff.organization_id, organizationId),
+          eq(organizationStaff.user_id, userId),
+          eq(organizationStaff.status, 'ACTIVE'),
+          eq(users.status, 'ACTIVE'),
+          eq(organizations.status, 'ACTIVE')
+        )
       )
-      .get(organizationId, userId) as
-      { roleId: number; roleName: string; isSuper: number } | undefined
+      .get()
     if (!row) return null
-    return { roleId: row.roleId, roleName: row.roleName, isSuper: row.isSuper === 1 }
+    return { roleId: row.roleId, roleName: row.roleName, isSuper: row.isSuper }
   }
 }

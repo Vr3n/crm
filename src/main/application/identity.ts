@@ -9,52 +9,25 @@ import {
   staffRepo,
   appMetaRepo
 } from '../repositories/identity'
-import { SessionContext } from '../domain/identity'
+import type {
+  AuthStatus,
+  CreateStaffMemberInput,
+  CreatedStaffMember,
+  LoginInput,
+  OrganizationExistenceInput,
+  SessionContext,
+  SetupOrganizationInput
+} from '../../shared/contracts/identity'
 import { IndianMobileNumber } from '../domain/phone'
 import { ValidationError, UnauthorizedError, NotFoundError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 
 const REMEMBERED_SESSION_KEY = 'remembered_session'
 
-export type AuthStatus = 'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'
-
 /** Describes whether the app needs first-run setup, login, or nothing. */
 export function getAuthStatus(): AuthStatus {
   if (organizationRepo.count() === 0) return 'SETUP_REQUIRED'
   return getSession() ? 'AUTHENTICATED' : 'LOGIN_REQUIRED'
-}
-
-export interface SetupOrganizationInput {
-  name: string
-  slug?: string
-  currency?: string
-  timezone?: string
-  ownerFullName: string
-  ownerEmail: string
-  ownerPassword: string
-  mobileNumber: string
-}
-
-export interface LoginInput {
-  email: string
-  password: string
-}
-
-export interface OrganizationExistenceInput {
-  name: string
-  ownerEmail: string
-  mobileNumber: string
-}
-
-export interface CreateStaffMemberInput {
-  fullName: string
-  email: string
-  password: string
-  roleName: string
-}
-
-export interface CreatedStaffMember {
-  userId: number
 }
 
 /**
@@ -261,7 +234,7 @@ function buildSessionContext(organizationId: number, userId: number): SessionCon
     roleId: row.roleId,
     roleName: row.roleName,
     isSuper: row.isSuper,
-    permissions: permissions as SessionContext['permissions']
+    permissions
   }
   setSession(session)
   return session

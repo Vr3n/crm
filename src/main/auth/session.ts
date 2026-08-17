@@ -1,5 +1,5 @@
-import { SessionContext } from '../domain/identity'
-import { ForbiddenError } from '../domain/errors'
+import { SessionContext } from '../../shared/contracts/identity'
+import { ForbiddenError, UnauthenticatedError } from '../domain/errors'
 import { PermissionCode } from '../db/permissions'
 
 let currentSession: SessionContext | null = null
@@ -14,7 +14,7 @@ export function getSession(): SessionContext | null {
 
 export function requireSession(): SessionContext {
   if (!currentSession) {
-    throw new ForbiddenError('user.view')
+    throw new UnauthenticatedError()
   }
   return currentSession
 }

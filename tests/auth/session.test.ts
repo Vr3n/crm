@@ -7,7 +7,7 @@ import {
   currentOrganizationId
 } from '../../src/main/auth/session'
 import { PERMISSIONS } from '../../src/main/db/permissions'
-import { ForbiddenError } from '../../src/main/domain/errors'
+import { ForbiddenError, UnauthenticatedError } from '../../src/main/domain/errors'
 import type { SessionContext } from '../../src/main/domain/identity'
 
 function makeSession(overrides: Partial<SessionContext> = {}): SessionContext {
@@ -53,7 +53,7 @@ describe('requireSession', () => {
 
 describe('requirePermission', () => {
   it('throws when there is no session at all (unauthenticated)', () => {
-    expect(() => requirePermission(PERMISSIONS.USER_CREATE)).toThrow(ForbiddenError)
+    expect(() => requirePermission(PERMISSIONS.USER_CREATE)).toThrow(UnauthenticatedError)
   })
 
   it('does not throw for a granted permission', () => {

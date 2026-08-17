@@ -4,32 +4,41 @@ import {
   createStaffMember,
   getAuthStatus,
   logout,
-  checkOrganizationExists,
-  SetupOrganizationInput,
-  LoginInput,
-  CreateStaffMemberInput,
-  OrganizationExistenceInput
+  checkOrganizationExists
 } from '../application/identity'
 import { getSession } from '../auth/session'
-import { SessionContext } from '../domain/identity'
+import type { SessionContext } from '../../shared/contracts/identity'
+import {
+  createStaffMemberInputSchema,
+  loginInputSchema,
+  organizationExistenceInputSchema,
+  setupOrganizationInputSchema
+} from '../../shared/contracts/identity'
+import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
 
 export function registerIdentityIpc(): void {
-  handle('identity:setup', (input: SetupOrganizationInput) => setupOrganization(input))
+  handle(
+    IPC_CHANNELS.IDENTITY_SETUP,
+    setupOrganizationInputSchema,
+    (input) => setupOrganization(input)
+  )
 
-  handle('identity:login', (input: LoginInput) => login(input))
+  handle(IPC_CHANNELS.IDENTITY_LOGIN, loginInputSchema, (input) => login(input))
 
-  handle('identity:session', (): SessionContext | null => getSession())
+  handle(IPC_CHANNELS.IDENTITY_SESSION, (): SessionContext | null => getSession())
 
-  handle('identity:status', () => getAuthStatus())
+  handle(IPC_CHANNELS.IDENTITY_STATUS, () => getAuthStatus())
 
-  handle('identity:createStaff', (input: CreateStaffMemberInput) => createStaffMember(input))
+  handle(IPC_CHANNELS.IDENTITY_CREATE_STAFF, createStaffMemberInputSchema, (input) =>
+    createStaffMember(input)
+  )
 
-  handle('identity:checkOrganizationExists', (input: OrganizationExistenceInput) =>
+  handle(IPC_CHANNELS.IDENTITY_CHECK_ORGANIZATION_EXISTS, organizationExistenceInputSchema, (input) =>
     checkOrganizationExists(input)
   )
 
-  handle('identity:logout', () => {
+  handle(IPC_CHANNELS.IDENTITY_LOGOUT, () => {
     logout()
     return true
   })
