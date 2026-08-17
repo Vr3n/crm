@@ -1,8 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import {
   Search,
-  Users,
-  CreditCard,
   Package,
   BadgePercent,
   Receipt,
@@ -20,6 +18,9 @@ import { LeadsPage } from '@/features/leads/pages/LeadsPage'
 import { LeadDetailPage } from '@/features/leads/pages/LeadDetailPage'
 import { FollowUpsPage } from '@/features/followups/pages/FollowUpsPage'
 import { ActivitiesPage } from '@/features/activities/pages/ActivitiesPage'
+import { CustomersPage } from '@/features/customers/pages/CustomersPage'
+import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
+import { MembershipsPage } from '@/features/memberships/pages/MembershipsPage'
 import { can, useSession } from '@/context/session-context'
 
 /** Route guard mirroring the nav gate: super OR the permission code. */
@@ -50,21 +51,6 @@ const MODULES: {
       'Search customers and leads by name, phone, email, membership ID or invoice number.',
     scope: 'Module 09 · Customer 360',
     icon: Search
-  },
-  {
-    path: 'customers',
-    title: 'Customers',
-    description: 'The customer directory, with a 360 view of memberships, billing and history.',
-    scope: 'Module 02 · People',
-    icon: Users
-  },
-  {
-    path: 'memberships',
-    title: 'Memberships',
-    description:
-      'Every purchased entitlement period, including renewals, freezes and cancellations.',
-    scope: 'Module 02 · People',
-    icon: CreditCard
   },
   {
     path: 'plans',
@@ -143,6 +129,9 @@ export function AppRoutes(): React.JSX.Element {
         <Route path="leads/:id" element={<LeadDetailPage />} />
         <Route path="followups" element={<FollowUpsPage />} />
         <Route path="activities" element={<ActivitiesPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="memberships" element={<MembershipsPage />} />
         {MODULES.map((m) => {
           const element = (
             <ModulePlaceholder
