@@ -12,6 +12,8 @@ were made, the trade-offs accepted, the test strategy, and the known gaps.
 - [`architecture.md`](./architecture.md) — layers, data flow, and the transaction/RBAC enforcement model.
 - [`identity-module.md`](./identity-module.md) — per-file review of the identity/tenancy implementation.
 - [`tests-and-quality.md`](./tests-and-quality.md) — test strategy, coverage, and the bugs the suite caught.
+- [`ui-shell.md`](./ui-shell.md) — the app shell & design system (sidebar/topbar/routing, pink accent, theme, permission-gated nav).
+- [`dashboard.md`](./dashboard.md) — the operational dashboard (masthead, quick actions, expirations / dues / cold-leads tables).
 - [`known-gaps.md`](./known-gaps.md) — deliberate limitations and next-sprint concerns.
 
 ## Scope of this pass

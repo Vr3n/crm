@@ -61,6 +61,9 @@ discover surprises. None of these block the current single-org, local, offline s
 
 - Wire the real CRUD flows (Member, Plan, Payment, Check-in) through the same
   layered + `withTransaction` + `requirePermission` pattern established here.
+- Replace the dashboard's mock member rows (expirations, dues) with read models over the real
+  Module 02–05 tables, and build the clickable calendar + reactive "Latest followups /
+  Latest activities" tables (deferred as a dedicated component-pattern sprint).
 - Extend the `permissions` catalog and per-role grants as Modules 02–13 go live, so role
   permissions stay data-driven.
 - Build the org-scoped multi-tenant queries (Module 08) once domains beyond identity exist.

@@ -1,0 +1,53 @@
+import type { Lead } from '@/features/leads/types'
+import type { FollowUpBucket, FollowUpRow } from './types'
+
+/**
+ * Deterministic flattening of the leads list into one flat follow-up queue.
+ * Each row carries its lead context (name, stage, owner) so the global page can
+ * show "who / what / when" without a second round-trip.
+ */
+export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
+  return leads.flatMap((lead) =>
+    lead.followUps.map((f) => ({
+      id: f.id,
+      leadId: lead.id,
+      leadName: lead.name,
+      stage: lead.stage,
+      title: f.title,
+      dueAt: f.dueAt,
+      completedAt: f.completedAt,
+      note: f.note,
+      ownerId: lead.owner?.id,
+      ownerName: lead.owner?.name
+    }))
+  )
+}
+
+function isSameCalendarDay(a: string, b: string): boolean {
+  const da = new Date(a)
+  const db = new Date(b)
+  return (
+    da.getFullYear() === db.getFullYear() &&
+    da.getMonth() === db.getMonth() &&
+    da.getDate() === db.getDate()
+  )
+}
+
+/** Urgency bucket for an open follow-up: overdue → today → upcoming. */
+export function bucketOf(row: FollowUpRow): Exclude<FollowUpBucket, 'all'> {
+  if (row.completedAt) return 'done'
+  const due = new Date(row.dueAt).getTime()
+  if (due < Date.now()) return 'overdue'
+  if (isSameCalendarDay(row.dueAt, new Date().toISOString())) return 'today'
+  return 'upcoming'
+}
+
+/** Open first, earliest due first; done items by completion time, newest first. */
+export function sortFollowUpRows(rows: FollowUpRow[]): FollowUpRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.completedAt && b.completedAt) return b.completedAt.localeCompare(a.completedAt)
+    if (a.completedAt) return 1
+    if (b.completedAt) return -1
+    return a.dueAt.localeCompare(b.dueAt)
+  })
+}

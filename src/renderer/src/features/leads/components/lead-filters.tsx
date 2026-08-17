@@ -1,0 +1,147 @@
+import { Search, SlidersHorizontal, CalendarDays } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { SOURCES, STAGES, STAFF } from '../constants'
+import type { LeadFilters, SourceKey, StageKey } from '../types'
+
+const RANGES: { key: LeadFilters['range']; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This week' },
+  { key: 'month', label: 'This month' },
+  { key: 'all', label: 'All time' }
+]
+
+const SOURCE_KEYS = Object.keys(SOURCES) as SourceKey[]
+const STAGE_KEYS = STAGES.map((s) => s.key)
+
+/**
+ * Filter bar for the pipeline: free-text search plus stage / source / owner
+ * selects and a date-range preset. All metrics below respect these filters.
+ */
+export function LeadFilters({
+  filters,
+  onChange
+}: {
+  filters: LeadFilters
+  onChange: (f: LeadFilters) => void
+}): React.JSX.Element {
+  const rangeLabel = RANGES.find((r) => r.key === filters.range)?.label ?? 'All time'
+  const hasActive =
+    !!filters.search || filters.stage !== 'ALL' || filters.source !== 'ALL' || filters.ownerId !== 'ALL'
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative min-w-52 flex-1">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={filters.search}
+          onChange={(e) => onChange({ ...filters, search: e.target.value })}
+          placeholder="Search name, phone, email, plan…"
+          className="pl-8"
+        />
+      </div>
+
+      <Select
+        value={filters.stage}
+        onValueChange={(v) => onChange({ ...filters, stage: v as StageKey | 'ALL' })}
+      >
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Stage" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All stages</SelectItem>
+          {STAGE_KEYS.map((s) => (
+            <SelectItem key={s} value={s}>
+              {STAGES.find((x) => x.key === s)!.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.source}
+        onValueChange={(v) => onChange({ ...filters, source: v as SourceKey | 'ALL' })}
+      >
+        <SelectTrigger className="w-44">
+          <SelectValue placeholder="Source" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All sources</SelectItem>
+          {SOURCE_KEYS.map((s) => (
+            <SelectItem key={s} value={s}>
+              {SOURCES[s]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.ownerId}
+        onValueChange={(v) => onChange({ ...filters, ownerId: v })}
+      >
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Owner" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All owners</SelectItem>
+          {STAFF.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">
+            <CalendarDays className="size-4" />
+            {rangeLabel}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-44 p-1">
+          <p className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground">
+            <SlidersHorizontal className="size-3" /> Date range
+          </p>
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => onChange({ ...filters, range: r.key })}
+              className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent ${
+                filters.range === r.key ? 'bg-accent font-medium' : ''
+              }`}
+            >
+              {r.label}
+              {filters.range === r.key ? <span className="size-1.5 rounded-full bg-primary" /> : null}
+            </button>
+          ))}
+        </PopoverContent>
+      </Popover>
+
+      {hasActive ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 text-muted-foreground"
+          onClick={() =>
+            onChange({ search: '', stage: 'ALL', source: 'ALL', ownerId: 'ALL', range: 'all' })
+          }
+        >
+          Clear
+        </Button>
+      ) : null}
+    </div>
+  )
+}

@@ -1,0 +1,168 @@
+import { useMemo } from 'react'
+import { CreditCard, Snowflake } from 'lucide-react'
+import { createColumnHelper } from '@tanstack/react-table'
+import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
+import { SortButton } from '@/features/dashboard/components/sort-button'
+import { EXPIRING_SOON_DAYS } from '@/features/customers/constants'
+import { daysUntil, formatMoney, formatShortDate } from '@/features/customers/format'
+import { cn } from '@/lib/utils'
+import type { MembershipRow } from '../types'
+import { MembershipStatusBadge } from '@/features/customers/components/status-badge'
+
+const helper = createColumnHelper<DashboardFeatures, MembershipRow>()
+
+function DaysLeftCell({ row, now }: { row: MembershipRow; now: number }): React.JSX.Element {
+  if (row.status !== 'ACTIVE' && row.status !== 'FROZEN' && row.status !== 'PENDING') {
+    return <span className="text-sm text-muted-foreground">—</span>
+  }
+  const days = daysUntil(row.endDate, now)
+  return (
+    <span
+      className={cn(
+        'font-mono text-xs font-medium tabular-nums',
+        row.status === 'ACTIVE' && days <= EXPIRING_SOON_DAYS && 'text-warning',
+        row.status === 'ACTIVE' && days > EXPIRING_SOON_DAYS && 'text-foreground',
+        row.status !== 'ACTIVE' && 'text-primary'
+      )}
+    >
+      {days}d
+    </span>
+  )
+}
+
+function buildColumns(now: number): ReturnType<typeof helper.columns> {
+  return helper.columns([
+    helper.accessor((row) => row.customerName, {
+      id: 'customerName',
+      header: ({ column }) => (
+        <SortButton
+          className="text-primary"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting()}
+        >
+          Member
+        </SortButton>
+      ),
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{row.original.customerName}</p>
+          <p className="font-mono text-xs text-muted-foreground tabular-nums">
+            {row.original.id} · {row.original.customerId}
+          </p>
+        </div>
+      ),
+      sortFn: 'alphanumeric'
+    }),
+    helper.accessor((row) => row.plan, {
+      id: 'plan',
+      header: ({ column }) => (
+        <SortButton
+          className="text-primary"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting()}
+        >
+          Plan
+        </SortButton>
+      ),
+      cell: ({ row }) => <span className="text-sm font-medium">{row.original.plan}</span>,
+      sortFn: 'alphanumeric'
+    }),
+    helper.accessor((row) => row.status, {
+      id: 'status',
+      header: () => 'Status',
+      enableSorting: false,
+      cell: ({ row }) => <MembershipStatusBadge status={row.original.status} />
+    }),
+    helper.accessor((row) => row.startDate, {
+      id: 'period',
+      header: ({ column }) => (
+        <SortButton
+          className="text-primary"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting()}
+        >
+          Period
+        </SortButton>
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          {formatShortDate(row.original.startDate)} → {formatShortDate(row.original.endDate)}
+        </span>
+      ),
+      sortFn: 'datetime'
+    }),
+    helper.accessor((row) => row.price, {
+      id: 'amount',
+      header: () => 'Amount',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-mono text-sm font-medium tabular-nums">
+            {formatMoney(row.original.price - row.original.discount)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {row.original.billingFrequency.charAt(0) +
+              row.original.billingFrequency.slice(1).toLowerCase()}
+          </span>
+        </div>
+      )
+    }),
+    helper.accessor((row) => row.freezeCount, {
+      id: 'freezes',
+      header: () => 'Freezes',
+      enableSorting: false,
+      cell: ({ row }) =>
+        row.original.freezeCount > 0 ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+            <Snowflake className="size-3" />
+            {row.original.freezeCount}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )
+    }),
+    helper.accessor((row) => row.endDate, {
+      id: 'daysLeft',
+      header: () => 'Left',
+      enableSorting: false,
+      cell: ({ row }) => <DaysLeftCell row={row.original} now={now} />
+    })
+  ])
+}
+
+/**
+ * The memberships list — every entitlement period across customers, defaulting
+ * to open memberships soonest-to-expire. Row-click opens the customer 360 view.
+ */
+export function MembershipTable({
+  rows,
+  now,
+  isLoading,
+  onOpenCustomer
+}: {
+  rows: MembershipRow[]
+  now: number
+  isLoading: boolean
+  onOpenCustomer: (customerId: string) => void
+}): React.JSX.Element {
+  const columns = useMemo(() => buildColumns(now), [now])
+
+  return (
+    <DataTable
+      columns={columns}
+      data={rows}
+      getRowId={(row) => row.id}
+      isLoading={isLoading}
+      initialPageSize={8}
+      pageSizeOptions={[8, 16, 32]}
+      initialSorting={[{ id: 'period', desc: false }]}
+      onRowClick={(row) => onOpenCustomer(row.customerId)}
+      showSearch={false}
+      emptyIcon={CreditCard}
+      emptyTitle="No memberships match"
+      emptyDescription="Try widening the filters to see more entitlement periods."
+      card
+      headerTone="primary"
+    />
+  )
+}

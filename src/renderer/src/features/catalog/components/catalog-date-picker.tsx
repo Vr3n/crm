@@ -1,0 +1,61 @@
+import { useState } from 'react'
+import { format } from 'date-fns'
+import { CalendarDays } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
+
+/**
+ * Day-level date picker for offer windows, emitting `yyyy-MM-dd`. A Calendar
+ * popover in the blocky 0-radius language — day-scoped unlike DateTimePicker.
+ */
+export function CatalogDatePicker({
+  value,
+  onChange,
+  placeholder = 'Pick a date'
+}: {
+  value: string
+  onChange: (date: string) => void
+  placeholder?: string
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+
+  const parsed = value ? new Date(`${value}T00:00:00`) : null
+  const valid = parsed && !Number.isNaN(parsed.getTime()) ? parsed : null
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            'h-9 w-full justify-start gap-2 rounded-md px-3 text-sm font-normal',
+            !valid && 'text-muted-foreground'
+          )}
+        >
+          <CalendarDays className="size-4 text-muted-foreground" />
+          {valid ? (
+            <span className="tabular-nums">{format(valid, 'EEE, d MMM yyyy')}</span>
+          ) : (
+            placeholder
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto rounded-lg p-0" align="start" sideOffset={6}>
+        <Calendar
+          mode="single"
+          selected={valid ?? undefined}
+          onSelect={(day) => {
+            if (day) {
+              onChange(format(day, 'yyyy-MM-dd'))
+              setOpen(false)
+            }
+          }}
+          className="w-72"
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
