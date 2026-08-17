@@ -1,14 +1,6 @@
-/** Presentational helpers for the dashboard — money, day deltas, cold-lead math. */
+/** Presentational helpers for the dashboard — day deltas and cold-lead math. */
 
-const MONEY = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0
-})
-
-export function formatMoney(amount: number): string {
-  return MONEY.format(amount)
-}
+export { formatMoney } from '@/lib/money'
 
 /** Whole days from "now" to the given timestamp (negative when past). */
 export function daysUntil(iso: string): number {

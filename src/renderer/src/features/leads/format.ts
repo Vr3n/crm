@@ -19,6 +19,14 @@ export function formatDateTime(iso: string): string {
   }).format(new Date(iso))
 }
 
+/** Time-only variant for high-frequency ledgers (payments, check-ins). */
+export function formatTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date(iso))
+}
+
 /** Coarse relative time: "3d ago", "2h ago", "in 1d". */
 export function timeAgo(iso: string): string {
   const diff = new Date(iso).getTime() - Date.now()
