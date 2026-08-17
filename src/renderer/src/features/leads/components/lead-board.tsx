@@ -31,7 +31,7 @@ export function LeadBoard({
   )
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div className="grid grid-cols-3 gap-3">
       {STAGES.map((stage) => {
         const columnLeads = groups.get(stage.key) ?? []
         return (
@@ -51,7 +51,7 @@ export function LeadBoard({
               if (lead && lead.stage !== stage.key) onStageChange(lead, stage.key)
             }}
             className={cn(
-              'flex w-64 shrink-0 flex-col rounded-lg border bg-muted/30',
+              'flex min-w-0 flex-col rounded-lg border bg-muted/30',
               overCol === stage.key && 'border-primary bg-primary/5'
             )}
           >
