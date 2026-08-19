@@ -23,7 +23,16 @@ const ALL_TABLES = [
   'permissions',
   'role_permissions',
   'roles',
-  'users'
+  'users',
+  'people',
+  'lead_stages',
+  'lead_sources',
+  'lead_lost_reasons',
+  'lead_activity_types',
+  'leads',
+  'lead_activities',
+  'lead_followups',
+  'lead_stage_history'
 ]
 
 function tableNames(): Set<string> {
@@ -41,7 +50,7 @@ function appliedVersions(): number[] {
 }
 
 describe('runMigrations', () => {
-  it('creates every identity table on a fresh database', () => {
+  it('creates every identity and sales table on a fresh database', () => {
     runMigrations()
     const tables = tableNames()
     for (const table of ALL_TABLES) {
@@ -49,12 +58,17 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records version 0 with the migration name', () => {
+  it('records versions 0 (identity), 3 (sales), 4 (sales index), and 5 (leads extra fields)', () => {
     runMigrations()
     const rows = getDb()
       .prepare('SELECT version, name FROM schema_migrations')
       .all() as { version: number; name: string }[]
-    expect(rows).toEqual([{ version: 0, name: 'identity' }])
+    expect(rows).toEqual([
+      { version: 0, name: 'identity' },
+      { version: 3, name: 'sales' },
+      { version: 4, name: 'sales_list_index' },
+      { version: 5, name: 'leads_extra_fields' }
+    ])
   })
 
   it('is idempotent — a second run applies nothing', () => {
@@ -63,10 +77,10 @@ describe('runMigrations', () => {
     const row = getDb()
       .prepare('SELECT COUNT(*) AS n FROM schema_migrations')
       .get() as { n: number }
-    expect(row.n).toBe(1)
+    expect(row.n).toBe(4)
   })
 
-  it('reconciles a legacy database by marking version 0 applied without re-executing it', () => {
+  it('reconciles a legacy database and still applies the new sales migration', () => {
     getDb().exec(`
       CREATE TABLE schema_migrations (
         version INTEGER PRIMARY KEY,
@@ -87,12 +101,17 @@ describe('runMigrations', () => {
 
     runMigrations()
 
-    expect(appliedVersions()).toEqual([0, 1, 2])
+    // Legacy versions 1 & 2 are left as-is; 0 is marked applied (no re-run);
+    // the sales migrations (3, 4) must still run — they would be lost on a legacy
+    // database if they reused a legacy version number.
+    expect(appliedVersions()).toEqual([0, 1, 2, 3, 4, 5])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
+    expect(tableNames().has('leads')).toBe(true)
+    expect(tableNames().has('people')).toBe(true)
   })
 
-  it('applies version 0 when schema_migrations exists but the legacy tables do not', () => {
+  it('applies versions 0 and 3 when schema_migrations exists but the legacy tables do not', () => {
     getDb().exec(`
       CREATE TABLE schema_migrations (
         version INTEGER PRIMARY KEY,
@@ -104,7 +123,8 @@ describe('runMigrations', () => {
 
     runMigrations()
 
-    expect(appliedVersions()).toEqual([0, 1])
+    expect(appliedVersions()).toEqual([0, 1, 3, 4, 5])
     expect(tableNames().has('users')).toBe(true)
+    expect(tableNames().has('leads')).toBe(true)
   })
 })
