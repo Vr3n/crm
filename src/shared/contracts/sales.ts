@@ -1,0 +1,224 @@
+import { z } from 'zod'
+import { pageRequestSchema } from './paging'
+
+/**
+ * Canonical contracts for the sales/leads IPC surface (Module 01). Input shapes
+ * are Zod-validated at the IPC boundary (guidelines §15); domain rules (phone
+ * format, stage legality, one-active-lead) are enforced in the application layer.
+ */
+
+export const createLeadInputSchema = z.object({
+  fullName: z.string().min(1).max(120),
+  phone: z.string().min(1).max(24),
+  email: z.string().max(254).optional(),
+  sourceId: z.number().int().positive(),
+  planInterest: z.string().max(200).optional(),
+  goal: z.string().max(200).optional(),
+  notes: z.string().max(2000).optional()
+})
+export type CreateLeadInput = z.infer<typeof createLeadInputSchema>
+
+export const createdLeadSchema = z.object({
+  leadId: z.number().int().positive(),
+  personId: z.number().int().positive()
+})
+export type CreatedLead = z.infer<typeof createdLeadSchema>
+
+export const moveLeadStageInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  targetStageId: z.number().int().positive(),
+  expectedStageId: z.number().int().positive(),
+  activityId: z.number().int().positive()
+})
+export type MoveLeadStageInput = z.infer<typeof moveLeadStageInputSchema>
+
+export const markLeadLostInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  lostReasonId: z.number().int().positive()
+})
+export type MarkLeadLostInput = z.infer<typeof markLeadLostInputSchema>
+
+export const scheduleFollowUpInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  title: z.string().min(1).max(200),
+  dueAt: z.string()
+})
+export type ScheduleFollowUpInput = z.infer<typeof scheduleFollowUpInputSchema>
+
+export const completeFollowUpInputSchema = z.object({
+  followupId: z.number().int().positive()
+})
+export type CompleteFollowUpInput = z.infer<typeof completeFollowUpInputSchema>
+
+export const assignLeadInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  ownerUserId: z.number().int().positive()
+})
+export type AssignLeadInput = z.infer<typeof assignLeadInputSchema>
+
+export const recordLeadActivityInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  typeId: z.number().int().positive(),
+  note: z.string().max(2000).optional(),
+  occurredAt: z.string()
+})
+export type RecordLeadActivityInput = z.infer<typeof recordLeadActivityInputSchema>
+
+export const recordedActivitySchema = z.object({
+  activityId: z.number().int().positive()
+})
+export type RecordedActivity = z.infer<typeof recordedActivitySchema>
+
+export const leadIdRequestSchema = z.object({ leadId: z.number().int().positive() })
+export type LeadIdRequest = z.infer<typeof leadIdRequestSchema>
+
+export const leadDetailsSchema = z.object({
+  leadId: z.number().int().positive(),
+  personName: z.string(),
+  phone: z.string(),
+  email: z.string().nullable(),
+  sourceName: z.string(),
+  stageName: z.string(),
+  status: z.enum(['OPEN', 'WON', 'LOST']),
+  ownerName: z.string().nullable(),
+  createdAt: z.string()
+})
+export type LeadDetails = z.infer<typeof leadDetailsSchema>
+
+export const leadTimelineEntrySchema = z.object({
+  kind: z.enum(['activity', 'stage', 'followup']),
+  at: z.string(),
+  label: z.string()
+})
+export type LeadTimelineEntry = z.infer<typeof leadTimelineEntrySchema>
+
+export const funnelCountsSchema = z.array(
+  z.object({
+    stageId: z.number().int().positive(),
+    stageName: z.string(),
+    isWon: z.boolean(),
+    isLost: z.boolean(),
+    count: z.number().int()
+  })
+)
+export type FunnelCounts = z.infer<typeof funnelCountsSchema>
+
+/** The org's sales reference data for forms (sources/stages/reasons/types). */
+export const referenceDataSchema = z.object({
+  sources: z.array(
+    z.object({ id: z.number().int().positive(), name: z.string(), active: z.boolean() })
+  ),
+  stages: z.array(
+    z.object({
+      id: z.number().int().positive(),
+      name: z.string(),
+      sortOrder: z.number().int(),
+      isInitial: z.boolean(),
+      isWon: z.boolean(),
+      isLost: z.boolean(),
+      active: z.boolean()
+    })
+  ),
+  lostReasons: z.array(
+    z.object({ id: z.number().int().positive(), name: z.string(), active: z.boolean() })
+  ),
+  activityTypes: z.array(
+    z.object({ id: z.number().int().positive(), name: z.string(), active: z.boolean() })
+  )
+})
+export type ReferenceData = z.infer<typeof referenceDataSchema>
+
+export const referenceDataRequestSchema = z.object({})
+export type ReferenceDataRequest = z.infer<typeof referenceDataRequestSchema>
+
+/**
+ * `leads:list` — the pipeline read model. Each row carries the nested arrays the
+ * renderer already consumes (timeline activities, follow-ups, stage history), so
+ * the whole Leads feature renders from a single query. Optional filters map to
+ * indexed columns; `range` uses the org's local day boundaries via the
+ * application layer.
+ */
+export const leadListRequestSchema = pageRequestSchema.extend({
+  search: z.string().max(120).optional(),
+  stageId: z.number().int().positive().optional(),
+  sourceId: z.number().int().positive().optional(),
+  ownerUserId: z.number().int().positive().optional(),
+  range: z.enum(['today', 'week', 'month', 'all']).optional()
+})
+export type LeadListRequest = z.infer<typeof leadListRequestSchema>
+
+export const leadListActivitySchema = z.object({
+  id: z.number().int().positive(),
+  typeId: z.number().int().positive(),
+  typeName: z.string(),
+  note: z.string().nullable(),
+  occurredAt: z.string(),
+  createdByName: z.string().nullable()
+})
+export type LeadListActivity = z.infer<typeof leadListActivitySchema>
+
+export const leadListFollowUpSchema = z.object({
+  id: z.number().int().positive(),
+  title: z.string(),
+  dueAt: z.string(),
+  completedAt: z.string().nullable()
+})
+export type LeadListFollowUp = z.infer<typeof leadListFollowUpSchema>
+
+export const leadListStageHistorySchema = z.object({
+  fromStageName: z.string().nullable(),
+  toStageName: z.string(),
+  changedAt: z.string()
+})
+export type LeadListStageHistory = z.infer<typeof leadListStageHistorySchema>
+
+export const leadListRowSchema = z.object({
+  id: z.number().int().positive(),
+  personId: z.number().int().positive(),
+  personName: z.string(),
+  phone: z.string(),
+  email: z.string().nullable(),
+  sourceId: z.number().int().positive(),
+  sourceName: z.string(),
+  stageId: z.number().int().positive(),
+  stageName: z.string(),
+  isWon: z.boolean(),
+  isLost: z.boolean(),
+  ownerUserId: z.number().int().positive().nullable(),
+  ownerName: z.string().nullable(),
+  planInterest: z.string().nullable(),
+  goal: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  lostReasonId: z.number().int().positive().nullable(),
+  lostReasonName: z.string().nullable(),
+  lostAt: z.string().nullable(),
+  activities: z.array(leadListActivitySchema),
+  followUps: z.array(leadListFollowUpSchema),
+  stageHistory: z.array(leadListStageHistorySchema)
+})
+export type LeadListRow = z.infer<typeof leadListRowSchema>
+
+export const leadListResponseSchema = z.object({
+  items: z.array(leadListRowSchema),
+  page: z.number().int().positive(),
+  limit: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+  hasMore: z.boolean()
+})
+export type LeadListResponse = z.infer<typeof leadListResponseSchema>
+
+export const peopleListSchema = z.array(
+  z.object({
+    id: z.number().int().positive(),
+    fullName: z.string(),
+    phone: z.string(),
+    email: z.string().nullable()
+  })
+)
+export type PeopleList = z.infer<typeof peopleListSchema>
+
+export const peopleSearchSchema = pageRequestSchema.extend({
+  query: z.string().max(120)
+})
+export type PeopleSearch = z.infer<typeof peopleSearchSchema>

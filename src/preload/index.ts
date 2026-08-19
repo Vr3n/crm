@@ -11,6 +11,24 @@ import type {
   SessionContext,
   SetupOrganizationInput
 } from '../shared/contracts/identity'
+import type {
+  AssignLeadInput,
+  CompleteFollowUpInput,
+  CreateLeadInput,
+  CreatedLead,
+  FunnelCounts,
+  LeadDetails,
+  LeadIdRequest,
+  LeadListRequest,
+  LeadListResponse,
+  LeadTimelineEntry,
+  MarkLeadLostInput,
+  MoveLeadStageInput,
+  PeopleList,
+  RecordLeadActivityInput,
+  ReferenceData,
+  ScheduleFollowUpInput
+} from '../shared/contracts/sales'
 import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 
 /**
@@ -34,8 +52,7 @@ const api = {
   identity: {
     setup: (input: SetupOrganizationInput): Promise<SessionContext> =>
       call(IPC_CHANNELS.IDENTITY_SETUP, input),
-    login: (input: LoginInput): Promise<SessionContext> =>
-      call(IPC_CHANNELS.IDENTITY_LOGIN, input),
+    login: (input: LoginInput): Promise<SessionContext> => call(IPC_CHANNELS.IDENTITY_LOGIN, input),
     session: (): Promise<SessionContext | null> => call(IPC_CHANNELS.IDENTITY_SESSION),
     status: (): Promise<AuthStatus> => call(IPC_CHANNELS.IDENTITY_STATUS),
     createStaff: (input: CreateStaffMemberInput): Promise<CreatedStaffMember> =>
@@ -43,6 +60,47 @@ const api = {
     checkOrganizationExists: (input: OrganizationExistenceInput): Promise<boolean> =>
       call(IPC_CHANNELS.IDENTITY_CHECK_ORGANIZATION_EXISTS, input),
     logout: (): Promise<boolean> => call(IPC_CHANNELS.IDENTITY_LOGOUT)
+  },
+  leads: {
+    create: (input: CreateLeadInput): Promise<CreatedLead> =>
+      call(IPC_CHANNELS.LEADS_CREATE, input),
+    moveStage: (input: MoveLeadStageInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_MOVE_STAGE, input),
+    recordActivity: (input: RecordLeadActivityInput): Promise<{ activityId: number }> =>
+      call(IPC_CHANNELS.LEADS_RECORD_ACTIVITY, input),
+    assign: (input: AssignLeadInput): Promise<void> => call(IPC_CHANNELS.LEADS_ASSIGN, input),
+    markLost: (input: MarkLeadLostInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_MARK_LOST, input),
+    scheduleFollowup: (input: ScheduleFollowUpInput): Promise<{ followupId: number }> =>
+      call(IPC_CHANNELS.LEADS_SCHEDULE_FOLLOWUP, input),
+    completeFollowup: (input: CompleteFollowUpInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_COMPLETE_FOLLOWUP, input),
+    getDetails: (input: LeadIdRequest): Promise<LeadDetails | null> =>
+      call(IPC_CHANNELS.LEADS_GET_DETAILS, input),
+    list: (input: LeadListRequest): Promise<LeadListResponse> =>
+      call(IPC_CHANNELS.LEADS_LIST, input),
+    getTimeline: (input: LeadIdRequest): Promise<LeadTimelineEntry[]> =>
+      call(IPC_CHANNELS.LEADS_GET_TIMELINE, input),
+    getNew: (): Promise<{ id: number; personName: string; phone: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_NEW),
+    getUncontacted: (): Promise<{ id: number; personName: string; phone: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_UNCONTACTED),
+    getTodaysFollowups: (): Promise<
+      { followupId: number; leadId: number; title: string; dueAt: string }[]
+    > => call(IPC_CHANNELS.LEADS_GET_TODAYS_FOLLOWUPS),
+    getOverdueFollowups: (): Promise<
+      { followupId: number; leadId: number; title: string; dueAt: string }[]
+    > => call(IPC_CHANNELS.LEADS_GET_OVERDUE_FOLLOWUPS),
+    getTrialsEnding: (): Promise<{ id: number; personName: string; dueAt: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_TRIALS_ENDING),
+    getRecentlyWon: (): Promise<{ id: number; personName: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_RECENT_WON),
+    getRecentlyLost: (): Promise<{ id: number; personName: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_RECENT_LOST),
+    getFunnelCounts: (): Promise<FunnelCounts> => call(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS),
+    searchPeople: (query: string): Promise<PeopleList> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, query),
+    getReferenceData: (): Promise<ReferenceData> => call(IPC_CHANNELS.LEADS_GET_REFERENCE)
   }
 }
 

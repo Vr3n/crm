@@ -8,17 +8,38 @@ import {
   roles,
   users
 } from './identity'
+import {
+  leadActivities,
+  leadActivityTypes,
+  leadFollowups,
+  leadLostReasons,
+  leadSources,
+  leadStageHistory,
+  leadStages,
+  leads,
+  people
+} from './sales'
 
 export * from './identity'
+export * from './sales'
 
 /**
  * The combined schema object passed to `drizzle()`. Future modules add their
- * tables here (people, catalog, sales, membership, billing, finance, ops).
+ * tables here (catalog, membership, billing, finance, ops).
  */
 export const schema = {
   appMeta,
+  leadActivities,
+  leadActivityTypes,
+  leadFollowups,
+  leadLostReasons,
+  leadSources,
+  leadStageHistory,
+  leadStages,
+  leads,
   organizationStaff,
   organizations,
+  people,
   permissions,
   rolePermissions,
   roles,
@@ -89,6 +110,120 @@ export const relations = defineRelations(schema, (helpers) => ({
     role: helpers.one.roles({
       from: helpers.organizationStaff.role_id,
       to: helpers.roles.id
+    })
+  },
+  people: {
+    organization: helpers.one.organizations({
+      from: helpers.people.organization_id,
+      to: helpers.organizations.id
+    }),
+    leads: helpers.many.leads({
+      from: helpers.people.id,
+      to: helpers.leads.person_id
+    })
+  },
+  leads: {
+    organization: helpers.one.organizations({
+      from: helpers.leads.organization_id,
+      to: helpers.organizations.id
+    }),
+    person: helpers.one.people({
+      from: helpers.leads.person_id,
+      to: helpers.people.id
+    }),
+    source: helpers.one.leadSources({
+      from: helpers.leads.source_id,
+      to: helpers.leadSources.id
+    }),
+    currentStage: helpers.one.leadStages({
+      from: helpers.leads.current_stage_id,
+      to: helpers.leadStages.id
+    }),
+    owner: helpers.one.users({
+      from: helpers.leads.owner_user_id,
+      to: helpers.users.id
+    }),
+    activities: helpers.many.leadActivities({
+      from: helpers.leads.id,
+      to: helpers.leadActivities.lead_id
+    }),
+    followups: helpers.many.leadFollowups({
+      from: helpers.leads.id,
+      to: helpers.leadFollowups.lead_id
+    }),
+    stageHistory: helpers.many.leadStageHistory({
+      from: helpers.leads.id,
+      to: helpers.leadStageHistory.lead_id
+    })
+  },
+  leadStages: {
+    organization: helpers.one.organizations({
+      from: helpers.leadStages.organization_id,
+      to: helpers.organizations.id
+    })
+  },
+  leadSources: {
+    organization: helpers.one.organizations({
+      from: helpers.leadSources.organization_id,
+      to: helpers.organizations.id
+    })
+  },
+  leadLostReasons: {
+    organization: helpers.one.organizations({
+      from: helpers.leadLostReasons.organization_id,
+      to: helpers.organizations.id
+    })
+  },
+  leadActivityTypes: {
+    organization: helpers.one.organizations({
+      from: helpers.leadActivityTypes.organization_id,
+      to: helpers.organizations.id
+    })
+  },
+  leadActivities: {
+    lead: helpers.one.leads({
+      from: helpers.leadActivities.lead_id,
+      to: helpers.leads.id
+    }),
+    type: helpers.one.leadActivityTypes({
+      from: helpers.leadActivities.type_id,
+      to: helpers.leadActivityTypes.id
+    }),
+    createdBy: helpers.one.users({
+      from: helpers.leadActivities.created_by,
+      to: helpers.users.id
+    })
+  },
+  leadFollowups: {
+    lead: helpers.one.leads({
+      from: helpers.leadFollowups.lead_id,
+      to: helpers.leads.id
+    }),
+    createdBy: helpers.one.users({
+      from: helpers.leadFollowups.created_by,
+      to: helpers.users.id
+    })
+  },
+  leadStageHistory: {
+    lead: helpers.one.leads({
+      from: helpers.leadStageHistory.lead_id,
+      to: helpers.leads.id
+    }),
+    fromStage: helpers.one.leadStages({
+      from: helpers.leadStageHistory.from_stage_id,
+      to: helpers.leadStages.id
+    }),
+    toStage: helpers.one.leadStages({
+      from: helpers.leadStageHistory.to_stage_id,
+      to: helpers.leadStages.id
+    }),
+    activity: helpers.one.leadActivities({
+      from: helpers.leadStageHistory.activity_id,
+      to: helpers.leadActivities.id
+    }),
+    changedBy: helpers.one.users({
+      from: helpers.leadStageHistory.changed_by,
+      to: helpers.users.id
     })
   }
 }))

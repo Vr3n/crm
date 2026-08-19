@@ -1,6 +1,14 @@
 import { getDrizzle } from './connection'
 import { withTransaction } from './connection'
-import { permissions, rolePermissions, roles } from './schema'
+import {
+  leadActivityTypes,
+  leadLostReasons,
+  leadSources,
+  leadStages,
+  permissions,
+  rolePermissions,
+  roles
+} from './schema'
 import { ALL_PERMISSION_CODES } from './permissions'
 
 export interface SeedRole {
@@ -34,6 +42,9 @@ export const SEED_ROLES: SeedRole[] = [
       'lead.update_stage',
       'lead.mark_lost',
       'lead.convert',
+      'followup.view',
+      'followup.create',
+      'followup.complete',
       'plan.view',
       'plan.create',
       'plan.update',
@@ -76,6 +87,9 @@ export const SEED_ROLES: SeedRole[] = [
       'lead.record_activity',
       'lead.update_stage',
       'lead.convert',
+      'followup.view',
+      'followup.create',
+      'followup.complete',
       'plan.view',
       'offer.view',
       'membership.view',
@@ -87,7 +101,7 @@ export const SEED_ROLES: SeedRole[] = [
     name: 'Front Desk',
     is_system: false,
     is_super: false,
-    permissions: ['lead.view', 'lead.record_activity', 'membership.view']
+    permissions: ['lead.view', 'lead.record_activity', 'followup.view', 'followup.create', 'followup.complete', 'membership.view']
   },
   {
     name: 'Finance',
@@ -162,5 +176,104 @@ export function seedRolesForOrganization(organizationId: number): void {
           .run()
       }
     }
+  })
+}
+
+/** The recommended starter stage pipeline (Module 01 §Lead Stage). */
+export const SEED_STAGES: Array<{
+  name: string
+  isInitial?: boolean
+  isWon?: boolean
+  isLost?: boolean
+}> = [
+  { name: 'NEW', isInitial: true },
+  { name: 'CONTACTED' },
+  { name: 'INTERESTED' },
+  { name: 'VISIT_SCHEDULED' },
+  { name: 'VISITED' },
+  { name: 'TRIAL' },
+  { name: 'NEGOTIATION' },
+  { name: 'WON', isWon: true },
+  { name: 'LOST', isLost: true }
+]
+
+/** Recommended enquiry sources (Module 01 §Lead Source). */
+export const SEED_SOURCES = [
+  'Walk-in',
+  'Phone',
+  'Referral',
+  'Instagram',
+  'Website',
+  'Advertisement',
+  'Existing Member Referral',
+  'Other'
+]
+
+/** Recommended activity vocabulary (Module 01 §Lead Activity). */
+export const SEED_ACTIVITY_TYPES = [
+  'PHONE_CALL',
+  'WALK_IN',
+  'WHATSAPP',
+  'GYM_TOUR',
+  'TRIAL',
+  'NOTE',
+  'PRICE_DISCUSSION',
+  'MEMBERSHIP_PROPOSAL',
+  'OWNER_CHANGE'
+]
+
+/** Recommended lost-lead reasons (Module 01 §Lost Lead). */
+export const SEED_LOST_REASONS = [
+  'Too Expensive',
+  'Joined Competitor',
+  'Not Interested',
+  'No Response',
+  'Moved Away',
+  'Medical Reason',
+  'Wrong Contact',
+  'Other'
+]
+
+/**
+ * Provisions the org's sales reference data: stages, sources, activity types,
+ * and lost reasons. Runs inside its own transaction and is called from the
+ * org-setup flow right after `seedRolesForOrganization`. The (organization_id,
+ * name) unique constraints guard against double-seeding; a second call for the
+ * same org would violate them, matching the shipped role-seed behavior.
+ */
+export function seedSalesReferenceData(organizationId: number): void {
+  withTransaction(() => {
+    const db = getDrizzle()
+
+    SEED_STAGES.forEach((s, i) => {
+      db.insert(leadStages)
+        .values({
+          organization_id: organizationId,
+          name: s.name,
+          sort_order: i,
+          is_initial: Boolean(s.isInitial),
+          is_won: Boolean(s.isWon),
+          is_lost: Boolean(s.isLost)
+        })
+        .run()
+    })
+
+    SEED_SOURCES.forEach((name, i) => {
+      db.insert(leadSources)
+        .values({ organization_id: organizationId, name, sort_order: i })
+        .run()
+    })
+
+    SEED_ACTIVITY_TYPES.forEach((name) => {
+      db.insert(leadActivityTypes)
+        .values({ organization_id: organizationId, name })
+        .run()
+    })
+
+    SEED_LOST_REASONS.forEach((name, i) => {
+      db.insert(leadLostReasons)
+        .values({ organization_id: organizationId, name, sort_order: i })
+        .run()
+    })
   })
 }

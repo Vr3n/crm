@@ -10,7 +10,28 @@ export const IPC_CHANNELS = {
   IDENTITY_STATUS: 'identity:status',
   IDENTITY_CREATE_STAFF: 'identity:createStaff',
   IDENTITY_CHECK_ORGANIZATION_EXISTS: 'identity:checkOrganizationExists',
-  IDENTITY_LOGOUT: 'identity:logout'
+  IDENTITY_LOGOUT: 'identity:logout',
+
+  LEADS_CREATE: 'leads:create',
+  LEADS_MOVE_STAGE: 'leads:moveStage',
+  LEADS_RECORD_ACTIVITY: 'leads:recordActivity',
+  LEADS_ASSIGN: 'leads:assign',
+  LEADS_MARK_LOST: 'leads:markLost',
+  LEADS_SCHEDULE_FOLLOWUP: 'leads:scheduleFollowup',
+  LEADS_COMPLETE_FOLLOWUP: 'leads:completeFollowup',
+  LEADS_LIST: 'leads:list',
+  LEADS_GET_DETAILS: 'leads:getDetails',
+  LEADS_GET_TIMELINE: 'leads:getTimeline',
+  LEADS_GET_NEW: 'leads:getNew',
+  LEADS_GET_UNCONTACTED: 'leads:getUncontacted',
+  LEADS_GET_TODAYS_FOLLOWUPS: 'leads:getTodaysFollowups',
+  LEADS_GET_OVERDUE_FOLLOWUPS: 'leads:getOverdueFollowups',
+  LEADS_GET_TRIALS_ENDING: 'leads:getTrialsEnding',
+  LEADS_GET_RECENT_WON: 'leads:getRecentlyWon',
+  LEADS_GET_RECENT_LOST: 'leads:getRecentlyLost',
+  LEADS_GET_FUNNEL_COUNTS: 'leads:getFunnelCounts',
+  LEADS_SEARCH_PEOPLE: 'leads:searchPeople',
+  LEADS_GET_REFERENCE: 'leads:getReferenceData'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

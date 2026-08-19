@@ -6,6 +6,7 @@ import { openDatabase } from './db/connection'
 import { runMigrations } from './db/migrations'
 import { seedPermissions } from './db/seed'
 import { registerIdentityIpc } from './ipc/identity'
+import { registerSalesIpc } from './ipc/sales'
 import { restoreRememberedLogin } from './application/identity'
 
 function createWindow(): void {
@@ -57,6 +58,7 @@ app.whenReady().then(async () => {
 
   // IPC (channels are the only way the renderer touches the database)
   registerIdentityIpc()
+  registerSalesIpc()
 
   createWindow()
 

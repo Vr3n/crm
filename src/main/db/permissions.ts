@@ -26,6 +26,11 @@ export const PERMISSIONS = {
   LEAD_MARK_LOST: 'lead.mark_lost',
   LEAD_CONVERT: 'lead.convert',
 
+  // Follow-ups (Module 01)
+  FOLLOWUP_VIEW: 'followup.view',
+  FOLLOWUP_CREATE: 'followup.create',
+  FOLLOWUP_COMPLETE: 'followup.complete',
+
   // Membership plans (Module 03)
   PLAN_VIEW: 'plan.view',
   PLAN_CREATE: 'plan.create',
