@@ -14,7 +14,6 @@ import { Timeline } from '../components/detail/timeline'
 import { QuickActions, type QuickActionType } from '../components/detail/quick-actions'
 import { MoveStageDialog } from '../components/move-stage-dialog'
 import { MarkLostDialog } from '../components/mark-lost-dialog'
-import { ConvertDialog } from '../components/convert-dialog'
 import { LogActivityDialog } from '../components/log-activity-dialog'
 import { FollowUpDialog } from '../components/follow-up-dialog'
 
@@ -25,9 +24,11 @@ import { FollowUpDialog } from '../components/follow-up-dialog'
  */
 export function LeadDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
+  const leadId =
+    id === undefined || Number.isNaN(Number(id)) ? undefined : Number(id)
   const navigate = useNavigate()
   const location = useLocation()
-  const { data: lead, isLoading } = useLead(id)
+  const { data: lead, isLoading } = useLead(leadId)
   const [action, setAction] = useState<QuickActionType | null>(null)
 
   const from = (location.state as { from?: string } | null)?.from ?? '/leads'
@@ -102,9 +103,6 @@ export function LeadDetailPage(): React.JSX.Element {
       )}
       {action === 'lost' && (
         <MarkLostDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
-      )}
-      {action === 'convert' && (
-        <ConvertDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
       )}
       {action === 'activity' && (
         <LogActivityDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />

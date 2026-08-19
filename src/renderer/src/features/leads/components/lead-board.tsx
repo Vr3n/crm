@@ -22,7 +22,7 @@ export function LeadBoard({
   onStageChange: (lead: Lead, to: StageKey) => void
 }): React.JSX.Element {
   const all = leads
-  const [dragId, setDragId] = useState<string | null>(null)
+  const [dragId, setDragId] = useState<number | null>(null)
   const [overCol, setOverCol] = useState<StageKey | null>(null)
 
   const groups = useMemo(
@@ -44,7 +44,7 @@ export function LeadBoard({
             onDragLeave={() => setOverCol((c) => (c === stage.key ? null : c))}
             onDrop={(e) => {
               e.preventDefault()
-              const id = e.dataTransfer.getData('text/lead-id')
+              const id = Number(e.dataTransfer.getData('text/lead-id'))
               const lead = all.find((l) => l.id === id)
               setOverCol(null)
               setDragId(null)
@@ -70,7 +70,7 @@ export function LeadBoard({
                     draggable
                     onDragStart={(e) => {
                       setDragId(lead.id)
-                      e.dataTransfer.setData('text/lead-id', lead.id)
+                      e.dataTransfer.setData('text/lead-id', String(lead.id))
                       e.dataTransfer.effectAllowed = 'move'
                     }}
                     onDragEnd={() => {
@@ -87,9 +87,6 @@ export function LeadBoard({
                       <span className="text-sm font-medium">{lead.name}</span>
                       <QualityDot quality={q} className="mt-0.5" />
                     </div>
-                    {lead.planInterest ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{lead.planInterest}</p>
-                    ) : null}
                     <div className="mt-2 flex flex-col gap-1 border-t pt-1.5 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <UserRound className="size-3" />

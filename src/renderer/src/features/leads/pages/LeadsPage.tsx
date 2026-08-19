@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,17 +14,29 @@ import { LeadFilters as Filters } from '../components/lead-filters'
 import { LeadMetrics } from '../components/lead-metrics'
 import { LeadTable } from '../components/lead-table'
 import { LeadBoard } from '../components/lead-board'
-import { NewLeadDialog } from '../components/new-lead-dialog'
-import { MoveStageDialog } from '../components/move-stage-dialog'
-import { MarkLostDialog } from '../components/mark-lost-dialog'
-import { ConvertDialog } from '../components/convert-dialog'
-import { LogActivityDialog } from '../components/log-activity-dialog'
-import { FollowUpDialog } from '../components/follow-up-dialog'
+
+// Lazy-load the dialogs so their module graphs (Radix Dialog/Select, the query
+// hooks) only parse and execute when a dialog is first opened — the leads page
+// itself stays lean at startup, and each dialog remounts fresh per open.
+const NewLeadDialog = lazy(() =>
+  import('../components/new-lead-dialog').then((m) => ({ default: m.NewLeadDialog }))
+)
+const MoveStageDialog = lazy(() =>
+  import('../components/move-stage-dialog').then((m) => ({ default: m.MoveStageDialog }))
+)
+const MarkLostDialog = lazy(() =>
+  import('../components/mark-lost-dialog').then((m) => ({ default: m.MarkLostDialog }))
+)
+const LogActivityDialog = lazy(() =>
+  import('../components/log-activity-dialog').then((m) => ({ default: m.LogActivityDialog }))
+)
+const FollowUpDialog = lazy(() =>
+  import('../components/follow-up-dialog').then((m) => ({ default: m.FollowUpDialog }))
+)
 
 type Action =
   | { type: 'move'; lead: Lead }
   | { type: 'lost'; lead: Lead }
-  | { type: 'convert'; lead: Lead }
   | { type: 'activity'; lead: Lead }
   | { type: 'followup'; lead: Lead }
   | null
@@ -55,10 +67,9 @@ export function LeadsPage(): React.JSX.Element {
     navigate(`/leads/${lead.id}`, { state: { from: '/leads' } })
   }
 
-  /** Strict routing: WON/LOST go to their reason-requiring dialogs. */
+  /** Strict routing: LOST goes to its reason-requiring dialog; WON is unreachable. */
   function onStageChange(lead: Lead, to: StageKey): void {
-    if (to === 'WON') setAction({ type: 'convert', lead })
-    else if (to === 'LOST') setAction({ type: 'lost', lead })
+    if (to === 'LOST') setAction({ type: 'lost', lead })
     else setAction({ type: 'move', lead })
   }
 
@@ -77,7 +88,7 @@ export function LeadsPage(): React.JSX.Element {
 
       <LeadMetrics leads={filtered} />
 
-      <Filters filters={filters} onChange={setFilters} />
+      <Filters leads={filtered} filters={filters} onChange={setFilters} />
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -120,47 +131,51 @@ export function LeadsPage(): React.JSX.Element {
         <LeadBoard leads={filtered} onOpen={openLead} onStageChange={onStageChange} />
       )}
 
-      {newOpen && <NewLeadDialog open onOpenChange={setNewOpen} />}
+      {newOpen && (
+        <Suspense fallback={null}>
+          <NewLeadDialog open onOpenChange={setNewOpen} />
+        </Suspense>
+      )}
 
       {action?.type === 'move' && (
-        <MoveStageDialog
-          key={action.lead.id}
-          open
-          onOpenChange={() => setAction(null)}
-          lead={action.lead}
-        />
+        <Suspense fallback={null}>
+          <MoveStageDialog
+            key={action.lead.id}
+            open
+            onOpenChange={() => setAction(null)}
+            lead={action.lead}
+          />
+        </Suspense>
       )}
       {action?.type === 'lost' && (
-        <MarkLostDialog
-          key={action.lead.id}
-          open
-          onOpenChange={() => setAction(null)}
-          lead={action.lead}
-        />
-      )}
-      {action?.type === 'convert' && (
-        <ConvertDialog
-          key={action.lead.id}
-          open
-          onOpenChange={() => setAction(null)}
-          lead={action.lead}
-        />
+        <Suspense fallback={null}>
+          <MarkLostDialog
+            key={action.lead.id}
+            open
+            onOpenChange={() => setAction(null)}
+            lead={action.lead}
+          />
+        </Suspense>
       )}
       {action?.type === 'activity' && (
-        <LogActivityDialog
-          key={action.lead.id}
-          open
-          onOpenChange={() => setAction(null)}
-          lead={action.lead}
-        />
+        <Suspense fallback={null}>
+          <LogActivityDialog
+            key={action.lead.id}
+            open
+            onOpenChange={() => setAction(null)}
+            lead={action.lead}
+          />
+        </Suspense>
       )}
       {action?.type === 'followup' && (
-        <FollowUpDialog
-          key={action.lead.id}
-          open
-          onOpenChange={() => setAction(null)}
-          lead={action.lead}
-        />
+        <Suspense fallback={null}>
+          <FollowUpDialog
+            key={action.lead.id}
+            open
+            onOpenChange={() => setAction(null)}
+            lead={action.lead}
+          />
+        </Suspense>
       )}
     </div>
   )

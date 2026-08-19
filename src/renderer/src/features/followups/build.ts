@@ -16,7 +16,6 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       title: f.title,
       dueAt: f.dueAt,
       completedAt: f.completedAt,
-      note: f.note,
       ownerId: lead.owner?.id,
       ownerName: lead.owner?.name
     }))

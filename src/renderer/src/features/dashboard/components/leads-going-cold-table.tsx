@@ -49,9 +49,9 @@ export function LeadsGoingColdTable(): React.JSX.Element {
       .slice(0, MAX_ROWS)
   }, [data])
 
-  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [selected, setSelected] = useState<Set<number>>(() => new Set())
 
-  const toggleRow = (id: string): void =>
+  const toggleRow = (id: number): void =>
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -61,7 +61,6 @@ export function LeadsGoingColdTable(): React.JSX.Element {
 
   const toggleAll = (value: boolean): void =>
     setSelected(value ? new Set(rows.map((r) => r.lead.id)) : new Set())
-
   return (
     <Card>
       <CardHeader>

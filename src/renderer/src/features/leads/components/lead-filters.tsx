@@ -13,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { SOURCES, STAGES, STAFF } from '../constants'
-import type { LeadFilters, SourceKey, StageKey } from '../types'
+import { useMemo } from 'react'
+import { SOURCES, STAGES } from '../constants'
+import type { Lead, LeadFilters, SourceKey, StageKey } from '../types'
 
 const RANGES: { key: LeadFilters['range']; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -29,14 +30,28 @@ const STAGE_KEYS = STAGES.map((s) => s.key)
 /**
  * Filter bar for the pipeline: free-text search plus stage / source / owner
  * selects and a date-range preset. All metrics below respect these filters.
+ * Owner options are derived from the leads themselves (there is no staff list
+ * on this page) so the filter only ever offers owners who actually exist.
  */
 export function LeadFilters({
+  leads,
   filters,
   onChange
 }: {
+  leads: Lead[]
   filters: LeadFilters
   onChange: (f: LeadFilters) => void
 }): React.JSX.Element {
+  const owners = useMemo(() => {
+    const seen = new Map<number, string>()
+    leads.forEach((l) => {
+      if (l.owner) seen.set(l.owner.id, l.owner.name)
+    })
+    return [...seen.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [leads])
+
   const rangeLabel = RANGES.find((r) => r.key === filters.range)?.label ?? 'All time'
   const hasActive =
     !!filters.search || filters.stage !== 'ALL' || filters.source !== 'ALL' || filters.ownerId !== 'ALL'
@@ -88,17 +103,17 @@ export function LeadFilters({
       </Select>
 
       <Select
-        value={filters.ownerId}
-        onValueChange={(v) => onChange({ ...filters, ownerId: v })}
+        value={filters.ownerId === 'ALL' ? 'ALL' : String(filters.ownerId)}
+        onValueChange={(v) => onChange({ ...filters, ownerId: v === 'ALL' ? 'ALL' : Number(v) })}
       >
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Owner" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All owners</SelectItem>
-          {STAFF.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
-              {s.name}
+          {owners.map((o) => (
+            <SelectItem key={o.id} value={String(o.id)}>
+              {o.name}
             </SelectItem>
           ))}
         </SelectContent>

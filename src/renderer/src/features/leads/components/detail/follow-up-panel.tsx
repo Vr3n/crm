@@ -60,7 +60,7 @@ export function FollowUpPanel({ lead }: { lead: Lead }): React.JSX.Element {
               <Button
                 size="icon-sm"
                 variant="outline"
-                onClick={() => complete.mutate(f.id)}
+                onClick={() => complete.mutate({ followupId: f.id })}
                 disabled={complete.isPending}
                 title="Mark done"
               >

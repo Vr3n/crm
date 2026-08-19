@@ -137,7 +137,7 @@ export class IdentityStore {
     if (input.billingEmail !== undefined) org.billingEmail = input.billingEmail.trim() || null
     if (input.mobileNumber !== undefined) {
       const digits = input.mobileNumber.replace(/\D/g, '')
-      if (!/^[6-9]\d{9}$/.test(digits)) throw new Error('Enter a valid 10-digit mobile number')
+      if (!/^[026-9]\d{9}$/.test(digits)) throw new Error('Enter a valid 10-digit mobile or landline number')
       org.mobileNumber = digits
     }
     if (input.timezone !== undefined) org.timezone = input.timezone.trim() || null

@@ -19,7 +19,7 @@ function CompleteFollowUpButton({
   followUpId,
   onDone
 }: {
-  followUpId: string
+  followUpId: number
   onDone: () => void
 }): React.JSX.Element {
   const complete = useCompleteFollowUp()
@@ -34,7 +34,7 @@ function CompleteFollowUpButton({
           disabled={complete.isPending}
           onClick={(e) => {
             e.stopPropagation()
-            complete.mutate(followUpId, { onSuccess: onDone })
+            complete.mutate({ followupId: followUpId }, { onSuccess: onDone })
           }}
         >
           <Check className="size-4" />
@@ -138,9 +138,6 @@ function buildColumns(
         cell: ({ row }) => (
           <div className="min-w-0 max-w-56">
             <p className="truncate text-sm font-medium">{row.original.title}</p>
-            {row.original.note ? (
-              <p className="truncate text-xs text-muted-foreground">{row.original.note}</p>
-            ) : null}
           </div>
         ),
         sortFn: 'alphanumeric'
@@ -201,7 +198,7 @@ export function FollowUpTable({
   rows: FollowUpRow[]
   bucket: FollowUpBucket
   isLoading: boolean
-  onOpenLead: (leadId: string) => void
+  onOpenLead: (leadId: number) => void
 }): React.JSX.Element {
   const handleDone = useCallback(() => {
     // nothing extra — the leads query invalidation refreshes this table
@@ -226,7 +223,7 @@ export function FollowUpTable({
     <DataTable
       columns={columns}
       data={rows}
-      getRowId={(row) => row.id}
+      getRowId={(row) => String(row.id)}
       isLoading={isLoading}
       initialSorting={[{ id: 'dueAt', desc: false }]}
       initialPageSize={8}

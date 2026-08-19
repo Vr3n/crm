@@ -10,6 +10,7 @@ import {
   CommandList
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import { useLeads } from '../queries'
 import { displayPhone } from '../format'
 import type { Lead, StageKey } from '../types'
@@ -23,13 +24,16 @@ export function LeadPicker({
   value,
   onChange,
   excludeStage,
-  placeholder = 'Search a lead…'
+  placeholder = 'Search a lead…',
+  invalid
 }: {
-  value: string
+  value: number
   onChange: (lead: Lead) => void
   /** Hide leads currently sitting in these stages (e.g. lost leads). */
   excludeStage?: StageKey[]
   placeholder?: string
+  /** Sets `aria-invalid` + destructive border on the trigger (reactive form states). */
+  invalid?: boolean
 }): React.JSX.Element {
   const { data } = useLeads()
   const [open, setOpen] = useState(false)
@@ -49,7 +53,12 @@ export function LeadPicker({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-full justify-between gap-2 rounded-md px-3 text-sm font-normal"
+          aria-invalid={invalid || undefined}
+          className={cn(
+            'h-9 w-full justify-between gap-2 rounded-md px-3 text-sm font-normal',
+            invalid &&
+              'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40'
+          )}
         >
           {selected ? (
             <span className="truncate">{selected.name}</span>
@@ -71,7 +80,7 @@ export function LeadPicker({
               {leads.map((lead) => (
                 <CommandItem
                   key={lead.id}
-                  value={lead.id}
+                  value={String(lead.id)}
                   onSelect={() => {
                     onChange(lead)
                     setOpen(false)

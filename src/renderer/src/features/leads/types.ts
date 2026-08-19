@@ -6,9 +6,9 @@
  * Stages are config-driven (see constants.ts) — logic only reads the
  * `isWon` / `isLost` flags, never the literal stage name.
  *
- * This is a *frontend-only* prototype: the mock api/store below stands in for
- * the future SQLite-backed command layer, so every mutation here is transient
- * (in-memory) and resets on reload.
+ * The display model below is hydrated by `mapLeadRow` from the `leads:list`
+ * IPC rows plus the org's reference data (ids ↔ keys resolved via
+ * `getLeadMaps`). All ids are the real SQLite integer ids.
  */
 
 export type StageKey =
@@ -54,6 +54,7 @@ export type ActivityTypeKey =
   | 'NO_SHOW'
   | 'PRICE_DISCUSSION'
   | 'MEMBERSHIP_PROPOSAL'
+  | 'OWNER_CHANGE'
   | 'STAGE_CHANGE'
   | 'FOLLOW_UP_CREATED'
   | 'FOLLOW_UP_DONE'
@@ -72,22 +73,21 @@ export type LostReasonKey =
   | 'OTHER'
 
 export interface OwnerRef {
-  id: string
+  id: number
   name: string
 }
 
 export interface FollowUp {
-  id: string
-  leadId: string
+  id: number
+  leadId: number
   title: string
   dueAt: string
   completedAt?: string
-  note?: string
 }
 
 export interface LeadActivity {
-  id: string
-  leadId: string
+  id: number
+  leadId: number
   type: ActivityTypeKey
   note?: string
   at: string
@@ -102,38 +102,36 @@ export interface LeadStageHistoryEntry {
 }
 
 export interface Lead {
-  id: string
+  id: number
+  personId: number
   name: string
   phone?: string
   email?: string
   /** Canonical source key. */
   source: SourceKey
-  /** Raw captured source label — may be dirty ("web", "Insta"). */
-  sourceLabel: string
+  sourceId: number
   owner?: OwnerRef
-  /** Plan / offer they're interested in, if stated. */
-  planInterest?: string
-  /** Fitness goal, if captured at intake. */
-  goal?: string
   stage: StageKey
+  stageId: number
   createdAt: string
+  planInterest?: string
+  goal?: string
   notes?: string
   lostReason?: LostReasonKey
   lostAt?: string
-  convertedAt?: string
   activities: LeadActivity[]
   followUps: FollowUp[]
   stageHistory: LeadStageHistoryEntry[]
 }
 
+/** Renderer-side create input; `phone` is mandatory (backend enforces the format). */
 export interface NewLeadInput {
-  name: string
-  phone?: string
+  fullName: string
+  phone: string
   email?: string
-  source: SourceKey
+  sourceId: number
   planInterest?: string
   goal?: string
-  ownerId?: string
   notes?: string
 }
 
@@ -141,6 +139,6 @@ export type LeadFilters = {
   search?: string
   stage?: StageKey | 'ALL'
   source?: SourceKey | 'ALL'
-  ownerId?: string | 'ALL'
+  ownerId?: number | 'ALL'
   range: 'today' | 'week' | 'month' | 'all'
 }

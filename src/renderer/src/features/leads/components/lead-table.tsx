@@ -26,7 +26,8 @@ import { StageBadge } from './stage-badge'
 /**
  * Airtable-minimal lead table: one row per lead, quiet hairlines, no heavy
  * card chrome. Stage is edited inline and always routes through the strict
- * move dialog (WON/LOST open their reason-requiring dialogs).
+ * move dialog (LOST opens its reason-requiring dialog; WON is unreachable
+ * until the Module 02 conversion handoff exists).
  */
 export function LeadTable({
   leads,
@@ -38,9 +39,9 @@ export function LeadTable({
   onStageChange: (lead: Lead, to: StageKey) => void
 }): React.JSX.Element {
   const all = leads
-  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  const [selected, setSelected] = useState<Set<number>>(() => new Set())
 
-  const toggleRow = (id: string): void =>
+  const toggleRow = (id: number): void =>
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -86,7 +87,6 @@ export function LeadTable({
             <TableHead className="text-primary">Stage</TableHead>
             <TableHead className="text-primary">Owner</TableHead>
             <TableHead className="text-primary">Next follow-up</TableHead>
-            <TableHead className="text-primary">Plan interest</TableHead>
             <TableHead className="text-right text-primary">Last activity</TableHead>
           </TableRow>
         </TableHeader>
@@ -110,12 +110,9 @@ export function LeadTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate font-medium">{lead.name}</span>
-                      <QualityDot quality={q} />
-                    </div>
-                    <span className="text-xs text-muted-foreground">{lead.goal || '—'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate font-medium">{lead.name}</span>
+                    <QualityDot quality={q} />
                   </div>
                 </TableCell>
                 <TableCell>
@@ -145,7 +142,7 @@ export function LeadTable({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent align="start">
-                      {STAGES.map((s) => (
+                      {STAGES.filter((s) => s.key !== 'WON').map((s) => (
                         <SelectItem key={s.key} value={s.key}>
                           {s.label}
                         </SelectItem>
@@ -160,9 +157,6 @@ export function LeadTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">{nextFollowUp(lead)}</span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{lead.planInterest || '—'}</span>
                 </TableCell>
                 <TableCell className="text-right">
                   <span className="text-sm text-muted-foreground">{lastActivity(lead)}</span>

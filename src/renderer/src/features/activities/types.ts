@@ -6,8 +6,8 @@ import type { ActivityTypeKey, StageKey } from '@/features/leads/types'
  * chronological audit, each carrying its lead context for navigation.
  */
 export interface ActivityRow {
-  id: string
-  leadId: string
+  id: number
+  leadId: number
   leadName: string
   stage: StageKey
   type: ActivityTypeKey

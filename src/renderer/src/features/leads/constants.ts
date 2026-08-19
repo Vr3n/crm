@@ -39,7 +39,7 @@ export function isTerminal(key: StageKey): boolean {
 /** Every non-terminal stage a lead can be moved to (strict-move dialog). */
 export function forwardStages(from: StageKey): StageConfig[] {
   const idx = STAGES.findIndex((s) => s.key === from)
-  return STAGES.slice(idx + 1)
+  return STAGES.slice(idx + 1).filter((s) => !isTerminal(s.key))
 }
 
 export const SOURCES: Record<SourceKey, string> = {
@@ -78,6 +78,7 @@ export const ACTIVITY_LABELS: Record<ActivityTypeKey, string> = {
   NO_SHOW: 'No-show',
   PRICE_DISCUSSION: 'Price discussion',
   MEMBERSHIP_PROPOSAL: 'Membership proposal',
+  OWNER_CHANGE: 'Owner changed',
   STAGE_CHANGE: 'Stage changed',
   FOLLOW_UP_CREATED: 'Follow-up scheduled',
   FOLLOW_UP_DONE: 'Follow-up done',
@@ -96,12 +97,6 @@ export const LOST_REASONS: Record<LostReasonKey, string> = {
   WRONG_CONTACT: 'Wrong contact details',
   OTHER: 'Other'
 }
-
-export const STAFF: { id: string; name: string }[] = [
-  { id: 'u-1', name: 'Priya Verma' },
-  { id: 'u-2', name: 'Arjun Mehta' },
-  { id: 'u-3', name: 'Sana Shaikh' }
-]
 
 /** Apply list filters (shared by the table, board and metrics). */
 export function filterLeads(leads: Lead[], filters: LeadFilters): Lead[] {
@@ -122,7 +117,7 @@ export function filterLeads(leads: Lead[], filters: LeadFilters): Lead[] {
     if (filters.source && filters.source !== 'ALL' && l.source !== filters.source) return false
     if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId) return false
     if (q) {
-      const hay = [l.name, l.phone, l.email, l.planInterest, l.goal].join(' ').toLowerCase()
+      const hay = [l.name, l.phone, l.email].join(' ').toLowerCase()
       if (!hay.includes(q)) return false
     }
     return true

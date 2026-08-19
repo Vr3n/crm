@@ -1,4 +1,5 @@
 import { CalendarDays, Search, SlidersHorizontal } from 'lucide-react'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -9,9 +10,9 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { ACTIVITY_LABELS, STAFF } from '@/features/leads/constants'
+import { ACTIVITY_LABELS } from '@/features/leads/constants'
 import type { ActivityTypeKey } from '@/features/leads/types'
-import type { ActivityFilters } from '../types'
+import type { ActivityFilters, ActivityRow } from '../types'
 
 const RANGES: { key: ActivityFilters['range']; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -24,15 +25,26 @@ const TYPES = Object.keys(ACTIVITY_LABELS) as ActivityTypeKey[]
 
 /**
  * Audit controls: search, activity type, staff member and date range. The
- * timeline below recomputes from these.
+ * timeline below recomputes from these. The staff options are the distinct
+ * "by" names present in the audit itself.
  */
 export function ActivityFilters({
+  rows,
   filters,
   onChange
 }: {
+  rows: ActivityRow[]
   filters: ActivityFilters
   onChange: (f: ActivityFilters) => void
 }): React.JSX.Element {
+  const staffNames = useMemo(() => {
+    const seen = new Set<string>()
+    rows.forEach((r) => {
+      if (r.by) seen.add(r.by)
+    })
+    return [...seen].sort((a, b) => a.localeCompare(b))
+  }, [rows])
+
   const rangeLabel = RANGES.find((r) => r.key === filters.range)?.label ?? 'All time'
   const hasActive =
     !!filters.search ||
@@ -75,9 +87,9 @@ export function ActivityFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All staff</SelectItem>
-          {STAFF.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
-              {s.name}
+          {staffNames.map((name) => (
+            <SelectItem key={name} value={name}>
+              {name}
             </SelectItem>
           ))}
         </SelectContent>
