@@ -17,9 +17,7 @@ import {
   User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Field } from '@/components/ui/field'
-import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
+import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { PasswordStrength } from '@/components/ui/password-strength'
 import {
@@ -298,7 +296,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   validators={{ onChange: ({ value }) => validators.name(value) }}
                 >
                   {(field) => (
-                    <AuthField
+                    <FormField
                       name={field.name}
                       state={field.state}
                       handleChange={field.handleChange}
@@ -322,7 +320,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   {(field) => {
                     const remaining = MOBILE_MAX - field.state.value.length
                     return (
-                      <AuthField
+                      <FormField
                         name={field.name}
                         state={field.state}
                         handleChange={field.handleChange}
@@ -364,7 +362,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   validators={{ onChange: ({ value }) => validators.ownerFullName(value) }}
                 >
                   {(field) => (
-                    <AuthField
+                    <FormField
                       name={field.name}
                       state={field.state}
                       handleChange={field.handleChange}
@@ -385,7 +383,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   validators={{ onChange: ({ value }) => validators.ownerEmail(value) }}
                 >
                   {(field) => (
-                    <AuthField
+                    <FormField
                       name={field.name}
                       state={field.state}
                       handleChange={field.handleChange}
@@ -407,7 +405,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   validators={{ onChange: ({ value }) => validators.ownerPassword(value) }}
                 >
                   {(field) => (
-                    <AuthField
+                    <FormField
                       name={field.name}
                       state={field.state}
                       handleChange={field.handleChange}
@@ -441,7 +439,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   validators={{ onChange: ({ value }) => validators.loginEmail(value) }}
                 >
                   {(field) => (
-                    <AuthField
+                    <FormField
                       name={field.name}
                       state={field.state}
                       handleChange={field.handleChange}
@@ -463,7 +461,7 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
                   validators={{ onChange: ({ value }) => validators.loginPassword(value) }}
                 >
                   {(field) => (
-                    <AuthField
+                    <FormField
                       name={field.name}
                       state={field.state}
                       handleChange={field.handleChange}
@@ -535,113 +533,6 @@ export function AuthGate({ status, statusPending, onAuthenticated }: AuthGatePro
         </div>
       </main>
     </div>
-  )
-}
-
-interface FieldControl {
-  name: string
-  state: { value: string; meta: { isTouched: boolean } }
-  handleChange: (value: string) => void
-  handleBlur: () => void
-}
-
-interface AuthFieldProps extends FieldControl {
-  submitted: boolean
-  label: string
-  hint?: React.ReactNode
-  validate: (value: string) => string | undefined
-  /**
-   * Returns true once the value is complete enough to judge live (e.g. a 10-digit
-   * mobile). When provided, the field evaluates on blur/submit OR as soon as this
-   * returns true; when omitted it evaluates only on blur/submit.
-   */
-  completeWhen?: (value: string) => boolean
-  leading?: React.ReactNode
-  /** Node rendered as a trailing addon inside the input (e.g. counter, eye toggle). */
-  trailing?: React.ReactNode
-  type?: string
-  placeholder?: string
-  autoComplete?: string
-  inputMode?: 'text' | 'tel' | 'email' | 'numeric' | 'url'
-  inputClassName?: string
-  onChange?: (value: string) => void
-  showSuccessCheck?: boolean
-  /**
-   * An externally-computed error (e.g. the async "organization already exists"
-   * check) shown in the same red style as a field error. When present the field
-   * is treated as invalid regardless of its own validator result.
-   */
-  extraError?: string | null
-}
-
-/**
- * Thin shadcn-style wrapper that wires a TanStack field to a reactive `<Input>`:
- * `aria-invalid` / `data-valid` are set directly on the input based on
- * touched-or-submitted state, so the control visibly reflects error (red) and
- * success (green + check) states the moment the user interacts.
- */
-function AuthField({
-  name,
-  state,
-  handleChange,
-  handleBlur,
-  submitted,
-  label,
-  hint,
-  validate,
-  completeWhen,
-  leading,
-  trailing,
-  type = 'text',
-  placeholder,
-  autoComplete,
-  inputMode,
-  inputClassName,
-  onChange,
-  showSuccessCheck = true,
-  extraError
-}: AuthFieldProps): React.JSX.Element {
-  const value = state.value
-  const evaluated = state.meta.isTouched || submitted || Boolean(completeWhen?.(value))
-  const errorMsg = validate(value)
-  const hasExtra = Boolean(extraError)
-  const invalid = (Boolean(errorMsg) || hasExtra) && (evaluated || hasExtra)
-  const valid = !errorMsg && !hasExtra && evaluated
-  const error = invalid ? (extraError ?? errorMsg) : undefined
-  const describedBy = error ? `${name}-error` : hint ? `${name}-hint` : undefined
-
-  return (
-    <Field
-      id={name}
-      label={label}
-      hint={hint}
-      error={error}
-      trailing={
-        valid && showSuccessCheck ? (
-          <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" aria-hidden />
-        ) : undefined
-      }
-    >
-      <InputGroup>
-        {leading ? <InputGroupAddon align="start">{leading}</InputGroupAddon> : null}
-        <Input
-          id={name}
-          name={name}
-          value={value}
-          onChange={(e) => (onChange ?? handleChange)(e.target.value)}
-          onBlur={handleBlur}
-          type={type}
-          placeholder={placeholder}
-          autoComplete={autoComplete}
-          inputMode={inputMode}
-          aria-invalid={invalid || undefined}
-          data-valid={valid || undefined}
-          aria-describedby={describedBy}
-          className={cn(inputClassName, leading ? 'pl-9' : '', trailing ? 'pr-10' : '')}
-        />
-        {trailing ? <InputGroupAddon align="end">{trailing}</InputGroupAddon> : null}
-      </InputGroup>
-    </Field>
   )
 }
 
