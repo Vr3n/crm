@@ -2,6 +2,7 @@ import {
   assignLead,
   completeFollowUp,
   createLead,
+  createLeadSource,
   getFunnelCounts,
   getLeadDetails,
   getLeadTimeline,
@@ -18,14 +19,20 @@ import {
   moveLeadStage,
   recordLeadActivity,
   scheduleFollowUp,
+  searchLeadGoals,
+  searchLeadPlanInterests,
+  searchLeadSources,
   searchPeople
 } from '../application/leads'
 import {
   assignLeadInputSchema,
   completeFollowUpInputSchema,
   createLeadInputSchema,
+  createLeadSourceInputSchema,
   leadIdRequestSchema,
   leadListRequestSchema,
+  leadSourceSearchRequestSchema,
+  leadVocabularySearchRequestSchema,
   markLeadLostInputSchema,
   moveLeadStageInputSchema,
   recordLeadActivityInputSchema,
@@ -62,4 +69,16 @@ export function registerSalesIpc(): void {
   handle(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS, () => getFunnelCounts())
   handle(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, (query: string) => searchPeople(query))
   handle(IPC_CHANNELS.LEADS_GET_REFERENCE, () => getReferenceData())
+  handle(IPC_CHANNELS.LEADS_SEARCH_SOURCES, leadSourceSearchRequestSchema, (input) =>
+    searchLeadSources(input)
+  )
+  handle(IPC_CHANNELS.LEADS_CREATE_SOURCE, createLeadSourceInputSchema, (input) =>
+    createLeadSource(input)
+  )
+  handle(IPC_CHANNELS.LEADS_SEARCH_PLAN_INTERESTS, leadVocabularySearchRequestSchema, (input) =>
+    searchLeadPlanInterests(input)
+  )
+  handle(IPC_CHANNELS.LEADS_SEARCH_GOALS, leadVocabularySearchRequestSchema, (input) =>
+    searchLeadGoals(input)
+  )
 }

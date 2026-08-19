@@ -15,12 +15,15 @@ import type {
   AssignLeadInput,
   CompleteFollowUpInput,
   CreateLeadInput,
+  CreateLeadSourceInput,
   CreatedLead,
   FunnelCounts,
   LeadDetails,
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadSourceRow,
+  LeadTextOptionRow,
   LeadTimelineEntry,
   MarkLeadLostInput,
   MoveLeadStageInput,
@@ -100,7 +103,15 @@ const api = {
     getFunnelCounts: (): Promise<FunnelCounts> => call(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS),
     searchPeople: (query: string): Promise<PeopleList> =>
       call(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, query),
-    getReferenceData: (): Promise<ReferenceData> => call(IPC_CHANNELS.LEADS_GET_REFERENCE)
+    getReferenceData: (): Promise<ReferenceData> => call(IPC_CHANNELS.LEADS_GET_REFERENCE),
+    searchSources: (query: string): Promise<LeadSourceRow[]> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_SOURCES, { query }),
+    createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
+      call(IPC_CHANNELS.LEADS_CREATE_SOURCE, input),
+    searchPlanInterests: (query: string): Promise<LeadTextOptionRow[]> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_PLAN_INTERESTS, { query }),
+    searchGoals: (query: string): Promise<LeadTextOptionRow[]> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_GOALS, { query })
   }
 }
 

@@ -1,9 +1,12 @@
 import type {
   CompleteFollowUpInput,
   CreateLeadInput,
+  CreateLeadSourceInput,
   CreatedLead,
   LeadListRequest,
   LeadListResponse,
+  LeadSourceRow,
+  LeadTextOptionRow,
   MarkLeadLostInput,
   MoveLeadStageInput,
   RecordLeadActivityInput,
@@ -29,7 +32,13 @@ export const api = {
     window.api.leads.scheduleFollowup(input),
   completeFollowUp: (input: CompleteFollowUpInput): Promise<void> =>
     window.api.leads.completeFollowup(input),
-  referenceData: (): Promise<ReferenceData> => window.api.leads.getReferenceData()
+  referenceData: (): Promise<ReferenceData> => window.api.leads.getReferenceData(),
+  searchSources: (query: string): Promise<LeadSourceRow[]> => window.api.leads.searchSources(query),
+  createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
+    window.api.leads.createSource(input),
+  searchPlanInterests: (query: string): Promise<LeadTextOptionRow[]> =>
+    window.api.leads.searchPlanInterests(query),
+  searchGoals: (query: string): Promise<LeadTextOptionRow[]> => window.api.leads.searchGoals(query)
 }
 
 /**

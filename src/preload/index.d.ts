@@ -12,12 +12,15 @@ import type {
   AssignLeadInput,
   CompleteFollowUpInput,
   CreateLeadInput,
+  CreateLeadSourceInput,
   CreatedLead,
   FunnelCounts,
   LeadDetails,
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadSourceRow,
+  LeadTextOptionRow,
   LeadTimelineEntry,
   MarkLeadLostInput,
   MoveLeadStageInput,
@@ -75,6 +78,10 @@ declare global {
         getFunnelCounts: () => Promise<FunnelCounts>
         searchPeople: (query: string) => Promise<PeopleList>
         getReferenceData: () => Promise<ReferenceData>
+        searchSources: (query: string) => Promise<LeadSourceRow[]>
+        createSource: (input: CreateLeadSourceInput) => Promise<LeadSourceRow>
+        searchPlanInterests: (query: string) => Promise<LeadTextOptionRow[]>
+        searchGoals: (query: string) => Promise<LeadTextOptionRow[]>
       }
     }
   }

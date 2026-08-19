@@ -8,7 +8,7 @@ create mutation that auto-selects the returned ID.
 ## Files
 
 - `src/renderer/src/components/autocorrect-combobox.tsx` — the component + exported types.
-- `tests/renderer/autocorrect-combobox.test.tsx` — 15 tests (unit, jsdom, TanStack Query client).
+- `tests/renderer/autocorrect-combobox.test.tsx` — 18 tests (unit, jsdom, TanStack Query client).
 
 ## Public API
 
@@ -25,12 +25,20 @@ export interface AutocorrectFieldAdapter<TId> { name?; state.value; state.meta; 
 
 Props: `field`, `search`, `create`, plus UI knobs (`label`, `description`, `placeholder`,
 `searchPlaceholder`, `emptyMessage`, `minSearchLength` (default 2), `debounceMs` (default
-300), `disabled`, `className`, `selectedOption`).
+300), `disabled`, `className`, `selectedOption`, `canCreate` (default true), `onCreated`).
 
 The field adapter is a **structural slice** of TanStack Form's `FieldApi` — plain `TId | null`
 for `state.value` and `handleChange(value: TId | null)`. That keeps the combobox decoupled
 from react-form while remaining a drop-in for any `FieldApi` (the `handleChange` signature is
 structurally compatible with react-form's `Updater<TData>`).
+
+**Note for string-backed react-form fields** (the new-lead source is one): react-form's
+`handleChange` only accepts `Updater<TId>` — it rejects `null`. Callers translate the combobox's
+clear-sentinel back to the field's "empty" value by wrapping it, e.g.
+`handleChange: (value: string | null) => field.handleChange(value ?? '')`. And because such a
+field starts as `''`, the combobox treats an **empty string as "no value"** (`hasValue` = value
+is neither `null` nor `''`), so the placeholder shows and the clear button stays hidden until a
+real selection exists.
 
 ## Ownership split
 
@@ -45,16 +53,31 @@ Transient UI state is `open`, `query`, `activeValue`/`navigatedQuery` (the cmdk 
 
 ## Data flow
 
-- **Search**: `useQuery({ queryKey: ['autocorrect-options', debouncedQuery] })`, enabled only
-  while `open && !disabled && searchable` (`debouncedQuery.length >= minSearchLength`). Debounce
-  uses the existing `useDebouncedValue` hook (default 300 ms). `staleTime: 30_000` keeps recent
-  queries cached; `placeholderData: keepPreviousData` keeps the previous results visible (dimmed,
+- **Search**: `useQuery({ queryKey: ['autocorrect-options', name, debouncedQuery] })`, enabled
+  only while `open && !disabled && searchable` (`debouncedQuery.length >= minSearchLength`). The
+  query key is **scoped by field name** so several comboboxes on one form never share each
+  other's cached results for the same query string (the new-lead form has Source, Plan interest,
+  and Goal — searching "weight" in Source must not surface Goal's results). Debounce uses the
+  existing `useDebouncedValue` hook (default 300 ms). `staleTime: 30_000` keeps recent queries
+  cached; `placeholderData: keepPreviousData` keeps the previous results visible (dimmed,
   `opacity-60`) while the next query resolves, so the list never flashes empty.
 - **Create**: `useMutation`. On success: cache the returned option for the display label,
   `field.handleChange(createdOption.id)`, close the popover, and
-  `invalidateQueries({ queryKey: ['autocorrect-options'] })` so the created value appears in
-  later searches. On failure: keep popover and query intact, show `CREATE_ERROR` inline.
+  `invalidateQueries({ queryKey: ['autocorrect-options', name] })` so the created value appears
+  in later searches on the same field. On failure: keep popover and query intact, show
+  `CREATE_ERROR` inline.
 - **Select existing**: `field.handleChange(option.id)` + close + blur. No Query round-trip.
+- **`canCreate`**: when `false`, the "+ Add" item is hidden and unmatched queries fall back to the
+  empty message — used for viewers who may search sources but not manage settings.
+- **`onCreated`**: invoked with the created option after the field is set and the popover closes;
+  the new-lead dialog uses it to invalidate `['reference-data']` so filters and row hydration see
+  the new source.
+- **Free-text values (plan interest / goal)**: when the field stores free text — not a
+  reference-data FK — pass an **identity create**: `create: async (label) => ({ id: label, label })`.
+  "Creating" an option just commits the typed text (there is no vocabulary row to persist), so
+  the combobox becomes an autocomplete-over-previously-used-values picker while staying free-form.
+  The new-lead dialog pairs this with a `search` callback that returns `{ id, label }` where
+  `id === label` (backend: distinct `plan_interest` / `goal` values from the org's leads).
 
 ## Highlight / Enter semantics (the tricky part)
 
@@ -93,12 +116,14 @@ re-emit `onValueChange`).
 - A visually-hidden `aria-live="polite"` region announces "Searching for …" / "Adding …" status.
 - Error state mirrors the app's form conventions (`Field`, red border + `aria-invalid`, inline
   `role="alert"` messages with a **Retry** button for search failures).
-- A ghost "Clear selection" button (absolute, top-right) is shown only when a value is selected;
-  it calls `field.handleChange(null)`.
+- A ghost "Clear selection" button (absolute, top-right) is shown only when a value is selected
+  (`hasValue`, so `''` never counts); it calls `field.handleChange(null)`.
+- `label` is a `ReactNode` (supports the required-asterisk pattern); the Command's accessible
+  `aria-label` falls back to a string.
 
 ## Test strategy
 
-15 tests over the shipped behavior — no test ever submits the harness `<form>`, so Enter-not-
+18 tests over the shipped behavior — no test ever submits the harness `<form>`, so Enter-not-
 submitting is asserted explicitly:
 
 - no search while closed; debounce collapses keystrokes to one query; nothing below
@@ -108,6 +133,8 @@ submitting is asserted explicitly:
 - add option: create mutation called with the trimmed query, created ID stored, popover closed,
   `autocorrect-options` cache invalidated; failure keeps popover + query and shows the error.
 - exact-match hides the add option (case-insensitive).
+- `canCreate={false}` hides the add option and shows the empty message; `onCreated` receives
+  the created option.
 - search error renders `role="alert"` + retry re-queries; create error uses a distinct message.
 - blur validation: the harness's required validator (`value ? [] : ['Please select a customer.']`)
   surfaces via `aria-invalid` + the Field error.
@@ -120,7 +147,7 @@ popover-friendly jsdom stubs). Harness passes `debounceMs={0}` except in the deb
 ## Verification
 
 ```bash
-npx vitest run --project components tests/renderer/autocorrect-combobox.test.tsx   # 15/15
+npx vitest run --project components tests/renderer/autocorrect-combobox.test.tsx   # 18/18
 npm run typecheck      # clean (node + web)
 npx eslint src/renderer/src/components/autocorrect-combobox.tsx tests/renderer/autocorrect-combobox.test.tsx  # clean
 npm test               # full suite green

@@ -1,15 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
+import { useQueryClient } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
-import { Mail, Phone, Tag, Target, User, UserPlus } from 'lucide-react'
+import { Mail, Phone, User, UserPlus } from 'lucide-react'
+import { AutocorrectCombobox, type AutocorrectOption } from '@/components/autocorrect-combobox'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -22,11 +17,14 @@ import { FieldGroup } from '@/components/ui/field'
 import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { Textarea } from '@/components/ui/textarea'
+import { can, useSession } from '@/context/session-context'
+import { logger } from '@/lib/logger'
 import { emailError, isValidEmail, leadNameError, mobileError } from '@/lib/validation'
 import { cn } from '@/lib/utils'
 import { isApiError } from '../../../../../shared/contracts/errors'
+import { api } from '../api'
 import { useCreateLead } from '../queries'
-import { useReferenceData } from '../reference-data'
+import { referenceKeys } from '../reference-data'
 
 const PHONE_MAX = 10
 
@@ -47,29 +45,27 @@ export function NewLeadDialog({
   onOpenChange: (o: boolean) => void
 }): React.JSX.Element {
   const create = useCreateLead()
-  const { data: ref } = useReferenceData()
-  const sources = useMemo(() => ref?.sources.filter((s) => s.active) ?? [], [ref])
+  const session = useSession()
+  const queryClient = useQueryClient()
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
 
-  // The dialog remounts per open (LeadsPage mounts it conditionally), so the
-  // first active source is seeded directly into the form's initial state when
-  // the reference vocabulary is already cached — the value is visible on the
-  // very first paint. If the vocabulary is still loading on this mount the
-  // `source` value stays '' and the effect below fills it once data arrives.
+  // The dialog remounts per open (LeadsPage mounts it conditionally). The source
+  // field is empty on mount — the combobox searches the backend live, so there is
+  // nothing to seed from reference data here.
   const form = useForm({
     defaultValues: {
       name: '',
       phone: '',
       email: '',
-      source: sources[0] ? String(sources[0].id) : '',
+      source: '',
       plan: '',
       goal: '',
       notes: ''
     },
     onSubmit: async ({ value }) => {
-      const sourceId = value.source ? Number(value.source) : sources[0]?.id
+      const sourceId = value.source ? Number(value.source) : undefined
       if (sourceId === undefined) return
       try {
         await create.mutateAsync({
@@ -89,27 +85,64 @@ export function NewLeadDialog({
     }
   })
 
-  // Fallback seed for the cold path: the dialog opened before the reference
-  // vocabulary resolved, so `defaultValues.source` was still ''. The guard
-  // keeps a real user pick — never overwrite a non-empty value.
-  useEffect(() => {
-    if (sources.length > 0 && form.state.values.source === '') {
-      form.setFieldValue('source', String(sources[0].id))
-    }
-  }, [sources, form])
-
   const submitted = useStore(form.store, (s) => s.isSubmitted)
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting)
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
-  // Before the reference data loads (and the seed below fills it), the source
-  // field's validator has not run yet, so `canSubmit` can be spuriously true —
-  // keep submit gated on an actual source value.
+  // Before the user picks a source the onChange validator has not run yet, so
+  // `canSubmit` can be spuriously true — keep submit gated on an actual value.
   const sourceValue = useStore(form.store, (s) => s.values.source)
   const formError = create.error
     ? isApiError(create.error)
       ? create.error.message
       : 'Could not create lead'
     : null
+
+  // Creating a source is a settings action; searching sources is visible to
+  // anyone who can view leads (mirrors `requirePermission` in the backend).
+  const canCreateSource = can(session.permissions, session.isSuper, 'settings.manage')
+
+  const searchSources = useCallback(async (query: string): Promise<AutocorrectOption<string>[]> => {
+    const rows = await api.searchSources(query)
+    return rows.map((row) => ({ id: String(row.id), label: row.name }))
+  }, [])
+
+  const createSource = useCallback(async (label: string): Promise<AutocorrectOption<string>> => {
+    const row = await api.createSource({ name: label })
+    return { id: String(row.id), label: row.name }
+  }, [])
+
+  const searchPlanInterests = useCallback(
+    async (query: string): Promise<AutocorrectOption<string>[]> => {
+      try {
+        const rows = await api.searchPlanInterests(query)
+        logger.debug('searchPlanInterests', { query, count: rows.length, rows })
+        return rows.map((row) => ({ id: row.id, label: row.label }))
+      } catch (error) {
+        logger.warn('searchPlanInterests failed', { query, error })
+        throw error
+      }
+    },
+    []
+  )
+
+  const searchGoals = useCallback(async (query: string): Promise<AutocorrectOption<string>[]> => {
+    try {
+      const rows = await api.searchGoals(query)
+      logger.debug('searchGoals', { query, count: rows.length, rows })
+      return rows.map((row) => ({ id: row.id, label: row.label }))
+    } catch (error) {
+      logger.warn('searchGoals failed', { query, error })
+      throw error
+    }
+  }, [])
+
+  // Plan interest / goal are free-text fields: the typed text is the identity, so
+  // "creating" an option just commits the text — there is no vocabulary row to
+  // persist, unlike sources.
+  const createFreeTextOption = useCallback(
+    async (label: string): Promise<AutocorrectOption<string>> => ({ id: label, label }),
+    []
+  )
 
   useEffect(() => {
     return () => {
@@ -148,10 +181,7 @@ export function NewLeadDialog({
           ) : null}
 
           <FieldGroup className="gap-3">
-            <form.Field
-              name="name"
-              validators={{ onChange: ({ value }) => leadNameError(value) }}
-            >
+            <form.Field name="name" validators={{ onChange: ({ value }) => leadNameError(value) }}>
               {(field) => (
                 <FormField
                   name={field.name}
@@ -174,10 +204,7 @@ export function NewLeadDialog({
             </form.Field>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <form.Field
-                name="phone"
-                validators={{ onChange: ({ value }) => mobileError(value) }}
-              >
+              <form.Field name="phone" validators={{ onChange: ({ value }) => mobileError(value) }}>
                 {(field) => {
                   const remaining = PHONE_MAX - field.state.value.length
                   return (
@@ -214,7 +241,10 @@ export function NewLeadDialog({
                         // invalid (a wrong starting digit) or once all 10
                         // digits are in — never nag about an incomplete
                         // length while typing.
-                        return digits.length > 0 && (!/^[026-9]/.test(digits) || digits.length === PHONE_MAX)
+                        return (
+                          digits.length > 0 &&
+                          (!/^[026-9]/.test(digits) || digits.length === PHONE_MAX)
+                        )
                       }}
                       leading={<Phone className="pointer-events-none size-4" aria-hidden />}
                       type="tel"
@@ -260,70 +290,71 @@ export function NewLeadDialog({
               validators={{ onChange: ({ value }) => (value ? undefined : 'Choose a source') }}
             >
               {(field) => (
-                <FormField
-                  name={field.name}
-                  state={field.state}
-                  handleChange={field.handleChange}
-                  handleBlur={field.handleBlur}
-                  submitted={submitted}
-                  label="Source"
-                  validate={(v) => (v ? undefined : 'Choose a source')}
-                  completeWhen={(v) => Boolean(v)}
-                >
-                  {({ id, value, invalid, valid, describedBy, onChange }) => (
-                    <Select value={value} onValueChange={onChange}>
-                      <SelectTrigger
-                        id={id}
-                        aria-invalid={invalid}
-                        data-valid={valid}
-                        aria-describedby={describedBy}
-                      >
-                        <SelectValue placeholder="Where did they come from?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sources.map((s) => (
-                          <SelectItem key={s.id} value={String(s.id)}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </FormField>
+                <AutocorrectCombobox
+                  field={{
+                    name: field.name,
+                    state: field.state,
+                    // react-form's source value is a string; the combobox clears
+                    // with `null`, so translate that back to the empty string.
+                    handleChange: (value: string | null) => field.handleChange(value ?? ''),
+                    handleBlur: field.handleBlur
+                  }}
+                  search={searchSources}
+                  create={createSource}
+                  label={
+                    <>
+                      Source <span className="text-destructive">*</span>
+                    </>
+                  }
+                  description="Search an existing source or add a new one"
+                  placeholder="Where did they come from?"
+                  searchPlaceholder="Search or add a source…"
+                  minSearchLength={2}
+                  canCreate={canCreateSource}
+                  onCreated={() =>
+                    void queryClient.invalidateQueries({ queryKey: referenceKeys.all })
+                  }
+                />
               )}
             </form.Field>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <form.Field name="plan">
                 {(field) => (
-                  <FormField
-                    name={field.name}
-                    state={field.state}
-                    handleChange={field.handleChange}
-                    handleBlur={field.handleBlur}
-                    submitted={submitted}
+                  <AutocorrectCombobox
+                    field={{
+                      name: field.name,
+                      state: field.state,
+                      handleChange: (value: string | null) => field.handleChange(value ?? ''),
+                      handleBlur: field.handleBlur
+                    }}
+                    search={searchPlanInterests}
+                    create={createFreeTextOption}
                     label="Plan interest"
-                    validate={() => undefined}
-                    completeWhen={(v) => v.trim().length > 0}
-                    leading={<Tag className="pointer-events-none size-4" aria-hidden />}
+                    description="Pick an existing interest or add a new one"
                     placeholder="e.g. Annual Premium"
+                    searchPlaceholder="Search or add a plan interest…"
+                    minSearchLength={2}
                   />
                 )}
               </form.Field>
 
               <form.Field name="goal">
                 {(field) => (
-                  <FormField
-                    name={field.name}
-                    state={field.state}
-                    handleChange={field.handleChange}
-                    handleBlur={field.handleBlur}
-                    submitted={submitted}
+                  <AutocorrectCombobox
+                    field={{
+                      name: field.name,
+                      state: field.state,
+                      handleChange: (value: string | null) => field.handleChange(value ?? ''),
+                      handleBlur: field.handleBlur
+                    }}
+                    search={searchGoals}
+                    create={createFreeTextOption}
                     label="Goal"
-                    validate={() => undefined}
-                    completeWhen={(v) => v.trim().length > 0}
-                    leading={<Target className="pointer-events-none size-4" aria-hidden />}
+                    description="Pick an existing goal or add a new one"
                     placeholder="e.g. Weight loss"
+                    searchPlaceholder="Search or add a goal…"
+                    minSearchLength={2}
                   />
                 )}
               </form.Field>

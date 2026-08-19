@@ -58,7 +58,7 @@ export interface AutocorrectComboboxProps<TId extends string | number = string> 
   search: SearchOptions<TId>
   create: CreateOption<TId>
 
-  label?: string
+  label?: React.ReactNode
   description?: string
   placeholder?: string
   searchPlaceholder?: string
@@ -72,6 +72,14 @@ export interface AutocorrectComboboxProps<TId extends string | number = string> 
    * When omitted, the component keeps the most recently selected option in state.
    */
   selectedOption?: AutocorrectOption<TId> | null
+  /**
+   * Whether the caller may create a new option. When false the "+ Add" item is
+   * hidden and unmatched queries fall back to the empty message (e.g. a viewer
+   * who can search sources but not manage settings).
+   */
+  canCreate?: boolean
+  /** Called with the newly created option, after the field is set and popover closed. */
+  onCreated?: (option: AutocorrectOption<TId>) => void
 }
 
 const QUERY_KEY = 'autocorrect-options'
@@ -102,7 +110,9 @@ export function AutocorrectCombobox<TId extends string | number = string>({
   debounceMs = DEFAULT_DEBOUNCE_MS,
   disabled = false,
   className,
-  selectedOption
+  selectedOption,
+  canCreate = true,
+  onCreated
 }: AutocorrectComboboxProps<TId>): React.JSX.Element {
   const queryClient = useQueryClient()
   const generatedId = React.useId()
@@ -117,8 +127,14 @@ export function AutocorrectCombobox<TId extends string | number = string>({
   const [navigatedQuery, setNavigatedQuery] = React.useState<string | null>(null)
 
   const selectedId = field.state.value
-  const displayOption =
-    selectedId != null ? (selectedOption !== undefined ? selectedOption : cachedSelected) : null
+  // String-backed fields (react-form) represent "no value" as '', so empty is
+  // not a selection even though it is a legal `TId`.
+  const hasValue = selectedId != null && selectedId !== ''
+  const displayOption = hasValue
+    ? selectedOption !== undefined
+      ? selectedOption
+      : cachedSelected
+    : null
 
   const trimmedQuery = query.trim()
   const debouncedQuery = useDebouncedValue(trimmedQuery, debounceMs)
@@ -126,7 +142,9 @@ export function AutocorrectCombobox<TId extends string | number = string>({
   const canSearch = open && !disabled && searchable
 
   const searchQuery = useQuery({
-    queryKey: [QUERY_KEY, debouncedQuery] as const,
+    // Keyed by field name too: several comboboxes on one form must not share
+    // each other's cached results for the same query string.
+    queryKey: [QUERY_KEY, name, debouncedQuery] as const,
     queryFn: ({ signal }) => search(debouncedQuery, signal),
     enabled: canSearch,
     staleTime: SEARCH_STALE_TIME,
@@ -145,7 +163,8 @@ export function AutocorrectCombobox<TId extends string | number = string>({
       field.handleChange(createdOption.id)
       setCreateError(null)
       closePopover()
-      void queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      void queryClient.invalidateQueries({ queryKey: [QUERY_KEY, name] })
+      onCreated?.(createdOption)
     },
     onError: () => {
       setCreateError(CREATE_ERROR)
@@ -158,6 +177,7 @@ export function AutocorrectCombobox<TId extends string | number = string>({
 
   const querySettled = debouncedQuery === trimmedQuery
   const canAdd =
+    canCreate &&
     open &&
     !disabled &&
     searchable &&
@@ -217,6 +237,7 @@ export function AutocorrectCombobox<TId extends string | number = string>({
 
   const hasError = field.state.meta.errors.length > 0
   const describedBy = hasError ? `${name}-error` : description ? `${name}-hint` : undefined
+  const commandLabel = typeof label === 'string' ? label : 'Search options'
 
   const statusMessage = createMutation.isPending
     ? `Adding ${trimmedQuery}`
@@ -248,11 +269,11 @@ export function AutocorrectCombobox<TId extends string | number = string>({
               className={cn(
                 'w-full justify-between font-normal',
                 displayOption ? '' : 'text-muted-foreground',
-                selectedId != null && 'pr-9'
+                hasValue && 'pr-9'
               )}
             >
               <span className="truncate">{displayOption ? displayOption.label : placeholder}</span>
-              {selectedId != null ? null : (
+              {hasValue ? null : (
                 <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden />
               )}
             </Button>
@@ -269,7 +290,7 @@ export function AutocorrectCombobox<TId extends string | number = string>({
                 setNavigatedQuery(value ? debouncedQuery : null)
               }}
               shouldFilter={false}
-              label={label ?? 'Search options'}
+              label={commandLabel}
             >
               <CommandInput
                 value={query}
@@ -378,7 +399,7 @@ export function AutocorrectCombobox<TId extends string | number = string>({
           </PopoverContent>
         </Popover>
 
-        {selectedId != null && !disabled ? (
+        {hasValue && !disabled ? (
           <Button
             type="button"
             variant="ghost"

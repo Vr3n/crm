@@ -12,6 +12,7 @@ import {
   stageRepo
 } from '../repositories/sales'
 import { organizationRepo, userRepo } from '../repositories/identity'
+import { logger } from '../lib/logger'
 import { IndianMobileNumber } from '../domain/phone'
 import {
   DEFAULT_TIMEZONE,
@@ -25,11 +26,16 @@ import type {
   AssignLeadInput,
   CompleteFollowUpInput,
   CreateLeadInput,
+  CreateLeadSourceInput,
   CreatedLead,
   FunnelCounts,
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadSourceRow,
+  LeadSourceSearchRequest,
+  LeadTextOptionRow,
+  LeadVocabularySearchRequest,
   MarkLeadLostInput,
   MoveLeadStageInput,
   PeopleList,
@@ -529,4 +535,73 @@ export function getReferenceData(): ReferenceData {
     lostReasons: lostReasonRepo.findAll(organizationId),
     activityTypes: activityTypeRepo.findAll(organizationId)
   }
+}
+
+/** Live source search for the combobox — active sources, ordered by sort order. */
+export function searchLeadSources(input: LeadSourceSearchRequest): LeadSourceRow[] {
+  requirePermission(PERMISSIONS.LEAD_VIEW)
+  const organizationId = currentOrganizationId()
+  return sourceRepo.search(organizationId, input.query.trim(), 20)
+}
+
+/**
+ * Creates a lead source. Settings scoped so only admins can grow the vocabulary;
+ * the duplicate check is case-insensitive even though the schema constraint is
+ * case-sensitive, so "instagram" and "Instagram" can't both be created.
+ */
+export function createLeadSource(input: CreateLeadSourceInput): LeadSourceRow {
+  requirePermission(PERMISSIONS.SETTINGS_MANAGE)
+  const organizationId = currentOrganizationId()
+  const name = input.name.trim()
+  if (!name) throw new ValidationError('Source name is required')
+  if (sourceRepo.findByName(organizationId, name)) {
+    throw new ConflictError(`A source named "${name}" already exists`)
+  }
+  return withTransaction(() => sourceRepo.create(organizationId, name))
+}
+
+const LEAD_VOCABULARY_LIMIT = 20
+
+/**
+ * Plan-interest / goal autocomplete. The vocabulary is data-driven: distinct
+ * free-text values already used on this org's leads (no lookup table), so
+ * "creating" an option is simply committing the typed text — the value itself
+ * is the identity (`id === label`). Trimmed and de-duplicated case-insensitively.
+ */
+function searchLeadVocabulary(
+  input: LeadVocabularySearchRequest,
+  field: string,
+  values: (organizationId: number, query: string, limit: number) => string[]
+): LeadTextOptionRow[] {
+  requirePermission(PERMISSIONS.LEAD_VIEW)
+  const organizationId = currentOrganizationId()
+  const query = input.query.trim()
+  const seen = new Set<string>()
+  const options: LeadTextOptionRow[] = []
+  for (const raw of values(organizationId, query, LEAD_VOCABULARY_LIMIT)) {
+    const value = raw.trim()
+    const key = value.toLocaleLowerCase()
+    if (!value || seen.has(key)) continue
+    seen.add(key)
+    options.push({ id: value, label: value })
+    if (options.length >= LEAD_VOCABULARY_LIMIT) break
+  }
+  logger.info(`vocab search "${field}"`, { organizationId, query, count: options.length })
+  return options
+}
+
+export function searchLeadPlanInterests(input: LeadVocabularySearchRequest): LeadTextOptionRow[] {
+  return searchLeadVocabulary(
+    input,
+    'plan_interest',
+    (organizationId, query, limit) => leadRepo.distinctPlanInterests(organizationId, query, limit)
+  )
+}
+
+export function searchLeadGoals(input: LeadVocabularySearchRequest): LeadTextOptionRow[] {
+  return searchLeadVocabulary(
+    input,
+    'goal',
+    (organizationId, query, limit) => leadRepo.distinctGoals(organizationId, query, limit)
+  )
 }

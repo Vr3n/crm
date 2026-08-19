@@ -1,19 +1,7 @@
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNull,
-  like,
-  lt,
-  lte,
-  or,
-  sql
-} from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { getDrizzle } from '../db/connection'
+import { logger } from '../lib/logger'
 import {
   leadActivities,
   leadActivityTypes,
@@ -289,6 +277,53 @@ export const sourceRepo = {
       .where(and(eq(leadSources.organization_id, organizationId), eq(leadSources.id, id)))
       .get() as LeadStageRow | undefined
     return row ? mapStage(row) : null
+  },
+
+  findByName(organizationId: number, name: string): { id: number; name: string } | null {
+    const row = getDrizzle()
+      .select({ id: leadSources.id, name: leadSources.name })
+      .from(leadSources)
+      .where(
+        and(
+          eq(leadSources.organization_id, organizationId),
+          sql`lower(${leadSources.name}) = lower(${name})`
+        )
+      )
+      .get()
+    return row ?? null
+  },
+
+  search(
+    organizationId: number,
+    query: string,
+    limit: number
+  ): { id: number; name: string; active: boolean }[] {
+    return getDrizzle()
+      .select({ id: leadSources.id, name: leadSources.name, active: leadSources.active })
+      .from(leadSources)
+      .where(
+        and(
+          eq(leadSources.organization_id, organizationId),
+          eq(leadSources.active, true),
+          like(leadSources.name, `%${query}%`)
+        )
+      )
+      .orderBy(leadSources.sort_order)
+      .limit(limit)
+      .all()
+  },
+
+  create(organizationId: number, name: string): { id: number; name: string; active: boolean } {
+    const maxOrder = getDrizzle()
+      .select({ value: sql<number>`coalesce(max(${leadSources.sort_order}), 0)` })
+      .from(leadSources)
+      .where(eq(leadSources.organization_id, organizationId))
+      .get()
+    return getDrizzle()
+      .insert(leadSources)
+      .values({ organization_id: organizationId, name, sort_order: (maxOrder?.value ?? 0) + 1 })
+      .returning({ id: leadSources.id, name: leadSources.name, active: leadSources.active })
+      .get()
   }
 }
 
@@ -382,6 +417,35 @@ export const stageRepo = {
       .orderBy(leadSources.sort_order)
       .all()
   }
+}
+
+/** Distinct non-empty text values used on `leads` for a free-text column. */
+function distinctLeadValues(
+  organizationId: number,
+  column: typeof leads.plan_interest,
+  query: string,
+  limit: number
+): string[] {
+  const builder = getDrizzle()
+    .selectDistinct({ value: column })
+    .from(leads)
+    .where(
+      and(
+        eq(leads.organization_id, organizationId),
+        like(column, `%${query}%`),
+        sql`trim(${column}) != ''`
+      )
+    )
+    .orderBy(column)
+    .limit(limit)
+  logger.debug('distinct lead values', {
+    organizationId,
+    column: column.name,
+    query,
+    limit,
+    sql: builder.toSQL().sql
+  })
+  return builder.all().map((row) => row.value ?? '')
 }
 
 export const leadRepo = {
@@ -547,7 +611,9 @@ export const leadRepo = {
       ...(sourceId !== undefined ? [eq(leads.source_id, sourceId)] : []),
       ...(ownerUserId !== undefined ? [eq(leads.owner_user_id, ownerUserId)] : []),
       ...(createdAfter !== undefined ? [gte(leads.created_at, createdAfter)] : []),
-      ...(search ? [or(like(people.full_name, `%${search}%`), like(people.phone, `%${search}%`))] : [])
+      ...(search
+        ? [or(like(people.full_name, `%${search}%`), like(people.phone, `%${search}%`))]
+        : [])
     )
 
     const base = getDrizzle()
@@ -593,6 +659,19 @@ export const leadRepo = {
       .get()
 
     return { items: base, total: totalRow?.value ?? 0 }
+  },
+
+  /**
+   * Plan-interest / goal autocomplete vocabularies — distinct free-text values
+   * already used on this org's leads, matching the query case-insensitively.
+   * No lookup table: the value itself is the option (free text, not an FK).
+   */
+  distinctPlanInterests(organizationId: number, query: string, limit: number): string[] {
+    return distinctLeadValues(organizationId, leads.plan_interest, query, limit)
+  },
+
+  distinctGoals(organizationId: number, query: string, limit: number): string[] {
+    return distinctLeadValues(organizationId, leads.goal, query, limit)
   },
 
   /** In an `is_initial` stage AND zero activities — "Uncontacted Leads" (D4). */
@@ -751,7 +830,10 @@ export const activityRepo = {
   },
 
   /** Batch read for `leads:list`: one IN query resolves type + actor names. */
-  listForLeadIds(organizationId: number, leadIds: number[]): Array<{
+  listForLeadIds(
+    organizationId: number,
+    leadIds: number[]
+  ): Array<{
     leadId: number
     id: number
     typeId: number
@@ -872,7 +954,10 @@ export const followupRepo = {
   },
 
   /** Batch read for `leads:list`: one IN query returns the follow-up cards. */
-  listForLeadIds(organizationId: number, leadIds: number[]): Array<{
+  listForLeadIds(
+    organizationId: number,
+    leadIds: number[]
+  ): Array<{
     leadId: number
     id: number
     title: string
@@ -940,7 +1025,10 @@ export const stageHistoryRepo = {
   },
 
   /** Batch read for `leads:list`: one IN query resolves stage names via aliases. */
-  listForLeadIds(organizationId: number, leadIds: number[]): Array<{
+  listForLeadIds(
+    organizationId: number,
+    leadIds: number[]
+  ): Array<{
     leadId: number
     fromStageName: string | null
     toStageName: string

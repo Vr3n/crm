@@ -4,6 +4,7 @@ import {
   assignLead,
   completeFollowUp,
   createLead,
+  createLeadSource,
   getFunnelCounts,
   getLeadDetails,
   getLeadTimeline,
@@ -14,7 +15,10 @@ import {
   markLeadLost,
   moveLeadStage,
   recordLeadActivity,
-  scheduleFollowUp
+  scheduleFollowUp,
+  searchLeadGoals,
+  searchLeadPlanInterests,
+  searchLeadSources
 } from '../../../src/main/application/leads'
 import { activityRepo, leadRepo } from '../../../src/main/repositories/sales'
 import { userRepo, staffRepo } from '../../../src/main/repositories/identity'
@@ -656,5 +660,138 @@ describe('listLeads', () => {
   it('throws PERMISSION_DENIED without lead.view', () => {
     seedOrgWithSession('Finance')
     expect(() => listLeads({ page: 1, limit: 50 })).toThrow(ForbiddenError)
+  })
+})
+
+describe('searchLeadSources', () => {
+  it('returns only active sources matching the query, ordered by sort order', () => {
+    const { organizationId } = seedOrgWithSession()
+    getDb()
+      .prepare('UPDATE lead_sources SET active = 0 WHERE organization_id = ? AND name = ?')
+      .run(organizationId, 'Instagram')
+
+    // Deactivated sources never appear, even on a name match.
+    expect(searchLeadSources({ query: 'insta' })).toEqual([])
+
+    const all = searchLeadSources({ query: 'a' })
+    expect(all.every((s) => s.active)).toBe(true)
+    expect(all.map((s) => s.name)).not.toContain('Instagram')
+  })
+
+  it('matches case-insensitively and trims the query', () => {
+    seedOrgWithSession()
+    expect(searchLeadSources({ query: '  INSTAGRAM  ' })).toEqual([
+      { id: expect.any(Number), name: 'Instagram', active: true }
+    ])
+  })
+
+  it('throws PERMISSION_DENIED without lead.view', () => {
+    seedOrgWithSession('Finance')
+    expect(() => searchLeadSources({ query: 'walk' })).toThrow(ForbiddenError)
+  })
+})
+
+describe('searchLeadPlanInterests', () => {
+  it('returns distinct plan-interest values used on this orgs leads, case-insensitively', () => {
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Asha', phone: '9876543210', sourceId, planInterest: 'Annual Premium' })
+    createLead({ fullName: 'Beena', phone: '9876543211', sourceId, planInterest: 'annual premium' })
+    createLead({ fullName: 'Chetan', phone: '9876543212', sourceId, planInterest: 'Couple Plan' })
+    // No plan interest on this lead — never suggested.
+    createLead({ fullName: 'Dev', phone: '9876543213', sourceId, goal: 'Weight loss' })
+
+    // The two case-variants collapse into one option.
+    expect(searchLeadPlanInterests({ query: 'annual' })).toEqual([
+      { id: 'Annual Premium', label: 'Annual Premium' }
+    ])
+    expect(searchLeadPlanInterests({ query: 'a' })).toEqual([
+      { id: 'Annual Premium', label: 'Annual Premium' },
+      { id: 'Couple Plan', label: 'Couple Plan' }
+    ])
+  })
+
+  it('is scoped to the current organization', () => {
+    seedOrgWithSession()
+    const { organizationId: otherOrg } = seedOrgWithSession()
+    const sourceId = createSourceId(otherOrg)
+    createLead({ fullName: 'Asha', phone: '9876543210', sourceId, planInterest: 'Other Org Plan' })
+
+    expect(searchLeadPlanInterests({ query: 'plan' })).toEqual([
+      { id: 'Other Org Plan', label: 'Other Org Plan' }
+    ])
+  })
+
+  it('throws PERMISSION_DENIED without lead.view', () => {
+    seedOrgWithSession('Finance')
+    expect(() => searchLeadPlanInterests({ query: 'a' })).toThrow(ForbiddenError)
+  })
+})
+
+describe('searchLeadGoals', () => {
+  it('returns distinct goal values used on this orgs leads, matching case-insensitively', () => {
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Asha', phone: '9876543210', sourceId, goal: 'Weight loss' })
+    createLead({ fullName: 'Beena', phone: '9876543211', sourceId, goal: 'Muscle gain' })
+
+    expect(searchLeadGoals({ query: '  WEIGHT  ' })).toEqual([
+      { id: 'Weight loss', label: 'Weight loss' }
+    ])
+  })
+
+  it('throws PERMISSION_DENIED without lead.view', () => {
+    seedOrgWithSession('Finance')
+    expect(() => searchLeadGoals({ query: 'a' })).toThrow(ForbiddenError)
+  })
+})
+
+describe('createLeadSource', () => {
+  it('creates a source with a trimmed name appended at the end of the sort order', () => {
+    const { organizationId } = seedOrgWithSession()
+
+    const created = createLeadSource({ name: '  Corporate Event  ' })
+
+    expect(created).toEqual({ id: expect.any(Number), name: 'Corporate Event', active: true })
+    const row = getDb()
+      .prepare('SELECT name, sort_order, active FROM lead_sources WHERE id = ?')
+      .get(created.id) as { name: string; sort_order: number; active: number }
+    expect(row).toEqual({ name: 'Corporate Event', sort_order: 8, active: 1 })
+    expect(row.sort_order).toBeGreaterThan(
+      (
+        getDb()
+          .prepare(
+            'SELECT MAX(sort_order) AS m FROM lead_sources WHERE id != ? AND organization_id = ?'
+          )
+          .get(created.id, organizationId) as { m: number }
+      ).m
+    )
+  })
+
+  it('computes the sort order per organization', () => {
+    const { organizationId: orgB } = seedOrgWithSession()
+    seedOrgWithSession()
+
+    createLeadSource({ name: 'Podcast' })
+
+    const bMax = getDb()
+      .prepare('SELECT MAX(sort_order) AS m FROM lead_sources WHERE organization_id = ?')
+      .get(orgB) as { m: number }
+    expect(bMax.m).toBe(7)
+  })
+
+  it('rejects a duplicate name case-insensitively with ConflictError', () => {
+    seedOrgWithSession()
+    expect(() => createLeadSource({ name: 'instagram' })).toThrow(ConflictError)
+  })
+
+  it('rejects a whitespace-only name with ValidationError', () => {
+    seedOrgWithSession()
+    expect(() => createLeadSource({ name: '   ' })).toThrow(ValidationError)
+  })
+
+  it('denies creation without settings.manage even when lead.view is present', () => {
+    seedOrgWithSession('Sales')
+    expect(() => createLeadSource({ name: 'Podcast' })).toThrow(ForbiddenError)
   })
 })

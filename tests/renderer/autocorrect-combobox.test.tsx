@@ -36,6 +36,8 @@ interface HarnessProps {
   minSearchLength?: number
   debounceMs?: number
   disabled?: boolean
+  canCreate?: boolean
+  onCreated?: (option: AutocorrectOption<string>) => void
 }
 
 /**
@@ -52,7 +54,9 @@ function Harness({
   onSubmit,
   minSearchLength = 2,
   debounceMs,
-  disabled
+  disabled,
+  canCreate,
+  onCreated
 }: HarnessProps): React.JSX.Element {
   const [state, setState] = useState<{
     value: string | null
@@ -106,6 +110,8 @@ function Harness({
         minSearchLength={minSearchLength}
         debounceMs={debounceMs}
         disabled={disabled}
+        canCreate={canCreate}
+        onCreated={onCreated}
       />
     </form>
   )
@@ -356,5 +362,44 @@ describe('AutocorrectCombobox', () => {
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1))
     expect(document.querySelector('[aria-live="polite"]')).toBeInTheDocument()
+  })
+
+  it('hides the add option and shows the empty message when creation is not allowed', async () => {
+    renderWithClient(<Harness canCreate={false} debounceMs={0} />)
+    const user = userEvent.setup()
+
+    await openAndType(user, 'vitality')
+
+    await waitFor(() => expect(screen.getByText('No results found.')).toBeInTheDocument())
+    expect(screen.queryByRole('option', { name: 'Add vitality' })).not.toBeInTheDocument()
+  })
+
+  it('still shows the add option for exact-match queries when creation is allowed', async () => {
+    const search = vi.fn(defaultSearch)
+    renderWithClient(<Harness search={search} debounceMs={0} />)
+    const user = userEvent.setup()
+
+    await openAndType(user, 'acme')
+
+    const options = await screen.findAllByRole('option')
+    expect(options).toHaveLength(1)
+    expect(options[0]).toHaveTextContent('Acme')
+    expect(options[0]).not.toHaveTextContent('Add')
+  })
+
+  it('invokes onCreated with the created option after selection', async () => {
+    const create = vi.fn(defaultCreate)
+    const onCreated = vi.fn()
+    renderWithClient(<Harness create={create} onCreated={onCreated} debounceMs={0} />)
+    const user = userEvent.setup()
+
+    await openAndType(user, 'vitality')
+    await user.click(await screen.findByRole('option', { name: 'Add vitality' }))
+
+    await waitFor(() =>
+      expect(onCreated).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'new-vitality', label: 'vitality' })
+      )
+    )
   })
 })

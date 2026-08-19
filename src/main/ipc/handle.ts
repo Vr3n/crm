@@ -3,6 +3,7 @@ import type { ZodType } from 'zod'
 import type { IpcError, IpcResult } from '../../shared/contracts/errors'
 import { ERROR_CODES } from '../../shared/contracts/errors'
 import { DomainError, ValidationError } from '../domain/errors'
+import { logger, short } from '../lib/logger'
 
 /**
  * Wraps an `ipcMain.handle` handler so thrown errors never cross the IPC
@@ -36,6 +37,8 @@ export function handle<T, R>(
   const schema = maybeFn ? (schemaOrFn as ZodType<T>) : undefined
 
   ipcMain.handle(channel, async (_event, ...args: unknown[]): Promise<IpcResult<R>> => {
+    const startedAt = Date.now()
+    logger.debug(`ipc ${channel}`, ...args.map((arg) => short(arg)))
     try {
       let data: R
       if (schema) {
@@ -44,9 +47,12 @@ export function handle<T, R>(
       } else {
         data = await (schemaOrFn as (...args: unknown[]) => Promise<R> | R)(...args)
       }
+      logger.debug(`ipc ${channel} ok`, `${Date.now() - startedAt}ms`)
       return { ok: true, data }
     } catch (err) {
-      return { ok: false, error: toIpcError(err) }
+      const error = toIpcError(err)
+      logger.warn(`ipc ${channel} failed`, `${Date.now() - startedAt}ms`, error.code, short(error.message))
+      return { ok: false, error }
     }
   })
 }

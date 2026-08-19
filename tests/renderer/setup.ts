@@ -76,15 +76,87 @@ export const referenceData: ReferenceData = {
     { id: 9, name: 'Other', active: true }
   ],
   stages: [
-    { id: 1, name: 'NEW', sortOrder: 1, isInitial: true, isWon: false, isLost: false, active: true },
-    { id: 2, name: 'CONTACTED', sortOrder: 2, isInitial: false, isWon: false, isLost: false, active: true },
-    { id: 3, name: 'INTERESTED', sortOrder: 3, isInitial: false, isWon: false, isLost: false, active: true },
-    { id: 4, name: 'VISIT_SCHEDULED', sortOrder: 4, isInitial: false, isWon: false, isLost: false, active: true },
-    { id: 5, name: 'VISITED', sortOrder: 5, isInitial: false, isWon: false, isLost: false, active: true },
-    { id: 6, name: 'TRIAL', sortOrder: 6, isInitial: false, isWon: false, isLost: false, active: true },
-    { id: 7, name: 'NEGOTIATION', sortOrder: 7, isInitial: false, isWon: false, isLost: false, active: true },
-    { id: 8, name: 'WON', sortOrder: 8, isInitial: false, isWon: true, isLost: false, active: true },
-    { id: 9, name: 'LOST', sortOrder: 9, isInitial: false, isWon: false, isLost: true, active: true }
+    {
+      id: 1,
+      name: 'NEW',
+      sortOrder: 1,
+      isInitial: true,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 2,
+      name: 'CONTACTED',
+      sortOrder: 2,
+      isInitial: false,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 3,
+      name: 'INTERESTED',
+      sortOrder: 3,
+      isInitial: false,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 4,
+      name: 'VISIT_SCHEDULED',
+      sortOrder: 4,
+      isInitial: false,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 5,
+      name: 'VISITED',
+      sortOrder: 5,
+      isInitial: false,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 6,
+      name: 'TRIAL',
+      sortOrder: 6,
+      isInitial: false,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 7,
+      name: 'NEGOTIATION',
+      sortOrder: 7,
+      isInitial: false,
+      isWon: false,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 8,
+      name: 'WON',
+      sortOrder: 8,
+      isInitial: false,
+      isWon: true,
+      isLost: false,
+      active: true
+    },
+    {
+      id: 9,
+      name: 'LOST',
+      sortOrder: 9,
+      isInitial: false,
+      isWon: false,
+      isLost: true,
+      active: true
+    }
   ],
   lostReasons: [
     { id: 1, name: 'Too expensive', active: true },
@@ -123,6 +195,9 @@ export const emptyLeadList: LeadListResponse = {
   total: 0,
   hasMore: false
 }
+
+export const leadPlanInterests = ['Annual Premium', 'Monthly Basic', 'Couple Plan']
+export const leadGoals = ['Weight loss', 'Muscle gain', 'General fitness']
 
 /** A freshly-captured lead in the NEW stage, as the list query would hydrate it. */
 export const sampleLead: Lead = {
@@ -172,7 +247,30 @@ beforeEach(() => {
       getRecentlyLost: vi.fn().mockResolvedValue([]),
       getFunnelCounts: vi.fn(),
       searchPeople: vi.fn().mockResolvedValue([]),
-      getReferenceData: vi.fn().mockResolvedValue(referenceData)
+      getReferenceData: vi.fn().mockResolvedValue(referenceData),
+      searchSources: vi.fn().mockImplementation(async (query: string) => {
+        const q = query.trim().toLocaleLowerCase()
+        return referenceData.sources.filter(
+          (s) => s.active && s.name.toLocaleLowerCase().includes(q)
+        )
+      }),
+      createSource: vi.fn().mockImplementation(async ({ name }: { name: string }) => ({
+        id: 99,
+        name: name.trim(),
+        active: true
+      })),
+      searchPlanInterests: vi.fn().mockImplementation(async (query: string) => {
+        const q = query.trim().toLocaleLowerCase()
+        return leadPlanInterests
+          .filter((v) => v.toLocaleLowerCase().includes(q))
+          .map((id) => ({ id, label: id }))
+      }),
+      searchGoals: vi.fn().mockImplementation(async (query: string) => {
+        const q = query.trim().toLocaleLowerCase()
+        return leadGoals
+          .filter((v) => v.toLocaleLowerCase().includes(q))
+          .map((id) => ({ id, label: id }))
+      })
     }
   }
 })
@@ -181,7 +279,10 @@ beforeEach(() => {
  * Render with a fresh QueryClient that never retries (a rejected query in one
  * test must not bleed into another). The shared cache is reset per test too.
  */
-export function renderWithClient(ui: React.ReactElement, client?: QueryClient): ReturnType<typeof render> {
+export function renderWithClient(
+  ui: React.ReactElement,
+  client?: QueryClient
+): ReturnType<typeof render> {
   const qc =
     client ??
     new QueryClient({

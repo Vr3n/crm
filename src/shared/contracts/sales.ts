@@ -103,11 +103,44 @@ export const funnelCountsSchema = z.array(
 )
 export type FunnelCounts = z.infer<typeof funnelCountsSchema>
 
+/** A configurable lead source (marketing channel) row. */
+export const leadSourceRowSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+  active: z.boolean()
+})
+export type LeadSourceRow = z.infer<typeof leadSourceRowSchema>
+
+export const leadSourceSearchRequestSchema = z.object({
+  query: z.string().max(120)
+})
+export type LeadSourceSearchRequest = z.infer<typeof leadSourceSearchRequestSchema>
+
+export const createLeadSourceInputSchema = z.object({
+  name: z.string().min(1).max(120)
+})
+export type CreateLeadSourceInput = z.infer<typeof createLeadSourceInputSchema>
+
+/**
+ * A free-text lead vocabulary option (plan interest / goal). The value itself is
+ * the identity: `id` and `label` carry the same trimmed text, because these
+ * fields store the text on `leads`, not a foreign key.
+ */
+export const leadTextOptionRowSchema = z.object({
+  id: z.string().min(1).max(200),
+  label: z.string().min(1).max(200)
+})
+export type LeadTextOptionRow = z.infer<typeof leadTextOptionRowSchema>
+
+/** Search request for a free-text lead vocabulary (plan interests / goals). */
+export const leadVocabularySearchRequestSchema = z.object({
+  query: z.string().max(120)
+})
+export type LeadVocabularySearchRequest = z.infer<typeof leadVocabularySearchRequestSchema>
+
 /** The org's sales reference data for forms (sources/stages/reasons/types). */
 export const referenceDataSchema = z.object({
-  sources: z.array(
-    z.object({ id: z.number().int().positive(), name: z.string(), active: z.boolean() })
-  ),
+  sources: z.array(leadSourceRowSchema),
   stages: z.array(
     z.object({
       id: z.number().int().positive(),

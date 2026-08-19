@@ -31,7 +31,11 @@ export const IPC_CHANNELS = {
   LEADS_GET_RECENT_LOST: 'leads:getRecentlyLost',
   LEADS_GET_FUNNEL_COUNTS: 'leads:getFunnelCounts',
   LEADS_SEARCH_PEOPLE: 'leads:searchPeople',
-  LEADS_GET_REFERENCE: 'leads:getReferenceData'
+  LEADS_GET_REFERENCE: 'leads:getReferenceData',
+  LEADS_SEARCH_SOURCES: 'leads:searchSources',
+  LEADS_CREATE_SOURCE: 'leads:createSource',
+  LEADS_SEARCH_PLAN_INTERESTS: 'leads:searchPlanInterests',
+  LEADS_SEARCH_GOALS: 'leads:searchGoals'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

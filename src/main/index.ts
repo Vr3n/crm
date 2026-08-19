@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { openDatabase } from './db/connection'
 import { runMigrations } from './db/migrations'
 import { seedPermissions } from './db/seed'
+import { logger } from './lib/logger'
 import { registerIdentityIpc } from './ipc/identity'
 import { registerSalesIpc } from './ipc/sales'
 import { restoreRememberedLogin } from './application/identity'
@@ -46,6 +47,7 @@ app.whenReady().then(async () => {
   })
 
   // Database foundation: connection -> migrations -> seeds
+  logger.info('main process started', { logLevel: process.env.GYMCRM_LOG_LEVEL ?? 'info', database: join(app.getPath('userData'), 'gym-crm.db') })
   openDatabase(join(app.getPath('userData'), 'gym-crm.db'))
   runMigrations()
   seedPermissions()
