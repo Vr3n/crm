@@ -1,8 +1,13 @@
 import {
   assignLead,
+  bulkMoveLeadStage,
+  bulkRecordActivity,
+  bulkScheduleFollowUp,
   completeFollowUp,
   createLead,
   createLeadSource,
+  deleteLeads,
+  editLead,
   getFunnelCounts,
   getLeadDetails,
   getLeadTimeline,
@@ -20,21 +25,27 @@ import {
   recordLeadActivity,
   scheduleFollowUp,
   searchLeadGoals,
-  searchLeadPlanInterests,
+  searchLeadPlans,
   searchLeadSources,
   searchPeople
 } from '../application/leads'
 import {
   assignLeadInputSchema,
+  bulkMoveLeadStageInputSchema,
+  bulkRecordActivityInputSchema,
+  bulkScheduleFollowUpInputSchema,
   completeFollowUpInputSchema,
   createLeadInputSchema,
   createLeadSourceInputSchema,
+  deleteLeadsInputSchema,
+  editLeadInputSchema,
   leadIdRequestSchema,
   leadListRequestSchema,
   leadSourceSearchRequestSchema,
   leadVocabularySearchRequestSchema,
   markLeadLostInputSchema,
   moveLeadStageInputSchema,
+  planSearchRequestSchema,
   recordLeadActivityInputSchema,
   scheduleFollowUpInputSchema
 } from '../../shared/contracts/sales'
@@ -43,7 +54,18 @@ import { handle } from './handle'
 
 export function registerSalesIpc(): void {
   handle(IPC_CHANNELS.LEADS_CREATE, createLeadInputSchema, (input) => createLead(input))
+  handle(IPC_CHANNELS.LEADS_EDIT, editLeadInputSchema, (input) => editLead(input))
   handle(IPC_CHANNELS.LEADS_MOVE_STAGE, moveLeadStageInputSchema, (input) => moveLeadStage(input))
+  handle(IPC_CHANNELS.LEADS_DELETE, deleteLeadsInputSchema, (input) => deleteLeads(input))
+  handle(IPC_CHANNELS.LEADS_BULK_MOVE_STAGE, bulkMoveLeadStageInputSchema, (input) =>
+    bulkMoveLeadStage(input)
+  )
+  handle(IPC_CHANNELS.LEADS_BULK_SCHEDULE_FOLLOWUP, bulkScheduleFollowUpInputSchema, (input) =>
+    bulkScheduleFollowUp(input)
+  )
+  handle(IPC_CHANNELS.LEADS_BULK_RECORD_ACTIVITY, bulkRecordActivityInputSchema, (input) =>
+    bulkRecordActivity(input)
+  )
   handle(IPC_CHANNELS.LEADS_RECORD_ACTIVITY, recordLeadActivityInputSchema, (input) =>
     recordLeadActivity(input)
   )
@@ -75,8 +97,8 @@ export function registerSalesIpc(): void {
   handle(IPC_CHANNELS.LEADS_CREATE_SOURCE, createLeadSourceInputSchema, (input) =>
     createLeadSource(input)
   )
-  handle(IPC_CHANNELS.LEADS_SEARCH_PLAN_INTERESTS, leadVocabularySearchRequestSchema, (input) =>
-    searchLeadPlanInterests(input)
+  handle(IPC_CHANNELS.LEADS_SEARCH_PLAN_INTERESTS, planSearchRequestSchema, (input) =>
+    searchLeadPlans(input)
   )
   handle(IPC_CHANNELS.LEADS_SEARCH_GOALS, leadVocabularySearchRequestSchema, (input) =>
     searchLeadGoals(input)

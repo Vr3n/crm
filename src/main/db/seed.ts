@@ -5,6 +5,7 @@ import {
   leadLostReasons,
   leadSources,
   leadStages,
+  membershipPlans,
   permissions,
   rolePermissions,
   roles
@@ -42,6 +43,8 @@ export const SEED_ROLES: SeedRole[] = [
       'lead.update_stage',
       'lead.mark_lost',
       'lead.convert',
+      'lead.delete',
+      'lead.edit',
       'followup.view',
       'followup.create',
       'followup.complete',
@@ -87,6 +90,8 @@ export const SEED_ROLES: SeedRole[] = [
       'lead.record_activity',
       'lead.update_stage',
       'lead.convert',
+      'lead.delete',
+      'lead.edit',
       'followup.view',
       'followup.create',
       'followup.complete',
@@ -234,6 +239,103 @@ export const SEED_LOST_REASONS = [
   'Other'
 ]
 
+export interface SeedPlan {
+  name: string
+  duration: string
+  billing: string
+  basePriceMinor: number
+  accessWindow: string
+  startTime: string | null
+  endTime: string | null
+  active: boolean
+  description: string
+}
+
+/**
+ * Recommended starter plans (Module 03 §Catalog). Mirrors the renderer's demo
+ * catalog so a fresh install has something to sell and the lead form has plans
+ * to pick from. Prices are integer minor units (paise).
+ */
+export const SEED_PLANS: SeedPlan[] = [
+  {
+    name: 'Basic Monthly',
+    duration: 'MONTHLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 150000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'Gym-floor access across all equipment zones.'
+  },
+  {
+    name: 'Student Monthly',
+    duration: 'MONTHLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 120000,
+    accessWindow: 'TIMED',
+    startTime: '07:00',
+    endTime: '17:00',
+    active: true,
+    description: 'Off-peak floor access for students with a valid college ID.'
+  },
+  {
+    name: 'Yoga Studio',
+    duration: 'MONTHLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 180000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'Yoga floor, mat sessions and the meditation hall.'
+  },
+  {
+    name: 'Premium Quarterly',
+    duration: 'QUARTERLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 390000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'Full facility for 3 months at a better per-month rate.'
+  },
+  {
+    name: 'Premium Half Yearly',
+    duration: 'HALF_YEARLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 740000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'Six months of full-facility access.'
+  },
+  {
+    name: 'Annual Premium',
+    duration: 'YEARLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 2400000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'The flagship year-long membership at the best per-month rate.'
+  },
+  {
+    name: 'Weekend Access',
+    duration: 'MONTHLY',
+    billing: 'ONE_TIME',
+    basePriceMinor: 90000,
+    accessWindow: 'TIMED',
+    startTime: '08:00',
+    endTime: '20:00',
+    active: false,
+    description: 'Weekend-only floor access. Paused while the weekend bootcamps run.'
+  }
+]
+
 /**
  * Provisions the org's sales reference data: stages, sources, activity types,
  * and lost reasons. Runs inside its own transaction and is called from the
@@ -275,5 +377,32 @@ export function seedSalesReferenceData(organizationId: number): void {
         .values({ organization_id: organizationId, name, sort_order: i })
         .run()
     })
+  })
+}
+
+/**
+ * Provisions the org's starter membership plans. Runs inside its own transaction
+ * and is called from the org-setup flow right after `seedSalesReferenceData`.
+ * The (organization_id, name) unique constraint guards against double-seeding.
+ */
+export function seedPlansForOrganization(organizationId: number): void {
+  withTransaction(() => {
+    const db = getDrizzle()
+    for (const plan of SEED_PLANS) {
+      db.insert(membershipPlans)
+        .values({
+          organization_id: organizationId,
+          name: plan.name,
+          description: plan.description,
+          duration: plan.duration,
+          billing_frequency: plan.billing,
+          base_price_minor: plan.basePriceMinor,
+          access_window: plan.accessWindow,
+          start_time: plan.startTime,
+          end_time: plan.endTime,
+          active: plan.active
+        })
+        .run()
+    }
   })
 }

@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 import { organizations, users } from './identity'
+import { membershipPlans } from './catalog'
 
 /**
  * Sales & CRM schema (Module 01). All tables are org-scoped: every row carries an
@@ -139,7 +140,8 @@ export const leads = sqliteTable(
       .references(() => leadStages.id),
     owner_user_id: integer('owner_user_id').references(() => users.id),
     customer_id: integer('customer_id'),
-    plan_interest: text('plan_interest'),
+    /** The plan this lead is interested in — a real FK to the catalog (Module 03). */
+    plan_id: integer('plan_id').references(() => membershipPlans.id),
     goal: text('goal'),
     notes: text('notes'),
     lost_reason_id: integer('lost_reason_id').references(() => leadLostReasons.id),
@@ -159,6 +161,7 @@ export const leads = sqliteTable(
     index('idx_leads_org_stage').on(table.organization_id, table.current_stage_id),
     index('idx_leads_org_owner').on(table.organization_id, table.owner_user_id),
     index('idx_leads_org_source').on(table.organization_id, table.source_id),
+    index('idx_leads_org_plan').on(table.organization_id, table.plan_id),
     index('idx_leads_person').on(table.person_id)
   ]
 )

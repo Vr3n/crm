@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { UserRound, CalendarClock } from 'lucide-react'
+import { Pencil, UserRound, CalendarClock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SOURCES, STAGES } from '../constants'
 import { computeQuality } from '../data-quality'
@@ -15,11 +16,15 @@ import { QualityDot } from './quality-dot'
 export function LeadBoard({
   leads,
   onOpen,
-  onStageChange
+  onStageChange,
+  onEdit,
+  canEditLead
 }: {
   leads: Lead[]
   onOpen: (lead: Lead) => void
   onStageChange: (lead: Lead, to: StageKey) => void
+  onEdit: (lead: Lead) => void
+  canEditLead: (lead: Lead) => boolean
 }): React.JSX.Element {
   const all = leads
   const [dragId, setDragId] = useState<number | null>(null)
@@ -105,6 +110,23 @@ export function LeadBoard({
                         {SOURCES[lead.source]}
                       </span>
                     </div>
+                    {canEditLead(lead) ? (
+                      <div className="mt-1.5 flex justify-end border-t pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Edit ${lead.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEdit(lead)
+                          }}
+                          className="size-6 text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 )
               })}

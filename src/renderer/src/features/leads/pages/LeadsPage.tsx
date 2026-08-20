@@ -6,12 +6,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSession } from '@/context/session-context'
-import { filterLeads, sortLeads } from '../constants'
-import { useLeads } from '../queries'
+import { can, useSession } from '@/context/session-context'
+import { filterLeads, moveableStages, sortLeads, STAGES } from '../constants'
+import { useBulkMoveStage, useDeleteLeads, useLeads } from '../queries'
 import type { Lead, LeadFilters, StageKey } from '../types'
 import { LeadFilters as Filters } from '../components/lead-filters'
 import { LeadMetrics } from '../components/lead-metrics'
+import { LeadSelectionToolbar } from '../components/lead-selection-toolbar'
 import { LeadTable } from '../components/lead-table'
 import { LeadBoard } from '../components/lead-board'
 
@@ -33,18 +34,33 @@ const LogActivityDialog = lazy(() =>
 const FollowUpDialog = lazy(() =>
   import('../components/follow-up-dialog').then((m) => ({ default: m.FollowUpDialog }))
 )
+const BulkFollowUpDialog = lazy(() =>
+  import('../components/bulk-follow-up-dialog').then((m) => ({ default: m.BulkFollowUpDialog }))
+)
+const BulkActivityDialog = lazy(() =>
+  import('../components/bulk-activity-dialog').then((m) => ({ default: m.BulkActivityDialog }))
+)
+const BulkMoveStageDialog = lazy(() =>
+  import('../components/bulk-move-stage-dialog').then((m) => ({ default: m.BulkMoveStageDialog }))
+)
+const EditLeadDialog = lazy(() =>
+  import('../components/edit-lead-dialog').then((m) => ({ default: m.EditLeadDialog }))
+)
 
 type Action =
-  | { type: 'move'; lead: Lead }
+  | { type: 'move'; lead: Lead; to?: StageKey }
   | { type: 'lost'; lead: Lead }
   | { type: 'activity'; lead: Lead }
   | { type: 'followup'; lead: Lead }
   | null
 
+type BulkAction =
+  { type: 'followup' } | { type: 'activity' } | { type: 'move'; to: StageKey } | null
+
 const DEFAULT_FILTERS: LeadFilters = {
   search: '',
   stage: 'ALL',
-  source: 'ALL',
+  sourceId: 'ALL',
   ownerId: 'ALL',
   range: 'all'
 }
@@ -53,24 +69,88 @@ export function LeadsPage(): React.JSX.Element {
   const navigate = useNavigate()
   const session = useSession()
   const { data, isLoading } = useLeads()
+  const deleteLeads = useDeleteLeads()
+  const bulkMove = useBulkMoveStage()
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS)
   const [view, setView] = useState<'table' | 'board'>('table')
+  const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [newOpen, setNewOpen] = useState(false)
   const [action, setAction] = useState<Action>(null)
+  const [bulkAction, setBulkAction] = useState<BulkAction>(null)
+  const [editing, setEditing] = useState<Lead | null>(null)
 
   const filtered = useMemo(
     () => (data ? sortLeads(filterLeads(data, filters)) : []),
     [data, filters]
   )
 
+  const selectedLeads = useMemo(
+    () => filtered.filter((l) => selected.has(l.id)),
+    [filtered, selected]
+  )
+
+  /** Stages every selected lead can be moved to — the safe intersection. */
+  const moveOptions = useMemo(() => {
+    if (selectedLeads.length === 0) return []
+    const optionSets = selectedLeads.map((l) => new Set(moveableStages(l.stage).map((s) => s.key)))
+    const shared = new Set(optionSets[0])
+    for (const set of optionSets.slice(1)) {
+      for (const key of shared) if (!set.has(key)) shared.delete(key)
+    }
+    return STAGES.filter((s) => shared.has(s.key))
+  }, [selectedLeads])
+
+  function changeView(v: string): void {
+    setView(v as 'table' | 'board')
+    setSelected(new Set())
+  }
+
   function openLead(lead: Lead): void {
     navigate(`/leads/${lead.id}`, { state: { from: '/leads' } })
   }
 
-  /** Strict routing: LOST goes to its reason-requiring dialog; WON is unreachable. */
+  /**
+   * Edit is owned: only the lead's owner or an admin (super) may edit. The
+   * backend enforces the same rule — hiding the button is UX only.
+   */
+  function canEditLead(lead: Lead): boolean {
+    return (
+      can(session.permissions, session.isSuper, 'lead.edit') &&
+      (session.isSuper || lead.owner?.id === session.userId)
+    )
+  }
+
+  /**
+   * Strict routing: LOST goes to its reason-requiring dialog; every other move
+   * opens the move dialog with the picked target preselected (WON stays
+   * unreachable until the Module 02 conversion handoff exists).
+   */
   function onStageChange(lead: Lead, to: StageKey): void {
     if (to === 'LOST') setAction({ type: 'lost', lead })
-    else setAction({ type: 'move', lead })
+    else setAction({ type: 'move', lead, to })
+  }
+
+  function onDeleteSelection(): void {
+    deleteLeads.mutate({ leadIds: [...selected] }, { onSuccess: () => setSelected(new Set()) })
+  }
+
+  function onBulkScheduleFollowups(): void {
+    if (selected.size === 0) return
+    setBulkAction({ type: 'followup' })
+  }
+
+  function onBulkLogActivities(): void {
+    if (selected.size === 0) return
+    setBulkAction({ type: 'activity' })
+  }
+
+  function clearSelection(): void {
+    setSelected(new Set())
+  }
+
+  /** Picking a target in the toolbar opens the strict bulk-move verification dialog. */
+  function onMoveSelection(key: StageKey): void {
+    setBulkAction({ type: 'move', to: key })
   }
 
   return (
@@ -91,15 +171,32 @@ export function LeadsPage(): React.JSX.Element {
       <Filters leads={filtered} filters={filters} onChange={setFilters} />
 
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>
-            {filtered.length} lead{filtered.length === 1 ? '' : 's'}
-          </span>
-          {filters.range !== 'all' && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Sample data</span>
-          )}
-        </div>
-        <Tabs value={view} onValueChange={(v) => setView(v as 'table' | 'board')}>
+        {view === 'table' && selected.size > 0 ? (
+          <LeadSelectionToolbar
+            count={selected.size}
+            canDelete={can(session.permissions, session.isSuper, 'lead.delete')}
+            canMove={can(session.permissions, session.isSuper, 'lead.update_stage')}
+            canScheduleFollowup={can(session.permissions, session.isSuper, 'followup.create')}
+            canLogActivity={can(session.permissions, session.isSuper, 'lead.record_activity')}
+            moveOptions={moveOptions}
+            isDeleting={deleteLeads.isPending}
+            isMoving={bulkMove.isPending}
+            onDelete={onDeleteSelection}
+            onMoveStage={onMoveSelection}
+            onScheduleFollowups={onBulkScheduleFollowups}
+            onLogActivities={onBulkLogActivities}
+          />
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              {filtered.length} lead{filtered.length === 1 ? '' : 's'}
+            </span>
+            {filters.range !== 'all' && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Sample data</span>
+            )}
+          </div>
+        )}
+        <Tabs value={view} onValueChange={changeView}>
           <TabsList>
             <TabsTrigger value="table">Table</TabsTrigger>
             <TabsTrigger value="board">Board</TabsTrigger>
@@ -126,9 +223,23 @@ export function LeadsPage(): React.JSX.Element {
           }
         />
       ) : view === 'table' ? (
-        <LeadTable leads={filtered} onOpen={openLead} onStageChange={onStageChange} />
+        <LeadTable
+          leads={filtered}
+          selected={selected}
+          onSelectionChange={setSelected}
+          onOpen={openLead}
+          onStageChange={onStageChange}
+          onEdit={setEditing}
+          canEditLead={canEditLead}
+        />
       ) : (
-        <LeadBoard leads={filtered} onOpen={openLead} onStageChange={onStageChange} />
+        <LeadBoard
+          leads={filtered}
+          onOpen={openLead}
+          onStageChange={onStageChange}
+          onEdit={setEditing}
+          canEditLead={canEditLead}
+        />
       )}
 
       {newOpen && (
@@ -144,6 +255,7 @@ export function LeadsPage(): React.JSX.Element {
             open
             onOpenChange={() => setAction(null)}
             lead={action.lead}
+            initialStage={action.to}
           />
         </Suspense>
       )}
@@ -174,6 +286,52 @@ export function LeadsPage(): React.JSX.Element {
             open
             onOpenChange={() => setAction(null)}
             lead={action.lead}
+          />
+        </Suspense>
+      )}
+
+      {bulkAction?.type === 'followup' && (
+        <Suspense fallback={null}>
+          <BulkFollowUpDialog
+            open
+            onOpenChange={() => setBulkAction(null)}
+            count={selected.size}
+            leadIds={[...selected]}
+            onSuccess={clearSelection}
+          />
+        </Suspense>
+      )}
+      {bulkAction?.type === 'activity' && (
+        <Suspense fallback={null}>
+          <BulkActivityDialog
+            open
+            onOpenChange={() => setBulkAction(null)}
+            count={selected.size}
+            leadIds={[...selected]}
+            onSuccess={clearSelection}
+          />
+        </Suspense>
+      )}
+      {bulkAction?.type === 'move' && (
+        <Suspense fallback={null}>
+          <BulkMoveStageDialog
+            open
+            onOpenChange={() => setBulkAction(null)}
+            count={selected.size}
+            leadIds={[...selected]}
+            to={bulkAction.to}
+            onSuccess={clearSelection}
+          />
+        </Suspense>
+      )}
+
+      {editing && (
+        <Suspense fallback={null}>
+          <EditLeadDialog
+            key={editing.id}
+            open
+            onOpenChange={() => setEditing(null)}
+            lead={editing}
           />
         </Suspense>
       )}

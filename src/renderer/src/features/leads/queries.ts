@@ -8,9 +8,17 @@ import {
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type {
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
   MarkLeadLostInput,
   MoveLeadStageInput,
   RecordLeadActivityInput,
@@ -102,6 +110,10 @@ export function useCreateLead(): UseMutationResult<CreatedLead, Error, CreateLea
   )
 }
 
+export function useEditLead(): UseMutationResult<void, Error, EditLeadInput> {
+  return useLeadMutation((input) => api.editLead(input), 'Lead updated', 'Could not update lead')
+}
+
 export function useMoveStage(): UseMutationResult<void, Error, MoveLeadStageInput> {
   // A concurrent-change CONFLICT leaves the cached list stale, so refresh it too.
   return useLeadMutation(
@@ -109,6 +121,53 @@ export function useMoveStage(): UseMutationResult<void, Error, MoveLeadStageInpu
     'Stage updated',
     'Could not move stage',
     true
+  )
+}
+
+export function useBulkMoveStage(): UseMutationResult<
+  BulkMoveLeadStageResult,
+  Error,
+  BulkMoveLeadStageInput
+> {
+  return useLeadMutation(
+    (input) => api.bulkMoveStage(input),
+    'Leads moved',
+    'Could not move leads',
+    true
+  )
+}
+
+export function useBulkScheduleFollowUp(): UseMutationResult<
+  BulkScheduleFollowUpResult,
+  Error,
+  BulkScheduleFollowUpInput
+> {
+  return useLeadMutation(
+    (input) => api.bulkScheduleFollowUp(input),
+    'Follow-ups scheduled',
+    'Could not schedule follow-ups',
+    true
+  )
+}
+
+export function useBulkRecordActivity(): UseMutationResult<
+  BulkRecordActivityResult,
+  Error,
+  BulkRecordActivityInput
+> {
+  return useLeadMutation(
+    (input) => api.bulkRecordActivity(input),
+    'Activities logged',
+    'Could not log activities',
+    true
+  )
+}
+
+export function useDeleteLeads(): UseMutationResult<void, Error, DeleteLeadsInput> {
+  return useLeadMutation(
+    (input) => api.deleteLeads(input),
+    'Leads deleted',
+    'Could not delete leads'
   )
 }
 

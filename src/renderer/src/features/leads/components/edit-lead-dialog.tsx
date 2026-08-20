@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
-import { Mail, Phone, User, UserPlus } from 'lucide-react'
+import { Mail, Pencil, Phone, User } from 'lucide-react'
 import { AutocorrectCombobox, type AutocorrectOption } from '@/components/autocorrect-combobox'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,52 +23,52 @@ import { emailError, isValidEmail, leadNameError, mobileError } from '@/lib/vali
 import { cn } from '@/lib/utils'
 import { isApiError } from '../../../../../shared/contracts/errors'
 import { api } from '../api'
-import { useCreateLead } from '../queries'
+import { SOURCES } from '../constants'
+import { useEditLead } from '../queries'
 import { referenceKeys } from '../reference-data'
+import type { Lead } from '../types'
 
 const PHONE_MAX = 10
 
 /**
- * Fast "New lead" capture (staff aren't tech-savvy): a single modal with only
- * the fields a front-desk person actually has at that moment. Name and phone
- * are required — the backend enforces an Indian mobile or landline format and
- * dedupes by phone, so an existing person never becomes a second lead. Fields
- * react live (red on error, green once complete) exactly like the auth forms;
- * the phone shows a live digit counter and flags a wrong starting digit the
- * moment it is typed.
+ * "Edit lead" capture. The same single-modal shape as the New lead dialog, but
+ * prefilled from the row and gated to the lead's owner or an admin (the backend
+ * enforces that too — hiding the button is UX only). The source and the
+ * free-text plan/goal fields prefill through the combobox's `selectedOption`
+ * prop, so the current values are visible before the live search starts.
  */
-export function NewLeadDialog({
+export function EditLeadDialog({
+  lead,
   open,
   onOpenChange
 }: {
+  lead: Lead
   open: boolean
   onOpenChange: (o: boolean) => void
 }): React.JSX.Element {
-  const create = useCreateLead()
+  const edit = useEditLead()
   const session = useSession()
   const queryClient = useQueryClient()
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
 
-  // The dialog remounts per open (LeadsPage mounts it conditionally). The source
-  // field is empty on mount — the combobox searches the backend live, so there is
-  // nothing to seed from reference data here.
   const form = useForm({
     defaultValues: {
-      name: '',
-      phone: '',
-      email: '',
-      source: '',
-      plan: '',
-      goal: '',
-      notes: ''
+      name: lead.name,
+      phone: lead.phone ?? '',
+      email: lead.email ?? '',
+      source: lead.sourceId ? String(lead.sourceId) : '',
+      plan: lead.planId ? String(lead.planId) : '',
+      goal: lead.goal ?? '',
+      notes: lead.notes ?? ''
     },
     onSubmit: async ({ value }) => {
       const sourceId = value.source ? Number(value.source) : undefined
       if (sourceId === undefined) return
       try {
-        await create.mutateAsync({
+        await edit.mutateAsync({
+          leadId: lead.id,
           fullName: value.name.trim(),
           phone: value.phone.trim(),
           email: value.email.trim() || undefined,
@@ -88,17 +88,14 @@ export function NewLeadDialog({
   const submitted = useStore(form.store, (s) => s.isSubmitted)
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting)
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
-  // Before the user picks a source the onChange validator has not run yet, so
-  // `canSubmit` can be spuriously true — keep submit gated on an actual value.
   const sourceValue = useStore(form.store, (s) => s.values.source)
-  const formError = create.error
-    ? isApiError(create.error)
-      ? create.error.message
-      : 'Could not create lead'
+  const formError = edit.error
+    ? isApiError(edit.error)
+      ? edit.error.message
+      : 'Could not update lead'
     : null
 
-  // Creating a source is a settings action; searching sources is visible to
-  // anyone who can view leads (mirrors `requirePermission` in the backend).
+  // Same as the create form: creating a source is a settings action.
   const canCreateSource = can(session.permissions, session.isSuper, 'settings.manage')
 
   const searchSources = useCallback(async (query: string): Promise<AutocorrectOption<string>[]> => {
@@ -114,7 +111,6 @@ export function NewLeadDialog({
   const searchPlans = useCallback(async (query: string): Promise<AutocorrectOption<string>[]> => {
     try {
       const rows = await api.searchPlanInterests(query)
-      logger.debug('searchPlans', { query, count: rows.length, rows })
       return rows.map((row) => ({ id: String(row.id), label: row.name }))
     } catch (error) {
       logger.warn('searchPlans failed', { query, error })
@@ -125,7 +121,6 @@ export function NewLeadDialog({
   const searchGoals = useCallback(async (query: string): Promise<AutocorrectOption<string>[]> => {
     try {
       const rows = await api.searchGoals(query)
-      logger.debug('searchGoals', { query, count: rows.length, rows })
       return rows.map((row) => ({ id: row.id, label: row.label }))
     } catch (error) {
       logger.warn('searchGoals failed', { query, error })
@@ -133,9 +128,6 @@ export function NewLeadDialog({
     }
   }, [])
 
-  // Goal stays free-text: the typed text is the identity, so "creating" an
-  // option just commits the text. Plan interest is now a catalog FK, so the
-  // plan field picks from existing plans only (canCreate=false).
   const createFreeTextOption = useCallback(
     async (label: string): Promise<AutocorrectOption<string>> => ({ id: label, label }),
     []
@@ -147,17 +139,27 @@ export function NewLeadDialog({
     }
   }, [])
 
+  // The combobox needs the current value's label to prefill. Sources and the
+  // free-text goal field display as their own text; the plan field shows the
+  // hydrated catalog name for the lead's plan id.
+  const sourceOption: AutocorrectOption<string> | null = lead.sourceId
+    ? { id: String(lead.sourceId), label: SOURCES[lead.source] }
+    : null
+  const planOption: AutocorrectOption<string> | null =
+    lead.planId && lead.planName ? { id: String(lead.planId), label: lead.planName } : null
+  const goalOption: AutocorrectOption<string> | null = lead.goal
+    ? { id: lead.goal, label: lead.goal }
+    : null
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="size-4 text-primary" />
-            New lead
+            <Pencil className="size-4 text-primary" />
+            Edit lead
           </DialogTitle>
-          <DialogDescription>
-            Capture an enquiry in under a minute. Name and phone are required.
-          </DialogDescription>
+          <DialogDescription>Update contact details or notes for {lead.name}.</DialogDescription>
         </DialogHeader>
 
         <form
@@ -234,10 +236,6 @@ export function NewLeadDialog({
                       validate={mobileError}
                       completeWhen={(v) => {
                         const digits = v.replace(/\D/g, '')
-                        // Judge the field the moment the number is clearly
-                        // invalid (a wrong starting digit) or once all 10
-                        // digits are in — never nag about an incomplete
-                        // length while typing.
                         return (
                           digits.length > 0 &&
                           (!/^[026-9]/.test(digits) || digits.length === PHONE_MAX)
@@ -291,8 +289,6 @@ export function NewLeadDialog({
                   field={{
                     name: field.name,
                     state: field.state,
-                    // react-form's source value is a string; the combobox clears
-                    // with `null`, so translate that back to the empty string.
                     handleChange: (value: string | null) => field.handleChange(value ?? ''),
                     handleBlur: field.handleBlur
                   }}
@@ -308,6 +304,7 @@ export function NewLeadDialog({
                   searchPlaceholder="Search or add a source…"
                   minSearchLength={2}
                   canCreate={canCreateSource}
+                  selectedOption={sourceOption}
                   onCreated={() =>
                     void queryClient.invalidateQueries({ queryKey: referenceKeys.all })
                   }
@@ -331,6 +328,7 @@ export function NewLeadDialog({
                     placeholder="e.g. Annual Premium"
                     searchPlaceholder="Search plans…"
                     minSearchLength={2}
+                    selectedOption={planOption}
                   />
                 )}
               </form.Field>
@@ -351,6 +349,7 @@ export function NewLeadDialog({
                     placeholder="e.g. Weight loss"
                     searchPlaceholder="Search or add a goal…"
                     minSearchLength={2}
+                    selectedOption={goalOption}
                   />
                 )}
               </form.Field>
@@ -395,10 +394,10 @@ export function NewLeadDialog({
               loading={isSubmitting}
               success={submitSuccess}
               disabled={!canSubmit || sourceValue === ''}
-              loadingLabel="Creating…"
-              successLabel="Created!"
+              loadingLabel="Saving…"
+              successLabel="Saved!"
             >
-              Create lead
+              Save changes
             </LoadingButton>
           </DialogFooter>
         </form>

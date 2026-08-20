@@ -56,7 +56,12 @@ export interface AutocorrectComboboxProps<TId extends string | number = string> 
   field: AutocorrectFieldAdapter<TId>
 
   search: SearchOptions<TId>
-  create: CreateOption<TId>
+  /**
+   * Creates a new backend-backed option. Optional — fields that only pick from
+   * an existing vocabulary (e.g. a catalog plan FK) omit it and set
+   * `canCreate={false}`; the "+ Add" item is never offered then.
+   */
+  create?: CreateOption<TId>
 
   label?: React.ReactNode
   description?: string
@@ -155,9 +160,12 @@ export function AutocorrectCombobox<TId extends string | number = string>({
   const loading = searchable && searchQuery.isPending && results === undefined
   const searchError = searchQuery.isError ? SEARCH_ERROR : null
 
+  // Only build the create path when a factory was supplied; a pick-only field
+  // never renders the "+ Add" item (see `canAdd`), so the mutation stays idle.
+  const createOption = create ?? (() => Promise.reject(new Error('create is not available')))
   const createMutation = useMutation({
     mutationFn: ({ label: newLabel, signal }: { label: string; signal?: AbortSignal }) =>
-      create(newLabel, signal),
+      createOption(newLabel, signal),
     onSuccess: (createdOption) => {
       setCachedSelected(createdOption)
       field.handleChange(createdOption.id)
@@ -178,6 +186,7 @@ export function AutocorrectCombobox<TId extends string | number = string>({
   const querySettled = debouncedQuery === trimmedQuery
   const canAdd =
     canCreate &&
+    create !== undefined &&
     open &&
     !disabled &&
     searchable &&

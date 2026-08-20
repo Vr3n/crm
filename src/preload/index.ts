@@ -12,11 +12,25 @@ import type {
   SetupOrganizationInput
 } from '../shared/contracts/identity'
 import type {
+  CreatePlanInput,
+  PlanIdRequest,
+  PlanRow,
+  UpdatePlanInput
+} from '../shared/contracts/catalog'
+import type {
   AssignLeadInput,
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
   CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
   FunnelCounts,
   LeadDetails,
   LeadIdRequest,
@@ -28,6 +42,7 @@ import type {
   MarkLeadLostInput,
   MoveLeadStageInput,
   PeopleList,
+  PlanOptionRow,
   RecordLeadActivityInput,
   ReferenceData,
   ScheduleFollowUpInput
@@ -67,8 +82,16 @@ const api = {
   leads: {
     create: (input: CreateLeadInput): Promise<CreatedLead> =>
       call(IPC_CHANNELS.LEADS_CREATE, input),
+    editLead: (input: EditLeadInput): Promise<void> => call(IPC_CHANNELS.LEADS_EDIT, input),
     moveStage: (input: MoveLeadStageInput): Promise<void> =>
       call(IPC_CHANNELS.LEADS_MOVE_STAGE, input),
+    deleteLeads: (input: DeleteLeadsInput): Promise<void> => call(IPC_CHANNELS.LEADS_DELETE, input),
+    bulkMoveStage: (input: BulkMoveLeadStageInput): Promise<BulkMoveLeadStageResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_MOVE_STAGE, input),
+    bulkScheduleFollowup: (input: BulkScheduleFollowUpInput): Promise<BulkScheduleFollowUpResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_SCHEDULE_FOLLOWUP, input),
+    bulkRecordActivity: (input: BulkRecordActivityInput): Promise<BulkRecordActivityResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_RECORD_ACTIVITY, input),
     recordActivity: (input: RecordLeadActivityInput): Promise<{ activityId: number }> =>
       call(IPC_CHANNELS.LEADS_RECORD_ACTIVITY, input),
     assign: (input: AssignLeadInput): Promise<void> => call(IPC_CHANNELS.LEADS_ASSIGN, input),
@@ -108,10 +131,19 @@ const api = {
       call(IPC_CHANNELS.LEADS_SEARCH_SOURCES, { query }),
     createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
       call(IPC_CHANNELS.LEADS_CREATE_SOURCE, input),
-    searchPlanInterests: (query: string): Promise<LeadTextOptionRow[]> =>
+    searchPlanInterests: (query: string): Promise<PlanOptionRow[]> =>
       call(IPC_CHANNELS.LEADS_SEARCH_PLAN_INTERESTS, { query }),
     searchGoals: (query: string): Promise<LeadTextOptionRow[]> =>
       call(IPC_CHANNELS.LEADS_SEARCH_GOALS, { query })
+  },
+  catalog: {
+    listPlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_PLANS),
+    createPlan: (input: CreatePlanInput): Promise<PlanRow> =>
+      call(IPC_CHANNELS.CATALOG_CREATE_PLAN, input),
+    updatePlan: (input: UpdatePlanInput): Promise<PlanRow> =>
+      call(IPC_CHANNELS.CATALOG_UPDATE_PLAN, input),
+    deletePlan: (input: PlanIdRequest): Promise<void> =>
+      call(IPC_CHANNELS.CATALOG_DELETE_PLAN, input)
   }
 }
 

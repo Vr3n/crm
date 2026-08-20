@@ -12,6 +12,7 @@ import {
   stageRepo
 } from '../repositories/sales'
 import { organizationRepo, userRepo } from '../repositories/identity'
+import { planRepo } from '../repositories/catalog'
 import { logger } from '../lib/logger'
 import { IndianMobileNumber } from '../domain/phone'
 import {
@@ -20,14 +21,22 @@ import {
   localDayUtcRange,
   deriveLeadStatus
 } from '../domain/lead'
-import { ConflictError, NotFoundError, ValidationError } from '../domain/errors'
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import type {
   AssignLeadInput,
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
   CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
   FunnelCounts,
   LeadIdRequest,
   LeadListRequest,
@@ -39,6 +48,8 @@ import type {
   MarkLeadLostInput,
   MoveLeadStageInput,
   PeopleList,
+  PlanOptionRow,
+  PlanSearchRequest,
   RecordedActivity,
   RecordLeadActivityInput,
   ReferenceData,
@@ -60,6 +71,14 @@ function stageMachineFor(organizationId: number): LeadStageMachine {
   return new LeadStageMachine(stageRepo.findAll(organizationId))
 }
 
+/** The plan a lead is interested in must exist in the org's catalog (Module 03). */
+function assertPlanExists(organizationId: number, planId: number | null | undefined): void {
+  if (planId === null || planId === undefined) return
+  if (!planRepo.getById(organizationId, planId)) {
+    throw new NotFoundError('Plan not found')
+  }
+}
+
 /** Creates the person (if unknown) and a lead at the initial stage, atomically. */
 export function createLead(input: CreateLeadInput): CreatedLead {
   requirePermission(PERMISSIONS.LEAD_CREATE)
@@ -73,6 +92,8 @@ export function createLead(input: CreateLeadInput): CreatedLead {
   if (!sourceRepo.findById(organizationId, input.sourceId)) {
     throw new NotFoundError('Lead source not found')
   }
+
+  assertPlanExists(organizationId, input.planId)
 
   return withTransaction(() => {
     let person = personRepo.findByPhone(organizationId, phone.value)
@@ -96,7 +117,7 @@ export function createLead(input: CreateLeadInput): CreatedLead {
       currentStageId: initialStage.id,
       ownerUserId: userId,
       createdBy: userId,
-      planInterest: input.planInterest?.trim() || null,
+      planId: input.planId ?? null,
       goal: input.goal?.trim() || null,
       notes: input.notes?.trim() || null
     })
@@ -112,6 +133,66 @@ export function createLead(input: CreateLeadInput): CreatedLead {
     })
 
     return { leadId: lead.id, personId: person.id }
+  })
+}
+
+/**
+ * Edits a lead's contact and interest fields. Only the lead's owner or a super
+ * role (Owner/Admin) may edit — every other role is denied even when it holds
+ * `lead.edit`, mirroring the "edit is owned" model (Module 15). The phone change
+ * dedupes like create: a number already used by a different person in the org is
+ * a conflict. A NOTE activity records the change on the timeline (Module 01
+ * audit rule: history is retained, never overwritten).
+ */
+export function editLead(input: EditLeadInput): void {
+  requirePermission(PERMISSIONS.LEAD_EDIT)
+  const session = requireSession()
+  const organizationId = session.organizationId
+
+  const lead = leadRepo.getById(organizationId, input.leadId)
+  if (!lead) throw new NotFoundError('Lead not found')
+
+  if (!session.isSuper && lead.ownerUserId !== session.userId) {
+    throw new ForbiddenError(PERMISSIONS.LEAD_EDIT)
+  }
+
+  const phone = IndianMobileNumber.parse(input.phone)
+  if (!sourceRepo.findById(organizationId, input.sourceId)) {
+    throw new NotFoundError('Lead source not found')
+  }
+
+  assertPlanExists(organizationId, input.planId)
+
+  const person = personRepo.findById(organizationId, lead.personId)
+  if (!person) throw new NotFoundError('Person not found')
+
+  const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
+  if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
+
+  withTransaction(() => {
+    const existing = personRepo.findByPhone(organizationId, phone.value)
+    if (existing && existing.id !== person.id) {
+      throw new ConflictError('Another person already uses this phone number')
+    }
+    personRepo.update(organizationId, person.id, {
+      fullName: input.fullName.trim(),
+      phone: phone.value,
+      email: input.email?.trim().toLowerCase() || null
+    })
+    leadRepo.update(organizationId, lead.id, {
+      sourceId: input.sourceId,
+      planId: input.planId ?? null,
+      goal: input.goal?.trim() || null,
+      notes: input.notes?.trim() || null
+    })
+    activityRepo.create({
+      organizationId,
+      leadId: lead.id,
+      typeId: noteType.id,
+      note: 'Lead details updated',
+      occurredAt: new Date().toISOString(),
+      createdBy: session.userId
+    })
   })
 }
 
@@ -159,6 +240,88 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
   })
 }
 
+/**
+ * Bulk stage move for the table's selection toolbar. Every selected lead is
+ * validated by the stage machine up front (all-or-nothing), then moved inside
+ * one transaction. The strict-move rule demands a real activity per lead, so a
+ * NOTE activity is recorded for each — the note names the bulk action and its
+ * target. Leads already at the target stage are skipped (a move is a no-op).
+ */
+export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadStageResult {
+  requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
+  const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
+
+  const machine = stageMachineFor(organizationId)
+  const target = stageRepo.findById(organizationId, input.targetStageId)
+  if (!target) throw new NotFoundError('Target stage not found')
+
+  const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
+  if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
+
+  const leads = input.leadIds.map((id) => {
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) throw new NotFoundError('Lead not found')
+    return lead
+  })
+
+  // Validate every move before mutating anything, so a bad lead aborts the batch.
+  for (const lead of leads) {
+    if (lead.currentStageId === target.id) continue
+    const current = stageRepo.findById(organizationId, lead.currentStageId)
+    if (!current) throw new NotFoundError('Current stage not found')
+    machine.assertMoveAllowed(current, target, true)
+  }
+
+  return withTransaction(() => {
+    let moved = 0
+    for (const lead of leads) {
+      if (lead.currentStageId === target.id) continue
+      const current = stageRepo.findById(organizationId, lead.currentStageId)!
+      const activity = activityRepo.create({
+        organizationId,
+        leadId: lead.id,
+        typeId: noteType.id,
+        note: input.note?.trim() || `Bulk move to ${target.name}`,
+        occurredAt: new Date().toISOString(),
+        createdBy: userId
+      })
+      leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+      stageHistoryRepo.record({
+        organizationId,
+        leadId: lead.id,
+        fromStageId: current.id,
+        toStageId: target.id,
+        activityId: activity.id,
+        reason: null,
+        changedBy: userId
+      })
+      moved++
+    }
+    return { moved }
+  })
+}
+
+/**
+ * Deletes leads and their history (activities, follow-ups, stage moves) in one
+ * transaction. The person row is deliberately preserved: a person can hold
+ * other leads, so a deleted lead never orphans shared contact data.
+ */
+export function deleteLeads(input: DeleteLeadsInput): void {
+  requirePermission(PERMISSIONS.LEAD_DELETE)
+  const organizationId = currentOrganizationId()
+
+  for (const id of input.leadIds) {
+    if (!leadRepo.getById(organizationId, id)) {
+      throw new NotFoundError('Lead not found')
+    }
+  }
+
+  withTransaction(() => {
+    leadRepo.deleteByIds(organizationId, input.leadIds)
+  })
+}
+
 /** Records an activity on a lead. Never mutates the stage (D10). */
 export function recordLeadActivity(input: RecordLeadActivityInput): RecordedActivity {
   requirePermission(PERMISSIONS.LEAD_RECORD_ACTIVITY)
@@ -180,6 +343,76 @@ export function recordLeadActivity(input: RecordLeadActivityInput): RecordedActi
     createdBy: userId
   })
   return { activityId: activity.id }
+}
+
+/**
+ * Bulk follow-up scheduling for the selection toolbar. Every lead is validated
+ * up front (all-or-nothing), then one follow-up is created per lead inside a
+ * single transaction. The due date must be in the future, as in the single flow.
+ */
+export function bulkScheduleFollowUp(input: BulkScheduleFollowUpInput): BulkScheduleFollowUpResult {
+  requirePermission(PERMISSIONS.FOLLOWUP_CREATE)
+  const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
+
+  const due = new Date(input.dueAt)
+  if (Number.isNaN(due.getTime())) throw new ValidationError('dueAt must be a valid date')
+  if (due.getTime() <= Date.now()) {
+    throw new ValidationError('Follow-up due date must be in the future')
+  }
+
+  for (const id of input.leadIds) {
+    if (!leadRepo.getById(organizationId, id)) throw new NotFoundError('Lead not found')
+  }
+
+  return withTransaction(() => {
+    let scheduled = 0
+    for (const id of input.leadIds) {
+      followupRepo.create({
+        organizationId,
+        leadId: id,
+        title: input.title.trim(),
+        dueAt: due.toISOString(),
+        createdBy: userId
+      })
+      scheduled++
+    }
+    return { scheduled }
+  })
+}
+
+/**
+ * Bulk activity logging for the selection toolbar. Every lead is validated up
+ * front (all-or-nothing), then one activity is recorded per lead inside a
+ * single transaction. Never mutates the stage (D10), like the single flow.
+ */
+export function bulkRecordActivity(input: BulkRecordActivityInput): BulkRecordActivityResult {
+  requirePermission(PERMISSIONS.LEAD_RECORD_ACTIVITY)
+  const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
+
+  const type = activityTypeRepo.findById(organizationId, input.typeId)
+  if (!type) throw new NotFoundError('Activity type not found')
+
+  for (const id of input.leadIds) {
+    if (!leadRepo.getById(organizationId, id)) throw new NotFoundError('Lead not found')
+  }
+
+  return withTransaction(() => {
+    let recorded = 0
+    for (const id of input.leadIds) {
+      activityRepo.create({
+        organizationId,
+        leadId: id,
+        typeId: type.id,
+        note: input.note?.trim() || null,
+        occurredAt: input.occurredAt,
+        createdBy: userId
+      })
+      recorded++
+    }
+    return { recorded }
+  })
 }
 
 /** Reassigns the owner, recording an OWNER_CHANGE activity (D15). */
@@ -355,7 +588,8 @@ export function listLeads(input: LeadListRequest): LeadListResponse {
     isLost: row.isLost,
     ownerUserId: row.ownerUserId,
     ownerName: row.ownerName,
-    planInterest: row.planInterest,
+    planId: row.planId,
+    planName: row.planName,
     goal: row.goal,
     notes: row.notes,
     createdAt: row.createdAt,
@@ -590,18 +824,22 @@ function searchLeadVocabulary(
   return options
 }
 
-export function searchLeadPlanInterests(input: LeadVocabularySearchRequest): LeadTextOptionRow[] {
-  return searchLeadVocabulary(
-    input,
-    'plan_interest',
-    (organizationId, query, limit) => leadRepo.distinctPlanInterests(organizationId, query, limit)
-  )
+/**
+ * Plan picker for the lead form. Plans are real catalog rows (Module 03), so the
+ * option identity is the numeric plan id — the picker offers only active plans,
+ * and creating a plan happens in the Catalog module, never from a lead form.
+ */
+export function searchLeadPlans(input: PlanSearchRequest): PlanOptionRow[] {
+  requirePermission(PERMISSIONS.LEAD_VIEW)
+  const organizationId = currentOrganizationId()
+  const query = input.query.trim()
+  const options = planRepo.searchActive(organizationId, query, LEAD_VOCABULARY_LIMIT)
+  logger.info('plan search', { organizationId, query, count: options.length })
+  return options.map((plan) => ({ id: plan.id, name: plan.name }))
 }
 
 export function searchLeadGoals(input: LeadVocabularySearchRequest): LeadTextOptionRow[] {
-  return searchLeadVocabulary(
-    input,
-    'goal',
-    (organizationId, query, limit) => leadRepo.distinctGoals(organizationId, query, limit)
+  return searchLeadVocabulary(input, 'goal', (organizationId, query, limit) =>
+    leadRepo.distinctGoals(organizationId, query, limit)
   )
 }

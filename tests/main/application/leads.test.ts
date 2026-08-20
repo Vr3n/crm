@@ -2,9 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { setupSalesDb, seedOrgWithSession } from '../../helpers/sales-db'
 import {
   assignLead,
+  bulkMoveLeadStage,
+  bulkRecordActivity,
+  bulkScheduleFollowUp,
   completeFollowUp,
   createLead,
   createLeadSource,
+  deleteLeads,
+  editLead,
   getFunnelCounts,
   getLeadDetails,
   getLeadTimeline,
@@ -17,11 +22,18 @@ import {
   recordLeadActivity,
   scheduleFollowUp,
   searchLeadGoals,
-  searchLeadPlanInterests,
+  searchLeadPlans,
   searchLeadSources
 } from '../../../src/main/application/leads'
 import { activityRepo, leadRepo } from '../../../src/main/repositories/sales'
-import { userRepo, staffRepo } from '../../../src/main/repositories/identity'
+import {
+  organizationRepo,
+  roleRepo,
+  userRepo,
+  staffRepo
+} from '../../../src/main/repositories/identity'
+import { setSession } from '../../../src/main/auth/session'
+import type { SessionContext } from '../../../src/main/domain/identity'
 import { getDb } from '../../../src/main/db/connection'
 import {
   ConflictError,
@@ -37,6 +49,13 @@ function createSourceId(organizationId: number): number {
   const row = getDb()
     .prepare('SELECT id FROM lead_sources WHERE organization_id = ? ORDER BY sort_order LIMIT 1')
     .get(organizationId) as { id: number }
+  return row.id
+}
+
+function planIdByName(organizationId: number, name: string): number {
+  const row = getDb()
+    .prepare('SELECT id FROM membership_plans WHERE organization_id = ? AND name = ?')
+    .get(organizationId, name) as { id: number }
   return row.id
 }
 
@@ -65,6 +84,33 @@ function createLeadFor(organizationId: number): { leadId: number; phone: string 
     sourceId
   })
   return { leadId, phone }
+}
+
+let signInCounter = 0
+/** Creates a brand-new staff member in the given role and switches the session to them. */
+function signInAs(organizationId: number, roleName: string): number {
+  const org = organizationRepo.findById(organizationId)
+  const user = userRepo.create({
+    fullName: 'Sana Kapoor',
+    email: `sana${++signInCounter}@fitgym.com`,
+    passwordHash: 'h'
+  })
+  const role = roleRepo.findByName(organizationId, roleName)
+  staffRepo.create({ organizationId, userId: user.id, roleId: role.id })
+  const session: SessionContext = {
+    organizationId,
+    organizationSlug: org.slug,
+    organizationName: org.name,
+    userId: user.id,
+    userFullName: user.fullName,
+    userEmail: user.email,
+    roleId: role.id,
+    roleName: role.name,
+    isSuper: role.isSuper,
+    permissions: roleRepo.findPermissionCodes(role.id)
+  }
+  setSession(session)
+  return user.id
 }
 
 describe('createLead', () => {
@@ -120,24 +166,25 @@ describe('createLead', () => {
     })
   })
 
-  it('persists plan interest, goal, and notes', () => {
+  it('persists plan, goal, and notes', () => {
     const { organizationId } = seedOrgWithSession()
     const sourceId = createSourceId(organizationId)
+    const planId = planIdByName(organizationId, 'Annual Premium')
 
     const { leadId } = createLead({
       fullName: 'Sana Kapoor',
       phone: '9876543210',
       sourceId,
-      planInterest: 'Annual Premium',
+      planId,
       goal: 'Weight loss',
       notes: 'Asked about pool access'
     })
 
     const lead = getDb()
-      .prepare('SELECT plan_interest, goal, notes FROM leads WHERE id = ?')
-      .get(leadId) as { plan_interest: string | null; goal: string | null; notes: string | null }
+      .prepare('SELECT plan_id, goal, notes FROM leads WHERE id = ?')
+      .get(leadId) as { plan_id: number | null; goal: string | null; notes: string | null }
     expect(lead).toEqual({
-      plan_interest: 'Annual Premium',
+      plan_id: planId,
       goal: 'Weight loss',
       notes: 'Asked about pool access'
     })
@@ -151,15 +198,31 @@ describe('createLead', () => {
       fullName: 'Sana Kapoor',
       phone: '9876543210',
       sourceId,
-      planInterest: '  ',
+      planId: undefined,
       goal: '',
       notes: undefined
     })
 
     const lead = getDb()
-      .prepare('SELECT plan_interest, goal, notes FROM leads WHERE id = ?')
-      .get(leadId) as { plan_interest: string | null; goal: string | null; notes: string | null }
-    expect(lead).toEqual({ plan_interest: null, goal: null, notes: null })
+      .prepare('SELECT plan_id, goal, notes FROM leads WHERE id = ?')
+      .get(leadId) as { plan_id: number | null; goal: string | null; notes: string | null }
+    expect(lead).toEqual({ plan_id: null, goal: null, notes: null })
+  })
+
+  it('rejects a plan that does not belong to this organization', () => {
+    const { organizationId: orgA } = seedOrgWithSession()
+    const { organizationId: orgB } = seedOrgWithSession()
+    const sourceId = createSourceId(orgA)
+    const foreignPlan = planIdByName(orgB, 'Annual Premium')
+
+    expect(() =>
+      createLead({
+        fullName: 'Sana Kapoor',
+        phone: '9876543210',
+        sourceId,
+        planId: foreignPlan
+      })
+    ).toThrow(NotFoundError)
   })
 
   it('reuses an existing person once the previous lead is terminal (lost)', () => {
@@ -218,6 +281,142 @@ describe('createLead', () => {
     const { organizationId } = seedOrgWithSession('Finance')
     const sourceId = createSourceId(organizationId)
     expect(() => createLead({ fullName: 'R', phone: '9876543210', sourceId })).toThrow(
+      ForbiddenError
+    )
+  })
+})
+
+describe('editLead', () => {
+  it('updates the person and lead fields and records a NOTE activity', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const { leadId, phone } = createLeadFor(organizationId)
+    const sourceId = createSourceId(organizationId)
+
+    editLead({
+      leadId,
+      fullName: 'Rahul Sharma Updated',
+      phone,
+      email: 'rahul@example.com',
+      sourceId,
+      planId: planIdByName(organizationId, 'Annual Premium'),
+      goal: 'Weight loss',
+      notes: 'Prefers evening sessions'
+    })
+
+    const lead = leadRepo.getById(organizationId, leadId)
+    const person = getDb()
+      .prepare('SELECT full_name, phone, email FROM people WHERE id = ?')
+      .get(lead.personId) as { full_name: string; phone: string; email: string | null }
+    expect(person).toEqual({
+      full_name: 'Rahul Sharma Updated',
+      phone,
+      email: 'rahul@example.com'
+    })
+    expect(lead).toMatchObject({
+      sourceId,
+      planId: planIdByName(organizationId, 'Annual Premium'),
+      goal: 'Weight loss',
+      notes: 'Prefers evening sessions'
+    })
+    const activities = activityRepo.listForLead(organizationId, leadId)
+    expect(activities).toHaveLength(1)
+    expect(activities[0]).toMatchObject({
+      typeId: activityTypeId(organizationId, 'NOTE'),
+      note: 'Lead details updated',
+      createdBy: userId
+    })
+  })
+
+  it('lets the owner edit their own lead (non-super)', () => {
+    const { organizationId } = seedOrgWithSession('Sales')
+    const { leadId, phone } = createLeadFor(organizationId)
+    expect(() =>
+      editLead({
+        leadId,
+        fullName: 'Rahul Sharma',
+        phone,
+        sourceId: createSourceId(organizationId)
+      })
+    ).not.toThrow()
+  })
+
+  it('rejects an edit by a different owner even with lead.edit', () => {
+    const { organizationId } = seedOrgWithSession('Sales')
+    const { leadId } = createLeadFor(organizationId)
+    signInAs(organizationId, 'Sales')
+
+    expect(() =>
+      editLead({
+        leadId,
+        fullName: 'Rahul Sharma',
+        phone: '9812345678',
+        sourceId: createSourceId(organizationId)
+      })
+    ).toThrow(ForbiddenError)
+  })
+
+  it('lets an admin (super) edit a lead they do not own', () => {
+    const { organizationId } = seedOrgWithSession() // seeded Owner session is super
+    const { leadId, phone } = createLeadFor(organizationId)
+    const other = signInAs(organizationId, 'Sales')
+    // Reassign ownership to the Sales user so the Owner is no longer the owner.
+    getDb().prepare('UPDATE leads SET owner_user_id = ? WHERE id = ?').run(other, leadId)
+    signInAs(organizationId, 'Owner')
+
+    expect(() =>
+      editLead({
+        leadId,
+        fullName: 'Rahul Sharma',
+        phone,
+        sourceId: createSourceId(organizationId)
+      })
+    ).not.toThrow()
+  })
+
+  it('rejects an unknown lead with NotFoundError', () => {
+    seedOrgWithSession()
+    expect(() =>
+      editLead({ leadId: 99999, fullName: 'R', phone: '9812345678', sourceId: 1 })
+    ).toThrow(NotFoundError)
+  })
+
+  it('rejects an unknown source with NotFoundError', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId, phone } = createLeadFor(organizationId)
+    expect(() => editLead({ leadId, fullName: 'R', phone, sourceId: 99999 })).toThrow(NotFoundError)
+  })
+
+  it('rejects a phone already used by another person with ConflictError', () => {
+    const { organizationId } = seedOrgWithSession()
+    const first = createLeadFor(organizationId)
+    const second = createLeadFor(organizationId)
+    expect(() =>
+      editLead({
+        leadId: second.leadId,
+        fullName: 'Rahul Sharma',
+        phone: first.phone,
+        sourceId: createSourceId(organizationId)
+      })
+    ).toThrow(ConflictError)
+    expect(leadRepo.getById(organizationId, second.leadId).planId).toBeNull()
+  })
+
+  it('allows keeping the person’s own phone number', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId, phone } = createLeadFor(organizationId)
+    expect(() =>
+      editLead({
+        leadId,
+        fullName: 'Rahul Sharma',
+        phone,
+        sourceId: createSourceId(organizationId)
+      })
+    ).not.toThrow()
+  })
+
+  it('denies without lead.edit', () => {
+    seedOrgWithSession('Front Desk')
+    expect(() => editLead({ leadId: 1, fullName: 'R', phone: '9812345678', sourceId: 1 })).toThrow(
       ForbiddenError
     )
   })
@@ -323,6 +522,194 @@ describe('moveLeadStage', () => {
   })
 })
 
+describe('bulkMoveLeadStage', () => {
+  it('moves several leads with a NOTE activity and stage history each', () => {
+    const { organizationId } = seedOrgWithSession()
+    const first = createLeadFor(organizationId)
+    const second = createLeadFor(organizationId)
+    const target = stageIdByName(organizationId, 'CONTACTED')
+    const initial = stageIdByName(organizationId, 'NEW')
+
+    const result = bulkMoveLeadStage({
+      leadIds: [first.leadId, second.leadId],
+      targetStageId: target
+    })
+
+    expect(result).toEqual({ moved: 2 })
+    for (const { leadId } of [first, second]) {
+      const lead = leadRepo.getById(organizationId, leadId)!
+      expect(lead.currentStageId).toBe(target)
+
+      const activities = activityRepo.listForLead(organizationId, leadId)
+      expect(activities).toHaveLength(1)
+      expect(activities[0].typeId).toBe(activityTypeId(organizationId, 'NOTE'))
+      expect(activities[0].note).toBe('Bulk move to CONTACTED')
+
+      const history = getDb()
+        .prepare(
+          'SELECT from_stage_id, to_stage_id, activity_id FROM lead_stage_history WHERE lead_id = ?'
+        )
+        .all(leadId) as { from_stage_id: number | null; to_stage_id: number }[]
+      expect(history).toHaveLength(2) // initial + bulk move
+      expect(history[1]).toEqual({
+        from_stage_id: initial,
+        to_stage_id: target,
+        activity_id: expect.any(Number)
+      })
+    }
+  })
+
+  it('skips leads already at the target stage', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const moved = createLeadFor(organizationId)
+    const already = createLeadFor(organizationId)
+    const target = stageIdByName(organizationId, 'CONTACTED')
+
+    // Pre-move one lead into CONTACTED via the strict single-move path.
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    const activity = activityRepo.create({
+      organizationId,
+      leadId: already.leadId,
+      typeId,
+      note: 'x',
+      occurredAt: new Date().toISOString(),
+      createdBy: userId
+    })
+    moveLeadStage({
+      leadId: already.leadId,
+      targetStageId: target,
+      expectedStageId: stageIdByName(organizationId, 'NEW'),
+      activityId: activity.id
+    })
+
+    const result = bulkMoveLeadStage({
+      leadIds: [moved.leadId, already.leadId],
+      targetStageId: target
+    })
+
+    expect(result).toEqual({ moved: 1 })
+    expect(leadRepo.getById(organizationId, moved.leadId)!.currentStageId).toBe(target)
+    expect(leadRepo.getById(organizationId, already.leadId)!.currentStageId).toBe(target)
+  })
+
+  it('rejects a terminal target and moves nothing', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const target = stageIdByName(organizationId, 'WON')
+
+    expect(() => bulkMoveLeadStage({ leadIds: [leadId], targetStageId: target })).toThrow(
+      InvalidStateTransitionError
+    )
+    expect(leadRepo.getById(organizationId, leadId)!.currentStageId).toBe(
+      stageIdByName(organizationId, 'NEW')
+    )
+  })
+
+  it('throws NotFoundError when any lead id is unknown', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    expect(() =>
+      bulkMoveLeadStage({
+        leadIds: [leadId, 99999],
+        targetStageId: stageIdByName(organizationId, 'CONTACTED')
+      })
+    ).toThrow(NotFoundError)
+  })
+
+  it('denies without lead.update_stage', () => {
+    seedOrgWithSession('Finance')
+    expect(() => bulkMoveLeadStage({ leadIds: [1], targetStageId: 1 })).toThrow(ForbiddenError)
+  })
+})
+
+describe('deleteLeads', () => {
+  it('deletes leads with activities, follow-ups, and stage history, preserving people', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    activityRepo.create({
+      organizationId,
+      leadId,
+      typeId,
+      note: 'Called Rahul',
+      occurredAt: new Date().toISOString(),
+      createdBy: userId
+    })
+    scheduleFollowUp({
+      leadId,
+      title: 'Re-call',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+
+    const personId = leadRepo.getById(organizationId, leadId)!.personId
+    const personCount = getDb()
+      .prepare('SELECT COUNT(*) AS n FROM people WHERE id = ?')
+      .get(personId) as { n: number }
+
+    expect(() => deleteLeads({ leadIds: [leadId] })).not.toThrow()
+
+    expect(leadRepo.getById(organizationId, leadId)).toBeNull()
+    expect(
+      (
+        getDb()
+          .prepare('SELECT COUNT(*) AS n FROM lead_activities WHERE lead_id = ?')
+          .get(leadId) as {
+          n: number
+        }
+      ).n
+    ).toBe(0)
+    expect(
+      (
+        getDb()
+          .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?')
+          .get(leadId) as {
+          n: number
+        }
+      ).n
+    ).toBe(0)
+    expect(
+      (
+        getDb()
+          .prepare('SELECT COUNT(*) AS n FROM lead_stage_history WHERE lead_id = ?')
+          .get(leadId) as {
+          n: number
+        }
+      ).n
+    ).toBe(0)
+    // The person row survives — they can hold other leads.
+    expect(
+      (
+        getDb().prepare('SELECT COUNT(*) AS n FROM people WHERE id = ?').get(personId) as {
+          n: number
+        }
+      ).n
+    ).toBe(personCount.n)
+  })
+
+  it('deletes multiple leads atomically', () => {
+    const { organizationId } = seedOrgWithSession()
+    const first = createLeadFor(organizationId)
+    const second = createLeadFor(organizationId)
+
+    deleteLeads({ leadIds: [first.leadId, second.leadId] })
+
+    expect(leadRepo.getById(organizationId, first.leadId)).toBeNull()
+    expect(leadRepo.getById(organizationId, second.leadId)).toBeNull()
+  })
+
+  it('throws NotFoundError when any id does not belong to the org', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    expect(() => deleteLeads({ leadIds: [leadId, 99999] })).toThrow(NotFoundError)
+    expect(leadRepo.getById(organizationId, leadId)).not.toBeNull() // nothing deleted
+  })
+
+  it('denies without lead.delete', () => {
+    seedOrgWithSession('Front Desk')
+    expect(() => deleteLeads({ leadIds: [1] })).toThrow(ForbiddenError)
+  })
+})
+
 describe('markLeadLost', () => {
   it('marks the lead lost with reason and writes history', () => {
     const { organizationId } = seedOrgWithSession()
@@ -420,6 +807,125 @@ describe('assignLead', () => {
     const { leadId } = createLeadFor(organizationId)
     expect(() => assignLead({ leadId, ownerUserId: userId })).not.toThrow()
     expect(activityRepo.listForLead(organizationId, leadId)).toHaveLength(0)
+  })
+})
+
+describe('bulkScheduleFollowUp', () => {
+  it('schedules one follow-up per selected lead', () => {
+    const { organizationId } = seedOrgWithSession()
+    const first = createLeadFor(organizationId)
+    const second = createLeadFor(organizationId)
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+
+    const result = bulkScheduleFollowUp({
+      leadIds: [first.leadId, second.leadId],
+      title: '  Re-call for trial  ',
+      dueAt: future
+    })
+
+    expect(result).toEqual({ scheduled: 2 })
+    for (const { leadId } of [first, second]) {
+      const followup = getDb()
+        .prepare('SELECT title, due_at FROM lead_followups WHERE lead_id = ?')
+        .get(leadId) as { title: string; due_at: string }
+      expect(followup.title).toBe('Re-call for trial') // trimmed
+      expect(followup.due_at).toBe(future)
+    }
+  })
+
+  it('rejects a past due date before writing anything', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    expect(() =>
+      bulkScheduleFollowUp({
+        leadIds: [leadId],
+        title: 'x',
+        dueAt: new Date(Date.now() - 1000).toISOString()
+      })
+    ).toThrow(ValidationError)
+    expect(
+      (
+        getDb()
+          .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?')
+          .get(leadId) as {
+          n: number
+        }
+      ).n
+    ).toBe(0)
+  })
+
+  it('throws NotFoundError when any id is unknown', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    expect(() =>
+      bulkScheduleFollowUp({
+        leadIds: [leadId, 99999],
+        title: 'x',
+        dueAt: new Date(Date.now() + 86_400_000).toISOString()
+      })
+    ).toThrow(NotFoundError)
+  })
+
+  it('denies without followup.create', () => {
+    seedOrgWithSession('Finance')
+    expect(() =>
+      bulkScheduleFollowUp({
+        leadIds: [1],
+        title: 'x',
+        dueAt: new Date(Date.now() + 86_400_000).toISOString()
+      })
+    ).toThrow(ForbiddenError)
+  })
+})
+
+describe('bulkRecordActivity', () => {
+  it('records one activity per selected lead', () => {
+    const { organizationId } = seedOrgWithSession()
+    const first = createLeadFor(organizationId)
+    const second = createLeadFor(organizationId)
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+
+    const result = bulkRecordActivity({
+      leadIds: [first.leadId, second.leadId],
+      typeId,
+      note: 'Called to confirm trial',
+      occurredAt: new Date().toISOString()
+    })
+
+    expect(result).toEqual({ recorded: 2 })
+    for (const { leadId } of [first, second]) {
+      const activities = activityRepo.listForLead(organizationId, leadId)
+      expect(activities).toHaveLength(1)
+      expect(activities[0]).toMatchObject({
+        typeId,
+        note: 'Called to confirm trial'
+      })
+    }
+  })
+
+  it('throws NotFoundError for an unknown lead or type', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    const now = new Date().toISOString()
+    expect(() =>
+      bulkRecordActivity({ leadIds: [leadId, 99999], typeId, note: 'x', occurredAt: now })
+    ).toThrow(NotFoundError)
+    expect(() =>
+      bulkRecordActivity({ leadIds: [leadId], typeId: 99999, note: 'x', occurredAt: now })
+    ).toThrow(NotFoundError)
+  })
+
+  it('denies without lead.record_activity', () => {
+    seedOrgWithSession('Finance')
+    expect(() =>
+      bulkRecordActivity({
+        leadIds: [1],
+        typeId: 1,
+        note: 'x',
+        occurredAt: new Date().toISOString()
+      })
+    ).toThrow(ForbiddenError)
   })
 })
 
@@ -606,21 +1112,23 @@ describe('listLeads', () => {
     })
   })
 
-  it('round-trips plan interest, goal, and notes in list rows', () => {
+  it('round-trips plan, goal, and notes in list rows', () => {
     const { organizationId } = seedOrgWithSession()
     const sourceId = createSourceId(organizationId)
+    const planId = planIdByName(organizationId, 'Premium Quarterly')
     createLead({
       fullName: 'Neha',
       phone: '9333333333',
       sourceId,
-      planInterest: 'Quarterly',
+      planId,
       goal: 'Muscle gain',
       notes: 'Prefers evening batch'
     })
 
     const row = listLeads({ page: 1, limit: 50 }).items[0]
     expect(row).toMatchObject({
-      planInterest: 'Quarterly',
+      planId,
+      planName: 'Premium Quarterly',
       goal: 'Muscle gain',
       notes: 'Prefers evening batch'
     })
@@ -691,40 +1199,42 @@ describe('searchLeadSources', () => {
   })
 })
 
-describe('searchLeadPlanInterests', () => {
-  it('returns distinct plan-interest values used on this orgs leads, case-insensitively', () => {
-    const { organizationId } = seedOrgWithSession()
-    const sourceId = createSourceId(organizationId)
-    createLead({ fullName: 'Asha', phone: '9876543210', sourceId, planInterest: 'Annual Premium' })
-    createLead({ fullName: 'Beena', phone: '9876543211', sourceId, planInterest: 'annual premium' })
-    createLead({ fullName: 'Chetan', phone: '9876543212', sourceId, planInterest: 'Couple Plan' })
-    // No plan interest on this lead — never suggested.
-    createLead({ fullName: 'Dev', phone: '9876543213', sourceId, goal: 'Weight loss' })
+describe('searchLeadPlans', () => {
+  it('returns only active catalog plans matching the query, case-insensitively', () => {
+    seedOrgWithSession()
 
-    // The two case-variants collapse into one option.
-    expect(searchLeadPlanInterests({ query: 'annual' })).toEqual([
-      { id: 'Annual Premium', label: 'Annual Premium' }
+    // The seeded catalog has exactly one "Annual Premium"; Weekend Access is
+    // seeded inactive and must never be suggested.
+    expect(searchLeadPlans({ query: 'annual' })).toEqual([
+      { id: expect.any(Number), name: 'Annual Premium' }
     ])
-    expect(searchLeadPlanInterests({ query: 'a' })).toEqual([
-      { id: 'Annual Premium', label: 'Annual Premium' },
-      { id: 'Couple Plan', label: 'Couple Plan' }
+    expect(searchLeadPlans({ query: '  ANNUAL  ' })).toEqual([
+      { id: expect.any(Number), name: 'Annual Premium' }
     ])
+    expect(searchLeadPlans({ query: 'weekend' })).toEqual([])
   })
 
   it('is scoped to the current organization', () => {
-    seedOrgWithSession()
+    const { organizationId: orgA } = seedOrgWithSession()
     const { organizationId: otherOrg } = seedOrgWithSession()
-    const sourceId = createSourceId(otherOrg)
-    createLead({ fullName: 'Asha', phone: '9876543210', sourceId, planInterest: 'Other Org Plan' })
+    getDb()
+      .prepare(
+        `INSERT INTO membership_plans (organization_id, name, duration, base_price_minor)
+         VALUES (?, 'Couple Plan', 'MONTHLY', 250000)`
+      )
+      .run(otherOrg)
 
-    expect(searchLeadPlanInterests({ query: 'plan' })).toEqual([
-      { id: 'Other Org Plan', label: 'Other Org Plan' }
+    signInAs(orgA, 'Owner')
+    expect(searchLeadPlans({ query: 'couple' })).toEqual([])
+    signInAs(otherOrg, 'Owner')
+    expect(searchLeadPlans({ query: 'couple' })).toEqual([
+      { id: expect.any(Number), name: 'Couple Plan' }
     ])
   })
 
   it('throws PERMISSION_DENIED without lead.view', () => {
     seedOrgWithSession('Finance')
-    expect(() => searchLeadPlanInterests({ query: 'a' })).toThrow(ForbiddenError)
+    expect(() => searchLeadPlans({ query: 'a' })).toThrow(ForbiddenError)
   })
 })
 

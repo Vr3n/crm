@@ -3,6 +3,12 @@ import '@testing-library/jest-dom/vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as React from 'react'
 import { afterEach, beforeEach, vi } from 'vitest'
+// Warm the module graphs for LeadsPage's lazily-loaded dialogs. In tests a click
+// triggers a dynamic import; pre-loading here absorbs the first-transform cost
+// so `React.lazy` resolves immediately instead of timing out the test.
+import '@/features/leads/components/bulk-follow-up-dialog'
+import '@/features/leads/components/bulk-activity-dialog'
+import '@/features/leads/components/edit-lead-dialog'
 import type { LeadListResponse, ReferenceData } from '../../src/shared/contracts/sales'
 import type { Lead } from '../../src/renderer/src/features/leads/types'
 
@@ -196,7 +202,11 @@ export const emptyLeadList: LeadListResponse = {
   hasMore: false
 }
 
-export const leadPlanInterests = ['Annual Premium', 'Monthly Basic', 'Couple Plan']
+export const leadPlans = [
+  { id: 101, name: 'Annual Premium' },
+  { id: 102, name: 'Monthly Basic' },
+  { id: 103, name: 'Couple Plan' }
+]
 export const leadGoals = ['Weight loss', 'Muscle gain', 'General fitness']
 
 /** A freshly-captured lead in the NEW stage, as the list query would hydrate it. */
@@ -229,7 +239,12 @@ beforeEach(() => {
     },
     leads: {
       create: vi.fn(),
+      editLead: vi.fn(),
       moveStage: vi.fn(),
+      deleteLeads: vi.fn(),
+      bulkMoveStage: vi.fn().mockResolvedValue({ moved: 0 }),
+      bulkScheduleFollowup: vi.fn().mockResolvedValue({ scheduled: 0 }),
+      bulkRecordActivity: vi.fn().mockResolvedValue({ recorded: 0 }),
       recordActivity: vi.fn(),
       assign: vi.fn(),
       markLost: vi.fn(),
@@ -261,9 +276,7 @@ beforeEach(() => {
       })),
       searchPlanInterests: vi.fn().mockImplementation(async (query: string) => {
         const q = query.trim().toLocaleLowerCase()
-        return leadPlanInterests
-          .filter((v) => v.toLocaleLowerCase().includes(q))
-          .map((id) => ({ id, label: id }))
+        return leadPlans.filter((p) => p.name.toLocaleLowerCase().includes(q))
       }),
       searchGoals: vi.fn().mockImplementation(async (query: string) => {
         const q = query.trim().toLocaleLowerCase()
@@ -271,6 +284,12 @@ beforeEach(() => {
           .filter((v) => v.toLocaleLowerCase().includes(q))
           .map((id) => ({ id, label: id }))
       })
+    },
+    catalog: {
+      listPlans: vi.fn().mockResolvedValue([]),
+      createPlan: vi.fn(),
+      updatePlan: vi.fn(),
+      deletePlan: vi.fn()
     }
   }
 })

@@ -1,14 +1,23 @@
 import type {
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
   CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
   LeadListRequest,
   LeadListResponse,
   LeadSourceRow,
   LeadTextOptionRow,
   MarkLeadLostInput,
   MoveLeadStageInput,
+  PlanOptionRow,
   RecordLeadActivityInput,
   RecordedActivity,
   ReferenceData,
@@ -24,7 +33,15 @@ import type {
 export const api = {
   list: (input: LeadListRequest): Promise<LeadListResponse> => window.api.leads.list(input),
   create: (input: CreateLeadInput): Promise<CreatedLead> => window.api.leads.create(input),
+  editLead: (input: EditLeadInput): Promise<void> => window.api.leads.editLead(input),
   moveStage: (input: MoveLeadStageInput): Promise<void> => window.api.leads.moveStage(input),
+  deleteLeads: (input: DeleteLeadsInput): Promise<void> => window.api.leads.deleteLeads(input),
+  bulkMoveStage: (input: BulkMoveLeadStageInput): Promise<BulkMoveLeadStageResult> =>
+    window.api.leads.bulkMoveStage(input),
+  bulkScheduleFollowUp: (input: BulkScheduleFollowUpInput): Promise<BulkScheduleFollowUpResult> =>
+    window.api.leads.bulkScheduleFollowup(input),
+  bulkRecordActivity: (input: BulkRecordActivityInput): Promise<BulkRecordActivityResult> =>
+    window.api.leads.bulkRecordActivity(input),
   logActivity: (input: RecordLeadActivityInput): Promise<RecordedActivity> =>
     window.api.leads.recordActivity(input),
   markLost: (input: MarkLeadLostInput): Promise<void> => window.api.leads.markLost(input),
@@ -36,7 +53,7 @@ export const api = {
   searchSources: (query: string): Promise<LeadSourceRow[]> => window.api.leads.searchSources(query),
   createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
     window.api.leads.createSource(input),
-  searchPlanInterests: (query: string): Promise<LeadTextOptionRow[]> =>
+  searchPlanInterests: (query: string): Promise<PlanOptionRow[]> =>
     window.api.leads.searchPlanInterests(query),
   searchGoals: (query: string): Promise<LeadTextOptionRow[]> => window.api.leads.searchGoals(query)
 }

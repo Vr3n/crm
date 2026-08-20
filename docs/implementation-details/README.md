@@ -15,6 +15,8 @@ were made, the trade-offs accepted, the test strategy, and the known gaps.
 - [`ui-shell.md`](./ui-shell.md) — the app shell & design system (sidebar/topbar/routing, pink accent, theme, permission-gated nav).
 - [`dashboard.md`](./dashboard.md) — the operational dashboard (masthead, quick actions, expirations / dues / cold-leads tables).
 - [`known-gaps.md`](./known-gaps.md) — deliberate limitations and next-sprint concerns.
+- [`leads-pipeline.md`](./leads-pipeline.md) — the SQLite-backed leads pipeline (list read model, stage machine, activities/follow-ups).
+- [`catalog-plans-and-lead-fk.md`](./catalog-plans-and-lead-fk.md) — the `membership_plans` catalog (Module 03) and the `leads.plan_id` FK migration (v9/v10).
 - [`autocorrect-combobox.md`](./autocorrect-combobox.md) — the reusable TanStack Form/Query-backed autocomplete + create combobox (`src/renderer/src/components/autocorrect-combobox.tsx`).
 
 ## Scope of this pass

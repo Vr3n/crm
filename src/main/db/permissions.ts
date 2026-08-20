@@ -25,6 +25,8 @@ export const PERMISSIONS = {
   LEAD_UPDATE_STAGE: 'lead.update_stage',
   LEAD_MARK_LOST: 'lead.mark_lost',
   LEAD_CONVERT: 'lead.convert',
+  LEAD_DELETE: 'lead.delete',
+  LEAD_EDIT: 'lead.edit',
 
   // Follow-ups (Module 01)
   FOLLOWUP_VIEW: 'followup.view',

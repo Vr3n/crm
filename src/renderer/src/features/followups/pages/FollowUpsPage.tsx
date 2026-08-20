@@ -12,11 +12,11 @@ import { filterFollowUps } from '../filters'
 import { useFollowUpRows } from '../queries'
 import type { FollowUpBucket, FollowUpFilters as FollowUpFilterState } from '../types'
 
-const DEFAULT_FILTERS: FollowUpFilterState = { bucket: 'overdue', search: '' }
+const DEFAULT_FILTERS: FollowUpFilterState = { bucket: 'all', search: '' }
 
 /**
  * Follow-ups (Module 01 §25) — the front-desk workbench. A flat queue of every
- * scheduled action across leads, defaulting to the overdue bucket, with an
+ * scheduled action across leads, defaulting to the all bucket, with an
  * inline "mark done" verb and row-click through to the lead. Completion logs a
  * Follow-up done activity and the sidebar badge tracks the real overdue count.
  */

@@ -78,7 +78,7 @@ export function IdentityCard({
           <Row icon={Mail} label="Email" value={lead.email} />
           <Row icon={UserRound} label="Owner" value={lead.owner?.name} />
           <Row icon={CalendarDays} label="Created" value={formatDate(lead.createdAt)} />
-          <Row icon={Tag} label="Plan interest" value={lead.planInterest} />
+          <Row icon={Tag} label="Plan interest" value={lead.planName} />
           <Row icon={Target} label="Goal" value={lead.goal} />
         </div>
 

@@ -1,104 +1,8 @@
-import type { Offer, OfferInput, Plan, PlanInput } from './types'
+import type { Offer, OfferInput } from './types'
 
-let planId = 0
 let offerId = 0
 
-const nextPlanId = (): number => ++planId
 const nextOfferId = (): number => ++offerId
-
-const seedPlans: Plan[] = [
-  {
-    id: nextPlanId(),
-    name: 'Basic Monthly',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePrice: 1500,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    isActive: true,
-    description: 'Gym-floor access across all equipment zones.',
-    createdAt: '2026-01-05'
-  },
-  {
-    id: nextPlanId(),
-    name: 'Student Monthly',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePrice: 1200,
-    accessWindow: 'TIMED',
-    startTime: '07:00',
-    endTime: '17:00',
-    isActive: true,
-    description: 'Off-peak floor access for students with a valid college ID.',
-    createdAt: '2026-01-05'
-  },
-  {
-    id: nextPlanId(),
-    name: 'Yoga Studio',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePrice: 1800,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    isActive: true,
-    description: 'Yoga floor, mat sessions and the meditation hall.',
-    createdAt: '2026-02-12'
-  },
-  {
-    id: nextPlanId(),
-    name: 'Premium Quarterly',
-    duration: 'QUARTERLY',
-    billing: 'ONE_TIME',
-    basePrice: 3900,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    isActive: true,
-    description: 'Full facility for 3 months at a better per-month rate.',
-    createdAt: '2026-01-05'
-  },
-  {
-    id: nextPlanId(),
-    name: 'Premium Half Yearly',
-    duration: 'HALF_YEARLY',
-    billing: 'ONE_TIME',
-    basePrice: 7400,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    isActive: true,
-    description: 'Six months of full-facility access.',
-    createdAt: '2026-01-05'
-  },
-  {
-    id: nextPlanId(),
-    name: 'Annual Premium',
-    duration: 'YEARLY',
-    billing: 'ONE_TIME',
-    basePrice: 24000,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    isActive: true,
-    description: 'The flagship year-long membership at the best per-month rate.',
-    createdAt: '2026-01-05'
-  },
-  {
-    id: nextPlanId(),
-    name: 'Weekend Access',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePrice: 900,
-    accessWindow: 'TIMED',
-    startTime: '08:00',
-    endTime: '20:00',
-    isActive: false,
-    description: 'Weekend-only floor access. Paused while the weekend bootcamps run.',
-    createdAt: '2026-03-01'
-  }
-]
 
 const seedOffers: Offer[] = [
   {
@@ -199,33 +103,15 @@ const seedOffers: Offer[] = [
   }
 ]
 
-let plans: Plan[] = [...seedPlans]
 let offers: Offer[] = [...seedOffers]
 
+/**
+ * In-memory store for the OFFERS surface only. Plans moved to the real SQLite
+ * backend (Module 03) — see `api.ts` for the IPC-backed plan facade. The
+ * `applicablePlanIds` above reference the seeded membership_plans ids; they are
+ * illustrative mock data until the offers backend lands.
+ */
 export const CatalogStore = {
-  listPlans(): Plan[] {
-    return [...plans]
-  },
-
-  createPlan(input: PlanInput): Plan {
-    const plan: Plan = { ...input, id: nextPlanId(), createdAt: new Date().toISOString().slice(0, 10) }
-    plans = [plan, ...plans]
-    return plan
-  },
-
-  updatePlan(id: number, input: PlanInput): Plan {
-    plans = plans.map((plan) => (plan.id === id ? { ...plan, ...input } : plan))
-    return plans.find((plan) => plan.id === id) as Plan
-  },
-
-  deletePlan(id: number): void {
-    plans = plans.filter((plan) => plan.id !== id)
-    offers = offers.map((offer) => ({
-      ...offer,
-      applicablePlanIds: offer.applicablePlanIds.filter((planId) => planId !== id)
-    }))
-  },
-
   listOffers(): Offer[] {
     return [...offers]
   },

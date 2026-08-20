@@ -19,9 +19,11 @@ import {
   leads,
   people
 } from './sales'
+import { membershipPlans } from './catalog'
 
 export * from './identity'
 export * from './sales'
+export * from './catalog'
 
 /**
  * The combined schema object passed to `drizzle()`. Future modules add their
@@ -37,6 +39,7 @@ export const schema = {
   leadStageHistory,
   leadStages,
   leads,
+  membershipPlans,
   organizationStaff,
   organizations,
   people,
@@ -143,6 +146,10 @@ export const relations = defineRelations(schema, (helpers) => ({
       from: helpers.leads.owner_user_id,
       to: helpers.users.id
     }),
+    plan: helpers.one.membershipPlans({
+      from: helpers.leads.plan_id,
+      to: helpers.membershipPlans.id
+    }),
     activities: helpers.many.leadActivities({
       from: helpers.leads.id,
       to: helpers.leadActivities.lead_id
@@ -160,6 +167,16 @@ export const relations = defineRelations(schema, (helpers) => ({
     organization: helpers.one.organizations({
       from: helpers.leadStages.organization_id,
       to: helpers.organizations.id
+    })
+  },
+  membershipPlans: {
+    organization: helpers.one.organizations({
+      from: helpers.membershipPlans.organization_id,
+      to: helpers.organizations.id
+    }),
+    leads: helpers.many.leads({
+      from: helpers.membershipPlans.id,
+      to: helpers.leads.plan_id
     })
   },
   leadSources: {

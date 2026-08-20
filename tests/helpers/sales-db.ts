@@ -3,6 +3,7 @@ import { openDatabase, closeDatabase } from '../../src/main/db/connection'
 import { runMigrations } from '../../src/main/db/migrations'
 import {
   seedPermissions,
+  seedPlansForOrganization,
   seedRolesForOrganization,
   seedSalesReferenceData
 } from '../../src/main/db/seed'
@@ -56,6 +57,7 @@ export function seedOrgWithSession(roleName = 'Owner'): SeededOrg {
   })
   seedRolesForOrganization(org.id)
   seedSalesReferenceData(org.id)
+  seedPlansForOrganization(org.id)
 
   const role = roleRepo.findByName(org.id, roleName)!
   const user = userRepo.create({

@@ -41,7 +41,7 @@ export interface Lead {
   currentStageId: number
   ownerUserId: number | null
   customerId: number | null
-  planInterest: string | null
+  planId: number | null
   goal: string | null
   notes: string | null
   lostReasonId: number | null

@@ -8,6 +8,7 @@ import { seedPermissions } from './db/seed'
 import { logger } from './lib/logger'
 import { registerIdentityIpc } from './ipc/identity'
 import { registerSalesIpc } from './ipc/sales'
+import { registerCatalogIpc } from './ipc/catalog'
 import { restoreRememberedLogin } from './application/identity'
 
 function createWindow(): void {
@@ -47,7 +48,10 @@ app.whenReady().then(async () => {
   })
 
   // Database foundation: connection -> migrations -> seeds
-  logger.info('main process started', { logLevel: process.env.GYMCRM_LOG_LEVEL ?? 'info', database: join(app.getPath('userData'), 'gym-crm.db') })
+  logger.info('main process started', {
+    logLevel: process.env.GYMCRM_LOG_LEVEL ?? 'info',
+    database: join(app.getPath('userData'), 'gym-crm.db')
+  })
   openDatabase(join(app.getPath('userData'), 'gym-crm.db'))
   runMigrations()
   seedPermissions()
@@ -61,6 +65,7 @@ app.whenReady().then(async () => {
   // IPC (channels are the only way the renderer touches the database)
   registerIdentityIpc()
   registerSalesIpc()
+  registerCatalogIpc()
 
   createWindow()
 

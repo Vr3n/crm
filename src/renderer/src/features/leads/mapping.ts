@@ -28,12 +28,11 @@ export function mapLeadRow(row: LeadListRow): Lead {
     stage: stageKeyFromName(row.stageName),
     stageId: row.stageId,
     createdAt: row.createdAt,
-    planInterest: row.planInterest ?? undefined,
+    planId: row.planId ?? undefined,
+    planName: row.planName ?? undefined,
     goal: row.goal ?? undefined,
     notes: row.notes ?? undefined,
-    lostReason: row.lostReasonId
-      ? lostReasonKeyFromName(row.lostReasonName ?? '')
-      : undefined,
+    lostReason: row.lostReasonId ? lostReasonKeyFromName(row.lostReasonName ?? '') : undefined,
     lostAt: row.lostAt ?? undefined,
     activities: row.activities.map((a) => ({
       id: a.id,

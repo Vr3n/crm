@@ -248,16 +248,126 @@ unit project (2026 stack: `@testing-library/react` 16 + `@testing-library/dom`,
   free text (committed verbatim), and the required error that surfaces when a picked source is
   cleared.
 
-Full suite: **18 files / 250 tests passing**; `typecheck:node`,
+Full suite: **19 files / 306 tests passing**; `typecheck:node`,
 `typecheck:web`, and `lint` (0 errors) are clean.
 
 ### Lazy-loaded dialogs (RAM)
 
-The five lead dialogs are `React.lazy` + `<Suspense fallback={null}>`, so their module graphs
+The seven lead dialogs are `React.lazy` + `<Suspense fallback={null}>`, so their module graphs
 (and everything they import) are only parsed once a dialog is first opened — the initial page
 load no longer pays for them. This directly addresses the cold-lead-dialog RAM spike: leaked
 child windows were pinning a full React alternate-fiber tree + V8 context. (Route-level
 lazy-loading in `AppRoutes.tsx` remains future work.)
+
+## Bulk selection toolbar (follow-up / activity / move / delete)
+
+A bulk-action toolbar appears on the left of the Table/Board tab row while rows are selected
+(**table view only**; switching views clears the selection). It shows the selected count and,
+left to right: **Schedule follow-up**, **Schedule activity**, **Move Stage**, and **Delete**
+(with an AlertDialog confirm). Buttons wrap (`flex-wrap`) when the row is narrow.
+
+- **Selection state** lives on the page (`LeadsPage` owns a `Set<number>`) and is passed down to
+  `LeadTable` as controlled `selected` / `onSelectionChange` — the table is no longer the owner.
+  The same selection powers the toolbar.
+- **Move Stage** offers only stages reachable from **every** selected lead (the intersection of
+  `forwardStages`), so a single choice is always a legal move for the whole batch. Leads already
+  at the target are skipped by the backend.
+- **Permissions mirror the backend** (`lead.delete`, `lead.update_stage`, `followup.create`,
+  `lead.record_activity`): hiding the buttons is UX only, never authorization. Per the decision
+  record, `lead.delete` + `lead.update_stage` are granted to **Manager** and **Sales**;
+  `followup.create` + `lead.record_activity` also cover **Front Desk**; Finance (read-only) gets
+  none of the four.
+- **Action color coding** uses the semantic tokens so the four actions are distinguishable at a
+  glance: **Schedule follow-up** cyan (`text-primary`), **Schedule activity** violet
+  (`text-violet`), **Move stage** pink (`text-secondary`, with an `ArrowRightLeft` icon in the
+  trigger) and **Delete** red (`text-destructive`). Icons inherit `currentColor`, and each button
+  gets a matching `hover:bg-<color>/10`.
+- **Schedule follow-up** opens `bulk-follow-up-dialog.tsx` — one follow-up per selected lead
+  (shared title + due time). The due time uses the shared `DateTimePicker` and the backend
+  rejects past dates, so "follow-up = future work" holds for the whole batch.
+- **Schedule activity** opens `bulk-activity-dialog.tsx` — a type select (defaulting to the first
+  active type that isn't an internal `OWNER_CHANGE`/`STAGE_CHANGE` bookkeeping type) plus a note,
+  recorded against every selected lead.
+- All four mutations clear the selection on success (`onSuccess`), hiding the toolbar. Both bulk
+  dialogs are `React.lazy` + `<Suspense>` like the single-lead dialogs and own their mutations —
+  `LeadsPage` passes `leadIds` (snapshot of the selection) + `onSuccess={clearSelection}`.
+
+### Backend: `leads:delete` and `leads:bulkMoveStage`
+
+- `deleteLeads` is gated on `lead.delete`, verifies every id belongs to the org (NotFoundError,
+  all-or-nothing), then deletes children in dependency order inside one transaction —
+  `lead_stage_history` → `lead_activities` → `lead_followups` → `leads` (FKs have no CASCADE
+  and `PRAGMA foreign_keys` is ON). The **person row is preserved** (a person can hold other leads).
+- `bulkMoveLeadStage` is gated on `lead.update_stage`. Every lead is validated against the stage
+  machine up front (all-or-nothing); the strict-move rule requires a real activity per stage
+  change, so each moved lead records a **NOTE** activity (`Bulk move to <STAGE>`) and a stage
+  history row inside the single transaction. Returns `{ moved }`.
+- Contracts: `deleteLeadsInputSchema` (`leadIds`, 1..200), `bulkMoveLeadStageInputSchema`,
+  `bulkMoveLeadStageResultSchema`. Channels `leads:delete` and `leads:bulkMoveStage` are bridged
+  through preload (`window.api.leads.deleteLeads` / `.bulkMoveStage`) and the TanStack hooks
+  `useDeleteLeads` / `useBulkMoveStage` (invalidate `['leads']` + toast on success).
+
+### Migration v7 — `lead.delete` for existing orgs
+
+Adds the `lead.delete` permission row (if missing) and grants it to the **Manager** and **Sales**
+starter roles of **existing** organizations (orgs created after this migration get it from
+`SEED_ROLES` at org-setup instead). The migration is self-guarded: `INSERT OR IGNORE` for the
+permission, and the grant `INSERT … SELECT` only matches rows that don't already have it, so it is
+idempotent.
+
+### Backend: `leads:bulkScheduleFollowup` and `leads:bulkRecordActivity`
+
+- `bulkScheduleFollowUp` is gated on `followup.create` (the same code as the single-lead flow).
+  It trims the title and validates the due date **once up front** — a past date throws
+  `ValidationError` before anything is written. Every id must belong to the org
+  (`NotFoundError`). All rows are inserted in one `withTransaction`; returns `{ scheduled }`.
+- `bulkRecordActivity` is gated on `lead.record_activity`. It resolves the activity type once and
+  inserts a row per lead inside one transaction — all-or-nothing. Returns `{ recorded }`.
+- Contracts: `bulkScheduleFollowUpInputSchema` (`leadIds` 1..200, `title`, `dueAt`),
+  `bulkScheduleFollowUpResultSchema` (`{ scheduled }`), `bulkRecordActivityInputSchema`
+  (`leadIds`, `typeId`, `note`, **required** `occurredAt`), `bulkRecordActivityResultSchema`
+  (`{ recorded }`). Channels `leads:bulkScheduleFollowup` / `leads:bulkRecordActivity` are
+  bridged through preload (`window.api.leads.bulkScheduleFollowup` / `.bulkRecordActivity`) and
+  the TanStack hooks `useBulkScheduleFollowUp` / `useBulkRecordActivity` (invalidate `['leads']`).
+- Both follow the same all-or-nothing contract as `deleteLeads` / `bulkMoveLeadStage`: validate
+  everything up front, then commit once.
+
+## Edit lead (owner-or-admin)
+
+Editing a lead's **details** (name / phone / email / source / plan interest / goal / notes) is an
+**owned** action: only the lead's owner or an admin can edit it.
+
+- **Permission `lead.edit`** is added to the catalog (`src/main/db/permissions.ts`) and granted to
+  the **Manager** and **Sales** starter roles (consistent with `lead.delete`). Owner (super) and
+  Admin (super) inherit it automatically. Front Desk keeps read-only lead access. Org-setup
+  seeding (`SEED_ROLES`) covers new orgs; **Migration v8** (`grant_lead_edit`) grants it to the
+  Manager and Sales roles of **existing** orgs, idempotently (`INSERT OR IGNORE` permission +
+  `NOT EXISTS` grant, mirroring v7).
+- **Backend use case `editLead`** (`src/main/application/leads.ts`): requires `lead.edit`, then
+  enforces ownership — `if (!session.isSuper && lead.ownerUserId !== session.userId)` →
+  `ForbiddenError`. After the gate it reuses the create-time validations: `IndianMobileNumber`
+  parse, source must exist (`NotFoundError`), person must exist, and the NOTE activity type must
+  be configured. Inside one `withTransaction` it re-checks phone uniqueness (a phone owned by a
+  **different** person → `ConflictError`; the person's own number passes), updates the person row
+  (`full_name` / `phone` / `email`), updates the lead (`source_id` / `plan_interest` / `goal` /
+  `notes`), and appends a **NOTE** activity (`Lead details updated`) to preserve the audit trail.
+  Returns `void`.
+- **Contract / transport:** `editLeadInputSchema` (`leadId` + the same fields as
+  `createLeadInputSchema`), channel `leads:edit`, IPC handler (validates → use case → envelope),
+  preload bridge `window.api.leads.editLead`, TanStack hook `useEditLead` (invalidate `['leads']`
+  + toast).
+- **Renderer UX** (`edit-lead-dialog.tsx`, `React.lazy` like the other dialogs):
+  - Opened from a **Pencil icon** in a new **Actions column** of the table (right-aligned,
+    `stopPropagation` so it never opens the detail page) and from a **Pencil icon in the card
+    footer** on the board.
+  - The Actions column only renders when **at least one** listed lead is editable
+    (`leads.some(canEditLead)`), so a read-only role never sees empty column chrome; per-row the
+    button renders only for owned leads.
+  - `canEditLead(lead)` on the page = `can(..., 'lead.edit') && (isSuper || lead.owner?.id ===
+    userId)` — hiding is UX only, the backend re-enforces ownership.
+  - The dialog is **prefilled** from the lead (comboboxes use the `selectedOption` prop of
+    `AutocorrectCombobox`), reuses the same live validation as `new-lead-dialog`, submits via
+    `useEditLead`, and auto-closes ~700ms after success.
 
 ## Main-process tests
 
@@ -272,7 +382,58 @@ lazy-loading in `AppRoutes.tsx` remains future work.)
   and asserts they persist; `LEADS_SEARCH_SOURCES` / `LEADS_CREATE_SOURCE` add their envelopes
   (including malformed-input and permission-denied cases); `LEADS_SEARCH_PLAN_INTERESTS` /
   `LEADS_SEARCH_GOALS` add valid and malformed-query envelopes.
-- `tests/db/migrations.test.ts` — expected migration versions include 5; idempotency count = 4.
+- `tests/main/application/leads.test.ts` — `bulkMoveLeadStage` moves several leads with a NOTE
+  activity + stage history each, skips leads already at the target, rejects terminal targets and
+  unknown ids, and is `lead.update_stage`-gated; `deleteLeads` removes leads with their
+  activities / follow-ups / stage history while preserving the person row, and is
+  `lead.delete`-gated.
+- `tests/main/application/leads.test.ts` — `bulkScheduleFollowUp` schedules one follow-up per
+  selected lead (title trimmed), rejects a past due date before writing anything, throws
+  `NotFoundError` on an unknown id, and is `followup.create`-gated; `bulkRecordActivity` records
+  one activity per selected lead, throws `NotFoundError` for an unknown lead or type, and is
+  `lead.record_activity`-gated.
+- `tests/main/ipc/sales.test.ts` — `LEADS_DELETE` and `LEADS_BULK_MOVE_STAGE` add their envelopes
+  (valid, malformed-input, and permission-denied cases); `LEADS_BULK_SCHEDULE_FOLLOWUP` and
+  `LEADS_BULK_RECORD_ACTIVITY` add valid / malformed / `PERMISSION_DENIED` envelopes.
+- `tests/db/migrations.test.ts` — expected version set includes 8; idempotency count = 7; a new
+  case simulates an org that predates the `lead.delete` / `lead.edit` grants and asserts Manager +
+  Sales receive them (Front Desk does not), and that a re-run is a no-op.
+- `tests/main/application/leads.test.ts` — `editLead` persists person + lead changes and appends a
+  `Lead details updated` NOTE activity; the owner (non-super) can edit their own lead; a different
+  owner with `lead.edit` is still rejected (`ForbiddenError`); a super edits a lead they do not
+  own; unknown lead / source → `NotFoundError`; a phone owned by another person → `ConflictError`
+  (the person's own number passes); a role without `lead.edit` is denied. The `signInAs` helper
+  creates a brand-new staff member in a role and switches the session to exercise ownership.
+- `tests/main/ipc/sales.test.ts` — `LEADS_EDIT` adds valid / malformed-input / `PERMISSION_DENIED`
+  envelopes.
+- `tests/renderer/leads-page.test.tsx` — the edit action shows per owned lead in the table, hides
+  for leads owned by someone else, the Actions column disappears entirely for roles without
+  `lead.edit`, the board card footer shows the same icon, and the dialog opens prefilled and saves
+  through `editLead`. `tests/renderer/setup.ts` pre-imports `edit-lead-dialog` (with the two bulk
+  dialogs) so the lazy dynamic import resolves instantly in tests.
+- `tests/renderer/leads-page.test.tsx` — the toolbar appears only with a selection, bulk move
+  sends the intersection-corrected target, scheduling a follow-up / logging an activity sends
+  every selected id through the bulk dialogs (due date picked via the `DateTimePicker`), the
+  delete confirm fires `deleteLeads`, permissions hide the actions, and switching to Board clears
+  the selection. `tests/renderer/setup.ts` pre-imports the two bulk dialogs so their
+  `React.lazy` dynamic imports resolve instantly in tests (the first-transform cost is paid at
+  setup instead of during a click).
+
+## Source filter reads the org's reference data
+
+- `LeadFilters` now filters by `sourceId: number | 'ALL'` instead of the canonical
+  `SourceKey` (`types.ts`). `filterLeads` compares `l.sourceId !== filters.sourceId`, so
+  matching is against the real SQLite id rather than the lossy `sourceKeyFromName` mapping
+  (custom sources previously collapsed into `OTHER` and could never be targeted).
+- The filter dropdown in `lead-filters.tsx` is populated from `useReferenceData()` (the same
+  TanStack Query cache the lead forms use) — active sources only (`s.active`), so an admin
+  adding a source via `createSource` (which invalidates `referenceKeys.all`) makes it appear
+  here immediately. `Lead.source`/`SOURCES` remain for display and metric grouping.
+- `LeadFilters` triggers the reference-data query on page mount (previously it only loaded when
+  a dialog opened); this is shared cache so the lazy dialogs now hydrate instantly, and the
+  5-minute `staleTime` prevents refetch churn.
+- The three filter selects (Stage / Source / Owner) gained `aria-label`s, matching the
+  selection-toolbar's `aria-label="Move stage"` pattern — they had no accessible name before.
 
 ## Known gaps / notes
 

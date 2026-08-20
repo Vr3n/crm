@@ -37,9 +37,14 @@ export function isTerminal(key: StageKey): boolean {
 }
 
 /** Every non-terminal stage a lead can be moved to (strict-move dialog). */
-export function forwardStages(from: StageKey): StageConfig[] {
+export function moveableStages(from: StageKey): StageConfig[] {
+  return STAGES.filter((s) => !isTerminal(s.key) && s.key !== from)
+}
+
+/** The first non-terminal stage after `from` in the pipeline, if any. */
+export function nextStage(from: StageKey): StageKey | undefined {
   const idx = STAGES.findIndex((s) => s.key === from)
-  return STAGES.slice(idx + 1).filter((s) => !isTerminal(s.key))
+  return STAGES.slice(idx + 1).find((s) => !isTerminal(s.key))?.key
 }
 
 export const SOURCES: Record<SourceKey, string> = {
@@ -114,7 +119,7 @@ export function filterLeads(leads: Lead[], filters: LeadFilters): Lead[] {
   return leads.filter((l) => {
     if (new Date(l.createdAt).getTime() < cutoff) return false
     if (filters.stage && filters.stage !== 'ALL' && l.stage !== filters.stage) return false
-    if (filters.source && filters.source !== 'ALL' && l.source !== filters.source) return false
+    if (filters.sourceId && filters.sourceId !== 'ALL' && l.sourceId !== filters.sourceId) return false
     if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId) return false
     if (q) {
       const hay = [l.name, l.phone, l.email].join(' ').toLowerCase()

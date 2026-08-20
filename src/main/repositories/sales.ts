@@ -11,6 +11,7 @@ import {
   leadStageHistory,
   leadStages,
   leads,
+  membershipPlans,
   people,
   users
 } from '../db/schema'
@@ -47,7 +48,7 @@ interface LeadRow {
   current_stage_id: number
   owner_user_id: number | null
   customer_id: number | null
-  plan_interest: string | null
+  plan_id: number | null
   goal: string | null
   notes: string | null
   lost_reason_id: number | null
@@ -126,7 +127,7 @@ function mapLead(row: LeadRow): Lead {
     currentStageId: row.current_stage_id,
     ownerUserId: row.owner_user_id,
     customerId: row.customer_id,
-    planInterest: row.plan_interest,
+    planId: row.plan_id,
     goal: row.goal,
     notes: row.notes,
     lostReasonId: row.lost_reason_id,
@@ -253,6 +254,26 @@ export const personRepo = {
         phone: input.phone,
         email: input.email
       })
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  /** Updates the person's contact fields. The use case owns phone-dedup checks. */
+  update(
+    organizationId: number,
+    id: number,
+    input: { fullName: string; phone: string; email: string | null }
+  ): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        full_name: input.fullName,
+        phone: input.phone,
+        email: input.email,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
       .returning()
       .get()
     return mapPerson(row as unknown as PersonRow)
@@ -422,7 +443,7 @@ export const stageRepo = {
 /** Distinct non-empty text values used on `leads` for a free-text column. */
 function distinctLeadValues(
   organizationId: number,
-  column: typeof leads.plan_interest,
+  column: typeof leads.goal,
   query: string,
   limit: number
 ): string[] {
@@ -489,7 +510,7 @@ export const leadRepo = {
     currentStageId: number
     ownerUserId: number | null
     createdBy: number
-    planInterest?: string | null
+    planId?: number | null
     goal?: string | null
     notes?: string | null
   }): Lead {
@@ -502,13 +523,32 @@ export const leadRepo = {
         current_stage_id: input.currentStageId,
         owner_user_id: input.ownerUserId,
         created_by: input.createdBy,
-        plan_interest: input.planInterest ?? null,
+        plan_id: input.planId ?? null,
         goal: input.goal ?? null,
         notes: input.notes ?? null
       })
       .returning()
       .get()
     return mapLead(row as unknown as LeadRow)
+  },
+
+  /** Updates the lead's interest/notes fields. Stage and owner are never touched here. */
+  update(
+    organizationId: number,
+    id: number,
+    input: { sourceId: number; planId: number | null; goal: string | null; notes: string | null }
+  ): void {
+    getDrizzle()
+      .update(leads)
+      .set({
+        source_id: input.sourceId,
+        plan_id: input.planId,
+        goal: input.goal,
+        notes: input.notes,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(leads.organization_id, organizationId), eq(leads.id, id)))
+      .run()
   },
 
   updateCurrentStage(organizationId: number, id: number, stageId: number): void {
@@ -544,6 +584,48 @@ export const leadRepo = {
         updated_at: sql`(datetime('now'))`
       })
       .where(and(eq(leads.organization_id, input.organizationId), eq(leads.id, input.id)))
+      .run()
+  },
+
+  /**
+   * Deletes leads together with their child rows. The FKs have no ON DELETE
+   * CASCADE and `PRAGMA foreign_keys` is ON, so children are removed explicitly
+   * in dependency order: stage history references activities, so it goes first.
+   * The owning `people` row is preserved — a person can hold other leads. The
+   * application use case owns the transaction boundary; this only runs inside one.
+   */
+  deleteByIds(organizationId: number, ids: number[]): void {
+    if (ids.length === 0) return
+    getDrizzle()
+      .delete(leadStageHistory)
+      .where(
+        and(
+          eq(leadStageHistory.organization_id, organizationId),
+          inArray(leadStageHistory.lead_id, ids)
+        )
+      )
+      .run()
+    getDrizzle()
+      .delete(leadActivities)
+      .where(
+        and(
+          eq(leadActivities.organization_id, organizationId),
+          inArray(leadActivities.lead_id, ids)
+        )
+      )
+      .run()
+    getDrizzle()
+      .delete(leadFollowups)
+      .where(
+        and(
+          eq(leadFollowups.organization_id, organizationId),
+          inArray(leadFollowups.lead_id, ids)
+        )
+      )
+      .run()
+    getDrizzle()
+      .delete(leads)
+      .where(and(eq(leads.organization_id, organizationId), inArray(leads.id, ids)))
       .run()
   },
 
@@ -594,7 +676,8 @@ export const leadRepo = {
       isLost: boolean
       ownerUserId: number | null
       ownerName: string | null
-      planInterest: string | null
+      planId: number | null
+      planName: string | null
       goal: string | null
       notes: string | null
       createdAt: string
@@ -631,7 +714,8 @@ export const leadRepo = {
         isLost: leadStages.is_lost,
         ownerUserId: leads.owner_user_id,
         ownerName: users.full_name,
-        planInterest: leads.plan_interest,
+        planId: leads.plan_id,
+        planName: membershipPlans.name,
         goal: leads.goal,
         notes: leads.notes,
         createdAt: leads.created_at,
@@ -645,6 +729,7 @@ export const leadRepo = {
       .innerJoin(leadStages, eq(leadStages.id, leads.current_stage_id))
       .leftJoin(users, eq(users.id, leads.owner_user_id))
       .leftJoin(leadLostReasons, eq(leadLostReasons.id, leads.lost_reason_id))
+      .leftJoin(membershipPlans, eq(membershipPlans.id, leads.plan_id))
       .where(where)
       .orderBy(desc(leads.created_at))
       .limit(input.limit)
@@ -662,16 +747,25 @@ export const leadRepo = {
   },
 
   /**
-   * Plan-interest / goal autocomplete vocabularies — distinct free-text values
-   * already used on this org's leads, matching the query case-insensitively.
-   * No lookup table: the value itself is the option (free text, not an FK).
+   * Goal autocomplete vocabulary — distinct free-text values already used on this
+   * org's leads, matching the query case-insensitively. No lookup table: the
+   * value itself is the option (free text, not an FK). Plan interest is no longer
+   * a vocabulary — it is a real FK to `membership_plans` (planRepo.searchActive).
    */
-  distinctPlanInterests(organizationId: number, query: string, limit: number): string[] {
-    return distinctLeadValues(organizationId, leads.plan_interest, query, limit)
-  },
-
   distinctGoals(organizationId: number, query: string, limit: number): string[] {
     return distinctLeadValues(organizationId, leads.goal, query, limit)
+  },
+
+  /** Number of leads referencing this plan — the delete guard for `deletePlan`. */
+  countByPlanId(organizationId: number, planId: number): number {
+    const row = getDrizzle()
+      .select({ value: count() })
+      .from(leads)
+      .where(
+        and(eq(leads.organization_id, organizationId), eq(leads.plan_id, planId))
+      )
+      .get()
+    return row?.value ?? 0
   },
 
   /** In an `is_initial` stage AND zero activities — "Uncontacted Leads" (D4). */

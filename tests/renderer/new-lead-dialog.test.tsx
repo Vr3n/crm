@@ -47,7 +47,7 @@ const sourceTrigger = (): HTMLElement => screen.getByRole('combobox', { name: /^
 const planTrigger = (): HTMLElement => screen.getByRole('combobox', { name: /Plan interest/ })
 const goalTrigger = (): HTMLElement => screen.getByRole('combobox', { name: /^Goal/ })
 const sourceSearch = (): HTMLElement => screen.getByPlaceholderText('Search or add a source…')
-const planSearch = (): HTMLElement => screen.getByPlaceholderText('Search or add a plan interest…')
+const planSearch = (): HTMLElement => screen.getByPlaceholderText('Search plans…')
 const goalSearch = (): HTMLElement => screen.getByPlaceholderText('Search or add a goal…')
 
 async function pickOption(
@@ -239,7 +239,7 @@ describe('NewLeadDialog', { timeout: 20000 }, () => {
         phone: '9876501234',
         email: 'rahul@example.com',
         sourceId: 1,
-        planInterest: 'Annual Premium',
+        planId: 101,
         goal: 'Weight loss',
         notes: 'Wants the morning batch'
       })
@@ -293,7 +293,7 @@ describe('NewLeadDialog', { timeout: 20000 }, () => {
     expect(sourceTrigger()).toHaveTextContent('Instagram')
   })
 
-  it('searches the backend for plan interest and goal suggestions', async () => {
+  it('searches the backend for plan and goal suggestions', async () => {
     renderDialog()
     const user = userEvent.setup()
 
@@ -314,16 +314,28 @@ describe('NewLeadDialog', { timeout: 20000 }, () => {
     expect(goalTrigger()).toHaveTextContent('Weight loss')
   })
 
-  it('creates a brand-new plan interest and goal on the fly as free text', async () => {
+  it('does not offer to create a plan — the catalog picker is pick-only', async () => {
+    renderDialog()
+    const user = userEvent.setup()
+
+    await user.click(planTrigger())
+    await user.type(planSearch(), 'strength')
+    await waitFor(() =>
+      expect(window.api.leads.searchPlanInterests).toHaveBeenCalledWith('strength')
+    )
+    expect(screen.queryByRole('option', { name: 'Add strength' })).not.toBeInTheDocument()
+  })
+
+  it('picks a plan from the catalog but still creates a brand-new goal as free text', async () => {
     const { onOpenChange } = renderDialog()
     const user = userEvent.setup()
 
     await fillRequired(user)
 
-    // No vocabulary row exists — "Add" commits the typed text as-is.
-    await addOption(user, planTrigger, planSearch, 'Strength')
+    // Plans are real catalog rows — pick an existing one, no free-text creation.
+    await pickOption(user, planTrigger, planSearch, 'monthly', 'Monthly Basic')
     await addOption(user, goalTrigger, goalSearch, 'Endurance')
-    expect(planTrigger()).toHaveTextContent('Strength')
+    expect(planTrigger()).toHaveTextContent('Monthly Basic')
     expect(goalTrigger()).toHaveTextContent('Endurance')
 
     await user.click(createButton())
@@ -331,7 +343,7 @@ describe('NewLeadDialog', { timeout: 20000 }, () => {
     await waitFor(() => {
       expect(window.api.leads.create).toHaveBeenCalledTimes(1)
       expect(window.api.leads.create).toHaveBeenCalledWith(
-        expect.objectContaining({ planInterest: 'Strength', goal: 'Endurance' })
+        expect.objectContaining({ planId: 102, goal: 'Endurance' })
       )
     })
 

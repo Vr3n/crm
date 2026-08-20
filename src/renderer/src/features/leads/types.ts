@@ -114,7 +114,9 @@ export interface Lead {
   stage: StageKey
   stageId: number
   createdAt: string
-  planInterest?: string
+  /** The catalog plan this lead is interested in (Module 03 FK). */
+  planId?: number
+  planName?: string
   goal?: string
   notes?: string
   lostReason?: LostReasonKey
@@ -130,7 +132,7 @@ export interface NewLeadInput {
   phone: string
   email?: string
   sourceId: number
-  planInterest?: string
+  planId?: number
   goal?: string
   notes?: string
 }
@@ -138,7 +140,7 @@ export interface NewLeadInput {
 export type LeadFilters = {
   search?: string
   stage?: StageKey | 'ALL'
-  source?: SourceKey | 'ALL'
+  sourceId?: number | 'ALL'
   ownerId?: number | 'ALL'
   range: 'today' | 'week' | 'month' | 'all'
 }

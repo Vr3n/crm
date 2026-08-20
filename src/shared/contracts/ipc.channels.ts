@@ -13,7 +13,12 @@ export const IPC_CHANNELS = {
   IDENTITY_LOGOUT: 'identity:logout',
 
   LEADS_CREATE: 'leads:create',
+  LEADS_EDIT: 'leads:edit',
   LEADS_MOVE_STAGE: 'leads:moveStage',
+  LEADS_DELETE: 'leads:delete',
+  LEADS_BULK_MOVE_STAGE: 'leads:bulkMoveStage',
+  LEADS_BULK_SCHEDULE_FOLLOWUP: 'leads:bulkScheduleFollowup',
+  LEADS_BULK_RECORD_ACTIVITY: 'leads:bulkRecordActivity',
   LEADS_RECORD_ACTIVITY: 'leads:recordActivity',
   LEADS_ASSIGN: 'leads:assign',
   LEADS_MARK_LOST: 'leads:markLost',
@@ -34,8 +39,13 @@ export const IPC_CHANNELS = {
   LEADS_GET_REFERENCE: 'leads:getReferenceData',
   LEADS_SEARCH_SOURCES: 'leads:searchSources',
   LEADS_CREATE_SOURCE: 'leads:createSource',
-  LEADS_SEARCH_PLAN_INTERESTS: 'leads:searchPlanInterests',
-  LEADS_SEARCH_GOALS: 'leads:searchGoals'
+  LEADS_SEARCH_PLAN_INTERESTS: 'leads:searchPlans',
+  LEADS_SEARCH_GOALS: 'leads:searchGoals',
+
+  CATALOG_LIST_PLANS: 'catalog:listPlans',
+  CATALOG_CREATE_PLAN: 'catalog:createPlan',
+  CATALOG_UPDATE_PLAN: 'catalog:updatePlan',
+  CATALOG_DELETE_PLAN: 'catalog:deletePlan'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

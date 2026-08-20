@@ -12,7 +12,7 @@ export const createLeadInputSchema = z.object({
   phone: z.string().min(1).max(24),
   email: z.string().max(254).optional(),
   sourceId: z.number().int().positive(),
-  planInterest: z.string().max(200).optional(),
+  planId: z.number().int().positive().nullable().optional(),
   goal: z.string().max(200).optional(),
   notes: z.string().max(2000).optional()
 })
@@ -23,6 +23,23 @@ export const createdLeadSchema = z.object({
   personId: z.number().int().positive()
 })
 export type CreatedLead = z.infer<typeof createdLeadSchema>
+
+/**
+ * Edits a lead's contact + interest fields. The same shape as create (the person
+ * fields live on `people`, the interest fields on `leads`). Ownership (owner or
+ * super) is enforced in the application layer, never in this shape.
+ */
+export const editLeadInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  fullName: z.string().min(1).max(120),
+  phone: z.string().min(1).max(24),
+  email: z.string().max(254).optional(),
+  sourceId: z.number().int().positive(),
+  planId: z.number().int().positive().nullable().optional(),
+  goal: z.string().max(200).optional(),
+  notes: z.string().max(2000).optional()
+})
+export type EditLeadInput = z.infer<typeof editLeadInputSchema>
 
 export const moveLeadStageInputSchema = z.object({
   leadId: z.number().int().positive(),
@@ -55,6 +72,67 @@ export const assignLeadInputSchema = z.object({
   ownerUserId: z.number().int().positive()
 })
 export type AssignLeadInput = z.infer<typeof assignLeadInputSchema>
+
+/**
+ * Bulk delete. Ids are org-scoped and validated by the application layer; the
+ * renderer never sends cross-org ids because it only selects visible rows.
+ */
+export const deleteLeadsInputSchema = z.object({
+  leadIds: z.array(z.number().int().positive()).min(1).max(200)
+})
+export type DeleteLeadsInput = z.infer<typeof deleteLeadsInputSchema>
+
+/**
+ * Bulk stage move. Every selected lead is validated by the stage machine and
+ * moved with a NOTE activity recorded per lead (the strict-move rule), inside
+ * one transaction. Leads already at the target stage are skipped.
+ */
+export const bulkMoveLeadStageInputSchema = z.object({
+  leadIds: z.array(z.number().int().positive()).min(1).max(200),
+  targetStageId: z.number().int().positive(),
+  note: z.string().trim().max(500).optional()
+})
+export type BulkMoveLeadStageInput = z.infer<typeof bulkMoveLeadStageInputSchema>
+
+export const bulkMoveLeadStageResultSchema = z.object({
+  moved: z.number().int().nonnegative()
+})
+export type BulkMoveLeadStageResult = z.infer<typeof bulkMoveLeadStageResultSchema>
+
+/**
+ * Bulk follow-up scheduling for the table's selection toolbar. One follow-up
+ * per selected lead, inside a single transaction; all leads are validated
+ * before anything is written (all-or-nothing).
+ */
+export const bulkScheduleFollowUpInputSchema = z.object({
+  leadIds: z.array(z.number().int().positive()).min(1).max(200),
+  title: z.string().min(1).max(200),
+  dueAt: z.string()
+})
+export type BulkScheduleFollowUpInput = z.infer<typeof bulkScheduleFollowUpInputSchema>
+
+export const bulkScheduleFollowUpResultSchema = z.object({
+  scheduled: z.number().int().nonnegative()
+})
+export type BulkScheduleFollowUpResult = z.infer<typeof bulkScheduleFollowUpResultSchema>
+
+/**
+ * Bulk activity logging for the table's selection toolbar. One activity per
+ * selected lead, inside a single transaction; all leads are validated before
+ * anything is written (all-or-nothing).
+ */
+export const bulkRecordActivityInputSchema = z.object({
+  leadIds: z.array(z.number().int().positive()).min(1).max(200),
+  typeId: z.number().int().positive(),
+  note: z.string().max(2000).optional(),
+  occurredAt: z.string()
+})
+export type BulkRecordActivityInput = z.infer<typeof bulkRecordActivityInputSchema>
+
+export const bulkRecordActivityResultSchema = z.object({
+  recorded: z.number().int().nonnegative()
+})
+export type BulkRecordActivityResult = z.infer<typeof bulkRecordActivityResultSchema>
 
 export const recordLeadActivityInputSchema = z.object({
   leadId: z.number().int().positive(),
@@ -132,11 +210,27 @@ export const leadTextOptionRowSchema = z.object({
 })
 export type LeadTextOptionRow = z.infer<typeof leadTextOptionRowSchema>
 
-/** Search request for a free-text lead vocabulary (plan interests / goals). */
+/** Search request for a free-text lead vocabulary (goals). */
 export const leadVocabularySearchRequestSchema = z.object({
   query: z.string().max(120)
 })
 export type LeadVocabularySearchRequest = z.infer<typeof leadVocabularySearchRequestSchema>
+
+/**
+ * A membership-plan option for the lead form's plan picker. Unlike the free-text
+ * vocabularies, the identity is the numeric plan id — the value is a real FK to
+ * `membership_plans` (Module 03).
+ */
+export const planOptionRowSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1).max(120)
+})
+export type PlanOptionRow = z.infer<typeof planOptionRowSchema>
+
+export const planSearchRequestSchema = z.object({
+  query: z.string().max(120)
+})
+export type PlanSearchRequest = z.infer<typeof planSearchRequestSchema>
 
 /** The org's sales reference data for forms (sources/stages/reasons/types). */
 export const referenceDataSchema = z.object({
@@ -219,7 +313,8 @@ export const leadListRowSchema = z.object({
   isLost: z.boolean(),
   ownerUserId: z.number().int().positive().nullable(),
   ownerName: z.string().nullable(),
-  planInterest: z.string().nullable(),
+  planId: z.number().int().positive().nullable(),
+  planName: z.string().nullable(),
   goal: z.string().nullable(),
   notes: z.string().nullable(),
   createdAt: z.string(),

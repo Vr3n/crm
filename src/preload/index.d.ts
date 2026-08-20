@@ -9,11 +9,25 @@ import type {
   SetupOrganizationInput
 } from '../shared/contracts/identity'
 import type {
+  CreatePlanInput,
+  PlanIdRequest,
+  PlanRow,
+  UpdatePlanInput
+} from '../shared/contracts/catalog'
+import type {
   AssignLeadInput,
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
   CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
   FunnelCounts,
   LeadDetails,
   LeadIdRequest,
@@ -25,6 +39,7 @@ import type {
   MarkLeadLostInput,
   MoveLeadStageInput,
   PeopleList,
+  PlanOptionRow,
   RecordLeadActivityInput,
   ReferenceData,
   ScheduleFollowUpInput
@@ -45,7 +60,14 @@ declare global {
       }
       leads: {
         create: (input: CreateLeadInput) => Promise<CreatedLead>
+        editLead: (input: EditLeadInput) => Promise<void>
         moveStage: (input: MoveLeadStageInput) => Promise<void>
+        deleteLeads: (input: DeleteLeadsInput) => Promise<void>
+        bulkMoveStage: (input: BulkMoveLeadStageInput) => Promise<BulkMoveLeadStageResult>
+        bulkScheduleFollowup: (
+          input: BulkScheduleFollowUpInput
+        ) => Promise<BulkScheduleFollowUpResult>
+        bulkRecordActivity: (input: BulkRecordActivityInput) => Promise<BulkRecordActivityResult>
         recordActivity: (input: RecordLeadActivityInput) => Promise<{ activityId: number }>
         assign: (input: AssignLeadInput) => Promise<void>
         markLost: (input: MarkLeadLostInput) => Promise<void>
@@ -80,8 +102,14 @@ declare global {
         getReferenceData: () => Promise<ReferenceData>
         searchSources: (query: string) => Promise<LeadSourceRow[]>
         createSource: (input: CreateLeadSourceInput) => Promise<LeadSourceRow>
-        searchPlanInterests: (query: string) => Promise<LeadTextOptionRow[]>
+        searchPlanInterests: (query: string) => Promise<PlanOptionRow[]>
         searchGoals: (query: string) => Promise<LeadTextOptionRow[]>
+      }
+      catalog: {
+        listPlans: () => Promise<PlanRow[]>
+        createPlan: (input: CreatePlanInput) => Promise<PlanRow>
+        updatePlan: (input: UpdatePlanInput) => Promise<PlanRow>
+        deletePlan: (input: PlanIdRequest) => Promise<void>
       }
     }
   }

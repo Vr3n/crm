@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { StageBadge } from './stage-badge'
-import { forwardStages } from '../constants'
+import { moveableStages, nextStage } from '../constants'
 import { useLogActivity, useMoveStage, useScheduleFollowUp } from '../queries'
 import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
 import type { Lead, StageKey } from '../types'
@@ -39,11 +39,13 @@ import type { Lead, StageKey } from '../types'
 export function MoveStageDialog({
   open,
   onOpenChange,
-  lead
+  lead,
+  initialStage
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   lead: Lead
+  initialStage?: StageKey
 }): React.JSX.Element {
   const logActivity = useLogActivity()
   const move = useMoveStage()
@@ -51,13 +53,25 @@ export function MoveStageDialog({
   const { data: ref } = useReferenceData()
   const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
 
-  const options = useMemo(() => forwardStages(lead.stage), [lead.stage])
+  const options = useMemo(() => moveableStages(lead.stage), [lead.stage])
+
+  /**
+   * The dropdown/board pass the stage the user picked; when opened from the
+   * detail page without one, default to the next pipeline stage instead of the
+   * first list item (which with backward moves enabled is the earliest stage).
+   */
+  const defaultTarget = useMemo(() => {
+    if (initialStage && options.some((o) => o.key === initialStage)) return initialStage
+    const next = nextStage(lead.stage)
+    if (next && options.some((o) => o.key === next)) return next
+    return options[0]?.key
+  }, [initialStage, lead.stage, options])
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
 
   const form = useForm({
-    defaultValues: { to: options[0]?.key, note: '', scheduleOn: false, fuTitle: '', due: '' },
+    defaultValues: { to: defaultTarget, note: '', scheduleOn: false, fuTitle: '', due: '' },
     validators: {
       // Cross-field rule: the follow-up fields only exist while `scheduleOn` is
       // checked, so this is the authoritative gate for `canSubmit` (per-field
