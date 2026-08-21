@@ -1,5 +1,10 @@
 import { withTransaction, getDb } from '../db/connection'
-import { seedRolesForOrganization, seedSalesReferenceData } from '../db/seed'
+import {
+  seedCatalogPoliciesForOrganization,
+  seedPlansForOrganization,
+  seedRolesForOrganization,
+  seedSalesReferenceData
+} from '../db/seed'
 import { hashPassword, verifyPassword } from '../auth/password'
 import { requirePermission, currentOrganizationId, setSession, getSession } from '../auth/session'
 import {
@@ -101,6 +106,8 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
 
     seedRolesForOrganization(org.id)
     seedSalesReferenceData(org.id)
+    seedPlansForOrganization(org.id)
+    seedCatalogPoliciesForOrganization(org.id)
 
     const ownerRole = roleRepo.findByName(org.id, 'Owner')
     if (!ownerRole) throw new NotFoundError('Owner role not found')
