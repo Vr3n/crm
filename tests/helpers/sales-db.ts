@@ -2,6 +2,8 @@ import { beforeEach, afterEach, afterAll } from 'vitest'
 import { openDatabase, closeDatabase } from '../../src/main/db/connection'
 import { runMigrations } from '../../src/main/db/migrations'
 import {
+  seedCatalogPoliciesForOrganization,
+  seedPaymentMethodsForOrganization,
   seedPermissions,
   seedPlansForOrganization,
   seedRolesForOrganization,
@@ -58,6 +60,8 @@ export function seedOrgWithSession(roleName = 'Owner'): SeededOrg {
   seedRolesForOrganization(org.id)
   seedSalesReferenceData(org.id)
   seedPlansForOrganization(org.id)
+  seedCatalogPoliciesForOrganization(org.id)
+  seedPaymentMethodsForOrganization(org.id)
 
   const role = roleRepo.findByName(org.id, roleName)!
   const user = userRepo.create({

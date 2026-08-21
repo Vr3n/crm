@@ -33,7 +33,27 @@ const ALL_TABLES = [
   'lead_activities',
   'lead_followups',
   'lead_stage_history',
-  'membership_plans'
+  'membership_plans',
+  'membership_plan_versions',
+  'offers',
+  'offer_redemptions',
+  'freeze_policies',
+  'proration_policies',
+  'cancellation_policies',
+  'offer_versions',
+  'customers',
+  'memberships',
+  'membership_freezes',
+  'membership_events',
+  'invoices',
+  'invoice_lines',
+  'invoice_sequence',
+  'payment_methods',
+  'payments',
+  'payment_allocations',
+  'refunds',
+  'credits',
+  'credit_allocations'
 ]
 
 function tableNames(): Set<string> {
@@ -59,7 +79,7 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records versions 0, 3, 4, 5, 6 (seed sales reference data), 7 (grant lead.delete), 8 (grant lead.edit), 9 (catalog plans), 10 (seed plans)', () => {
+  it('records versions 0, 3, 4, 5, 6 (seed sales reference data), 7 (grant lead.delete), 8 (grant lead.edit), 9 (catalog plans), 10 (seed plans), 11 (catalog offers & policies), 12 (seed policies), 13 (offer versions), 14 (followup edit cancel), 15 (customers, memberships, billing, finance)', () => {
     runMigrations()
     const rows = getDb().prepare('SELECT version, name FROM schema_migrations').all() as {
       version: number
@@ -74,7 +94,12 @@ describe('runMigrations', () => {
       { version: 7, name: 'grant_lead_delete' },
       { version: 8, name: 'grant_lead_edit' },
       { version: 9, name: 'catalog_plans' },
-      { version: 10, name: 'seed_plans' }
+      { version: 10, name: 'seed_plans' },
+      { version: 11, name: 'catalog_offers_policies' },
+      { version: 12, name: 'seed_catalog_policies' },
+      { version: 13, name: 'offer_versions' },
+      { version: 14, name: 'followup_edit_cancel' },
+      { version: 15, name: 'customers_memberships_billing_finance' }
     ])
   })
 
@@ -84,7 +109,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(9)
+    expect(row.n).toBe(14)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -130,7 +155,7 @@ describe('runMigrations', () => {
     // Legacy versions 1 & 2 are left as-is; 0 is marked applied (no re-run);
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
-    expect(appliedVersions()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(appliedVersions()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
     expect(tableNames().has('leads')).toBe(true)
@@ -149,7 +174,7 @@ describe('runMigrations', () => {
 
     runMigrations()
 
-    expect(appliedVersions()).toEqual([0, 1, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(appliedVersions()).toEqual([0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)
   })
@@ -237,6 +262,17 @@ describe('runMigrations', () => {
         organization_id INTEGER NOT NULL,
         plan_interest TEXT
       );
+      CREATE TABLE lead_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        lead_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        due_at TEXT NOT NULL,
+        completed_at TEXT,
+        completed_by INTEGER,
+        created_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL
+      );
       INSERT INTO schema_migrations (version, name) VALUES (0, 'identity'), (3, 'sales'), (4, 'sales_list_index'), (5, 'leads_extra_fields');
     `)
 
@@ -295,6 +331,17 @@ describe('runMigrations', () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
         plan_interest TEXT
+      );
+      CREATE TABLE lead_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        lead_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        due_at TEXT NOT NULL,
+        completed_at TEXT,
+        completed_by INTEGER,
+        created_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL
       );
       INSERT INTO schema_migrations (version, name) VALUES (0, 'identity'), (3, 'sales'), (4, 'sales_list_index'), (5, 'leads_extra_fields'), (6, 'seed_sales_reference_data'), (7, 'grant_lead_delete'), (8, 'grant_lead_edit');
     `)
@@ -362,6 +409,17 @@ describe('runMigrations', () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
         plan_interest TEXT
+      );
+      CREATE TABLE lead_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        lead_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        due_at TEXT NOT NULL,
+        completed_at TEXT,
+        completed_by INTEGER,
+        created_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL
       );
       INSERT INTO schema_migrations (version, name)
       VALUES (0, 'identity'), (3, 'sales'), (4, 'sales_list_index'), (5, 'leads_extra_fields'), (6, 'seed_sales_reference_data');
@@ -443,6 +501,17 @@ describe('runMigrations', () => {
         organization_id INTEGER NOT NULL,
         plan_interest TEXT
       );
+      CREATE TABLE lead_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        lead_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        due_at TEXT NOT NULL,
+        completed_at TEXT,
+        completed_by INTEGER,
+        created_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL
+      );
       INSERT INTO schema_migrations (version, name)
       VALUES (0, 'identity'), (3, 'sales'), (4, 'sales_list_index'), (5, 'leads_extra_fields'), (6, 'seed_sales_reference_data'), (7, 'grant_lead_delete');
       INSERT INTO organizations (slug, name, mobile_number) VALUES ('old-gym', 'Old Gym', '9999999999');
@@ -478,5 +547,100 @@ describe('runMigrations', () => {
       )
       .get() as { n: number }
     expect(editGrants.n).toBe(2)
+  })
+
+  it('seeds default policies and attaches them to plans for an org that predates the policy tables', () => {
+    // Simulates an org created before the catalog offers/policies module landed:
+    // the schema (and migration record through v10) exists, but the policy
+    // tables and their default rows do not. v11 creates the tables, v12 must
+    // provision the default policies and attach them to the org's plans, and a
+    // second run must stay idempotent.
+    getDb().exec(`
+      CREATE TABLE schema_migrations (
+        version INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE organizations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        mobile_number TEXT NOT NULL,
+        currency TEXT DEFAULT 'INR' NOT NULL,
+        status TEXT DEFAULT 'ACTIVE' NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL
+      );
+      INSERT INTO organizations (slug, name, mobile_number) VALUES ('old-gym', 'Old Gym', '9999999999');
+      CREATE TABLE membership_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        duration TEXT NOT NULL,
+        billing_frequency TEXT DEFAULT 'ONE_TIME' NOT NULL,
+        base_price_minor INTEGER NOT NULL,
+        access_window TEXT DEFAULT 'ALL_HOURS' NOT NULL,
+        start_time TEXT,
+        end_time TEXT,
+        active INTEGER DEFAULT 1 NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now')) NOT NULL,
+        UNIQUE (organization_id, name)
+      );
+      INSERT INTO membership_plans (organization_id, name, duration, base_price_minor)
+      VALUES (1, 'Legacy Monthly', 'MONTHLY', 150000);
+      CREATE TABLE lead_followups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        lead_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        due_at TEXT NOT NULL,
+        completed_at TEXT,
+        completed_by INTEGER,
+        created_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')) NOT NULL
+      );
+      INSERT INTO schema_migrations (version, name) VALUES
+        (0, 'identity'), (3, 'sales'), (4, 'sales_list_index'), (5, 'leads_extra_fields'),
+        (6, 'seed_sales_reference_data'), (7, 'grant_lead_delete'), (8, 'grant_lead_edit'),
+        (9, 'catalog_plans'), (10, 'seed_plans');
+    `)
+
+    runMigrations()
+
+    const policyCount = getDb()
+      .prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM freeze_policies WHERE organization_id = 1) AS freeze,
+          (SELECT COUNT(*) FROM proration_policies WHERE organization_id = 1) AS proration,
+          (SELECT COUNT(*) FROM cancellation_policies WHERE organization_id = 1) AS cancel`
+      )
+      .get() as { freeze: number; proration: number; cancel: number }
+    expect(policyCount).toEqual({ freeze: 3, proration: 3, cancel: 3 })
+
+    const plan = getDb()
+      .prepare(
+        `SELECT fp.name AS freeze, pp.name AS proration, cp.name AS cancel
+         FROM membership_plans mp
+         LEFT JOIN freeze_policies fp ON fp.id = mp.freeze_policy_id
+         LEFT JOIN proration_policies pp ON pp.id = mp.proration_policy_id
+         LEFT JOIN cancellation_policies cp ON cp.id = mp.cancellation_policy_id
+         WHERE mp.organization_id = 1 AND mp.name = 'Legacy Monthly'`
+      )
+      .get() as { freeze: string | null; proration: string | null; cancel: string | null }
+    expect(plan).toEqual({
+      freeze: 'Standard Freeze',
+      proration: 'Standard Proration',
+      cancel: 'End of Period'
+    })
+
+    // A second migration run must not duplicate the seeded policies.
+    runMigrations()
+    const after = getDb()
+      .prepare(
+        `SELECT COUNT(*) AS n FROM freeze_policies WHERE organization_id = 1`
+      )
+      .get() as { n: number }
+    expect(after.n).toBe(3)
   })
 })
