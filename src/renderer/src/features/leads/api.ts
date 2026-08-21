@@ -5,6 +5,7 @@ import type {
   BulkRecordActivityResult,
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
+  CancelFollowUpInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -21,7 +22,8 @@ import type {
   RecordLeadActivityInput,
   RecordedActivity,
   ReferenceData,
-  ScheduleFollowUpInput
+  ScheduleFollowUpInput,
+  UpdateFollowUpInput
 } from '../../../../shared/contracts/sales'
 
 /**
@@ -49,6 +51,10 @@ export const api = {
     window.api.leads.scheduleFollowup(input),
   completeFollowUp: (input: CompleteFollowUpInput): Promise<void> =>
     window.api.leads.completeFollowup(input),
+  updateFollowUp: (input: UpdateFollowUpInput): Promise<void> =>
+    window.api.leads.updateFollowup(input),
+  cancelFollowUp: (input: CancelFollowUpInput): Promise<void> =>
+    window.api.leads.cancelFollowup(input),
   referenceData: (): Promise<ReferenceData> => window.api.leads.getReferenceData(),
   searchSources: (query: string): Promise<LeadSourceRow[]> => window.api.leads.searchSources(query),
   createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
@@ -57,9 +63,3 @@ export const api = {
     window.api.leads.searchPlanInterests(query),
   searchGoals: (query: string): Promise<LeadTextOptionRow[]> => window.api.leads.searchGoals(query)
 }
-
-/**
- * Mock actor name still consumed by the finance feature's transient store; the
- * leads mutations themselves get the actor from the main-process session.
- */
-export const currentActor = 'Priya Verma'

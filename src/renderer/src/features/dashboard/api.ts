@@ -1,36 +1,16 @@
-import { DashboardStore } from './store'
-import { SEED_EXPIRATIONS, SEED_PAYMENTS_DUE } from './mock-data'
-import type { MemberRecord, MembershipExpiration, PaymentDue } from './types'
+import type { MembershipExpiration, PaymentDue, MemberRecord } from './types'
 
 /**
- * Async facade over the in-memory dashboard store.
- *
- * This is the seam where the future backend drops in: keep these signatures
- * and swap the bodies for IPC calls (e.g. `window.api.dashboard.expirations()`)
- * once the SQLite read-model layer exists. A small artificial delay keeps the
- * loading states honest so the UI reads like a real system.
+ * Thin IPC facade for the dashboard surface. Every method delegates to the
+ * preload bridge (`window.api.dashboard.*`).
  */
-
-const store = new DashboardStore()
-store.seed(SEED_EXPIRATIONS, SEED_PAYMENTS_DUE)
-
-const delay = (ms = 120): Promise<void> => new Promise<void>((r) => setTimeout(r, ms))
-
 export const api = {
-  async upcomingExpirations(): Promise<MembershipExpiration[]> {
-    await delay()
-    return store.upcomingExpirations()
-  },
-  async paymentsDue(): Promise<PaymentDue[]> {
-    await delay()
-    return store.listPaymentsDue()
-  },
-  async memberRecord(id: string): Promise<MemberRecord | undefined> {
-    await delay()
-    return store.memberRecord(id)
-  },
-  async paymentRecord(id: string): Promise<MemberRecord | undefined> {
-    await delay()
-    return store.paymentRecord(id)
-  }
+  upcomingExpirations: (): Promise<MembershipExpiration[]> =>
+    window.api.dashboard.expirations(),
+  paymentsDue: (): Promise<PaymentDue[]> =>
+    window.api.dashboard.paymentsDue(),
+  memberRecord: (id: string): Promise<MemberRecord | undefined> =>
+    window.api.dashboard.memberRecord({ memberId: id }),
+  paymentRecord: (id: string): Promise<MemberRecord | undefined> =>
+    window.api.dashboard.paymentRecord({ memberId: id })
 }

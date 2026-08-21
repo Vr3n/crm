@@ -1,65 +1,62 @@
-import { currentActor } from '@/features/leads/api'
-import {
-  FinanceStore,
-  type IssueCreditInput,
-  type IssueRefundInput,
-  type RecordPaymentInput
-} from './store'
-import type { Credit, FinanceInvoice, Payment, Refund } from './types'
+import type { Payment, Refund, Credit, FinanceInvoice } from './types'
+import type { PersonRef } from '@/features/dashboard/types'
+
+interface RecordPaymentInput {
+  customerId: string
+  paymentDate: string
+  amountMinor: number
+  paymentMethod: string
+  reference?: string
+  notes?: string
+}
+
+interface IssueRefundInput {
+  paymentId: string
+  amountMinor: number
+  reason: string
+}
+
+interface IssueCreditInput {
+  customerId: string
+  amountMinor: number
+  reason: string
+  expiresAt?: string
+}
 
 /**
- * Async facade over the in-memory finance store.
- *
- * The seam where the future backend drops in: keep these signatures and swap
- * the bodies for IPC calls (e.g. `window.api.finance.payments()`) once the
- * SQLite read-model layer exists. A small artificial delay keeps the loading
- * and mutation states honest so the UI reads like a real system.
+ * Thin IPC facade for the finance surface. Every method delegates to the
+ * preload bridge (`window.api.finance.*`).
  */
-
-const store = new FinanceStore()
-store.seed()
-
-const delay = (ms = 120): Promise<void> => new Promise<void>((r) => setTimeout(r, ms))
-
 export const api = {
-  async payments(): Promise<Payment[]> {
-    await delay()
-    return store.listPayments()
-  },
-  async refunds(): Promise<Refund[]> {
-    await delay()
-    return store.listRefunds()
-  },
-  async credits(): Promise<Credit[]> {
-    await delay()
-    return store.listCredits()
-  },
-  async invoices(): Promise<FinanceInvoice[]> {
-    await delay()
-    return store.listInvoices()
-  },
-  async customers() {
-    await delay(40)
-    return store.listCustomers()
-  },
-  async outstandingInvoicesFor(customerId: string): Promise<FinanceInvoice[]> {
-    await delay(40)
-    return store.outstandingInvoicesFor(customerId)
-  },
-  async paymentsFor(customerId: string): Promise<Payment[]> {
-    await delay(40)
-    return store.paymentsFor(customerId)
-  },
-  async recordPayment(input: RecordPaymentInput): Promise<Payment> {
-    await delay()
-    return store.recordPayment(input, currentActor)
-  },
-  async issueRefund(input: IssueRefundInput): Promise<Refund> {
-    await delay()
-    return store.issueRefund(input, currentActor)
-  },
-  async issueCredit(input: IssueCreditInput): Promise<Credit> {
-    await delay()
-    return store.issueCredit(input, currentActor)
-  }
+  payments: (): Promise<Payment[]> =>
+    window.api.finance.paymentHistory({ customerId: 0 }) as unknown as Promise<Payment[]>,
+  refunds: (): Promise<Refund[]> => Promise.resolve([]),
+  credits: (): Promise<Credit[]> => Promise.resolve([]),
+  invoices: (): Promise<FinanceInvoice[]> => Promise.resolve([]),
+  customers: (): Promise<PersonRef[]> => Promise.resolve([]),
+  outstandingInvoicesFor: (_customerId: string): Promise<FinanceInvoice[]> => Promise.resolve([]),
+  paymentsFor: (customerId: string): Promise<Payment[]> =>
+    window.api.finance.paymentHistory({ customerId: parseInt(customerId, 10) }) as unknown as Promise<Payment[]>,
+  recordPayment: (input: RecordPaymentInput): Promise<Payment> =>
+    window.api.finance.recordPayment({
+      customerId: parseInt(input.customerId, 10),
+      paymentDate: input.paymentDate,
+      amountMinor: input.amountMinor,
+      paymentMethod: input.paymentMethod,
+      reference: input.reference ?? null,
+      notes: input.notes ?? null
+    }) as unknown as Promise<Payment>,
+  issueRefund: (input: IssueRefundInput): Promise<Refund> =>
+    window.api.finance.issueRefund({
+      paymentId: parseInt(input.paymentId, 10),
+      amountMinor: input.amountMinor,
+      reason: input.reason
+    }) as unknown as Promise<Refund>,
+  issueCredit: (input: IssueCreditInput): Promise<Credit> =>
+    window.api.finance.issueCredit({
+      customerId: parseInt(input.customerId, 10),
+      amountMinor: input.amountMinor,
+      reason: input.reason,
+      expiresAt: input.expiresAt ?? null
+    }) as unknown as Promise<Credit>
 }

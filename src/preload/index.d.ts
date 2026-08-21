@@ -9,11 +9,82 @@ import type {
   SetupOrganizationInput
 } from '../shared/contracts/identity'
 import type {
+  CancellationPolicyRow,
+  CreateCancellationPolicyInput,
+  CreateFreezePolicyInput,
+  CreateOfferInput,
   CreatePlanInput,
+  CreateProrationPolicyInput,
+  FreezePolicyRow,
+  OfferIdRequest,
+  OfferRow,
+  OfferVersionListRequest,
+  OfferVersionRow,
   PlanIdRequest,
   PlanRow,
-  UpdatePlanInput
+  PlanVersionListRequest,
+  PlanVersionRow,
+  PolicyLookupSet,
+  ProrationPolicyRow,
+  UpdateCancellationPolicyInput,
+  UpdateFreezePolicyInput,
+  UpdateOfferInput,
+  UpdatePlanInput,
+  UpdateProrationPolicyInput
 } from '../shared/contracts/catalog'
+import type {
+  CreateInvoiceInput,
+  AddInvoiceLineInput,
+  RemoveInvoiceLineInput,
+  FinalizeInvoiceInput,
+  VoidInvoiceInput,
+  MarkUncollectibleInput,
+  InvoiceIdRequest,
+  CustomerInvoicesRequest,
+  InvoiceDetail,
+  InvoiceRow
+} from '../shared/contracts/billing'
+import type {
+  RecordPaymentInput,
+  AllocatePaymentInput,
+  RecordAndAllocatePaymentInput,
+  IssueRefundInput,
+  IssueCreditInput,
+  ApplyCreditInput,
+  InvoicePaymentStateRequest,
+  PaymentIdRequest,
+  CustomerPaymentsRequest,
+  CustomerCreditBalanceRequest,
+  PaymentRow,
+  InvoicePaymentState,
+  RefundRow,
+  CreditRow,
+  PaymentMethodRow
+} from '../shared/contracts/finance'
+import type {
+  CustomerIdRequest,
+  CustomerRowOutput
+} from '../shared/contracts/customers'
+import type {
+  InvoiceIdRequest as InvoiceReadIdRequest,
+  InvoicesByStatusRequest,
+  InvoiceOutput
+} from '../shared/contracts/invoices'
+import type {
+  MemberRecordRequest,
+  MembershipExpirationOutput,
+  PaymentDueOutput,
+  MemberRecordOutput
+} from '../shared/contracts/dashboard'
+import type {
+  PaymentRecordOutput,
+  DayCollectionOutput
+} from '../shared/contracts/collections'
+import type {
+  OrganizationOutput,
+  StaffMemberOutput,
+  RoleOutput
+} from '../shared/contracts/identity-read'
 import type {
   AssignLeadInput,
   BulkMoveLeadStageInput,
@@ -22,6 +93,7 @@ import type {
   BulkRecordActivityResult,
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
+  CancelFollowUpInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -42,7 +114,8 @@ import type {
   PlanOptionRow,
   RecordLeadActivityInput,
   ReferenceData,
-  ScheduleFollowUpInput
+  ScheduleFollowUpInput,
+  UpdateFollowUpInput
 } from '../shared/contracts/sales'
 
 declare global {
@@ -73,6 +146,8 @@ declare global {
         markLost: (input: MarkLeadLostInput) => Promise<void>
         scheduleFollowup: (input: ScheduleFollowUpInput) => Promise<{ followupId: number }>
         completeFollowup: (input: CompleteFollowUpInput) => Promise<void>
+        updateFollowup: (input: UpdateFollowUpInput) => Promise<void>
+        cancelFollowup: (input: CancelFollowUpInput) => Promise<void>
         getDetails: (input: LeadIdRequest) => Promise<LeadDetails | null>
         list: (input: LeadListRequest) => Promise<LeadListResponse>
         getTimeline: (input: LeadIdRequest) => Promise<LeadTimelineEntry[]>
@@ -110,6 +185,73 @@ declare global {
         createPlan: (input: CreatePlanInput) => Promise<PlanRow>
         updatePlan: (input: UpdatePlanInput) => Promise<PlanRow>
         deletePlan: (input: PlanIdRequest) => Promise<void>
+        listOffers: () => Promise<OfferRow[]>
+        getOffer: (input: OfferIdRequest) => Promise<OfferRow>
+        createOffer: (input: CreateOfferInput) => Promise<OfferRow>
+        updateOffer: (input: UpdateOfferInput) => Promise<OfferRow>
+        deactivateOffer: (input: OfferIdRequest) => Promise<void>
+        listOfferVersions: (input: OfferVersionListRequest) => Promise<OfferVersionRow[]>
+        listPlanVersions: (input: PlanVersionListRequest) => Promise<PlanVersionRow[]>
+        listPolicyLookups: () => Promise<PolicyLookupSet>
+        createFreezePolicy: (input: CreateFreezePolicyInput) => Promise<FreezePolicyRow>
+        updateFreezePolicy: (input: UpdateFreezePolicyInput) => Promise<FreezePolicyRow>
+        createProrationPolicy: (input: CreateProrationPolicyInput) => Promise<ProrationPolicyRow>
+        updateProrationPolicy: (input: UpdateProrationPolicyInput) => Promise<ProrationPolicyRow>
+        createCancellationPolicy: (
+          input: CreateCancellationPolicyInput
+        ) => Promise<CancellationPolicyRow>
+        updateCancellationPolicy: (
+          input: UpdateCancellationPolicyInput
+        ) => Promise<CancellationPolicyRow>
+      }
+      billing: {
+        createInvoice: (input: CreateInvoiceInput) => Promise<InvoiceRow>
+        addLine: (input: AddInvoiceLineInput) => Promise<InvoiceDetail>
+        removeLine: (input: RemoveInvoiceLineInput) => Promise<InvoiceDetail>
+        finalize: (input: FinalizeInvoiceInput) => Promise<InvoiceRow>
+        void: (input: VoidInvoiceInput) => Promise<InvoiceRow>
+        markUncollectible: (input: MarkUncollectibleInput) => Promise<InvoiceRow>
+        getInvoice: (input: InvoiceIdRequest) => Promise<InvoiceDetail>
+        listByCustomer: (input: CustomerInvoicesRequest) => Promise<InvoiceRow[]>
+        listOpen: () => Promise<InvoiceRow[]>
+      }
+      finance: {
+        recordPayment: (input: RecordPaymentInput) => Promise<PaymentRow>
+        allocatePayment: (input: AllocatePaymentInput) => Promise<{ allocationId: number }>
+        recordAndAllocate: (input: RecordAndAllocatePaymentInput) => Promise<{ paymentId: number; allocationId: number }>
+        issueRefund: (input: IssueRefundInput) => Promise<RefundRow>
+        issueCredit: (input: IssueCreditInput) => Promise<CreditRow>
+        applyCredit: (input: ApplyCreditInput) => Promise<{ creditAllocationId: number }>
+        getInvoicePaymentState: (input: InvoicePaymentStateRequest) => Promise<InvoicePaymentState>
+        paymentHistory: (input: CustomerPaymentsRequest) => Promise<PaymentRow[]>
+        refundHistory: (input: PaymentIdRequest) => Promise<RefundRow[]>
+        creditBalance: (input: CustomerCreditBalanceRequest) => Promise<{ balanceMinor: number }>
+        listCredits: (input: CustomerCreditBalanceRequest) => Promise<CreditRow[]>
+        listPaymentMethods: () => Promise<PaymentMethodRow[]>
+      }
+      customers: {
+        list: () => Promise<CustomerRowOutput[]>
+        get: (input: CustomerIdRequest) => Promise<CustomerRowOutput | undefined>
+      }
+      invoices: {
+        list: () => Promise<InvoiceOutput[]>
+        get: (input: InvoiceReadIdRequest) => Promise<InvoiceOutput | undefined>
+        listByStatus: (input: InvoicesByStatusRequest) => Promise<InvoiceOutput[]>
+      }
+      dashboard: {
+        expirations: () => Promise<MembershipExpirationOutput[]>
+        paymentsDue: () => Promise<PaymentDueOutput[]>
+        memberRecord: (input: MemberRecordRequest) => Promise<MemberRecordOutput | undefined>
+        paymentRecord: (input: MemberRecordRequest) => Promise<MemberRecordOutput | undefined>
+      }
+      collections: {
+        payments: () => Promise<PaymentRecordOutput[]>
+        payment: (paymentId: number) => Promise<PaymentRecordOutput | undefined>
+      }
+      identityRead: {
+        organization: () => Promise<OrganizationOutput | null>
+        staff: () => Promise<StaffMemberOutput[]>
+        roles: () => Promise<RoleOutput[]>
       }
     }
   }

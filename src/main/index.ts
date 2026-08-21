@@ -9,6 +9,13 @@ import { logger } from './lib/logger'
 import { registerIdentityIpc } from './ipc/identity'
 import { registerSalesIpc } from './ipc/sales'
 import { registerCatalogIpc } from './ipc/catalog'
+import { registerBillingIpc } from './ipc/billing'
+import { registerFinanceIpc } from './ipc/finance'
+import { registerCustomersIpc } from './ipc/customers'
+import { registerInvoicesIpc } from './ipc/invoices'
+import { registerDashboardIpc } from './ipc/dashboard'
+import { registerCollectionsIpc } from './ipc/collections'
+import { registerIdentityReadIpc } from './ipc/identity-read'
 import { restoreRememberedLogin } from './application/identity'
 
 function createWindow(): void {
@@ -66,6 +73,13 @@ app.whenReady().then(async () => {
   registerIdentityIpc()
   registerSalesIpc()
   registerCatalogIpc()
+  registerBillingIpc()
+  registerFinanceIpc()
+  registerCustomersIpc()
+  registerInvoicesIpc()
+  registerDashboardIpc()
+  registerCollectionsIpc()
+  registerIdentityReadIpc()
 
   createWindow()
 

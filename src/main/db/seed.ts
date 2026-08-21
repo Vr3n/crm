@@ -1,12 +1,17 @@
+import { and, eq } from 'drizzle-orm'
 import { getDrizzle } from './connection'
 import { withTransaction } from './connection'
 import {
+  cancellationPolicies,
+  freezePolicies,
   leadActivityTypes,
   leadLostReasons,
   leadSources,
   leadStages,
   membershipPlans,
+  paymentMethods,
   permissions,
+  prorationPolicies,
   rolePermissions,
   roles
 } from './schema'
@@ -47,6 +52,8 @@ export const SEED_ROLES: SeedRole[] = [
       'lead.edit',
       'followup.view',
       'followup.create',
+      'followup.update',
+      'followup.cancel',
       'followup.complete',
       'plan.view',
       'plan.create',
@@ -94,6 +101,8 @@ export const SEED_ROLES: SeedRole[] = [
       'lead.edit',
       'followup.view',
       'followup.create',
+      'followup.update',
+      'followup.cancel',
       'followup.complete',
       'plan.view',
       'offer.view',
@@ -106,7 +115,7 @@ export const SEED_ROLES: SeedRole[] = [
     name: 'Front Desk',
     is_system: false,
     is_super: false,
-    permissions: ['lead.view', 'lead.record_activity', 'followup.view', 'followup.create', 'followup.complete', 'membership.view']
+    permissions: ['lead.view', 'lead.record_activity', 'followup.view', 'followup.create', 'followup.update', 'followup.cancel', 'followup.complete', 'membership.view']
   },
   {
     name: 'Finance',
@@ -237,6 +246,14 @@ export const SEED_LOST_REASONS = [
   'Medical Reason',
   'Wrong Contact',
   'Other'
+]
+
+/** Default payment methods (Module 05). */
+export const SEED_PAYMENT_METHODS = [
+  'UPI',
+  'CASH',
+  'CREDIT CARD',
+  'DEBIT CARD'
 ]
 
 export interface SeedPlan {
@@ -404,5 +421,219 @@ export function seedPlansForOrganization(organizationId: number): void {
         })
         .run()
     }
+  })
+}
+
+export interface SeedFreezePolicy {
+  name: string
+  billingBehavior: string
+  accessBehavior: string
+  extendOrCredit: string
+  feeMinor: number
+  freeFreezeCountPerYear: number
+  description: string
+}
+
+export interface SeedProrationPolicy {
+  name: string
+  rule: string
+  description: string
+}
+
+export interface SeedCancellationPolicy {
+  name: string
+  effectiveRule: string
+  noticeDays: number | null
+  description: string
+}
+
+/**
+ * Default membership policies (Module 03, ADR-0008: policy is data, referenced
+ * by the plan). Seeded per org so a fresh install has sensible defaults and the
+ * plan editor has lookups to pick from.
+ */
+export const SEED_FREEZE_POLICIES: SeedFreezePolicy[] = [
+  {
+    name: 'Standard Freeze',
+    billingBehavior: 'SUSPEND_BILLING',
+    accessBehavior: 'NO_ACCESS',
+    extendOrCredit: 'EXTEND_END_DATE',
+    feeMinor: 0,
+    freeFreezeCountPerYear: 2,
+    description: 'Billing pauses and the end date extends for the frozen period.'
+  },
+  {
+    name: 'Credit Freeze',
+    billingBehavior: 'SUSPEND_BILLING',
+    accessBehavior: 'LIMITED_ACCESS',
+    extendOrCredit: 'CREDIT_PERIOD',
+    feeMinor: 0,
+    freeFreezeCountPerYear: 1,
+    description: 'Billing pauses and the frozen time is credited back to the member.'
+  },
+  {
+    name: 'Paid Freeze',
+    billingBehavior: 'SUSPEND_BILLING',
+    accessBehavior: 'NO_ACCESS',
+    extendOrCredit: 'EXTEND_END_DATE',
+    feeMinor: 19900,
+    freeFreezeCountPerYear: 0,
+    description: 'Every freeze beyond the free allowance is charged a flat fee.'
+  }
+]
+
+export const SEED_PRORATION_POLICIES: SeedProrationPolicy[] = [
+  {
+    name: 'Standard Proration',
+    rule: 'UPGRADE_CREDIT_UNUSED',
+    description: 'Upgrades credit the unused value of the current period.'
+  },
+  {
+    name: 'Downgrade Remainder',
+    rule: 'DOWNGRADE_CHARGE_REMAINDER',
+    description: 'Downgrades charge the remainder of the current period at the new rate.'
+  },
+  {
+    name: 'No Partial Credit',
+    rule: 'NO_PARTIAL_CREDIT',
+    description: 'Mid-term changes take effect at the next billing period with no proration.'
+  }
+]
+
+export const SEED_CANCELLATION_POLICIES: SeedCancellationPolicy[] = [
+  {
+    name: 'Immediate',
+    effectiveRule: 'IMMEDIATE',
+    noticeDays: null,
+    description: 'Cancellation takes effect immediately and the remaining time is forfeited.'
+  },
+  {
+    name: 'End of Period',
+    effectiveRule: 'END_OF_PERIOD',
+    noticeDays: null,
+    description: 'Cancellation takes effect at the end of the current billing period.'
+  },
+  {
+    name: '30 Days Notice',
+    effectiveRule: 'NOTICE_DAYS',
+    noticeDays: 30,
+    description: 'A 30-day notice is required before cancellation takes effect.'
+  }
+]
+
+/** Defaults attached to seeded plans: freeze, proration, cancellation by name. */
+export const DEFAULT_POLICY_NAMES = {
+  freeze: 'Standard Freeze',
+  proration: 'Standard Proration',
+  cancellation: 'End of Period'
+} as const
+
+/**
+ * Provisions the org's default freeze/proration/cancellation policies and
+ * attaches them to the org's seeded plans. Runs inside its own transaction and
+ * is called from the org-setup flow right after `seedPlansForOrganization`. The
+ * (organization_id, name) unique constraints guard against double-seeding.
+ */
+export function seedCatalogPoliciesForOrganization(organizationId: number): void {
+  withTransaction(() => {
+    const db = getDrizzle()
+
+    for (const policy of SEED_FREEZE_POLICIES) {
+      db.insert(freezePolicies)
+        .values({
+          organization_id: organizationId,
+          name: policy.name,
+          billing_behavior: policy.billingBehavior,
+          access_behavior: policy.accessBehavior,
+          extend_or_credit: policy.extendOrCredit,
+          fee_minor: policy.feeMinor,
+          free_freeze_count_per_year: policy.freeFreezeCountPerYear,
+          description: policy.description
+        })
+        .run()
+    }
+
+    for (const policy of SEED_PRORATION_POLICIES) {
+      db.insert(prorationPolicies)
+        .values({
+          organization_id: organizationId,
+          name: policy.name,
+          rule: policy.rule,
+          description: policy.description
+        })
+        .run()
+    }
+
+    for (const policy of SEED_CANCELLATION_POLICIES) {
+      db.insert(cancellationPolicies)
+        .values({
+          organization_id: organizationId,
+          name: policy.name,
+          effective_rule: policy.effectiveRule,
+          notice_days: policy.noticeDays,
+          description: policy.description
+        })
+        .run()
+    }
+
+    const freeze = db
+      .select({ id: freezePolicies.id })
+      .from(freezePolicies)
+      .where(
+        and(
+          eq(freezePolicies.organization_id, organizationId),
+          eq(freezePolicies.name, DEFAULT_POLICY_NAMES.freeze)
+        )
+      )
+      .get()
+    const proration = db
+      .select({ id: prorationPolicies.id })
+      .from(prorationPolicies)
+      .where(
+        and(
+          eq(prorationPolicies.organization_id, organizationId),
+          eq(prorationPolicies.name, DEFAULT_POLICY_NAMES.proration)
+        )
+      )
+      .get()
+    const cancellation = db
+      .select({ id: cancellationPolicies.id })
+      .from(cancellationPolicies)
+      .where(
+        and(
+          eq(cancellationPolicies.organization_id, organizationId),
+          eq(cancellationPolicies.name, DEFAULT_POLICY_NAMES.cancellation)
+        )
+      )
+      .get()
+
+    db.update(membershipPlans)
+      .set({
+        freeze_policy_id: freeze?.id ?? null,
+        proration_policy_id: proration?.id ?? null,
+        cancellation_policy_id: cancellation?.id ?? null
+      })
+      .where(eq(membershipPlans.organization_id, organizationId))
+      .run()
+  })
+}
+
+/**
+ * Provisions the org's default payment methods. Runs inside its own transaction
+ * and is called from the org-setup flow. The (organization_id, name) unique
+ * constraint guards against double-seeding.
+ */
+export function seedPaymentMethodsForOrganization(organizationId: number): void {
+  withTransaction(() => {
+    const db = getDrizzle()
+    SEED_PAYMENT_METHODS.forEach((name, i) => {
+      db.insert(paymentMethods)
+        .values({
+          organization_id: organizationId,
+          name,
+          sort_order: i
+        })
+        .run()
+    })
   })
 }

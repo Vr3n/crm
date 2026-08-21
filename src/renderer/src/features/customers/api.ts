@@ -1,21 +1,12 @@
-import { CustomerStore } from './mock-data'
 import type { Customer } from './types'
 
 /**
- * Async facade over the in-memory customer store — the seam where the future
- * SQLite command layer drops in (docs/02, docs/09 read models). A small delay
- * keeps the loading state honest.
+ * Thin IPC facade for the customers surface. Every method delegates to the
+ * preload bridge (`window.api.customers.*`).
  */
-const store = new CustomerStore()
-const delay = (ms = 120): Promise<void> => new Promise<void>((r) => setTimeout(r, ms))
-
 export const api = {
-  async list(): Promise<Customer[]> {
-    await delay()
-    return store.all()
-  },
-  async get(id: string): Promise<Customer | undefined> {
-    await delay(60)
-    return store.byId(id)
-  }
+  list: (): Promise<Customer[]> =>
+    window.api.customers.list() as unknown as Promise<Customer[]>,
+  get: (id: string): Promise<Customer | undefined> =>
+    window.api.customers.get({ customerId: id }) as unknown as Promise<Customer | undefined>
 }

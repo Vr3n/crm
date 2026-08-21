@@ -83,3 +83,59 @@ export class InvalidStateTransitionError extends DomainError {
     this.name = 'InvalidStateTransitionError'
   }
 }
+
+/** An invoice that has already been finalized cannot be modified. */
+export class InvoiceAlreadyFinalizedError extends DomainError {
+  constructor(message = 'Invoice is already finalized') {
+    super(message, ERROR_CODES.INVOICE_ALREADY_FINALIZED)
+    this.name = 'InvoiceAlreadyFinalizedError'
+  }
+}
+
+/** Cannot finalize an invoice with zero lines. */
+export class InvoiceEmptyError extends DomainError {
+  constructor(message = 'Invoice must have at least one line to finalize') {
+    super(message, ERROR_CODES.INVOICE_EMPTY)
+    this.name = 'InvoiceEmptyError'
+  }
+}
+
+/** Invoice number collision during finalization (atomic counter conflict). */
+export class InvoiceNumberCollisionError extends DomainError {
+  constructor(message = 'Invoice number collision — please retry') {
+    super(message, ERROR_CODES.INVOICE_NUMBER_COLLISION)
+    this.name = 'InvoiceNumberCollisionError'
+  }
+}
+
+/** A payment allocation exceeds the payment amount or invoice outstanding. */
+export class PaymentOverAllocatedError extends DomainError {
+  constructor(message = 'Payment allocation exceeds allowed amount') {
+    super(message, ERROR_CODES.PAYMENT_OVER_ALLOCATED)
+    this.name = 'PaymentOverAllocatedError'
+  }
+}
+
+/** A payment is already fully allocated. */
+export class PaymentAlreadyAllocatedError extends DomainError {
+  constructor(message = 'Payment is already fully allocated') {
+    super(message, ERROR_CODES.PAYMENT_ALREADY_ALLOCATED)
+    this.name = 'PaymentAlreadyAllocatedError'
+  }
+}
+
+/** A refund exceeds the net paid amount. */
+export class RefundExceedsPaymentError extends DomainError {
+  constructor(message = 'Refund exceeds net paid amount') {
+    super(message, ERROR_CODES.REFUND_EXCEEDS_PAYMENT)
+    this.name = 'RefundExceedsPaymentError'
+  }
+}
+
+/** A credit application exceeds the remaining credit balance. */
+export class CreditExceedsBalanceError extends DomainError {
+  constructor(message = 'Credit application exceeds remaining balance') {
+    super(message, ERROR_CODES.CREDIT_EXCEEDS_BALANCE)
+    this.name = 'CreditExceedsBalanceError'
+  }
+}

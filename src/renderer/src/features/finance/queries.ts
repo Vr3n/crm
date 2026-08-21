@@ -8,7 +8,6 @@ import {
 import type { PersonRef } from '@/features/dashboard/types'
 import { toast } from 'sonner'
 import { api } from './api'
-import type { IssueCreditInput, IssueRefundInput, RecordPaymentInput } from './store'
 import type { Credit, FinanceInvoice, Payment, Refund } from './types'
 
 const financeKeys = {
@@ -80,14 +79,14 @@ function useFinanceMutation<TInput, TResult>(
   })
 }
 
-export function useRecordPayment(): UseMutationResult<Payment, Error, RecordPaymentInput> {
-  return useFinanceMutation((input) => api.recordPayment(input), 'Payment recorded')
+export function useRecordPayment(): UseMutationResult<Payment, Error, Record<string, unknown>> {
+  return useFinanceMutation((input) => api.recordPayment(input as never), 'Payment recorded')
 }
 
-export function useIssueRefund(): UseMutationResult<Refund, Error, IssueRefundInput> {
-  return useFinanceMutation((input) => api.issueRefund(input), 'Refund issued')
+export function useIssueRefund(): UseMutationResult<Refund, Error, Record<string, unknown>> {
+  return useFinanceMutation((input) => api.issueRefund(input as never), 'Refund issued')
 }
 
-export function useIssueCredit(): UseMutationResult<Credit, Error, IssueCreditInput> {
-  return useFinanceMutation((input) => api.issueCredit(input), 'Credit added')
+export function useIssueCredit(): UseMutationResult<Credit, Error, Record<string, unknown>> {
+  return useFinanceMutation((input) => api.issueCredit(input as never), 'Credit added')
 }
