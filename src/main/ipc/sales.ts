@@ -3,6 +3,7 @@ import {
   bulkMoveLeadStage,
   bulkRecordActivity,
   bulkScheduleFollowUp,
+  cancelFollowUp,
   completeFollowUp,
   createLead,
   createLeadSource,
@@ -27,13 +28,15 @@ import {
   searchLeadGoals,
   searchLeadPlans,
   searchLeadSources,
-  searchPeople
+  searchPeople,
+  updateFollowUp
 } from '../application/leads'
 import {
   assignLeadInputSchema,
   bulkMoveLeadStageInputSchema,
   bulkRecordActivityInputSchema,
   bulkScheduleFollowUpInputSchema,
+  cancelFollowUpInputSchema,
   completeFollowUpInputSchema,
   createLeadInputSchema,
   createLeadSourceInputSchema,
@@ -47,7 +50,8 @@ import {
   moveLeadStageInputSchema,
   planSearchRequestSchema,
   recordLeadActivityInputSchema,
-  scheduleFollowUpInputSchema
+  scheduleFollowUpInputSchema,
+  updateFollowUpInputSchema
 } from '../../shared/contracts/sales'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
@@ -76,6 +80,12 @@ export function registerSalesIpc(): void {
   )
   handle(IPC_CHANNELS.LEADS_COMPLETE_FOLLOWUP, completeFollowUpInputSchema, (input) =>
     completeFollowUp(input)
+  )
+  handle(IPC_CHANNELS.LEADS_UPDATE_FOLLOWUP, updateFollowUpInputSchema, (input) =>
+    updateFollowUp(input)
+  )
+  handle(IPC_CHANNELS.LEADS_CANCEL_FOLLOWUP, cancelFollowUpInputSchema, (input) =>
+    cancelFollowUp(input)
   )
 
   handle(IPC_CHANNELS.LEADS_GET_DETAILS, leadIdRequestSchema, (input) => getLeadDetails(input))

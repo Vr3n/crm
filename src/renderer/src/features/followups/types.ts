@@ -15,7 +15,9 @@ export interface FollowUpRow {
   stage: StageKey
   title: string
   dueAt: string
+  extensionReason?: string
   completedAt?: string
+  cancelledAt?: string
   ownerId?: number
   ownerName?: string
 }

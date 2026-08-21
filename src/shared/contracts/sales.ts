@@ -67,6 +67,18 @@ export const completeFollowUpInputSchema = z.object({
 })
 export type CompleteFollowUpInput = z.infer<typeof completeFollowUpInputSchema>
 
+export const updateFollowUpInputSchema = z.object({
+  followupId: z.number().int().positive(),
+  dueAt: z.string(),
+  extensionReason: z.string().max(500).optional()
+})
+export type UpdateFollowUpInput = z.infer<typeof updateFollowUpInputSchema>
+
+export const cancelFollowUpInputSchema = z.object({
+  followupId: z.number().int().positive()
+})
+export type CancelFollowUpInput = z.infer<typeof cancelFollowUpInputSchema>
+
 export const assignLeadInputSchema = z.object({
   leadId: z.number().int().positive(),
   ownerUserId: z.number().int().positive()
@@ -288,7 +300,9 @@ export const leadListFollowUpSchema = z.object({
   id: z.number().int().positive(),
   title: z.string(),
   dueAt: z.string(),
-  completedAt: z.string().nullable()
+  extensionReason: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  cancelledAt: z.string().nullable()
 })
 export type LeadListFollowUp = z.infer<typeof leadListFollowUpSchema>
 

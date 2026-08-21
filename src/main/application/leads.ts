@@ -31,6 +31,7 @@ import type {
   BulkRecordActivityResult,
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
+  CancelFollowUpInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -53,7 +54,8 @@ import type {
   RecordedActivity,
   RecordLeadActivityInput,
   ReferenceData,
-  ScheduleFollowUpInput
+  ScheduleFollowUpInput,
+  UpdateFollowUpInput
 } from '../../shared/contracts/sales'
 
 /**
@@ -521,6 +523,45 @@ export function completeFollowUp(input: CompleteFollowUpInput): void {
 
   withTransaction(() => {
     followupRepo.complete(organizationId, followup.id, requireSession().userId)
+  })
+}
+
+/** Extends a follow-up due date with an optional extension reason. */
+export function updateFollowUp(input: UpdateFollowUpInput): void {
+  requirePermission(PERMISSIONS.FOLLOWUP_UPDATE)
+  const organizationId = currentOrganizationId()
+
+  const followup = followupRepo.getById(organizationId, input.followupId)
+  if (!followup) throw new NotFoundError('Follow-up not found')
+  if (followup.completedAt) throw new ValidationError('Cannot edit a completed follow-up')
+  if (followup.cancelledAt) throw new ValidationError('Cannot edit a cancelled follow-up')
+
+  const due = new Date(input.dueAt)
+  if (Number.isNaN(due.getTime())) throw new ValidationError('dueAt must be a valid date')
+  if (due.getTime() <= Date.now()) {
+    throw new ValidationError('Follow-up due date must be in the future')
+  }
+
+  withTransaction(() => {
+    followupRepo.update(organizationId, followup.id, {
+      dueAt: due.toISOString(),
+      extensionReason: input.extensionReason?.trim() || null
+    })
+  })
+}
+
+/** Cancels a follow-up. Idempotent: cancelling an already-cancelled one is a no-op. */
+export function cancelFollowUp(input: CancelFollowUpInput): void {
+  requirePermission(PERMISSIONS.FOLLOWUP_CANCEL)
+  const organizationId = currentOrganizationId()
+
+  const followup = followupRepo.getById(organizationId, input.followupId)
+  if (!followup) throw new NotFoundError('Follow-up not found')
+  if (followup.completedAt) throw new ValidationError('Cannot cancel a completed follow-up')
+  if (followup.cancelledAt) return
+
+  withTransaction(() => {
+    followupRepo.cancel(organizationId, followup.id, requireSession().userId)
   })
 }
 

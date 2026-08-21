@@ -47,7 +47,9 @@ export function mapLeadRow(row: LeadListRow): Lead {
       leadId: row.id,
       title: f.title,
       dueAt: f.dueAt,
-      completedAt: f.completedAt ?? undefined
+      extensionReason: f.extensionReason ?? undefined,
+      completedAt: f.completedAt ?? undefined,
+      cancelledAt: f.cancelledAt ?? undefined
     })),
     stageHistory: row.stageHistory.map((h) => ({
       from: h.fromStageName ? stageKeyFromName(h.fromStageName) : undefined,

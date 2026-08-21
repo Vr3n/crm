@@ -88,8 +88,11 @@ interface FollowupRow {
   lead_id: number
   title: string
   due_at: string
+  extension_reason: string | null
   completed_at: string | null
   completed_by: number | null
+  cancelled_at: string | null
+  cancelled_by: number | null
   created_by: number
   created_at: string
 }
@@ -171,8 +174,11 @@ function mapFollowup(row: FollowupRow): LeadFollowup {
     leadId: row.lead_id,
     title: row.title,
     dueAt: row.due_at,
+    extensionReason: row.extension_reason,
     completedAt: row.completed_at,
     completedBy: row.completed_by,
+    cancelledAt: row.cancelled_at,
+    cancelledBy: row.cancelled_by,
     createdBy: row.created_by,
     createdAt: row.created_at
   }
@@ -1000,6 +1006,30 @@ export const followupRepo = {
       .run()
   },
 
+  update(
+    organizationId: number,
+    id: number,
+    input: { dueAt?: string; extensionReason?: string | null }
+  ): void {
+    const sets: Record<string, unknown> = {}
+    if (input.dueAt !== undefined) sets.due_at = input.dueAt
+    if (input.extensionReason !== undefined) sets.extension_reason = input.extensionReason
+    if (Object.keys(sets).length === 0) return
+    getDrizzle()
+      .update(leadFollowups)
+      .set(sets)
+      .where(and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.id, id)))
+      .run()
+  },
+
+  cancel(organizationId: number, id: number, by: number): void {
+    getDrizzle()
+      .update(leadFollowups)
+      .set({ cancelled_at: sql`(datetime('now'))`, cancelled_by: by })
+      .where(and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.id, id)))
+      .run()
+  },
+
   /** Open follow-ups due within the given UTC window (boundary precomputed, D5). */
   listDueBetween(organizationId: number, startUtc: string, endUtc: string): LeadFollowup[] {
     const rows = getDrizzle()
@@ -1056,7 +1086,9 @@ export const followupRepo = {
     id: number
     title: string
     dueAt: string
+    extensionReason: string | null
     completedAt: string | null
+    cancelledAt: string | null
   }> {
     if (leadIds.length === 0) return []
     return getDrizzle()
@@ -1065,7 +1097,9 @@ export const followupRepo = {
         id: leadFollowups.id,
         title: leadFollowups.title,
         dueAt: leadFollowups.due_at,
-        completedAt: leadFollowups.completed_at
+        extensionReason: leadFollowups.extension_reason,
+        completedAt: leadFollowups.completed_at,
+        cancelledAt: leadFollowups.cancelled_at
       })
       .from(leadFollowups)
       .where(

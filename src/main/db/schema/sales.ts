@@ -205,8 +205,11 @@ export const leadFollowups = sqliteTable(
       .references(() => leads.id),
     title: text('title').notNull(),
     due_at: text('due_at').notNull(),
+    extension_reason: text('extension_reason'),
     completed_at: text('completed_at'),
     completed_by: integer('completed_by').references(() => users.id),
+    cancelled_at: text('cancelled_at'),
+    cancelled_by: integer('cancelled_by').references(() => users.id),
     created_by: integer('created_by')
       .notNull()
       .references(() => users.id),

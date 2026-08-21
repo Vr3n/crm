@@ -14,6 +14,7 @@ import type {
   BulkRecordActivityResult,
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
+  CancelFollowUpInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreatedLead,
@@ -23,7 +24,8 @@ import type {
   MoveLeadStageInput,
   RecordLeadActivityInput,
   RecordedActivity,
-  ScheduleFollowUpInput
+  ScheduleFollowUpInput,
+  UpdateFollowUpInput
 } from '../../../../shared/contracts/sales'
 import { isApiError } from '../../../../shared/contracts/errors'
 import { api } from './api'
@@ -200,5 +202,21 @@ export function useCompleteFollowUp(): UseMutationResult<void, Error, CompleteFo
     (input) => api.completeFollowUp(input),
     'Follow-up done',
     'Could not complete follow-up'
+  )
+}
+
+export function useUpdateFollowUp(): UseMutationResult<void, Error, UpdateFollowUpInput> {
+  return useLeadMutation(
+    (input) => api.updateFollowUp(input),
+    'Follow-up extended',
+    'Could not update follow-up'
+  )
+}
+
+export function useCancelFollowUp(): UseMutationResult<void, Error, CancelFollowUpInput> {
+  return useLeadMutation(
+    (input) => api.cancelFollowUp(input),
+    'Follow-up cancelled',
+    'Could not cancel follow-up'
   )
 }

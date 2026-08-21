@@ -1,23 +1,31 @@
-import { CalendarClock, PhoneCall, Check } from 'lucide-react'
+import { useState } from 'react'
+import { CalendarClock, PhoneCall, Check, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useCompleteFollowUp } from '../../queries'
+import { useCancelFollowUp, useCompleteFollowUp } from '../../queries'
+import { EditFollowUpDialog } from '../edit-follow-up-dialog'
 import { dueLabel } from '../../format'
-import type { Lead } from '../../types'
+import type { FollowUp } from '../../types'
 
 /**
- * Follow-ups panel (Module 01 §25): pending / overdue / upcoming and completed.
+ * Follow-ups panel (Module 01 §25): pending / overdue / upcoming, completed, and cancelled.
  * Completing one marks it done and logs a Follow-up done activity.
  */
-export function FollowUpPanel({ lead }: { lead: Lead }): React.JSX.Element {
+export function FollowUpPanel({ lead }: { lead: { followUps: FollowUp[] } }): React.JSX.Element {
   const complete = useCompleteFollowUp()
+  const cancel = useCancelFollowUp()
+  const [editing, setEditing] = useState<FollowUp | null>(null)
+
   const open = lead.followUps
-    .filter((f) => !f.completedAt)
+    .filter((f) => !f.completedAt && !f.cancelledAt)
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
   const done = lead.followUps
     .filter((f) => f.completedAt)
     .sort((a, b) => b.completedAt!.localeCompare(a.completedAt!))
+  const cancelled = lead.followUps
+    .filter((f) => f.cancelledAt)
+    .sort((a, b) => b.cancelledAt!.localeCompare(a.cancelledAt!))
 
   if (lead.followUps.length === 0) {
     return (
@@ -57,15 +65,35 @@ export function FollowUpPanel({ lead }: { lead: Lead }): React.JSX.Element {
                   {d.overdue ? 'Overdue' : 'Due'} {d.text}
                 </p>
               </div>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                onClick={() => complete.mutate({ followupId: f.id })}
-                disabled={complete.isPending}
-                title="Mark done"
-              >
-                <Check />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => setEditing(f)}
+                  title="Extend due date"
+                >
+                  <CalendarClock className="size-3.5" />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  onClick={() => complete.mutate({ followupId: f.id })}
+                  disabled={complete.isPending}
+                  title="Mark done"
+                >
+                  <Check />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => cancel.mutate({ followupId: f.id })}
+                  disabled={cancel.isPending}
+                  title="Cancel follow-up"
+                >
+                  <XCircle className="size-3.5" />
+                </Button>
+              </div>
             </div>
           )
         })}
@@ -77,7 +105,34 @@ export function FollowUpPanel({ lead }: { lead: Lead }): React.JSX.Element {
             </span>
           </div>
         ))}
+        {cancelled.map((f) => (
+          <div key={f.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm">
+            <span className="text-muted-foreground line-through">{f.title}</span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <XCircle className="size-3" /> cancelled
+            </span>
+          </div>
+        ))}
       </CardContent>
+      {editing && (
+        <EditFollowUpDialog
+          open={Boolean(editing)}
+          onOpenChange={(o) => {
+            if (!o) setEditing(null)
+          }}
+          followUp={{
+            id: editing.id,
+            leadId: lead.followUps[0]?.leadId ?? 0,
+            leadName: '',
+            stage: 'NEW' as const,
+            title: editing.title,
+            dueAt: editing.dueAt,
+            extensionReason: editing.extensionReason,
+            completedAt: editing.completedAt,
+            cancelledAt: editing.cancelledAt
+          }}
+        />
+      )}
     </Card>
   )
 }

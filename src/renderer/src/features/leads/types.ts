@@ -82,7 +82,9 @@ export interface FollowUp {
   leadId: number
   title: string
   dueAt: string
+  extensionReason?: string
   completedAt?: string
+  cancelledAt?: string
 }
 
 export interface LeadActivity {

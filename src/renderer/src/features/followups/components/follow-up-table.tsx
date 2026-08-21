@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from 'react'
-import { Check, CheckCircle2, Inbox } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Check, CheckCircle2, Inbox, CalendarClock, XCircle } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCompleteFollowUp } from '@/features/leads/queries'
+import { useCancelFollowUp, useCompleteFollowUp } from '@/features/leads/queries'
+import { EditFollowUpDialog } from '@/features/leads/components/edit-follow-up-dialog'
 import { StageBadge } from '@/features/leads/components/stage-badge'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
@@ -45,10 +46,85 @@ function CompleteFollowUpButton({
   )
 }
 
+function CancelFollowUpButton({
+  followUpId,
+  onDone
+}: {
+  followUpId: number
+  onDone: () => void
+}): React.JSX.Element {
+  const cancel = useCancelFollowUp()
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          aria-label="Cancel follow-up"
+          disabled={cancel.isPending}
+          onClick={(e) => {
+            e.stopPropagation()
+            cancel.mutate({ followupId: followUpId }, { onSuccess: onDone })
+          }}
+        >
+          <XCircle className="size-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="left">Cancel</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function EditFollowUpButton({
+  followUp,
+  onDone
+}: {
+  followUp: FollowUpRow
+  onDone: () => void
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Edit follow-up"
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpen(true)
+            }}
+          >
+            <CalendarClock className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Extend due date</TooltipContent>
+      </Tooltip>
+      {open && (
+        <EditFollowUpDialog
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o)
+            if (!o) onDone()
+          }}
+          followUp={followUp}
+        />
+      )}
+    </>
+  )
+}
+
 /** Due column: mono date, urgency-tinted relative line. */
 function DueCell({ row }: { row: FollowUpRow }): React.JSX.Element {
   const bucket = bucketOf(row)
-  const relative = row.completedAt ? timeAgo(row.completedAt) : timeAgo(row.dueAt)
+  const relative = row.completedAt
+    ? timeAgo(row.completedAt)
+    : row.cancelledAt
+      ? timeAgo(row.cancelledAt)
+      : timeAgo(row.dueAt)
   return (
     <div className="flex flex-col gap-0.5">
       <span className="font-mono text-xs font-medium tabular-nums">
@@ -64,9 +140,11 @@ function DueCell({ row }: { row: FollowUpRow }): React.JSX.Element {
       >
         {row.completedAt
           ? `Done ${relative}`
-          : bucket === 'overdue'
-            ? `Overdue ${relative}`
-            : `Due ${relative}`}
+          : row.cancelledAt
+            ? `Cancelled ${relative}`
+            : bucket === 'overdue'
+              ? `Overdue ${relative}`
+              : `Due ${relative}`}
       </span>
     </div>
   )
@@ -75,6 +153,7 @@ function DueCell({ row }: { row: FollowUpRow }): React.JSX.Element {
 /** Urgency badge for the status column. */
 function StatusBadge({ row }: { row: FollowUpRow }): React.JSX.Element {
   const bucket = bucketOf(row)
+  const isCancelled = !row.completedAt && row.cancelledAt
   const variant =
     bucket === 'overdue'
       ? 'destructive'
@@ -83,8 +162,9 @@ function StatusBadge({ row }: { row: FollowUpRow }): React.JSX.Element {
         : bucket === 'done'
           ? 'success'
           : 'outline'
-  const label =
-    bucket === 'done'
+  const label = isCancelled
+    ? 'Cancelled'
+    : bucket === 'done'
       ? 'Done'
       : bucket === 'overdue'
         ? 'Overdue'
@@ -93,7 +173,8 @@ function StatusBadge({ row }: { row: FollowUpRow }): React.JSX.Element {
           : 'Upcoming'
   return (
     <Badge variant={variant} className="rounded-full px-2.5 py-0.5">
-      {bucket === 'done' ? <CheckCircle2 className="size-3" /> : null}
+      {bucket === 'done' && !isCancelled ? <CheckCircle2 className="size-3" /> : null}
+      {isCancelled ? <XCircle className="size-3" /> : null}
       {label}
     </Badge>
   )
@@ -174,12 +255,17 @@ function buildColumns(
       helper.display({
         id: 'actions',
         header: () => null,
-        cell: ({ row }) =>
-          row.original.completedAt ? null : (
-            <div className="flex items-center justify-end">
+        cell: ({ row }) => {
+          const isDone = row.original.completedAt || row.original.cancelledAt
+          if (isDone) return null
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <EditFollowUpButton followUp={row.original} onDone={onDone} />
               <CompleteFollowUpButton followUpId={row.original.id} onDone={onDone} />
+              <CancelFollowUpButton followUpId={row.original.id} onDone={onDone} />
             </div>
           )
+        }
       })
     ])
     .filter((c) => !(bucket === 'done' && c.id === 'actions'))
