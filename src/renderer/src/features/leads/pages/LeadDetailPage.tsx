@@ -3,7 +3,6 @@ import { useNavigate, useParams, useLocation, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/empty-state'
 import { useLead } from '../queries'
 import { computeQuality } from '../data-quality'
@@ -12,7 +11,6 @@ import { NextActionCard } from '../components/detail/next-action-card'
 import { StageHistory } from '../components/detail/stage-history'
 import { FollowUpPanel } from '../components/detail/follow-up-panel'
 import { Timeline } from '../components/detail/timeline'
-import { FollowUpTimeline } from '../components/detail/follow-up-timeline'
 import { PlanPriceTimeline } from '@/features/catalog/components/plan-price-timeline'
 import { QuickActions, type QuickActionType } from '../components/detail/quick-actions'
 import { MoveStageDialog } from '../components/move-stage-dialog'
@@ -22,9 +20,8 @@ import { FollowUpDialog } from '../components/follow-up-dialog'
 
 /**
  * Lead detail (bento layout, Module 01 §24). Identity + actions up top, then a
- * bento of Next action / Stage history / Follow-ups, with a tabbed timeline
- * section at the bottom for Activities, Follow-ups history, and Plan price
- * history. Every verb routes through its strict dialog.
+ * bento of Next action / Follow-ups, Stage history + Activity timeline, and
+ * optionally Plan price history. Every verb routes through its strict dialog.
  */
 export function LeadDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -50,7 +47,7 @@ export function LeadDetailPage(): React.JSX.Element {
           <Skeleton className="h-40" />
           <Skeleton className="h-40 xl:col-span-2" />
           <Skeleton className="h-40" />
-          <Skeleton className="h-72 xl:col-span-3" />
+          <Skeleton className="h-72 xl:col-span-2" />
         </div>
       </div>
     )
@@ -95,28 +92,17 @@ export function LeadDetailPage(): React.JSX.Element {
         <div className="xl:col-span-2">
           <FollowUpPanel lead={lead} />
         </div>
-        <StageHistory lead={lead} />
 
-        <div className="xl:col-span-3">
-          <Tabs defaultValue="activity" className="w-full">
-            <TabsList variant="line" className="w-full justify-start">
-              <TabsTrigger value="activity">Activity</TabsTrigger>
-              <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-              {lead.planId && <TabsTrigger value="plan-history">Plan history</TabsTrigger>}
-            </TabsList>
-            <TabsContent value="activity">
-              <Timeline lead={lead} />
-            </TabsContent>
-            <TabsContent value="followups">
-              <FollowUpTimeline followUps={lead.followUps} />
-            </TabsContent>
-            {lead.planId && (
-              <TabsContent value="plan-history">
-                <PlanPriceTimeline planId={lead.planId} planName={lead.planName} />
-              </TabsContent>
-            )}
-          </Tabs>
+        <StageHistory lead={lead} />
+        <div className="xl:col-span-2">
+          <Timeline lead={lead} />
         </div>
+
+        {lead.planId && (
+          <div className="xl:col-span-3">
+            <PlanPriceTimeline planId={lead.planId} planName={lead.planName} />
+          </div>
+        )}
       </div>
 
       {action === 'move' && (

@@ -3,9 +3,11 @@ import { CalendarClock, PhoneCall, Check, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Timeline } from '@/components/timeline'
 import { useCancelFollowUp, useCompleteFollowUp } from '../../queries'
 import { EditFollowUpDialog } from '../edit-follow-up-dialog'
-import { dueLabel } from '../../format'
+import { mapFollowUpsToEntries } from './follow-up-timeline'
+import { dueLabel, formatDateTime } from '../../format'
 import type { FollowUp } from '../../types'
 
 /**
@@ -114,6 +116,16 @@ export function FollowUpPanel({ lead }: { lead: { followUps: FollowUp[] } }): Re
           </div>
         ))}
       </CardContent>
+      {lead.followUps.length > 0 && (
+        <>
+          <div className="px-6">
+            <div className="border-t border-border" />
+          </div>
+          <CardContent>
+            <Timeline entries={mapFollowUpsToEntries(lead.followUps)} formatDate={formatDateTime} />
+          </CardContent>
+        </>
+      )}
       {editing && (
         <EditFollowUpDialog
           open={Boolean(editing)}

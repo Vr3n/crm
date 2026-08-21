@@ -10,7 +10,7 @@ import type { FollowUp } from '../../types'
  * Timeline component. Open follow-ups are shown first (overdue first),
  * then completed, then cancelled.
  */
-function mapFollowUpsToEntries(followUps: FollowUp[]): TimelineEntry[] {
+export function mapFollowUpsToEntries(followUps: FollowUp[]): TimelineEntry[] {
   const open = followUps
     .filter((f) => !f.completedAt && !f.cancelledAt)
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
