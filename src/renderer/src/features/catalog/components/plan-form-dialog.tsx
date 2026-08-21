@@ -50,6 +50,9 @@ export function PlanFormDialog({
   const [duration, setDuration] = useState<PlanDuration>(plan?.duration ?? 'MONTHLY')
   const [billing, setBilling] = useState<BillingFrequency>(plan?.billing ?? 'ONE_TIME')
   const [price, setPrice] = useState(plan ? String(plan.basePrice) : '')
+  const [taxCode, setTaxCode] = useState(plan?.taxCode ?? '')
+  const [taxRate, setTaxRate] = useState(plan ? String(plan.taxRate) : '')
+  const [registrationFee, setRegistrationFee] = useState(plan ? String(plan.registrationFee) : '0')
   const [accessWindow, setAccessWindow] = useState<AccessWindow>(plan?.accessWindow ?? 'ALL_HOURS')
   const [startTime, setStartTime] = useState(plan?.startTime ?? '06:00')
   const [endTime, setEndTime] = useState(plan?.endTime ?? '23:00')
@@ -66,6 +69,9 @@ export function PlanFormDialog({
       duration,
       billing,
       basePrice: priceValue,
+      taxCode: taxCode.trim().toUpperCase(),
+      taxRate: Number(taxRate || 0),
+      registrationFee: Number(registrationFee || 0),
       accessWindow,
       startTime,
       endTime,
@@ -83,7 +89,10 @@ export function PlanFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-4 text-primary" />
@@ -166,6 +175,45 @@ export function PlanFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="pl-tax-code">Tax code</Label>
+              <Input
+                id="pl-tax-code"
+                value={taxCode}
+                onChange={(e) => setTaxCode(e.target.value)}
+                placeholder="e.g. GST18"
+                className="font-mono tabular-nums"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="pl-tax-rate">Tax rate (%)</Label>
+              <Input
+                id="pl-tax-rate"
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={taxRate}
+                onChange={(e) => setTaxRate(e.target.value)}
+                placeholder="0"
+                className="font-mono tabular-nums"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="pl-reg-fee">Registration fee</Label>
+              <Input
+                id="pl-reg-fee"
+                type="number"
+                min={0}
+                value={registrationFee}
+                onChange={(e) => setRegistrationFee(e.target.value)}
+                placeholder="0"
+                className="font-mono tabular-nums"
+              />
             </div>
           </div>
 

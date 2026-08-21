@@ -11,6 +11,7 @@ import { PlanFilters, type PlanFiltersState } from '../components/plan-filters'
 import { PlanFormDialog } from '../components/plan-form-dialog'
 import { PlanMetrics } from '../components/plan-metrics'
 import { PlanTable } from '../components/plan-table'
+import { PlanVersionsDialog } from '../components/plan-versions-dialog'
 
 const DEFAULT_FILTERS: PlanFiltersState = { search: '', status: 'ALL' }
 
@@ -27,6 +28,7 @@ export function PlansPage(): React.JSX.Element {
   const [filters, setFilters] = useState<PlanFiltersState>(DEFAULT_FILTERS)
   const [dialog, setDialog] = useState<DialogState>(null)
   const [deleting, setDeleting] = useState<Plan | null>(null)
+  const [historyPlan, setHistoryPlan] = useState<Plan | null>(null)
   const deletePlan = useDeletePlan()
 
   const rows = useMemo(() => {
@@ -69,6 +71,7 @@ export function PlansPage(): React.JSX.Element {
         isLoading={isLoading}
         onEdit={(plan) => setDialog({ mode: 'edit', plan })}
         onDelete={setDeleting}
+        onHistory={setHistoryPlan}
       />
 
       <PlanFormDialog
@@ -77,6 +80,14 @@ export function PlansPage(): React.JSX.Element {
         open={dialog !== null}
         onOpenChange={(open) => {
           if (!open) setDialog(null)
+        }}
+      />
+
+      <PlanVersionsDialog
+        plan={historyPlan}
+        open={historyPlan !== null}
+        onOpenChange={(open) => {
+          if (!open) setHistoryPlan(null)
         }}
       />
 

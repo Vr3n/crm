@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BadgePercent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -20,10 +20,12 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/lib/money'
 import { DISCOUNT_TYPES, discountTypeLabel, FREE_PERIOD_MONTHS } from '../constants'
 import { computeDiscountLine, validateOfferInput } from '../pricing'
+import { codeFromName } from '../mappers'
 import { useCreateOffer, useUpdateOffer } from '../queries'
 import type { DiscountType, Offer, Plan } from '../types'
 import { CatalogDatePicker } from './catalog-date-picker'
@@ -63,11 +65,11 @@ export function OfferFormDialog({
   const update = useUpdateOffer()
 
   const [name, setName] = useState(offer?.name ?? '')
-  const [code, setCode] = useState(offer?.code ?? '')
+  const [description, setDescription] = useState(offer?.description ?? '')
   const [discountType, setDiscountType] = useState<DiscountType>(offer?.discountType ?? 'PERCENTAGE')
   const [value, setValue] = useState(offer ? String(offer.value) : '')
   const [minPurchase, setMinPurchase] = useState(offer ? String(offer.minPurchase) : '0')
-  const [maxUses, setMaxUses] = useState(offer ? String(offer.maxUses) : '100')
+  const [maxUses, setMaxUses] = useState(offer ? String(offer.maxUses || '') : '100')
   const [applicablePlanIds, setApplicablePlanIds] = useState<number[]>(offer?.applicablePlanIds ?? [])
   const [startDate, setStartDate] = useState(offer?.startDate ?? '')
   const [endDate, setEndDate] = useState(offer?.endDate ?? '')
@@ -78,18 +80,36 @@ export function OfferFormDialog({
     () =>
       validateOfferInput({
         name,
-        code,
         discountType,
         value: Number(value),
         minPurchase: Number(minPurchase),
-        maxUses: Number(maxUses),
+        maxUses: Number(maxUses || 0),
         startDate,
-        endDate
+        endDate: endDate || null
       }),
-    [name, code, discountType, value, minPurchase, maxUses, startDate, endDate]
+    [name, discountType, value, minPurchase, maxUses, startDate, endDate]
   )
 
   const canSubmit = error === null
+
+  const minPurchaseValue = Number(minPurchase)
+
+  const qualifyingPlans = useMemo(
+    () => plans.filter((p) => p.basePrice >= minPurchaseValue),
+    [plans, minPurchaseValue]
+  )
+
+  // Auto-deselect plans that fall below the minimum purchase threshold.
+  useEffect(() => {
+    if (minPurchaseValue > 0) {
+      setApplicablePlanIds((current) =>
+        current.filter((id) => {
+          const plan = plans.find((p) => p.id === id)
+          return plan && plan.basePrice >= minPurchaseValue
+        })
+      )
+    }
+  }, [minPurchaseValue, plans])
 
   function togglePlan(planId: number): void {
     setApplicablePlanIds((current) =>
@@ -99,25 +119,27 @@ export function OfferFormDialog({
 
   const previewPlans = useMemo(() => {
     const pool = applicablePlanIds.length
-      ? plans.filter((p) => applicablePlanIds.includes(p.id))
-      : plans
+      ? qualifyingPlans.filter((p) => applicablePlanIds.includes(p.id))
+      : qualifyingPlans
     return pool.slice(0, 4)
-  }, [applicablePlanIds, plans])
+  }, [applicablePlanIds, qualifyingPlans])
 
-  const previewCount = applicablePlanIds.length ? applicablePlanIds.length : plans.length
+  const previewCount = applicablePlanIds.length
+    ? qualifyingPlans.filter((p) => applicablePlanIds.includes(p.id)).length
+    : qualifyingPlans.length
   const freePeriod = discountType === 'FREE_PERIOD' && Number(value) >= 1
 
   function submit(): void {
     const input = {
       name: name.trim(),
-      code: code.trim().toUpperCase(),
+      description: description.trim(),
       discountType,
       value: Number(value),
       applicablePlanIds,
       minPurchase: Number(minPurchase),
-      maxUses: Number(maxUses),
+      maxUses: Number(maxUses || 0),
       startDate,
-      endDate,
+      endDate: endDate || null,
       isActive,
       eligibility: eligibility.trim()
     }
@@ -132,7 +154,10 @@ export function OfferFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BadgePercent className="size-4 text-primary" />
@@ -152,17 +177,26 @@ export function OfferFormDialog({
               <Input id="of-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. New Year Offer" />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="of-code">
-                Code <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="of-code">Code</Label>
               <Input
                 id="of-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="e.g. NEWYEAR20"
-                className="font-mono tabular-nums"
+                value={codeFromName(name)}
+                readOnly
+                className="font-mono tabular-nums text-muted-foreground"
               />
+              <p className="text-xs text-muted-foreground">Auto-generated from the name.</p>
             </div>
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="of-description">Description</Label>
+            <Textarea
+              id="of-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="When should staff apply this offer?"
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -226,30 +260,36 @@ export function OfferFormDialog({
                 onChange={(e) => setMinPurchase(e.target.value)}
                 className="font-mono tabular-nums"
               />
+              <p className="text-xs text-muted-foreground">
+                Only applies to plans costing at least this amount. Set to 0 for no minimum.
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="of-max">Usage limit</Label>
               <Input
                 id="of-max"
                 type="number"
-                min={1}
+                min={0}
                 value={maxUses}
                 onChange={(e) => setMaxUses(e.target.value)}
                 className="font-mono tabular-nums"
               />
+              <p className="text-xs text-muted-foreground">Leave blank for unlimited uses.</p>
             </div>
           </div>
 
           <div className="grid gap-1.5">
             <Label>Applies to</Label>
             <div className="max-h-36 overflow-y-auto rounded-lg border bg-muted/30 p-2">
-              {plans.length === 0 ? (
+              {qualifyingPlans.length === 0 ? (
                 <p className="px-2 py-1 text-xs text-muted-foreground">
-                  No plans in the catalog yet.
+                  {plans.length === 0
+                    ? 'No plans in the catalog yet.'
+                    : 'No plans meet the minimum purchase amount.'}
                 </p>
               ) : (
                 <div className="grid gap-1">
-                  {plans.map((plan) => {
+                  {qualifyingPlans.map((plan) => {
                     const checked = applicablePlanIds.includes(plan.id)
                     return (
                       <label
@@ -268,7 +308,7 @@ export function OfferFormDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              No plans selected means the offer applies to every plan in the catalog.
+              No plans selected means the offer applies to every qualifying plan.
             </p>
           </div>
 
@@ -279,7 +319,13 @@ export function OfferFormDialog({
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="of-end">Ends</Label>
-              <CatalogDatePicker value={endDate} onChange={setEndDate} placeholder="Pick end date" />
+              <CatalogDatePicker
+                value={endDate}
+                onChange={setEndDate}
+                placeholder="Open-ended"
+                clearable
+              />
+              <p className="text-xs text-muted-foreground">Leave empty for an open-ended offer.</p>
             </div>
           </div>
 
@@ -312,15 +358,16 @@ export function OfferFormDialog({
                     {
                       id: 0,
                       name,
-                      code,
+                      code: codeFromName(name),
+                      description,
                       discountType,
                       value: Number(value),
                       applicablePlanIds,
                       minPurchase: Number(minPurchase),
-                      maxUses: Number(maxUses),
+                      maxUses: Number(maxUses || 0),
                       usedCount: 0,
                       startDate,
-                      endDate,
+                      endDate: endDate || null,
                       isActive,
                       eligibility,
                       createdAt: ''

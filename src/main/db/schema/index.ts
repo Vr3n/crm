@@ -19,18 +19,57 @@ import {
   leads,
   people
 } from './sales'
-import { membershipPlans } from './catalog'
+import {
+  cancellationPolicies,
+  freezePolicies,
+  membershipPlanVersions,
+  membershipPlans,
+  offerRedemptions,
+  offerVersions,
+  offers,
+  prorationPolicies
+} from './catalog'
+import {
+  customers,
+  memberships,
+  membershipFreezes,
+  membershipEvents
+} from './membership'
+import {
+  invoices,
+  invoiceLines,
+  invoiceSequence
+} from './billing'
+import {
+  paymentMethods,
+  payments,
+  paymentAllocations,
+  refunds,
+  credits,
+  creditAllocations
+} from './finance'
 
 export * from './identity'
 export * from './sales'
 export * from './catalog'
+export * from './membership'
+export * from './billing'
+export * from './finance'
 
 /**
- * The combined schema object passed to `drizzle()`. Future modules add their
- * tables here (catalog, membership, billing, finance, ops).
+ * The combined schema object passed to `drizzle()`. All tables from every module
+ * are registered here.
  */
 export const schema = {
   appMeta,
+  cancellationPolicies,
+  creditAllocations,
+  credits,
+  customers,
+  freezePolicies,
+  invoiceLines,
+  invoiceSequence,
+  invoices,
   leadActivities,
   leadActivityTypes,
   leadFollowups,
@@ -39,20 +78,32 @@ export const schema = {
   leadStageHistory,
   leadStages,
   leads,
+  membershipEvents,
+  membershipFreezes,
+  membershipPlanVersions,
   membershipPlans,
+  memberships,
+  offerRedemptions,
+  offerVersions,
+  offers,
   organizationStaff,
   organizations,
+  paymentAllocations,
+  paymentMethods,
+  payments,
   people,
   permissions,
+  prorationPolicies,
+  refunds,
   rolePermissions,
   roles,
   users
 }
 
 /**
- * Relational config for the identity tables. Declared for schema completeness
- * and future relational queries; repositories query with explicit joins via the
- * Drizzle select builder (never `db.query.*`), per the ORM conventions.
+ * Relational config. Declared for schema completeness; repositories query with
+ * explicit joins via the Drizzle select builder (never `db.query.*`), per the
+ * ORM conventions.
  */
 export const relations = defineRelations(schema, (helpers) => ({
   organizations: {
@@ -177,6 +228,86 @@ export const relations = defineRelations(schema, (helpers) => ({
     leads: helpers.many.leads({
       from: helpers.membershipPlans.id,
       to: helpers.leads.plan_id
+    }),
+    versions: helpers.many.membershipPlanVersions({
+      from: helpers.membershipPlans.id,
+      to: helpers.membershipPlanVersions.plan_id
+    }),
+    freezePolicy: helpers.one.freezePolicies({
+      from: helpers.membershipPlans.freeze_policy_id,
+      to: helpers.freezePolicies.id
+    }),
+    prorationPolicy: helpers.one.prorationPolicies({
+      from: helpers.membershipPlans.proration_policy_id,
+      to: helpers.prorationPolicies.id
+    }),
+    cancellationPolicy: helpers.one.cancellationPolicies({
+      from: helpers.membershipPlans.cancellation_policy_id,
+      to: helpers.cancellationPolicies.id
+    })
+  },
+  membershipPlanVersions: {
+    organization: helpers.one.organizations({
+      from: helpers.membershipPlanVersions.organization_id,
+      to: helpers.organizations.id
+    }),
+    plan: helpers.one.membershipPlans({
+      from: helpers.membershipPlanVersions.plan_id,
+      to: helpers.membershipPlans.id
+    })
+  },
+  offers: {
+    organization: helpers.one.organizations({
+      from: helpers.offers.organization_id,
+      to: helpers.organizations.id
+    }),
+    redemptions: helpers.many.offerRedemptions({
+      from: helpers.offers.id,
+      to: helpers.offerRedemptions.offer_id
+    })
+  },
+  offerRedemptions: {
+    organization: helpers.one.organizations({
+      from: helpers.offerRedemptions.organization_id,
+      to: helpers.organizations.id
+    }),
+    offer: helpers.one.offers({
+      from: helpers.offerRedemptions.offer_id,
+      to: helpers.offers.id
+    }),
+    createdBy: helpers.one.users({
+      from: helpers.offerRedemptions.created_by,
+      to: helpers.users.id
+    })
+  },
+  freezePolicies: {
+    organization: helpers.one.organizations({
+      from: helpers.freezePolicies.organization_id,
+      to: helpers.organizations.id
+    }),
+    plans: helpers.many.membershipPlans({
+      from: helpers.freezePolicies.id,
+      to: helpers.membershipPlans.freeze_policy_id
+    })
+  },
+  prorationPolicies: {
+    organization: helpers.one.organizations({
+      from: helpers.prorationPolicies.organization_id,
+      to: helpers.organizations.id
+    }),
+    plans: helpers.many.membershipPlans({
+      from: helpers.prorationPolicies.id,
+      to: helpers.membershipPlans.proration_policy_id
+    })
+  },
+  cancellationPolicies: {
+    organization: helpers.one.organizations({
+      from: helpers.cancellationPolicies.organization_id,
+      to: helpers.organizations.id
+    }),
+    plans: helpers.many.membershipPlans({
+      from: helpers.cancellationPolicies.id,
+      to: helpers.membershipPlans.cancellation_policy_id
     })
   },
   leadSources: {
@@ -241,6 +372,152 @@ export const relations = defineRelations(schema, (helpers) => ({
     changedBy: helpers.one.users({
       from: helpers.leadStageHistory.changed_by,
       to: helpers.users.id
+    })
+  },
+  customers: {
+    organization: helpers.one.organizations({
+      from: helpers.customers.organization_id,
+      to: helpers.organizations.id
+    }),
+    person: helpers.one.people({
+      from: helpers.customers.person_id,
+      to: helpers.people.id
+    }),
+    memberships: helpers.many.memberships({
+      from: helpers.customers.id,
+      to: helpers.memberships.customer_id
+    })
+  },
+  memberships: {
+    organization: helpers.one.organizations({
+      from: helpers.memberships.organization_id,
+      to: helpers.organizations.id
+    }),
+    customer: helpers.one.customers({
+      from: helpers.memberships.customer_id,
+      to: helpers.customers.id
+    }),
+    plan: helpers.one.membershipPlans({
+      from: helpers.memberships.plan_id,
+      to: helpers.membershipPlans.id
+    }),
+    offer: helpers.one.offers({
+      from: helpers.memberships.offer_id,
+      to: helpers.offers.id
+    }),
+    freezes: helpers.many.membershipFreezes({
+      from: helpers.memberships.id,
+      to: helpers.membershipFreezes.membership_id
+    }),
+    events: helpers.many.membershipEvents({
+      from: helpers.memberships.id,
+      to: helpers.membershipEvents.membership_id
+    })
+  },
+  membershipFreezes: {
+    membership: helpers.one.memberships({
+      from: helpers.membershipFreezes.membership_id,
+      to: helpers.memberships.id
+    }),
+    createdBy: helpers.one.users({
+      from: helpers.membershipFreezes.created_by,
+      to: helpers.users.id
+    })
+  },
+  membershipEvents: {
+    membership: helpers.one.memberships({
+      from: helpers.membershipEvents.membership_id,
+      to: helpers.memberships.id
+    }),
+    createdBy: helpers.one.users({
+      from: helpers.membershipEvents.created_by,
+      to: helpers.users.id
+    })
+  },
+  invoices: {
+    organization: helpers.one.organizations({
+      from: helpers.invoices.organization_id,
+      to: helpers.organizations.id
+    }),
+    customer: helpers.one.customers({
+      from: helpers.invoices.customer_id,
+      to: helpers.customers.id
+    }),
+    lines: helpers.many.invoiceLines({
+      from: helpers.invoices.id,
+      to: helpers.invoiceLines.invoice_id
+    })
+  },
+  invoiceLines: {
+    invoice: helpers.one.invoices({
+      from: helpers.invoiceLines.invoice_id,
+      to: helpers.invoices.id
+    }),
+    plan: helpers.one.membershipPlans({
+      from: helpers.invoiceLines.plan_id,
+      to: helpers.membershipPlans.id
+    }),
+    offer: helpers.one.offers({
+      from: helpers.invoiceLines.offer_id,
+      to: helpers.offers.id
+    })
+  },
+  payments: {
+    organization: helpers.one.organizations({
+      from: helpers.payments.organization_id,
+      to: helpers.organizations.id
+    }),
+    customer: helpers.one.customers({
+      from: helpers.payments.customer_id,
+      to: helpers.customers.id
+    }),
+    allocations: helpers.many.paymentAllocations({
+      from: helpers.payments.id,
+      to: helpers.paymentAllocations.payment_id
+    }),
+    refunds: helpers.many.refunds({
+      from: helpers.payments.id,
+      to: helpers.refunds.payment_id
+    })
+  },
+  paymentAllocations: {
+    payment: helpers.one.payments({
+      from: helpers.paymentAllocations.payment_id,
+      to: helpers.payments.id
+    }),
+    invoice: helpers.one.invoices({
+      from: helpers.paymentAllocations.invoice_id,
+      to: helpers.invoices.id
+    })
+  },
+  refunds: {
+    payment: helpers.one.payments({
+      from: helpers.refunds.payment_id,
+      to: helpers.payments.id
+    })
+  },
+  credits: {
+    organization: helpers.one.organizations({
+      from: helpers.credits.organization_id,
+      to: helpers.organizations.id
+    }),
+    customer: helpers.one.customers({
+      from: helpers.credits.customer_id,
+      to: helpers.customers.id
+    }),
+    allocations: helpers.many.creditAllocations({
+      from: helpers.credits.id,
+      to: helpers.creditAllocations.credit_id
+    })
+  },
+  creditAllocations: {
+    credit: helpers.one.credits({
+      from: helpers.creditAllocations.credit_id,
+      to: helpers.credits.id
+    }),
+    invoice: helpers.one.invoices({
+      from: helpers.creditAllocations.invoice_id,
+      to: helpers.invoices.id
     })
   }
 }))

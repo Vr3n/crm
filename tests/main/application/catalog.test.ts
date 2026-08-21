@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { setupSalesDb, seedOrgWithSession } from '../../helpers/sales-db'
 import {
+  createCancellationPolicy,
+  createOffer,
   createPlan,
+  deactivateOffer,
   deletePlan,
+  listOfferVersions,
+  listOffers,
+  listPlanVersions,
   listPlans,
+  listPolicyLookups,
+  updateOffer,
   updatePlan
 } from '../../../src/main/application/catalog'
 import { createLead } from '../../../src/main/application/leads'
@@ -70,6 +78,16 @@ const VALID_PLAN = {
   startTime: '06:00',
   endTime: '23:00',
   isActive: true
+}
+
+const VALID_OFFER = {
+  name: 'New Year Offer',
+  description: 'Welcome deal.',
+  discountType: 'PERCENTAGE' as const,
+  valueMinor: 20,
+  applicablePlanIds: [] as number[],
+  validFrom: '2026-01-01',
+  active: true
 }
 
 describe('listPlans', () => {
@@ -196,5 +214,243 @@ describe('deletePlan', () => {
   it('denies deletion without plan.deactivate', () => {
     seedOrgWithSession('Sales')
     expect(() => deletePlan({ planId: 1 })).toThrow(ForbiddenError)
+  })
+})
+
+describe('updatePlan version history', () => {
+  it('captures a version row with the outgoing price before the edit', () => {
+    const { organizationId } = seedOrgWithSession()
+    const target = planRepo.list(organizationId)[0]
+    const oldPrice = target.basePriceMinor
+
+    updatePlan({ planId: target.id, ...VALID_PLAN, name: target.name, basePriceMinor: 999999 })
+
+    const versions = listPlanVersions({ planId: target.id })
+    expect(versions).toHaveLength(1)
+    expect(versions[0]).toMatchObject({
+      planId: target.id,
+      basePriceMinor: oldPrice,
+      effectiveFrom: expect.any(String)
+    })
+  })
+
+  it('returns versions oldest first across repeated edits', () => {
+    const { organizationId } = seedOrgWithSession()
+    const target = planRepo.list(organizationId)[0]
+    const original = target.basePriceMinor
+    updatePlan({ planId: target.id, ...VALID_PLAN, name: target.name, basePriceMinor: 111111 })
+    updatePlan({ planId: target.id, ...VALID_PLAN, name: target.name, basePriceMinor: 222222 })
+
+    const versions = listPlanVersions({ planId: target.id })
+    expect(versions).toHaveLength(2)
+    expect(versions.map((v) => v.basePriceMinor)).toEqual([original, 111111])
+  })
+
+  it('denies listing without plan.view', () => {
+    seedOrgWithSession('Front Desk')
+    expect(() => listPlanVersions({ planId: 1 })).toThrow(ForbiddenError)
+  })
+})
+
+describe('createOffer', () => {
+  it('creates an offer with trimmed name and derived usedCount 0', () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: '  New Year Offer  ' })
+    expect(created).toMatchObject({
+      id: expect.any(Number),
+      name: 'New Year Offer',
+      discountType: 'PERCENTAGE',
+      valueMinor: 20,
+      active: true,
+      usedCount: 0
+    })
+    expect(created.applicablePlanIds).toEqual([])
+  })
+
+  it('rejects a duplicate name case-insensitively with ConflictError', () => {
+    seedOrgWithSession()
+    createOffer({ ...VALID_OFFER, name: 'New Year Offer' })
+    expect(() => createOffer({ ...VALID_OFFER, name: 'new year offer' })).toThrow(ConflictError)
+  })
+
+  it('rejects an out-of-range percentage with ValidationError', () => {
+    seedOrgWithSession()
+    expect(() => createOffer({ ...VALID_OFFER, valueMinor: 150 })).toThrow(ValidationError)
+  })
+
+  it('denies creation without offer.create', () => {
+    seedOrgWithSession('Sales')
+    expect(() => createOffer(VALID_OFFER)).toThrow(ForbiddenError)
+  })
+})
+
+describe('listOffers', () => {
+  it('lists offers with usage counts, scoped to the current org', () => {
+    const { organizationId: orgA } = seedOrgWithSession()
+    createOffer({ ...VALID_OFFER, name: 'Early Bird' })
+    seedOrgWithSession()
+    createOffer({ ...VALID_OFFER, name: 'Referral Bonus' })
+
+    expect(listOffers().map((o) => o.name)).toEqual(['Referral Bonus'])
+
+    signInAs(orgA, 'Owner')
+    const offers = listOffers()
+    expect(offers.map((o) => o.name)).toEqual(['Early Bird'])
+    expect(offers[0]).toMatchObject({ usedCount: 0, active: true })
+  })
+})
+
+describe('deactivateOffer', () => {
+  it('soft-deactivates an offer, leaving the row in place', () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: 'Flash Sale' })
+
+    deactivateOffer({ offerId: created.id })
+
+    const row = getDb()
+      .prepare('SELECT active FROM offers WHERE id = ?')
+      .get(created.id) as { active: number }
+    expect(row.active).toBe(0)
+    const offers = listOffers()
+    expect(offers.find((o) => o.id === created.id)?.active).toBe(false)
+  })
+
+  it('throws NotFoundError for a missing offer', () => {
+    seedOrgWithSession()
+    expect(() => deactivateOffer({ offerId: 999999 })).toThrow(NotFoundError)
+  })
+
+  it('denies deactivation without offer.deactivate', () => {
+    seedOrgWithSession('Sales')
+    expect(() => deactivateOffer({ offerId: 1 })).toThrow(ForbiddenError)
+  })
+})
+
+describe('updateOffer version history', () => {
+  it('captures a version row with the outgoing discount on every edit', () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: 'Early Bird' })
+
+    updateOffer({
+      offerId: created.id,
+      ...VALID_OFFER,
+      name: 'Early Bird',
+      discountType: 'FIXED_AMOUNT',
+      valueMinor: 50000
+    })
+
+    const versions = listOfferVersions({ offerId: created.id })
+    expect(versions).toHaveLength(1)
+    expect(versions[0]).toMatchObject({
+      offerId: created.id,
+      discountType: 'PERCENTAGE',
+      valueMinor: 20,
+      effectiveFrom: expect.any(String)
+    })
+  })
+
+  it('captures a version even when only non-discount fields change', () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: 'Early Bird' })
+
+    updateOffer({
+      offerId: created.id,
+      ...VALID_OFFER,
+      name: 'Early Bird Renamed'
+    })
+
+    const versions = listOfferVersions({ offerId: created.id })
+    expect(versions).toHaveLength(1)
+    expect(versions[0]).toMatchObject({
+      discountType: 'PERCENTAGE',
+      valueMinor: 20
+    })
+  })
+
+  it('returns versions oldest first across repeated edits', () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: 'Early Bird' })
+    updateOffer({
+      offerId: created.id,
+      ...VALID_OFFER,
+      name: 'Early Bird',
+      discountType: 'FIXED_AMOUNT',
+      valueMinor: 50000
+    })
+    updateOffer({
+      offerId: created.id,
+      ...VALID_OFFER,
+      name: 'Early Bird',
+      discountType: 'PERCENTAGE',
+      valueMinor: 30
+    })
+
+    const versions = listOfferVersions({ offerId: created.id })
+    expect(versions).toHaveLength(2)
+    expect(versions.map((v) => v.discountType)).toEqual(['PERCENTAGE', 'FIXED_AMOUNT'])
+    expect(versions.map((v) => v.valueMinor)).toEqual([20, 50000])
+  })
+
+  it('denies listing without offer.view', () => {
+    seedOrgWithSession('Front Desk')
+    expect(() => listOfferVersions({ offerId: 1 })).toThrow(ForbiddenError)
+  })
+})
+
+describe('listPolicyLookups', () => {
+  it('returns the three seeded policy sets with default plans attached', () => {
+    const { organizationId } = seedOrgWithSession()
+    const lookups = listPolicyLookups()
+    expect(lookups.freezePolicies).toHaveLength(3)
+    expect(lookups.prorationPolicies).toHaveLength(3)
+    expect(lookups.cancellationPolicies).toHaveLength(3)
+
+    const plans = planRepo.list(organizationId)
+    expect(plans.every((p) => p.freezePolicyId !== null)).toBe(true)
+    expect(plans.every((p) => p.prorationPolicyId !== null)).toBe(true)
+    expect(plans.every((p) => p.cancellationPolicyId !== null)).toBe(true)
+  })
+
+  it('denies without plan.view', () => {
+    seedOrgWithSession('Front Desk')
+    expect(() => listPolicyLookups()).toThrow(ForbiddenError)
+  })
+})
+
+describe('createCancellationPolicy', () => {
+  it('creates a notice-period policy when noticeDays is present', () => {
+    seedOrgWithSession()
+    const created = createCancellationPolicy({
+      name: 'Two Weeks Notice',
+      effectiveRule: 'NOTICE_DAYS',
+      noticeDays: 14,
+      description: 'Requires advance notice.'
+    })
+    expect(created).toMatchObject({
+      name: 'Two Weeks Notice',
+      effectiveRule: 'NOTICE_DAYS',
+      noticeDays: 14
+    })
+  })
+
+  it('rejects NOTICE_DAYS without noticeDays with ValidationError', () => {
+    seedOrgWithSession()
+    expect(() =>
+      createCancellationPolicy({ name: 'Bad Notice', effectiveRule: 'NOTICE_DAYS' })
+    ).toThrow(ValidationError)
+  })
+
+  it('rejects a duplicate policy name with ConflictError', () => {
+    seedOrgWithSession()
+    expect(() =>
+      createCancellationPolicy({ name: 'end of period', effectiveRule: 'IMMEDIATE' })
+    ).toThrow(ConflictError)
+  })
+
+  it('denies creation without settings.manage', () => {
+    seedOrgWithSession('Manager')
+    expect(() =>
+      createCancellationPolicy({ name: 'Manager Policy', effectiveRule: 'IMMEDIATE' })
+    ).toThrow(ForbiddenError)
   })
 })

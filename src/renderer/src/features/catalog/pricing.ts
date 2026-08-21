@@ -66,7 +66,7 @@ export function offerLifecycle(
   now: Date = new Date()
 ): OfferLifecycle {
   if (!offer.isActive) return 'PAUSED'
-  if (now > new Date(offer.endDate)) return 'ENDED'
+  if (offer.endDate && now > new Date(offer.endDate)) return 'ENDED'
   if (now < new Date(offer.startDate)) return 'UPCOMING'
   return 'LIVE'
 }
@@ -84,7 +84,7 @@ export function filterOffersByLifecycle(
   return offers.filter((offer) => offerLifecycle(offer, now) === lifecycle)
 }
 
-export function discountBadgeText(offer: Offer): string {
+export function discountBadgeText(offer: { discountType: Offer['discountType']; value: number }): string {
   const { discountType, value } = offer
   if (discountType === 'PERCENTAGE') return `${value}%`
   if (discountType === 'FIXED_AMOUNT') return `−${formatMoney(value)}`
@@ -94,21 +94,19 @@ export function discountBadgeText(offer: Offer): string {
 
 export function validateOfferInput(offer: {
   name: string
-  code: string
   discountType: Offer['discountType']
   value: number
   minPurchase: number
   maxUses: number
   startDate: string
-  endDate: string
+  endDate: string | null
 }): string | null {
   if (!offer.name.trim()) return 'Offer needs a name'
-  if (!/^[A-Z0-9_-]+$/.test(offer.code.trim())) {
-    return 'Code must be uppercase letters, numbers, dashes or underscores'
+  if (offer.endDate && offer.endDate <= offer.startDate) {
+    return 'End date must be after the start date'
   }
-  if (offer.endDate <= offer.startDate) return 'End date must be after the start date'
   if (offer.minPurchase < 0) return 'Minimum purchase cannot be negative'
-  if (offer.maxUses <= 0) return 'Usage limit must be at least 1'
+  if (offer.maxUses > 0 && offer.maxUses < 1) return 'Usage limit must be at least 1'
 
   const { discountType, value } = offer
   if (discountType === 'PERCENTAGE' && (value < 1 || value > 100)) {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BadgePercent, Pencil, Trash2 } from 'lucide-react'
+import { Archive, BadgePercent, History, Pencil } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
@@ -24,7 +24,8 @@ const appliesToLabel = (offer: Offer, plans: Plan[]): string => {
 function buildColumns(
   plans: Plan[],
   onEdit: (offer: Offer) => void,
-  onDelete: (offer: Offer) => void
+  onDeactivate: (offer: Offer) => void,
+  onHistory: (offer: Offer) => void
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.name, {
@@ -73,7 +74,8 @@ function buildColumns(
       enableSorting: false,
       cell: ({ row }) => (
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          {formatDate(row.original.startDate)} → {formatDate(row.original.endDate)}
+          {formatDate(row.original.startDate)} →{' '}
+          {row.original.endDate ? formatDate(row.original.endDate) : 'Open'}
         </span>
       )
     }),
@@ -82,7 +84,7 @@ function buildColumns(
       header: () => 'Uses',
       enableSorting: false,
       cell: ({ row }) => {
-        const exhausted = row.original.usedCount >= row.original.maxUses
+        const exhausted = row.original.maxUses > 0 && row.original.usedCount >= row.original.maxUses
         return (
           <span
             className={cn(
@@ -90,7 +92,9 @@ function buildColumns(
               exhausted ? 'text-warning' : 'text-muted-foreground'
             )}
           >
-            {row.original.usedCount} / {row.original.maxUses}
+            {row.original.maxUses > 0
+              ? `${row.original.usedCount} / ${row.original.maxUses}`
+              : `${row.original.usedCount} used`}
           </span>
         )
       }
@@ -111,6 +115,21 @@ function buildColumns(
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={`Discount history for ${row.original.name}`}
+                className="size-8 text-muted-foreground hover:text-foreground"
+                onClick={() => onHistory(row.original)}
+              >
+                <History className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Discount history</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Edit ${row.original.name}`}
                 className="size-8 text-muted-foreground hover:text-foreground"
                 onClick={() => onEdit(row.original)}
               >
@@ -124,13 +143,14 @@ function buildColumns(
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-muted-foreground hover:text-destructive"
-                onClick={() => onDelete(row.original)}
+                aria-label={`Deactivate ${row.original.name}`}
+                className="size-8 text-muted-foreground hover:text-warning"
+                onClick={() => onDeactivate(row.original)}
               >
-                <Trash2 className="size-3.5" />
+                <Archive className="size-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Delete offer</TooltipContent>
+            <TooltipContent>Deactivate offer</TooltipContent>
           </Tooltip>
         </div>
       )
@@ -147,15 +167,20 @@ export function OfferTable({
   plans,
   isLoading,
   onEdit,
-  onDelete
+  onDeactivate,
+  onHistory
 }: {
   offers: Offer[]
   plans: Plan[]
   isLoading: boolean
   onEdit: (offer: Offer) => void
-  onDelete: (offer: Offer) => void
+  onDeactivate: (offer: Offer) => void
+  onHistory: (offer: Offer) => void
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(plans, onEdit, onDelete), [plans, onEdit, onDelete])
+  const columns = useMemo(
+    () => buildColumns(plans, onEdit, onDeactivate, onHistory),
+    [plans, onEdit, onDeactivate, onHistory]
+  )
 
   return (
     <DataTable

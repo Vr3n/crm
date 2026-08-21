@@ -13,11 +13,13 @@ import { cn } from '@/lib/utils'
 export function CatalogDatePicker({
   value,
   onChange,
-  placeholder = 'Pick a date'
+  placeholder = 'Pick a date',
+  clearable = false
 }: {
   value: string
   onChange: (date: string) => void
   placeholder?: string
+  clearable?: boolean
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
@@ -41,6 +43,19 @@ export function CatalogDatePicker({
           ) : (
             placeholder
           )}
+          {clearable && valid ? (
+            <span
+              role="button"
+              tabIndex={0}
+              className="ml-auto rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation()
+                onChange('')
+              }}
+            >
+              ✕
+            </span>
+          ) : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto rounded-lg p-0" align="start" sideOffset={6}>

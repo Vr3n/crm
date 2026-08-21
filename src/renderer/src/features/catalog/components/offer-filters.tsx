@@ -1,3 +1,5 @@
+import { startOfMonth, startOfYear } from 'date-fns'
+import type { DateRange } from 'react-day-picker'
 import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,17 +10,27 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { OFFER_LIFECYCLES } from '../constants'
-import type { OfferLifecycle } from '../types'
+import { DateRangePicker } from '@/features/dashboard/components/date-range-picker'
+import { DISCOUNT_TYPES, OFFER_LIFECYCLES } from '../constants'
+import type { DiscountType, OfferLifecycle } from '../types'
+
+const now = new Date()
+const DATE_PRESETS = [
+  { label: 'This month', from: startOfMonth(now), to: now },
+  { label: 'This year', from: startOfYear(now), to: now },
+  { label: 'All time', from: undefined, to: undefined }
+]
 
 export interface OfferFiltersState {
   search: string
   lifecycle: 'ALL' | OfferLifecycle
+  discountType: 'ALL' | DiscountType
+  dateRange: DateRange | undefined
 }
 
 /**
- * Filter bar for the offers list: free-text search plus a lifecycle select so
- * paused and ended offers can be swept out of the active view.
+ * Filter bar for the offers list: free-text search plus lifecycle, discount type
+ * and date-range selects so the list can be narrowed precisely.
  */
 export function OfferFilters({
   filters,
@@ -27,7 +39,12 @@ export function OfferFilters({
   filters: OfferFiltersState
   onChange: (f: OfferFiltersState) => void
 }): React.JSX.Element {
-  const hasActive = !!filters.search || filters.lifecycle !== 'ALL'
+  const hasActive =
+    !!filters.search ||
+    filters.lifecycle !== 'ALL' ||
+    filters.discountType !== 'ALL' ||
+    !!filters.dateRange?.from ||
+    !!filters.dateRange?.to
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -58,12 +75,40 @@ export function OfferFilters({
         </SelectContent>
       </Select>
 
+      <Select
+        value={filters.discountType}
+        onValueChange={(v) =>
+          onChange({ ...filters, discountType: v as OfferFiltersState['discountType'] })
+        }
+      >
+        <SelectTrigger className="w-44">
+          <SelectValue placeholder="Discount type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ALL">All types</SelectItem>
+          {DISCOUNT_TYPES.map((d) => (
+            <SelectItem key={d.value} value={d.value}>
+              {d.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <DateRangePicker
+        presets={DATE_PRESETS}
+        value={filters.dateRange}
+        onValueChange={(range) => onChange({ ...filters, dateRange: range })}
+        placeholder="Date range"
+      />
+
       {hasActive ? (
         <Button
           variant="ghost"
           size="sm"
           className="h-9 text-muted-foreground"
-          onClick={() => onChange({ search: '', lifecycle: 'ALL' })}
+          onClick={() =>
+            onChange({ search: '', lifecycle: 'ALL', discountType: 'ALL', dateRange: undefined })
+          }
         >
           Clear
         </Button>

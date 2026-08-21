@@ -10,6 +10,7 @@ vi.mock('electron', () => ({
 import { setupSalesDb, seedOrgWithSession } from '../../helpers/sales-db'
 import { registerCatalogIpc } from '../../../src/main/ipc/catalog'
 import { createLead } from '../../../src/main/application/leads'
+import { createOffer, updateOffer, updatePlan } from '../../../src/main/application/catalog'
 import { planRepo } from '../../../src/main/repositories/catalog'
 import { getDb } from '../../../src/main/db/connection'
 import { IPC_CHANNELS } from '../../../src/shared/contracts/ipc.channels'
@@ -39,6 +40,15 @@ const VALID_PLAN = {
   startTime: '06:00',
   endTime: '23:00',
   isActive: true
+}
+
+const VALID_OFFER = {
+  name: 'New Year Offer',
+  discountType: 'PERCENTAGE',
+  valueMinor: 20,
+  applicablePlanIds: [],
+  validFrom: '2026-01-01',
+  active: true
 }
 
 describe('registerCatalogIpc', () => {
@@ -147,6 +157,134 @@ describe('registerCatalogIpc', () => {
       ok: false
       error: { code: string }
     }
+    expect(result.ok).toBe(false)
+    expect(result.error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('lists plan versions over IPC after an edit', async () => {
+    const { organizationId } = seedOrgWithSession()
+    const target = planRepo.list(organizationId)[0]
+    updatePlan({ planId: target.id, ...VALID_PLAN, name: target.name, basePriceMinor: 999999 })
+
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_PLAN_VERSIONS)({}, { planId: target.id })) as {
+      ok: true
+      data: Array<{ planId: number; basePriceMinor: number }>
+    }
+    expect(result.ok).toBe(true)
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0].planId).toBe(target.id)
+  })
+
+  it('creates an offer over IPC with usedCount 0', async () => {
+    seedOrgWithSession()
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_CREATE_OFFER)({}, VALID_OFFER)) as {
+      ok: true
+      data: { name: string; active: boolean; usedCount: number }
+    }
+    expect(result.ok).toBe(true)
+    expect(result.data).toMatchObject({ name: 'New Year Offer', active: true, usedCount: 0 })
+  })
+
+  it('lists offers over IPC', async () => {
+    seedOrgWithSession()
+    createOffer(VALID_OFFER)
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_OFFERS)({})) as {
+      ok: true
+      data: Array<{ name: string }>
+    }
+    expect(result.ok).toBe(true)
+    expect(result.data.map((o) => o.name)).toEqual(['New Year Offer'])
+  })
+
+  it('deactivates an offer over IPC', async () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: 'Flash Sale' })
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER)({}, { offerId: created.id })) as {
+      ok: true
+      data: undefined
+    }
+    expect(result.ok).toBe(true)
+    const row = getDb().prepare('SELECT active FROM offers WHERE id = ?').get(created.id) as {
+      active: number
+    }
+    expect(row.active).toBe(0)
+  })
+
+  it('lists offer versions over IPC after a discount change', async () => {
+    seedOrgWithSession()
+    const created = createOffer({ ...VALID_OFFER, name: 'Flash Sale' })
+    updateOffer({
+      offerId: created.id,
+      ...VALID_OFFER,
+      name: 'Flash Sale',
+      discountType: 'FIXED_AMOUNT',
+      valueMinor: 50000
+    })
+
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_OFFER_VERSIONS)(
+      {},
+      { offerId: created.id }
+    )) as {
+      ok: true
+      data: Array<{ offerId: number; discountType: string; valueMinor: number }>
+    }
+    expect(result.ok).toBe(true)
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toMatchObject({
+      offerId: created.id,
+      discountType: 'PERCENTAGE',
+      valueMinor: 20
+    })
+  })
+
+  it('returns the permission error envelope for offer create as Sales', async () => {
+    seedOrgWithSession('Sales')
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_CREATE_OFFER)({}, VALID_OFFER)) as {
+      ok: false
+      error: { code: string }
+    }
+    expect(result.ok).toBe(false)
+    expect(result.error.code).toBe('PERMISSION_DENIED')
+  })
+
+  it('returns the permission error envelope for offer deactivate as Sales', async () => {
+    seedOrgWithSession('Sales')
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER)({}, { offerId: 1 })) as {
+      ok: false
+      error: { code: string }
+    }
+    expect(result.ok).toBe(false)
+    expect(result.error.code).toBe('PERMISSION_DENIED')
+  })
+
+  it('lists the seeded policy lookups over IPC', async () => {
+    seedOrgWithSession()
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_POLICY_LOOKUPS)({})) as {
+      ok: true
+      data: { freezePolicies: unknown[]; prorationPolicies: unknown[]; cancellationPolicies: unknown[] }
+    }
+    expect(result.ok).toBe(true)
+    expect(result.data.freezePolicies).toHaveLength(3)
+    expect(result.data.prorationPolicies).toHaveLength(3)
+    expect(result.data.cancellationPolicies).toHaveLength(3)
+  })
+
+  it('creates a cancellation policy over IPC with settings.manage', async () => {
+    seedOrgWithSession()
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_CREATE_CANCELLATION_POLICY)(
+      {},
+      { name: 'Two Weeks Notice', effectiveRule: 'NOTICE_DAYS', noticeDays: 14 }
+    )) as { ok: true; data: { name: string; noticeDays: number } }
+    expect(result.ok).toBe(true)
+    expect(result.data).toMatchObject({ name: 'Two Weeks Notice', noticeDays: 14 })
+  })
+
+  it('rejects a malformed cancellation policy with VALIDATION_ERROR', async () => {
+    seedOrgWithSession()
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_CREATE_CANCELLATION_POLICY)(
+      {},
+      { name: 'Bad', effectiveRule: 'NOT_A_RULE' }
+    )) as { ok: false; error: { code: string } }
     expect(result.ok).toBe(false)
     expect(result.error.code).toBe('VALIDATION_ERROR')
   })

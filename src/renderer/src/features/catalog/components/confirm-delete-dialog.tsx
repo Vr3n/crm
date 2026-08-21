@@ -18,6 +18,7 @@ export function ConfirmDeleteDialog({
   title,
   description,
   confirmLabel = 'Delete',
+  pendingLabel = 'Deleting…',
   isPending,
   onConfirm,
   onOpenChange
@@ -26,6 +27,7 @@ export function ConfirmDeleteDialog({
   title: string
   description: string
   confirmLabel?: string
+  pendingLabel?: string
   isPending: boolean
   onConfirm: () => void
   onOpenChange: (open: boolean) => void
@@ -47,7 +49,7 @@ export function ConfirmDeleteDialog({
               onConfirm()
             }}
           >
-            {isPending ? 'Deleting…' : confirmLabel}
+            {isPending ? pendingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
