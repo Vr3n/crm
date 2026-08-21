@@ -289,7 +289,25 @@ beforeEach(() => {
       listPlans: vi.fn().mockResolvedValue([]),
       createPlan: vi.fn(),
       updatePlan: vi.fn(),
-      deletePlan: vi.fn()
+      deletePlan: vi.fn(),
+      listOffers: vi.fn().mockResolvedValue([]),
+      getOffer: vi.fn(),
+      createOffer: vi.fn(),
+      updateOffer: vi.fn(),
+      deactivateOffer: vi.fn(),
+      listPlanVersions: vi.fn().mockResolvedValue([]),
+      listOfferVersions: vi.fn().mockResolvedValue([]),
+      listPolicyLookups: vi.fn().mockResolvedValue({
+        freezePolicies: [],
+        prorationPolicies: [],
+        cancellationPolicies: []
+      }),
+      createFreezePolicy: vi.fn(),
+      updateFreezePolicy: vi.fn(),
+      createProrationPolicy: vi.fn(),
+      updateProrationPolicy: vi.fn(),
+      createCancellationPolicy: vi.fn(),
+      updateCancellationPolicy: vi.fn()
     }
   }
 })
