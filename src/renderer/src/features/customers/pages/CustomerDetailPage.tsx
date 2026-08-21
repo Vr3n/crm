@@ -10,7 +10,7 @@ import { useCustomer } from '../queries'
 import { CurrentMembershipCard } from '../components/detail/current-membership-card'
 import { IdentityCard } from '../components/detail/identity-card'
 import { LifetimeCard } from '../components/detail/lifetime-card'
-import { MembershipHistory } from '../components/detail/membership-history'
+import { MembershipTimeline } from '../components/detail/membership-timeline'
 import { ProfileCard } from '../components/detail/profile-card'
 
 /**
@@ -87,7 +87,7 @@ export function CustomerDetailPage(): React.JSX.Element {
         <ProfileCard customer={customer} />
 
         <div className="xl:col-span-3">
-          <MembershipHistory customer={customer} now={now} />
+          <MembershipTimeline memberships={customer.memberships} now={now} />
         </div>
       </div>
     </div>
