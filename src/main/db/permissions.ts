@@ -31,6 +31,8 @@ export const PERMISSIONS = {
   // Follow-ups (Module 01)
   FOLLOWUP_VIEW: 'followup.view',
   FOLLOWUP_CREATE: 'followup.create',
+  FOLLOWUP_UPDATE: 'followup.update',
+  FOLLOWUP_CANCEL: 'followup.cancel',
   FOLLOWUP_COMPLETE: 'followup.complete',
 
   // Membership plans (Module 03)

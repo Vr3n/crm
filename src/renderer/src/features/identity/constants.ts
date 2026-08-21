@@ -73,6 +73,16 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         description: 'Schedule a follow-up against a lead'
       },
       {
+        code: 'followup.update',
+        label: 'Update follow-ups',
+        description: 'Extend a follow-up due date'
+      },
+      {
+        code: 'followup.cancel',
+        label: 'Cancel follow-ups',
+        description: 'Cancel a scheduled follow-up'
+      },
+      {
         code: 'followup.complete',
         label: 'Complete follow-ups',
         description: 'Mark a follow-up done and close the loop'
