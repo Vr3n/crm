@@ -32,7 +32,8 @@ export function Sidebar(): React.JSX.Element {
     <aside
       className={cn(
         'flex h-full shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200',
-        collapsed ? 'w-[68px]' : 'w-64'
+        collapsed ? 'w-[68px]' : 'w-60',
+        'max-lg:hidden'
       )}
     >
       {/* Brand */}
@@ -85,15 +86,15 @@ export function Sidebar(): React.JSX.Element {
         </button>
       </div>
 
-      {/* Identity */}
-      <div className="border-t p-2">
+      {/* Identity — anchored to bottom of rail */}
+      <div className="mt-auto border-t p-2">
         <div
           className={cn(
             'flex items-center gap-2.5 rounded-md px-2 py-2',
             collapsed && 'justify-center px-0'
           )}
         >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary/10 font-heading text-sm font-semibold text-sidebar-primary">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-heading text-sm font-semibold text-primary">
             {initials(session.userFullName)}
           </div>
           {!collapsed && (

@@ -16,19 +16,19 @@ export function DashboardPage(): React.JSX.Element {
   const [newLeadOpen, setNewLeadOpen] = useState(false)
 
   return (
-    <div className="flex w-full flex-col gap-6 p-6">
+    <main className="flex w-full flex-col gap-6 px-6 py-8">
       <DashboardHeader />
 
       <DashboardActions onNewLead={() => setNewLeadOpen(true)} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <section aria-label="Operational data" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <MembershipExpirationsTable />
         <PaymentsDueTable />
-      </div>
+      </section>
 
       <LeadsGoingColdTable />
 
       {newLeadOpen && <NewLeadDialog open onOpenChange={setNewLeadOpen} />}
-    </div>
+    </main>
   )
 }

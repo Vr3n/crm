@@ -64,9 +64,24 @@ export function LeadsGoingColdTable(): React.JSX.Element {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Flame className="size-4 text-warning" />
-          Leads turning cold
+        <CardTitle className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
+            <Flame className="size-5" />
+          </span>
+          <div className="flex flex-1 items-center justify-between">
+            <div>
+              <span className="font-heading text-lg">Leads turning cold</span>
+              <p className="text-xs font-normal text-muted-foreground">
+                Leads with no recent follow-up or activity
+              </p>
+            </div>
+            {rows.length > 0 && (
+              <span className="hidden items-center gap-1.5 rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning sm:flex">
+                <Flame className="size-3" />
+                {rows.length} lead{rows.length !== 1 ? 's' : ''} need attention
+              </span>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>

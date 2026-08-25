@@ -132,10 +132,15 @@ export function PaymentsDueTable(): React.JSX.Element {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-md bg-success/10 text-success">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-success/10 text-success">
               <Wallet className="size-5" />
             </span>
-            <span className="font-heading text-lg">Payments due</span>
+            <div>
+              <span className="font-heading text-lg">Payments due</span>
+              <p className="text-xs font-normal text-muted-foreground">
+                Outstanding member obligations awaiting collection
+              </p>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
