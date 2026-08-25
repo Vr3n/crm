@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
 import { filterOffersByLifecycle } from '../pricing'
@@ -77,22 +78,24 @@ export function OffersPage(): React.JSX.Element {
 
       <OfferMetrics offers={rows} />
 
-      <OfferFilters filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <OfferFilters filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>
-          {rows.length} offer{rows.length === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <OfferTable
-        offers={rows}
-        plans={plans}
-        isLoading={isLoading}
-        onEdit={(offer) => setDialog({ mode: 'edit', offer })}
-        onDeactivate={setDeactivating}
-        onHistory={setHistoryOffer}
-      />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <OfferTable
+            offers={rows}
+            plans={plans}
+            isLoading={isLoading}
+            onEdit={(offer) => setDialog({ mode: 'edit', offer })}
+            onDeactivate={setDeactivating}
+            onHistory={setHistoryOffer}
+          />
+        </CardContent>
+      </Card>
 
       <OfferFormDialog
         key={dialog ? (dialog.mode === 'edit' ? String(dialog.offer.id) : 'new') : 'closed'}

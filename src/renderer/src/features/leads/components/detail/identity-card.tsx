@@ -68,7 +68,7 @@ export function IdentityCard({
         </div>
 
         {tier !== 'clean' ? (
-          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <p className="rounded-md border border-dashed border-destructive/30 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive">
             {qualityMessage(quality)}
           </p>
         ) : null}

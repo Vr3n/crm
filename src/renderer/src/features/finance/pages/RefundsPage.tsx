@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PiggyBank, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/page-header'
 import { RefundsMetrics } from '../components/refunds-metrics'
@@ -62,36 +63,52 @@ export function RefundsPage(): React.JSX.Element {
 
       <RefundsMetrics refunds={refunds ?? []} credits={credits ?? []} />
 
-      <Tabs value={tab} onValueChange={setTab} className="flex w-full flex-col gap-2">
-        <TabsList>
-          <TabsTrigger value="refunds">Refunds</TabsTrigger>
-          <TabsTrigger value="credits">Credits</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={setTab} className="flex w-full flex-col gap-4">
+        <Card className="gap-0 py-0">
+          <CardContent className="px-3 py-2.5">
+            <TabsList className="h-7">
+              <TabsTrigger value="refunds" className="text-xs">
+                Refunds
+              </TabsTrigger>
+              <TabsTrigger value="credits" className="text-xs">
+                Credits
+              </TabsTrigger>
+            </TabsList>
+          </CardContent>
+        </Card>
 
         <TabsContent value="refunds" className="mt-0">
-          <RefundsTable
-            refunds={visibleRefunds}
-            isLoading={loadingRefunds}
-            method={refundMethod}
-            onMethodChange={setRefundMethod}
-            onOpen={(refund) => {
-              setSelectedRefund(refund)
-              setRefundSheetOpen(true)
-            }}
-          />
+          <Card className="gap-0 py-0">
+            <CardContent className="px-3 py-3">
+              <RefundsTable
+                refunds={visibleRefunds}
+                isLoading={loadingRefunds}
+                method={refundMethod}
+                onMethodChange={setRefundMethod}
+                onOpen={(refund) => {
+                  setSelectedRefund(refund)
+                  setRefundSheetOpen(true)
+                }}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="credits" className="mt-0">
-          <CreditsTable
-            credits={visibleCredits}
-            isLoading={loadingCredits}
-            status={creditStatus}
-            onStatusChange={setCreditStatus}
-            onOpen={(credit) => {
-              setSelectedCredit(credit)
-              setCreditSheetOpen(true)
-            }}
-          />
+          <Card className="gap-0 py-0">
+            <CardContent className="px-3 py-3">
+              <CreditsTable
+                credits={visibleCredits}
+                isLoading={loadingCredits}
+                status={creditStatus}
+                onStatusChange={setCreditStatus}
+                onOpen={(credit) => {
+                  setSelectedCredit(credit)
+                  setCreditSheetOpen(true)
+                }}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

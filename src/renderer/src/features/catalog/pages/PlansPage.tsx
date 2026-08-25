@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
 import { filterPlansByStatus } from '../constants'
@@ -58,21 +59,23 @@ export function PlansPage(): React.JSX.Element {
 
       <PlanMetrics plans={rows} />
 
-      <PlanFilters filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <PlanFilters filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>
-          {rows.length} plan{rows.length === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <PlanTable
-        plans={rows}
-        isLoading={isLoading}
-        onEdit={(plan) => setDialog({ mode: 'edit', plan })}
-        onDelete={setDeleting}
-        onHistory={setHistoryPlan}
-      />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <PlanTable
+            plans={rows}
+            isLoading={isLoading}
+            onEdit={(plan) => setDialog({ mode: 'edit', plan })}
+            onDelete={setDeleting}
+            onHistory={setHistoryPlan}
+          />
+        </CardContent>
+      </Card>
 
       <PlanFormDialog
         key={dialog ? (dialog.mode === 'edit' ? String(dialog.plan.id) : 'new') : 'closed'}

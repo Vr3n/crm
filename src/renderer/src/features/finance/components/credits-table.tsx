@@ -168,7 +168,6 @@ export function CreditsTable({
       emptyIcon={PiggyBank}
       emptyTitle="No credits on account"
       emptyDescription="Credits you add from the button above will appear here."
-      card
       headerTone="primary"
       toolbar={
         <Select value={status} onValueChange={(v) => onStatusChange(v as CreditStatus | 'ALL')}>

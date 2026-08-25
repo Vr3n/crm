@@ -195,7 +195,6 @@ export function OfferTable({
       emptyIcon={BadgePercent}
       emptyTitle="No offers match"
       emptyDescription="Try clearing the filters, or create a new offer to layer on the catalog."
-      card
       headerTone="primary"
     />
   )

@@ -319,7 +319,6 @@ export function FollowUpTable({
       emptyIcon={bucket === 'done' ? CheckCircle2 : Inbox}
       emptyTitle={emptyCopy[bucket].title}
       emptyDescription={emptyCopy[bucket].description}
-      card
       headerTone="primary"
     />
   )

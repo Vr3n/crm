@@ -4,7 +4,7 @@ import type { DateRange } from 'react-day-picker'
 import { Eye, ReceiptText } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -205,16 +205,8 @@ export function InvoicesTable(): React.JSX.Element {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <ReceiptText className="size-5" />
-            </span>
-            <span className="font-heading text-lg">Invoice register</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
           <DataTable
             columns={columns}
             data={filtered}

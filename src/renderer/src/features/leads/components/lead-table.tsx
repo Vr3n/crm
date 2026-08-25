@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SOURCES, STAGES, isTerminal } from '../constants'
-import { computeQuality } from '../data-quality'
+import { computeQuality, qualityMessage, qualityTier } from '../data-quality'
 import { displayPhone, timeAgo } from '../format'
 import type { Lead, StageKey } from '../types'
 import { QualityDot } from './quality-dot'
@@ -79,7 +79,7 @@ export function LeadTable({
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-primary/5 hover:bg-transparent">
@@ -128,9 +128,22 @@ export function LeadTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate font-medium">{lead.name}</span>
-                    <QualityDot quality={q} />
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-medium">{lead.name}</span>
+                      <QualityDot quality={q} />
+                    </div>
+                    {qualityTier(q) !== 'clean' ? (
+                      <span
+                        className={
+                          qualityTier(q) === 'bad'
+                            ? 'truncate text-[11px] font-medium text-destructive'
+                            : 'truncate text-[11px] font-medium text-warning'
+                        }
+                      >
+                        {qualityMessage(q)}
+                      </span>
+                    ) : null}
                   </div>
                 </TableCell>
                 <TableCell>

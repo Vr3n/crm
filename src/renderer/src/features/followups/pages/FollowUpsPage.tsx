@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BellPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { FollowUpDialog } from '@/features/leads/components/follow-up-dialog'
 import { bucketOf, sortFollowUpRows } from '../build'
@@ -54,14 +55,22 @@ export function FollowUpsPage(): React.JSX.Element {
 
       <FollowUpMetrics rows={rows} />
 
-      <FollowUpFilters counts={counts} filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <FollowUpFilters counts={counts} filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <FollowUpTable
-        rows={visible}
-        bucket={filters.bucket}
-        isLoading={isLoading}
-        onOpenLead={(leadId) => navigate(`/leads/${leadId}`, { state: { from: '/followups' } })}
-      />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <FollowUpTable
+            rows={visible}
+            bucket={filters.bucket}
+            isLoading={isLoading}
+            onOpenLead={(leadId) => navigate(`/leads/${leadId}`, { state: { from: '/followups' } })}
+          />
+        </CardContent>
+      </Card>
 
       {scheduleOpen && <FollowUpDialog open={scheduleOpen} onOpenChange={setScheduleOpen} />}
     </div>

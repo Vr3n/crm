@@ -214,7 +214,6 @@ export function PlanTable({
       emptyIcon={Package}
       emptyTitle="No plans match"
       emptyDescription="Try clearing the filters, or add a new plan to the catalog."
-      card
       headerTone="primary"
     />
   )

@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
@@ -168,70 +169,89 @@ export function LeadsPage(): React.JSX.Element {
 
       <LeadMetrics leads={filtered} />
 
-      <Filters leads={filtered} filters={filters} onChange={setFilters} />
-
-      <div className="flex items-center justify-between gap-3">
-        {view === 'table' && selected.size > 0 ? (
-          <LeadSelectionToolbar
-            count={selected.size}
-            canDelete={can(session.permissions, session.isSuper, 'lead.delete')}
-            canMove={can(session.permissions, session.isSuper, 'lead.update_stage')}
-            canScheduleFollowup={can(session.permissions, session.isSuper, 'followup.create')}
-            canLogActivity={can(session.permissions, session.isSuper, 'lead.record_activity')}
-            moveOptions={moveOptions}
-            isDeleting={deleteLeads.isPending}
-            isMoving={bulkMove.isPending}
-            onDelete={onDeleteSelection}
-            onMoveStage={onMoveSelection}
-            onScheduleFollowups={onBulkScheduleFollowups}
-            onLogActivities={onBulkLogActivities}
-          />
-        ) : (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
-              {filtered.length} lead{filtered.length === 1 ? '' : 's'}
-            </span>
-            {filters.range !== 'all' && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Sample data</span>
-            )}
-          </div>
-        )}
-        <Tabs value={view} onValueChange={changeView}>
-          <TabsList>
-            <TabsTrigger value="table">Table</TabsTrigger>
-            <TabsTrigger value="board">Board</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <Filters leads={filtered} filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
       {isLoading ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+        <Card className="gap-0 py-0">
+          <CardContent className="px-3 py-3">
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Plus}
-          title="No leads match"
-          description="Try widening the filters, or add a new lead to get started."
-          action={
-            <Button onClick={() => setNewOpen(true)}>
-              <Plus />
-              New lead
-            </Button>
-          }
-        />
+        <Card className="gap-0 py-0">
+          <CardContent className="px-3 py-3">
+            <EmptyState
+              icon={Plus}
+              title="No leads match"
+              description="Try widening the filters, or add a new lead to get started."
+              action={
+                <Button onClick={() => setNewOpen(true)}>
+                  <Plus />
+                  New lead
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
       ) : view === 'table' ? (
-        <LeadTable
-          leads={filtered}
-          selected={selected}
-          onSelectionChange={setSelected}
-          onOpen={openLead}
-          onStageChange={onStageChange}
-          onEdit={setEditing}
-          canEditLead={canEditLead}
-        />
+        <Card className="gap-0 py-0">
+          <CardContent className="flex flex-col gap-3 px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              {selected.size > 0 ? (
+                <LeadSelectionToolbar
+                  count={selected.size}
+                  canDelete={can(session.permissions, session.isSuper, 'lead.delete')}
+                  canMove={can(session.permissions, session.isSuper, 'lead.update_stage')}
+                  canScheduleFollowup={can(session.permissions, session.isSuper, 'followup.create')}
+                  canLogActivity={can(session.permissions, session.isSuper, 'lead.record_activity')}
+                  moveOptions={moveOptions}
+                  isDeleting={deleteLeads.isPending}
+                  isMoving={bulkMove.isPending}
+                  onDelete={onDeleteSelection}
+                  onMoveStage={onMoveSelection}
+                  onScheduleFollowups={onBulkScheduleFollowups}
+                  onLogActivities={onBulkLogActivities}
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>
+                    {filtered.length} lead{filtered.length === 1 ? '' : 's'}
+                  </span>
+                  {filters.range !== 'all' && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Sample data</span>
+                  )}
+                </div>
+              )}
+              <Tabs value={view} onValueChange={changeView}>
+                <TabsList className="h-7">
+                  <TabsTrigger value="table" className="text-xs">
+                    Table
+                  </TabsTrigger>
+                  <TabsTrigger value="board" className="text-xs">
+                    Board
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <LeadTable
+              leads={filtered}
+              selected={selected}
+              onSelectionChange={setSelected}
+              onOpen={openLead}
+              onStageChange={onStageChange}
+              onEdit={setEditing}
+              canEditLead={canEditLead}
+            />
+          </CardContent>
+        </Card>
       ) : (
         <LeadBoard
           leads={filtered}

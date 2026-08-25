@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ShieldCheck, UserPlus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -99,82 +100,100 @@ export function UsersPage(): React.JSX.Element {
 
       <StaffMetrics staff={staff} superCount={superStaff(staff).length} />
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'users' | 'roles')} className="w-full">
-        <TabsList variant="line" className="w-fit">
-          <TabsTrigger value="users">
-            <Users className="size-4" />
-            Staff
-            <span className="ml-1 font-mono text-xs text-muted-foreground tabular-nums">
-              {staff.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="roles">
-            <ShieldCheck className="size-4" />
-            Roles
-            <span className="ml-1 font-mono text-xs text-muted-foreground tabular-nums">
-              {roles.length}
-            </span>
-          </TabsTrigger>
-        </TabsList>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as 'users' | 'roles')}
+        className="flex w-full flex-col gap-4"
+      >
+        <Card className="gap-0 py-0">
+          <CardContent className="px-3 py-2.5">
+            <TabsList variant="line" className="w-fit">
+              <TabsTrigger value="users">
+                <Users className="size-4" />
+                Staff
+                <span className="ml-1 font-mono text-xs text-muted-foreground tabular-nums">
+                  {staff.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="roles">
+                <ShieldCheck className="size-4" />
+                Roles
+                <span className="ml-1 font-mono text-xs text-muted-foreground tabular-nums">
+                  {roles.length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </CardContent>
+        </Card>
 
-        <TabsContent value="users" className="mt-3 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="grid gap-1.5">
-              <Label className="text-[11px] text-muted-foreground">Role</Label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger size="default" className="h-9 w-44 rounded-md text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All roles</SelectItem>
-                  {roles.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label className="text-[11px] text-muted-foreground">Status</Label>
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as StaffStatus | 'ALL')}
-              >
-                <SelectTrigger size="default" className="h-9 w-40 rounded-md text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STAFF_STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s === 'ALL' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <TabsContent value="users" className="mt-0 flex flex-col gap-4">
+          <Card className="gap-0 py-0">
+            <CardContent className="flex items-center gap-3 px-3 py-2.5">
+              <div className="grid gap-1.5">
+                <Label className="text-[11px] text-muted-foreground">Role</Label>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger size="default" className="h-9 w-44 rounded-md text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All roles</SelectItem>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-[11px] text-muted-foreground">Status</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => setStatusFilter(v as StaffStatus | 'ALL')}
+                >
+                  <SelectTrigger size="default" className="h-9 w-40 rounded-md text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAFF_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s === 'ALL' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-          <StaffTable
-            staff={visibleStaff}
-            isLoading={staffLoading}
-            youEmail={session.userEmail}
-            onOpen={(member) => {
-              setSelectedStaff(member)
-              setStaffSheetOpen(true)
-            }}
-          />
+          <Card className="gap-0 py-0">
+            <CardContent className="px-3 py-3">
+              <StaffTable
+                staff={visibleStaff}
+                isLoading={staffLoading}
+                youEmail={session.userEmail}
+                onOpen={(member) => {
+                  setSelectedStaff(member)
+                  setStaffSheetOpen(true)
+                }}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="roles" className="mt-3">
-          <RolesTable
-            roles={rolesWithCounts}
-            isLoading={rolesLoading}
-            onOpen={(role) => {
-              setSelectedRole(role)
-              setRoleSheetOpen(true)
-            }}
-          />
+        <TabsContent value="roles" className="mt-0">
+          <Card className="gap-0 py-0">
+            <CardContent className="px-3 py-3">
+              <RolesTable
+                roles={rolesWithCounts}
+                isLoading={rolesLoading}
+                onOpen={(role) => {
+                  setSelectedRole(role)
+                  setRoleSheetOpen(true)
+                }}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

@@ -171,7 +171,6 @@ export function PaymentsTable({
       emptyIcon={Wallet}
       emptyTitle="No payments recorded"
       emptyDescription="Record the first payment from the button above."
-      card
       headerTone="primary"
       toolbar={
         unallocatedTotal > 0 ? (
