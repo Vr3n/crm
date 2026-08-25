@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarClock } from 'lucide-react'
+import { CalendarClock, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -96,7 +96,15 @@ export function DateTimePicker({
       </PopoverTrigger>
       <PopoverContent className="w-auto rounded-lg p-0" align="start" sideOffset={6}>
         <Calendar mode="single" selected={valid ?? undefined} onSelect={setDay} className="w-72" />
-        <div className="flex items-center gap-2 border-t p-2">
+        <div className="border-t">
+          <div className="flex items-center gap-1.5 bg-muted/40 px-3 py-2">
+            <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Clock className="size-3.5" />
+            </span>
+            <span className="text-xs font-semibold text-foreground">Set time</span>
+            <span className="text-xs text-muted-foreground">· hour & minute</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 pb-3 pt-2">
           <Select
             value={valid ? String(valid.getHours()) : undefined}
             onValueChange={(v) => setHour(Number(v))}
@@ -130,6 +138,7 @@ export function DateTimePicker({
               ))}
             </SelectContent>
           </Select>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

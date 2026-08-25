@@ -290,6 +290,26 @@ export function FollowUpTable({
     // nothing extra — the leads query invalidation refreshes this table
   }, [])
   const columns = useMemo(() => buildColumns(bucket, handleDone), [bucket, handleDone])
+  const complete = useCompleteFollowUp()
+  const [bulkPending, setBulkPending] = useState(false)
+
+  const handleBulkDone = useCallback(
+    async (ids: string[]) => {
+      const rowMap = new Map(rows.map((r) => [String(r.id), r]))
+      const pendingIds = ids.filter((id) => {
+        const r = rowMap.get(id)
+        return r && !r.completedAt && !r.cancelledAt
+      })
+      if (pendingIds.length === 0) return
+      setBulkPending(true)
+      try {
+        await Promise.all(pendingIds.map((id) => complete.mutateAsync({ followupId: Number(id) })))
+      } finally {
+        setBulkPending(false)
+      }
+    },
+    [rows, complete]
+  )
 
   const emptyCopy: Record<FollowUpBucket, { title: string; description: string }> = {
     all: {
@@ -320,6 +340,8 @@ export function FollowUpTable({
       emptyTitle={emptyCopy[bucket].title}
       emptyDescription={emptyCopy[bucket].description}
       headerTone="primary"
+      onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
+      isMarkingSelected={bulkPending}
     />
   )
 }
