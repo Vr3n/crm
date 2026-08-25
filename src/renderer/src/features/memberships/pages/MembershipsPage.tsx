@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
@@ -41,6 +43,12 @@ export function MembershipsPage(): React.JSX.Element {
       <PageHeader
         title="Memberships"
         description={`${session.organizationName} · every entitlement period`}
+        actions={
+          <Button onClick={() => navigate('/memberships/sale')}>
+            <Plus className="size-4" />
+            New Membership Sale
+          </Button>
+        }
       />
 
       <MembershipMetrics rows={rows} now={now} />

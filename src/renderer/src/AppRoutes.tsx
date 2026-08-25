@@ -12,6 +12,7 @@ import { ActivitiesPage } from '@/features/activities/pages/ActivitiesPage'
 import { CustomersPage } from '@/features/customers/pages/CustomersPage'
 import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPage'
 import { MembershipsPage } from '@/features/memberships/pages/MembershipsPage'
+import { MembershipSalePage } from '@/features/memberships/sale/page'
 import { InvoicesPage } from '@/features/invoices/pages/InvoicesPage'
 import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
 import { PaymentsPage } from '@/features/finance/pages/PaymentsPage'
@@ -64,6 +65,8 @@ export function AppRoutes(): React.JSX.Element {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="memberships" element={<MembershipsPage />} />
+        <Route path="memberships/sale" element={<MembershipSalePage />} />
+        <Route path="memberships/sell" element={<MembershipSalePage />} />
         <Route path="plans" element={<PlansPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
