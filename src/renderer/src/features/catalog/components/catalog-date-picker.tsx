@@ -62,6 +62,7 @@ export function CatalogDatePicker({
         <Calendar
           mode="single"
           selected={valid ?? undefined}
+          defaultMonth={valid ?? undefined}
           onSelect={(day) => {
             if (day) {
               onChange(format(day, 'yyyy-MM-dd'))

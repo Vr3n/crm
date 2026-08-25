@@ -36,11 +36,13 @@ import type { AccessWindow, BillingFrequency, Plan, PlanDuration } from '../type
 export function PlanFormDialog({
   plan,
   open,
-  onOpenChange
+  onOpenChange,
+  onCreated
 }: {
   plan: Plan | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onCreated?: (plan: Plan) => void
 }): React.JSX.Element {
   const isEdit = plan !== null
   const create = useCreatePlan()
@@ -81,7 +83,12 @@ export function PlanFormDialog({
     if (isEdit && plan) {
       update.mutate({ id: plan.id, input }, { onSuccess: () => onOpenChange(false) })
     } else {
-      create.mutate(input, { onSuccess: () => onOpenChange(false) })
+      create.mutate(input, {
+        onSuccess: (created) => {
+          onCreated?.(created)
+          onOpenChange(false)
+        }
+      })
     }
   }
 

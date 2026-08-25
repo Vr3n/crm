@@ -53,12 +53,14 @@ export function OfferFormDialog({
   offer,
   plans,
   open,
-  onOpenChange
+  onOpenChange,
+  onCreated
 }: {
   offer: Offer | null
   plans: Plan[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  onCreated?: (offer: Offer) => void
 }): React.JSX.Element {
   const isEdit = offer !== null
   const create = useCreateOffer()
@@ -146,7 +148,12 @@ export function OfferFormDialog({
     if (isEdit && offer) {
       update.mutate({ id: offer.id, input }, { onSuccess: () => onOpenChange(false) })
     } else {
-      create.mutate(input, { onSuccess: () => onOpenChange(false) })
+      create.mutate(input, {
+        onSuccess: (created) => {
+          onCreated?.(created)
+          onOpenChange(false)
+        }
+      })
     }
   }
 

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
-import { Mail, Phone, User, UserPlus } from 'lucide-react'
+import { CalendarClock, ChevronDown, Mail, Phone, PhoneCall, User, UserPlus } from 'lucide-react'
 import { AutocorrectCombobox, type AutocorrectOption } from '@/components/autocorrect-combobox'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -13,9 +14,17 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { FieldGroup } from '@/components/ui/field'
 import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { can, useSession } from '@/context/session-context'
 import { logger } from '@/lib/logger'
@@ -24,9 +33,15 @@ import { cn } from '@/lib/utils'
 import { isApiError } from '../../../../../shared/contracts/errors'
 import { api } from '../api'
 import { useCreateLead } from '../queries'
-import { referenceKeys } from '../reference-data'
+import { referenceKeys, useReferenceData } from '../reference-data'
 
 const PHONE_MAX = 10
+
+/** Default due date for auto-created followup: now + 2 days. */
+function defaultFollowupDueAt(): string {
+  const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+  return d.toISOString()
+}
 
 /**
  * Fast "New lead" capture (staff aren't tech-savvy): a single modal with only
@@ -39,17 +54,29 @@ const PHONE_MAX = 10
  */
 export function NewLeadDialog({
   open,
-  onOpenChange
+  onOpenChange,
+  onCreated
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
+  onCreated?: (created: import('../../../../../shared/contracts/sales').CreatedLead) => void
 }): React.JSX.Element {
   const create = useCreateLead()
   const session = useSession()
   const queryClient = useQueryClient()
+  const { data: ref } = useReferenceData()
+
+  const activityTypes = useMemo(
+    () => ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
+    [ref]
+  )
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
+
+  // Collapsible section states
+  const [followupOpen, setFollowupOpen] = useState(false)
+  const [activityOpen, setActivityOpen] = useState(false)
 
   // The dialog remounts per open (LeadsPage mounts it conditionally). The source
   // field is empty on mount — the combobox searches the backend live, so there is
@@ -62,21 +89,39 @@ export function NewLeadDialog({
       source: '',
       plan: '',
       goal: '',
-      notes: ''
+      notes: '',
+      followupTitle: 'Post enquiry followup',
+      followupDue: defaultFollowupDueAt(),
+      activityTypeId: String(activityTypes[0]?.id ?? ''),
+      activityNote: ''
     },
     onSubmit: async ({ value }) => {
       const sourceId = value.source ? Number(value.source) : undefined
       if (sourceId === undefined) return
       try {
-        await create.mutateAsync({
+        const created = await create.mutateAsync({
           fullName: value.name.trim(),
           phone: value.phone.trim(),
           email: value.email.trim() || undefined,
           sourceId,
           planId: value.plan ? Number(value.plan) : undefined,
           goal: value.goal.trim() || undefined,
-          notes: value.notes.trim() || undefined
+          notes: value.notes.trim() || undefined,
+          followup: followupOpen
+            ? {
+                title: value.followupTitle.trim() || 'Post enquiry followup',
+                dueAt: value.followupDue || defaultFollowupDueAt()
+              }
+            : undefined,
+          activity:
+            activityOpen && value.activityTypeId
+              ? {
+                  typeId: Number(value.activityTypeId),
+                  note: value.activityNote.trim() || undefined
+                }
+              : undefined
         })
+        onCreated?.(created)
         setSubmitSuccess(true)
         successTimer.current = window.setTimeout(() => onOpenChange(false), 700)
       } catch {
@@ -384,6 +429,200 @@ export function NewLeadDialog({
                 </FormField>
               )}
             </form.Field>
+
+            {/* Follow-up section */}
+            <Collapsible open={followupOpen} onOpenChange={setFollowupOpen}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50',
+                    followupOpen && 'bg-muted/50'
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <CalendarClock className="size-4 text-primary" />
+                    Schedule a follow-up
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {followupOpen ? 'Enabled' : 'Auto: 2 days'}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'size-4 text-muted-foreground transition-transform',
+                        followupOpen && 'rotate-180'
+                      )}
+                    />
+                  </span>
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-3">
+                <form.Field
+                  name="followupTitle"
+                  validators={{
+                    onChange: ({ value }) =>
+                      followupOpen && !value.trim() ? 'Give this follow-up a name' : undefined
+                  }}
+                >
+                  {(field) => (
+                    <FormField
+                      name={field.name}
+                      state={field.state}
+                      handleChange={field.handleChange}
+                      handleBlur={field.handleBlur}
+                      submitted={submitted}
+                      label="What to do"
+                      validate={(v) => (!v.trim() ? 'Give this follow-up a name' : undefined)}
+                      completeWhen={(v) => v.trim().length > 0}
+                      placeholder="e.g. Call to confirm trial"
+                    />
+                  )}
+                </form.Field>
+
+                <form.Field
+                  name="followupDue"
+                  validators={{
+                    onChange: ({ value }) =>
+                      followupOpen && !value ? 'Pick a due date and time' : undefined
+                  }}
+                >
+                  {(field) => (
+                    <FormField
+                      name={field.name}
+                      state={field.state}
+                      handleChange={field.handleChange}
+                      handleBlur={field.handleBlur}
+                      submitted={submitted}
+                      label="Due"
+                      validate={(v) => (v ? undefined : 'Pick a due date and time')}
+                      completeWhen={(v) => Boolean(v)}
+                    >
+                      {({ id, value, invalid, describedBy, onChange }) => (
+                        <DateTimePicker
+                          id={id}
+                          value={value}
+                          invalid={invalid}
+                          aria-describedby={describedBy}
+                          onChange={(iso) => onChange(iso)}
+                        />
+                      )}
+                    </FormField>
+                  )}
+                </form.Field>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Activity section */}
+            <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50',
+                    activityOpen && 'bg-muted/50'
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <PhoneCall className="size-4 text-primary" />
+                    Log an activity
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'size-4 text-muted-foreground transition-transform',
+                      activityOpen && 'rotate-180'
+                    )}
+                  />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-3">
+                <form.Field
+                  name="activityTypeId"
+                  validators={{
+                    onChange: ({ value }) =>
+                      activityOpen && !value ? 'Choose a type' : undefined
+                  }}
+                >
+                  {(field) => (
+                    <FormField
+                      name={field.name}
+                      state={{
+                        value: field.state.value,
+                        meta: field.state.meta
+                      }}
+                      handleChange={(v) => field.handleChange(v)}
+                      handleBlur={field.handleBlur}
+                      submitted={submitted}
+                      label="Type"
+                      validate={(v) => (v ? undefined : 'Choose a type')}
+                      completeWhen={(v) => Boolean(v)}
+                    >
+                      {({ id, value, invalid, valid, describedBy }) => (
+                        <Select
+                          value={value}
+                          onValueChange={(v) => {
+                            if (v !== '') field.handleChange(v)
+                          }}
+                          disabled={activityTypes.length === 0}
+                        >
+                          <SelectTrigger
+                            id={id}
+                            aria-invalid={invalid}
+                            data-valid={valid}
+                            aria-describedby={describedBy}
+                          >
+                            <SelectValue
+                              placeholder={
+                                activityTypes.length === 0
+                                  ? 'No activity types configured'
+                                  : 'Choose a type'
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {activityTypes.map((t) => (
+                              <SelectItem key={t.id} value={String(t.id)}>
+                                {t.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </FormField>
+                  )}
+                </form.Field>
+
+                <form.Field name="activityNote">
+                  {(field) => (
+                    <FormField
+                      name={field.name}
+                      state={field.state}
+                      handleChange={field.handleChange}
+                      handleBlur={field.handleBlur}
+                      submitted={submitted}
+                      label="Note"
+                      hint="What happened on this touchpoint?"
+                      validate={() => undefined}
+                      completeWhen={(v) => v.trim().length > 0}
+                    >
+                      {({ id, value, invalid, valid, describedBy, onBlur, onChange }) => (
+                        <Textarea
+                          id={id}
+                          value={value}
+                          onBlur={onBlur}
+                          onChange={(e) => onChange(e.target.value)}
+                          placeholder="What happened on this touchpoint?"
+                          rows={3}
+                          aria-invalid={invalid}
+                          data-valid={valid}
+                          aria-describedby={describedBy}
+                        />
+                      )}
+                    </FormField>
+                  )}
+                </form.Field>
+              </CollapsibleContent>
+            </Collapsible>
           </FieldGroup>
 
           <DialogFooter className="mt-6">

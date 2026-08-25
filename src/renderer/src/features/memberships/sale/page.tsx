@@ -1,25 +1,147 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Sparkles } from 'lucide-react'
+import { ArrowLeft, Plus, Sparkles, RotateCcw } from 'lucide-react'
+import { useForm } from '@tanstack/react-form'
+import { useStore } from '@tanstack/react-store'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { CatalogDatePicker } from '@/features/catalog/components/catalog-date-picker'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
-// import { SaleAnchorNav } from './components/sale-anchor-nav' // commented per request — uncomment when anchor nav needed
+import { Badge } from '@/components/ui/badge'
 import { SaleSectionCard } from './components/sale-section-card'
 import { OrderSummary } from './components/order-summary'
+import { LeadPicker } from '@/features/leads/components/lead-picker'
+import { NewLeadDialog } from '@/features/leads/components/new-lead-dialog'
+import { PlanPicker } from './components/plan-picker'
+import { OfferPicker } from './components/offer-picker'
+import { PlanFormDialog } from '@/features/catalog/components/plan-form-dialog'
+import { OfferFormDialog } from '@/features/catalog/components/offer-form-dialog'
+import { useLead } from '@/features/leads/queries'
+import { usePlans } from '@/features/catalog/queries'
+import { displayPhone } from '@/features/leads/format'
+import type { Plan, Offer } from '@/features/catalog/types'
 
-/**
- * Membership Sale — IA & Layout scaffold (plan 01).
- * Single scrolled page + sticky Order Summary (Tally-style). Later phases
- * (02-07) replace each placeholder card body with real pickers/calculations.
- */
+function daysForDuration(duration: Plan['duration']): number {
+  switch (duration) {
+    case 'MONTHLY':
+      return 30
+    case 'QUARTERLY':
+      return 90
+    case 'HALF_YEARLY':
+      return 180
+    case 'YEARLY':
+      return 365
+    default:
+      return 30
+  }
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function formatISO(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  return formatISO(d)
+}
+
+function todayISO(): string {
+  return formatISO(new Date())
+}
+
 export function MembershipSalePage(): React.JSX.Element {
   const session = useSession()
   const navigate = useNavigate()
+  const [showNewLead, setShowNewLead] = useState(false)
+  const [showNewPlan, setShowNewPlan] = useState(false)
+  const [showNewOffer, setShowNewOffer] = useState(false)
+  const [dateLinked, setDateLinked] = useState(true)
+
+  const { data: plansList = [] } = usePlans()
+
+  const form = useForm({
+    defaultValues: {
+      leadId: null as number | null,
+      planId: null as number | null,
+      offerId: null as number | null,
+      startDate: todayISO(),
+      endDate: todayISO(),
+      baseInput: '',
+      discountType: '' as '' | Offer['discountType'],
+      discountValue: '',
+      paidInput: '',
+      paymentMethod: '' as string
+    },
+    onSubmit: async ({ value }) => {
+      // prototype: just log
+      console.log('submit', value)
+    }
+  })
+
+  // Derived lookups via store subscriptions
+  const leadId = useStore(form.store, (s) => s.values.leadId)
+  const planId = useStore(form.store, (s) => s.values.planId)
+  const offerId = useStore(form.store, (s) => s.values.offerId)
+  const startDate = useStore(form.store, (s) => s.values.startDate)
+  const endDate = useStore(form.store, (s) => s.values.endDate)
+  const baseInput = useStore(form.store, (s) => s.values.baseInput)
+  const discountType = useStore(form.store, (s) => s.values.discountType)
+  const discountValue = useStore(form.store, (s) => s.values.discountValue)
+  const paidInput = useStore(form.store, (s) => s.values.paidInput)
+  const paymentMethod = useStore(form.store, (s) => s.values.paymentMethod)
+
+  const { data: leadDetail } = useLead(leadId ?? undefined)
+  const selectedPlan = plansList.find((p) => p.id === planId) ?? null
+  // For offer lookup, fetch from useOffers? Use plansList's offers? Use a separate hook
+  // Quick: derive via OfferPicker's internal list would be duplicated, so fetch here via useOffers
+  // To avoid extra query, offer object is kept via onChange handler below storing it in form meta? Instead track offer object separately:
+  // For prototype keep a local offer object synced via onChange
+  const [offerObj, setOfferObj] = useState<Offer | null>(null)
+  const displayBase = baseInput === '' ? null : Number(baseInput.replace(/,/g, '')) || null
+  const isDirty = selectedPlan !== null && displayBase !== null && displayBase !== selectedPlan.basePrice
+
+  const manualDiscount = (() => {
+    if (displayBase === null || !discountType || discountValue === '') return 0
+    const v = Number(discountValue.replace(/,/g, ''))
+    if (Number.isNaN(v)) return 0
+    switch (discountType) {
+      case 'PERCENTAGE':
+        return Math.round((displayBase * v) / 100)
+      case 'FIXED_AMOUNT':
+        return Math.min(v, displayBase)
+      case 'OVERRIDE_PRICE':
+        return Math.max(0, displayBase - v)
+      case 'FREE_PERIOD':
+        return 0
+      default:
+        return 0
+    }
+  })()
+  const discountAmount = manualDiscount
+  const finalPrice = displayBase !== null ? Math.max(0, displayBase - discountAmount) : null
+  const paidAmount = paidInput === '' ? null : Number(paidInput.replace(/,/g, ''))
+  const paidValid = paidAmount === null || (!Number.isNaN(paidAmount) && paidAmount >= 0)
+
+  // Use leadDetail as effective lead (simplified, no selectedLead cache needed because leadId now drives lookup)
+  const effectiveLead = leadDetail ?? null
 
   return (
     <div className="flex w-full flex-col gap-0">
-      {/* Page header — title is "Membership Sale" (updated per request in 01) */}
-      <div className="px-6 pb-4 pt-6">
+      <div className="px-6 pb-2 pt-4">
         <PageHeader
           title="Membership Sale"
           description={`${session.organizationName} · create membership, invoice and payment in one sale`}
@@ -32,121 +154,425 @@ export function MembershipSalePage(): React.JSX.Element {
         />
       </div>
 
-      {/* Anchor nav — scroll-spy pills (commented per request; uncomment when needed) */}
-      {/* <div className="px-6">
-        <SaleAnchorNav />
-      </div> */}
-
-      {/* Two-column layout: left 2/3 form, right 1/3 sticky summary */}
-      <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start">
-        {/* Left — stacked section cards */}
+      <div className="grid gap-6 px-6 pb-6 pt-3 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-4">
           <SaleSectionCard
             id="lead"
             step={1}
-            title="Member"
-            description="Search by name or phone, or create a new lead inline. Loyalty chips appear when the person is already a customer."
+            title="Select Lead / Customer"
+            description="Pick existing or create new"
             required
-            badge="Lead"
           >
-            <p className="text-xs font-medium text-muted-foreground">Member picker — AutocorrectCombobox</p>
-            <p className="mt-1 text-[11px] text-muted-foreground/70">Phase 02 will wire search + inline create + duplicate-phone guard</p>
+            <div className="flex flex-col gap-3">
+              <form.Field name="leadId">
+                {(field) => (
+                  <LeadPicker
+                    value={field.state.value ?? 0}
+                    onChange={(lead) => field.handleChange(lead.id)}
+                    invalid={false}
+                  />
+                )}
+              </form.Field>
+              {!leadId ? (
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowNewLead(true)}>
+                    <Plus className="size-3.5" />
+                    Create new lead
+                  </Button>
+                </div>
+              ) : null}
+              {effectiveLead ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-white px-3 py-2.5 text-left shadow-sm">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                    {effectiveLead.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{effectiveLead.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {displayPhone(effectiveLead.phone)} {effectiveLead.email ? `· ${effectiveLead.email}` : ''}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-xs text-muted-foreground">No member selected — search or create one above</p>
+              )}
+              {effectiveLead ? (
+                <span className="text-xs text-muted-foreground">
+                  Stage: <Badge variant="outline" className="ml-1 text-[11px]">{effectiveLead.stage}</Badge>
+                </span>
+              ) : null}
+            </div>
           </SaleSectionCard>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard
-              id="plan"
-              step={2}
-              title="Plan"
-              description="Plan sets the initial base price and duration. You can still override any value before selling — the snapshot keeps the difference."
-              required
-              badge="Required"
-            >
-              <p className="text-xs font-medium text-muted-foreground">Plan picker — AutocorrectCombobox</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">Phase 02 will seed base price, tax and auto-calculate end date</p>
+            <SaleSectionCard id="plan" step={2} title="Select Plan" description="Sets price & duration" required>
+              <div className="flex flex-col gap-3">
+                <form.Field name="planId">
+                  {(field) => (
+                    <PlanPicker
+                      value={field.state.value}
+                      onChange={(p) => {
+                        field.handleChange(p ? p.id : null)
+                        // sync base price without useEffect
+                        form.setFieldValue('baseInput', p ? String(p.basePrice) : '')
+                        // auto-update end date if linked
+                        if (p) {
+                          const newEnd = addDays(form.getFieldValue('startDate'), daysForDuration(p.duration) - 1)
+                          form.setFieldValue('endDate', newEnd)
+                          setDateLinked(true)
+                        }
+                        // clear incompatible offer
+                        const currentOfferId = form.getFieldValue('offerId')
+                        if (currentOfferId !== null && p) {
+                          const currentOffer = offerObj
+                          if (currentOffer && currentOffer.applicablePlanIds.length > 0 && !currentOffer.applicablePlanIds.includes(p.id)) {
+                            form.setFieldValue('offerId', null)
+                            setOfferObj(null)
+                            form.setFieldValue('discountType', '')
+                            form.setFieldValue('discountValue', '')
+                          }
+                        }
+                      }}
+                    />
+                  )}
+                </form.Field>
+                {!planId ? (
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowNewPlan(true)}>
+                      <Plus className="size-3.5" />
+                      Create plan
+                    </Button>
+                  </div>
+                ) : null}
+                {selectedPlan ? (
+                  <div className="rounded-lg border bg-white px-3 py-2.5 text-xs shadow-sm">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium">₹{selectedPlan.basePrice.toLocaleString('en-IN')}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span>{selectedPlan.duration}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span>Tax {selectedPlan.taxRate}%</span>
+                      {selectedPlan.registrationFee > 0 ? (
+                        <>
+                          <span className="text-muted-foreground">·</span>
+                          <span>Reg ₹{selectedPlan.registrationFee.toLocaleString('en-IN')}</span>
+                        </>
+                      ) : null}
+                    </div>
+                    {isDirty && displayBase !== null ? (
+                      <p className="mt-1 text-[11px] text-amber-600">Edited — differs from plan · ₹{selectedPlan.basePrice.toLocaleString('en-IN')} → ₹{displayBase.toLocaleString('en-IN')}</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">No plan selected</p>
+                )}
+                {isDirty ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs self-start"
+                    onClick={() => {
+                      if (selectedPlan) {
+                        form.setFieldValue('baseInput', String(selectedPlan.basePrice))
+                      }
+                    }}
+                  >
+                    <RotateCcw className="size-3.5" />
+                    Reset to plan
+                  </Button>
+                ) : null}
+              </div>
             </SaleSectionCard>
 
-            <SaleSectionCard
-              id="offer"
-              step={3}
-              title="Offer"
-              description="Offers are filtered to the chosen plan. Picking one reveals discount type and value, which stay editable."
-              badge="Optional"
-            >
-              <p className="text-xs font-medium text-muted-foreground">Offer picker + discount type/value</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">Phase 03 will link the four discount types to the final price</p>
+            <SaleSectionCard id="offer" step={3} title="Select Offer" description="Optional discount">
+              <div className="flex flex-col gap-3">
+                <form.Field name="offerId">
+                  {(field) => (
+                    <OfferPicker
+                      value={field.state.value}
+                      onChange={(o) => {
+                        field.handleChange(o ? o.id : null)
+                        setOfferObj(o)
+                        if (o) {
+                          form.setFieldValue('discountType', o.discountType)
+                          form.setFieldValue('discountValue', String(o.value))
+                        } else {
+                          form.setFieldValue('discountType', '')
+                          form.setFieldValue('discountValue', '')
+                        }
+                      }}
+                      planId={planId ?? null}
+                    />
+                  )}
+                </form.Field>
+                {!offerId ? (
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowNewOffer(true)}>
+                      <Plus className="size-3.5" />
+                      Create offer
+                    </Button>
+                  </div>
+                ) : null}
+                {offerObj ? (
+                  <div className="rounded-lg border bg-white px-3 py-2.5 text-xs shadow-sm">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium">{offerObj.name}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span>
+                        {offerObj.discountType} · {offerObj.value}
+                        {offerObj.discountType === 'PERCENTAGE' ? '%' : offerObj.discountType === 'FREE_PERIOD' ? ' months' : ''}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {offerObj.applicablePlanIds.length === 0
+                        ? 'Applies to all plans'
+                        : offerObj.applicablePlanIds.includes(planId ?? -1)
+                          ? 'Applies to selected plan'
+                          : 'Not applicable to selected plan'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">No offer selected — optional</p>
+                )}
+              </div>
             </SaleSectionCard>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard
-              id="dates"
-              step={4}
-              title="Dates"
-              description="Start defaults to today. End auto-sets from the plan duration (e.g. QUARTERLY = +90 days) and stays editable."
-            >
-              <p className="text-xs font-medium text-muted-foreground">Start date · End date — two independent date pickers</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">Phase 04 will add UTC/Asia/Kolkata handling and duration validation</p>
+            <SaleSectionCard id="dates" step={4} title="Dates" description="Start & end dates">
+              <div className="flex gap-3">
+                <div className="grid flex-1 gap-1.5">
+                  <Label className="text-xs">Start date</Label>
+                  <form.Field name="startDate">
+                    {(field) => (
+                      <CatalogDatePicker
+                        value={field.state.value}
+                        onChange={(v) => {
+                          field.handleChange(v)
+                          // auto-update end if linked and plan exists
+                          const pid = form.getFieldValue('planId')
+                          const p = plansList.find((x) => x.id === pid)
+                          if (p && dateLinked) {
+                            form.setFieldValue('endDate', addDays(v, daysForDuration(p.duration) - 1))
+                          }
+                        }}
+                        placeholder="Pick start date"
+                      />
+                    )}
+                  </form.Field>
+                </div>
+                <div className="grid flex-1 gap-1.5">
+                  <Label className="text-xs">End date {dateLinked && planId ? <span className="font-normal text-muted-foreground">· auto</span> : null}</Label>
+                  <form.Field name="endDate">
+                    {(field) => (
+                      <CatalogDatePicker
+                        value={field.state.value}
+                        onChange={(v) => {
+                          field.handleChange(v)
+                          setDateLinked(false)
+                        }}
+                        placeholder="Pick end date"
+                      />
+                    )}
+                  </form.Field>
+                </div>
+              </div>
+              {startDate && endDate && endDate < startDate ? (
+                <p className="mt-2 text-[11px] text-destructive">End date cannot be before start date</p>
+              ) : null}
+              {planId && startDate && endDate ? (() => {
+                const p = plansList.find((x) => x.id === planId)
+                if (!p) return null
+                const days = daysForDuration(p.duration)
+                const minEnd = addDays(startDate, days - 1)
+                if (endDate < minEnd) {
+                  return <p className="mt-1 text-[11px] text-amber-600">End violates {p.duration} — should be at least {minEnd} ({days} days)</p>
+                }
+                return null
+              })() : null}
             </SaleSectionCard>
 
-            <SaleSectionCard
-              id="pricing"
-              step={5}
-              title="Pricing"
-              description="Base price in rupees (2 decimals, comma-grouped). Discount amount and final price update live. Tax and registration fee are optional."
-            >
-              <p className="text-xs font-medium text-muted-foreground">Base · Discount · Final (₹, 2 decimals)</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">Phase 03 will add masking, reactive calc and zero-trial guard</p>
+            <SaleSectionCard id="pricing" step={5} title="Pricing" description="Rupees, 2 decimals">
+              <div className="flex flex-col gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sale-base" className="text-xs">Base Price <span className="text-destructive">*</span></Label>
+                  <form.Field name="baseInput">
+                    {(field) => {
+                      const restrictToTwoDecimals = (v: string): string => {
+                        let cleaned = v.replace(/[^0-9.,]/g, '')
+                        const firstDot = cleaned.indexOf('.')
+                        if (firstDot !== -1) {
+                          const before = cleaned.slice(0, firstDot + 1)
+                          const after = cleaned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
+                          cleaned = before + after
+                        }
+                        return cleaned
+                      }
+                      return (
+                        <Input
+                          id="sale-base"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="e.g. 5000"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
+                          className="font-mono tabular-nums"
+                        />
+                      )
+                    }}
+                  </form.Field>
+                </div>
+                <div className="flex gap-3">
+                  <div className="grid flex-1 gap-1.5">
+                    <Label className="text-xs">Discount type</Label>
+                    <form.Field name="discountType">
+                      {(field) => (
+                        <Select value={field.state.value} onValueChange={(v) => field.handleChange(v as Offer['discountType'])}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                            <SelectItem value="FIXED_AMOUNT">Fixed amount</SelectItem>
+                            <SelectItem value="OVERRIDE_PRICE">Override price</SelectItem>
+                            <SelectItem value="FREE_PERIOD">Free period</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </form.Field>
+                  </div>
+                  <div className="grid flex-1 gap-1.5">
+                    <Label className="text-xs">Discount value</Label>
+                    <form.Field name="discountValue">
+                      {(field) => {
+                        const restrictToTwoDecimals = (v: string): string => {
+                          let cleaned = v.replace(/[^0-9.,]/g, '')
+                          const firstDot = cleaned.indexOf('.')
+                          if (firstDot !== -1) {
+                            const before = cleaned.slice(0, firstDot + 1)
+                            const after = cleaned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
+                            cleaned = before + after
+                          }
+                          return cleaned
+                        }
+                        return (
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder={discountType === 'PERCENTAGE' ? 'e.g. 20' : discountType === 'FREE_PERIOD' ? 'e.g. 1' : 'e.g. 500'}
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
+                            className="font-mono tabular-nums"
+                          />
+                        )
+                      }}
+                    </form.Field>
+                  </div>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-xs">Final Price</Label>
+                  <div className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-sm font-mono font-semibold tabular-nums">
+                    {finalPrice !== null ? `₹${finalPrice.toLocaleString('en-IN')}` : '—'}
+                  </div>
+                  {discountAmount > 0 ? (
+                    <p className="text-[11px] text-muted-foreground">Discount amount: -₹{discountAmount.toLocaleString('en-IN')}</p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">No discount applied</p>
+                  )}
+                </div>
+                {selectedPlan && selectedPlan.registrationFee > 0 ? (
+                  <p className="text-[11px] text-muted-foreground">+ Registration ₹{selectedPlan.registrationFee.toLocaleString('en-IN')} {selectedPlan.taxRate ? `· Tax ${selectedPlan.taxRate}%` : ''}</p>
+                ) : selectedPlan && selectedPlan.taxRate ? (
+                  <p className="text-[11px] text-muted-foreground">Tax {selectedPlan.taxRate}% on base</p>
+                ) : null}
+                {discountAmount > 0 && displayBase !== null && discountAmount > displayBase ? (
+                  <p className="text-[11px] text-destructive">Discount exceeds base price</p>
+                ) : null}
+                {finalPrice === 0 && displayBase !== null ? (
+                  <p className="text-[11px] text-amber-600">Free trial — final price is ₹0. You’ll be asked to confirm trial days on sell.</p>
+                ) : null}
+              </div>
             </SaleSectionCard>
           </div>
-
-          <SaleSectionCard
-            id="payment"
-            step={6}
-            title="Payment"
-            description="Paid may be partial — amount due / change due shows live. Payment method is required; overpay offers credit vs change."
-            required
-          >
-            <p className="text-xs font-medium text-muted-foreground">Paid amount · Payment method · Amount due</p>
-            <p className="mt-1 text-[11px] text-muted-foreground/70">Phase 05 will add partial/overpay logic</p>
-          </SaleSectionCard>
-
-          {/* Mobile submit — visible only below lg; desktop uses the button under Order Summary */}
-          <Button disabled size="sm" className="w-full gap-1.5 lg:hidden">
-            <Sparkles className="size-4" />
-            Sell &amp; invoice
-          </Button>
         </div>
 
-        {/* Right — sticky Order Summary (desktop) + Submit */}
-        <div className="hidden min-w-0 lg:block">
-          <div className="sticky top-[72px] flex flex-col gap-4">
-            <OrderSummary />
-            <Button disabled size="sm" className="w-full gap-1.5">
-              <Sparkles className="size-4" />
-              Sell &amp; invoice
-            </Button>
+        <div className="min-w-0">
+          <div className="flex flex-col gap-4 lg:sticky lg:top-[72px]">
+            <OrderSummary
+              plan={selectedPlan}
+              basePrice={displayBase}
+              discountType={discountType}
+              discountValue={discountValue}
+              discountAmount={discountAmount}
+              finalPrice={finalPrice}
+              paidInput={paidInput}
+              paidAmount={paidAmount}
+              paymentMethod={paymentMethod || ''}
+              onPaidChange={(v) => form.setFieldValue('paidInput', v)}
+              onPaymentMethodChange={(v) => form.setFieldValue('paymentMethod', v)}
+              isDirty={isDirty}
+              leadName={effectiveLead?.name ?? null}
+            />
+            <form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
+              {({ canSubmit, isSubmitting }) => (
+                <Button
+                  type="button"
+                  disabled={!canSubmit || !leadId || !planId || !paymentMethod || !paidValid || paidInput === '' || isSubmitting}
+                  onClick={() => form.handleSubmit()}
+                  size="sm"
+                  className="w-full gap-1.5"
+                >
+                  <Sparkles className="size-4" />
+                  Sell &amp; invoice
+                </Button>
+              )}
+            </form.Subscribe>
             <p className="px-1 text-center text-[11px] leading-relaxed text-muted-foreground">
-              This preview mirrors the Tally-style totals block.
-              <br />
-              Later phases will bind it to live pricing.
+              {leadId && planId ? 'Ready to sell — validation arrives in phase 07' : 'Pick a member and plan to enable the sale'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Mobile bottom summary bar — collapses sticky card on small screens */}
-      <div className="sticky bottom-0 z-20 border-t bg-card px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] lg:hidden">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-medium">Order summary</p>
-            <p className="truncate text-[11px] text-muted-foreground">Final — · Paid — · Due —</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}>
-            Review totals
-          </Button>
-        </div>
-      </div>
+      {showNewLead ? (
+        <NewLeadDialog
+          open={showNewLead}
+          onOpenChange={setShowNewLead}
+          onCreated={(created) => {
+            form.setFieldValue('leadId', created.leadId)
+          }}
+        />
+      ) : null}
+      {showNewPlan ? (
+        <PlanFormDialog
+          key="sale-new-plan"
+          plan={null}
+          open={showNewPlan}
+          onOpenChange={setShowNewPlan}
+          onCreated={(created) => {
+            form.setFieldValue('planId', created.id)
+            form.setFieldValue('baseInput', String(created.basePrice))
+            form.setFieldValue('endDate', addDays(form.getFieldValue('startDate'), daysForDuration(created.duration) - 1))
+            setDateLinked(true)
+          }}
+        />
+      ) : null}
+      {showNewOffer ? (
+        <OfferFormDialog
+          key="sale-new-offer"
+          offer={null}
+          plans={plansList}
+          open={showNewOffer}
+          onOpenChange={setShowNewOffer}
+          onCreated={(created) => {
+            form.setFieldValue('offerId', created.id)
+            setOfferObj(created)
+            form.setFieldValue('discountType', created.discountType)
+            form.setFieldValue('discountValue', String(created.value))
+          }}
+        />
+      ) : null}
     </div>
   )
 }
