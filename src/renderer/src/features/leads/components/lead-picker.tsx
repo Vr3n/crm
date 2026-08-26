@@ -92,11 +92,6 @@ export function LeadPicker({
                       {displayPhone(lead.phone)}
                     </span>
                   </span>
-                  {lead.owner ? (
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {lead.owner.name}
-                    </span>
-                  ) : null}
                   {selected?.id === lead.id ? <UserRound className="ml-auto size-3.5" /> : null}
                 </CommandItem>
               ))}

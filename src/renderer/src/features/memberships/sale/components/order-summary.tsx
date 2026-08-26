@@ -1,6 +1,8 @@
+import { AlertCircle, HandCoins, IndianRupee, Wallet } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -46,7 +48,7 @@ export function OrderSummary({
   const amountDue = finalPrice !== null && paidAmount !== null ? Math.max(0, finalPrice - paidAmount) : null
   const changeDue = finalPrice !== null && paidAmount !== null ? Math.max(0, paidAmount - finalPrice) : null
 
-  const discountTypeLabel = discountType ? discountType.replace('_', ' ') : '—'
+  const discountTypeLabel = !discountType || discountType === 'NONE' ? 'None' : discountType.replace('_', ' ')
   const discountValueLabel =
     discountValue !== '' && discountType
       ? discountType === 'PERCENTAGE'
@@ -103,9 +105,9 @@ export function OrderSummary({
         <Separator />
 
         {/* Final */}
-        <div className="flex items-center justify-between bg-muted/50 px-5 py-3">
-          <span className="text-sm font-semibold tracking-tight">Final Price</span>
-          <span aria-live="polite" className="font-mono text-sm font-semibold tabular-nums">
+        <div className="flex items-center justify-between bg-emerald-50 px-5 py-3 dark:bg-emerald-950/20">
+          <span className="text-sm font-semibold tracking-tight text-emerald-700 dark:text-emerald-300">Final Price</span>
+          <span aria-live="polite" className="font-mono text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
             {finalPrice !== null ? formatRupees(finalPrice) : '—'}
           </span>
         </div>
@@ -119,24 +121,29 @@ export function OrderSummary({
               Paid Amount <span className="text-destructive">*</span>
               {finalPrice !== null ? <span className="font-normal text-muted-foreground"> · of {formatRupees(finalPrice)}</span> : null}
             </Label>
-            <Input
-              id="summary-paid"
-              type="text"
-              inputMode="decimal"
-              placeholder="e.g. 4000"
-              value={paidInput}
-              onChange={(e) => {
-                let v = e.target.value.replace(/[^0-9.,]/g, '')
-                const firstDot = v.indexOf('.')
-                if (firstDot !== -1) {
-                  const before = v.slice(0, firstDot + 1)
-                  const after = v.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
-                  v = before + after
-                }
-                onPaidChange?.(v)
-              }}
-              className="font-mono tabular-nums"
-            />
+            <InputGroup>
+              <InputGroupAddon align="start" className="pointer-events-none">
+                <IndianRupee className="size-3.5" />
+              </InputGroupAddon>
+              <Input
+                id="summary-paid"
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 4000"
+                value={paidInput}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/[^0-9.,]/g, '')
+                  const firstDot = v.indexOf('.')
+                  if (firstDot !== -1) {
+                    const before = v.slice(0, firstDot + 1)
+                    const after = v.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
+                    v = before + after
+                  }
+                  onPaidChange?.(v)
+                }}
+                className="pl-9 font-mono tabular-nums"
+              />
+            </InputGroup>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="summary-method" className="text-xs">
@@ -144,7 +151,10 @@ export function OrderSummary({
             </Label>
             <Select value={paymentMethod ?? ''} onValueChange={(v) => onPaymentMethodChange?.(v)}>
               <SelectTrigger id="summary-method">
-                <SelectValue placeholder="Choose method" />
+                <div className="flex items-center gap-2">
+                  <Wallet className="size-3.5 text-muted-foreground" />
+                  <SelectValue placeholder="Choose method" />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.map((m) => (
@@ -163,20 +173,23 @@ export function OrderSummary({
         <div className="px-5 py-3">
           {finalPrice !== null && paidAmount !== null ? (
             amountDue !== null && amountDue > 0 ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-center text-xs font-medium text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-center text-base font-bold text-amber-700 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
+                <HandCoins className="size-5 shrink-0" />
                 Amount due {formatRupees(amountDue)}
               </div>
             ) : changeDue !== null && changeDue > 0 ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-xs font-medium text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">
+                <HandCoins className="size-4 shrink-0" />
                 Change due {formatRupees(changeDue)}
               </div>
             ) : (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-xs font-medium text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">
                 Paid in full ✓
               </div>
             )
           ) : (
-            <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-center text-xs text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-center text-xs text-muted-foreground">
+              <AlertCircle className="size-3.5 shrink-0" />
               Amount due / change appears after payment
             </div>
           )}

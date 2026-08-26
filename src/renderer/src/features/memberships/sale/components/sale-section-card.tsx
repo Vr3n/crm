@@ -9,6 +9,7 @@ export function SaleSectionCard({
   description,
   required,
   badge,
+  icon,
   children
 }: {
   id: string
@@ -17,16 +18,22 @@ export function SaleSectionCard({
   description: string
   required?: boolean
   badge?: string
+  icon?: ReactNode
   children: ReactNode
 }): React.JSX.Element {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-20">
-      <Card className="gap-0 rounded-2xl border bg-card py-0 shadow-sm">
+      <Card className="gap-0 overflow-hidden rounded-xl border border-border bg-card py-0 shadow-sm transition-shadow hover:shadow-md">
         <CardHeader className="gap-1.5 px-5 py-4">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold tabular-nums text-primary-foreground">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold tabular-nums text-primary-foreground shadow-sm">
               {step}
             </span>
+            {icon ? (
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/10">
+                {icon}
+              </span>
+            ) : null}
             <CardTitle id={`${id}-heading`} className="text-sm font-semibold tracking-tight">
               {title}
               {required ? <span className="ml-1 text-destructive">*</span> : null}

@@ -1,11 +1,25 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Sparkles, RotateCcw } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  BadgePercent,
+  CalendarDays,
+  IndianRupee,
+  Package,
+  Percent,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Users,
+  X
+} from 'lucide-react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import {
   Select,
   SelectContent,
@@ -81,7 +95,7 @@ export function MembershipSalePage(): React.JSX.Element {
       startDate: todayISO(),
       endDate: todayISO(),
       baseInput: '',
-      discountType: '' as '' | Offer['discountType'],
+      discountType: 'NONE' as 'NONE' | Offer['discountType'],
       discountValue: '',
       paidInput: '',
       paymentMethod: '' as string
@@ -115,10 +129,10 @@ export function MembershipSalePage(): React.JSX.Element {
   const isDirty = selectedPlan !== null && displayBase !== null && displayBase !== selectedPlan.basePrice
 
   const manualDiscount = (() => {
-    if (displayBase === null || !discountType || discountValue === '') return 0
+    if (displayBase === null || !discountType || (discountType as string) === 'NONE' || discountValue === '') return 0
     const v = Number(discountValue.replace(/,/g, ''))
     if (Number.isNaN(v)) return 0
-    switch (discountType) {
+    switch (discountType as string) {
       case 'PERCENTAGE':
         return Math.round((displayBase * v) / 100)
       case 'FIXED_AMOUNT':
@@ -126,6 +140,8 @@ export function MembershipSalePage(): React.JSX.Element {
       case 'OVERRIDE_PRICE':
         return Math.max(0, displayBase - v)
       case 'FREE_PERIOD':
+        return 0
+      case 'NONE':
         return 0
       default:
         return 0
@@ -141,6 +157,7 @@ export function MembershipSalePage(): React.JSX.Element {
 
   return (
     <div className="flex w-full flex-col gap-0">
+      <style>{`@keyframes gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}} .animate-gradient{animation:gradient 3s ease infinite}`}</style>
       <div className="px-6 pb-2 pt-4">
         <PageHeader
           title="Membership Sale"
@@ -162,6 +179,7 @@ export function MembershipSalePage(): React.JSX.Element {
             title="Select Lead / Customer"
             description="Pick existing or create new"
             required
+            icon={<Users className="size-3.5" />}
           >
             <div className="flex flex-col gap-3">
               <form.Field name="leadId">
@@ -182,15 +200,27 @@ export function MembershipSalePage(): React.JSX.Element {
                 </div>
               ) : null}
               {effectiveLead ? (
-                <div className="flex items-center gap-3 rounded-lg border bg-white px-3 py-2.5 text-left shadow-sm">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                    {effectiveLead.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{effectiveLead.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {displayPhone(effectiveLead.phone)} {effectiveLead.email ? `· ${effectiveLead.email}` : ''}
-                    </p>
+                <div className="rounded-none bg-gradient-to-r from-cyan-400 via-sky-500 to-cyan-600 p-[1.5px] shadow-sm animate-gradient bg-[length:200%_200%]">
+                  <div className="flex items-center gap-3 rounded-none bg-white px-3 py-2.5 text-left">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                      {effectiveLead.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{effectiveLead.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {displayPhone(effectiveLead.phone)} {effectiveLead.email ? `· ${effectiveLead.email}` : ''}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => form.setFieldValue('leadId', null)}
+                      aria-label="Remove lead selection"
+                    >
+                      <X className="size-3.5" />
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -205,7 +235,7 @@ export function MembershipSalePage(): React.JSX.Element {
           </SaleSectionCard>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard id="plan" step={2} title="Select Plan" description="Sets price & duration" required>
+            <SaleSectionCard id="plan" step={2} title="Select Plan" description="Sets price & duration" required icon={<Package className="size-3.5" />}>
               <div className="flex flex-col gap-3">
                 <form.Field name="planId">
                   {(field) => (
@@ -228,7 +258,7 @@ export function MembershipSalePage(): React.JSX.Element {
                           if (currentOffer && currentOffer.applicablePlanIds.length > 0 && !currentOffer.applicablePlanIds.includes(p.id)) {
                             form.setFieldValue('offerId', null)
                             setOfferObj(null)
-                            form.setFieldValue('discountType', '')
+                            form.setFieldValue('discountType', 'NONE')
                             form.setFieldValue('discountValue', '')
                           }
                         }
@@ -245,23 +275,40 @@ export function MembershipSalePage(): React.JSX.Element {
                   </div>
                 ) : null}
                 {selectedPlan ? (
-                  <div className="rounded-lg border bg-white px-3 py-2.5 text-xs shadow-sm">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-medium">₹{selectedPlan.basePrice.toLocaleString('en-IN')}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span>{selectedPlan.duration}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span>Tax {selectedPlan.taxRate}%</span>
-                      {selectedPlan.registrationFee > 0 ? (
-                        <>
+                  <div className="rounded-none bg-gradient-to-r from-teal-400 via-emerald-500 to-teal-600 p-[1.5px] shadow-sm animate-gradient bg-[length:200%_200%]">
+                    <div className="flex items-center gap-2 rounded-none bg-white px-3 py-2.5 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-medium">₹{selectedPlan.basePrice.toLocaleString('en-IN')}</span>
                           <span className="text-muted-foreground">·</span>
-                          <span>Reg ₹{selectedPlan.registrationFee.toLocaleString('en-IN')}</span>
-                        </>
-                      ) : null}
+                          <span>{selectedPlan.duration}</span>
+                          <span className="text-muted-foreground">·</span>
+                          <span>Tax {selectedPlan.taxRate}%</span>
+                          {selectedPlan.registrationFee > 0 ? (
+                            <>
+                              <span className="text-muted-foreground">·</span>
+                              <span>Reg ₹{selectedPlan.registrationFee.toLocaleString('en-IN')}</span>
+                            </>
+                          ) : null}
+                        </div>
+                        {isDirty && displayBase !== null ? (
+                          <p className="mt-1 text-[11px] text-amber-600">Edited — differs from plan · ₹{selectedPlan.basePrice.toLocaleString('en-IN')} → ₹{displayBase.toLocaleString('en-IN')}</p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          form.setFieldValue('planId', null)
+                          form.setFieldValue('baseInput', '')
+                        }}
+                        aria-label="Remove plan selection"
+                      >
+                        <X className="size-3.5" />
+                      </Button>
                     </div>
-                    {isDirty && displayBase !== null ? (
-                      <p className="mt-1 text-[11px] text-amber-600">Edited — differs from plan · ₹{selectedPlan.basePrice.toLocaleString('en-IN')} → ₹{displayBase.toLocaleString('en-IN')}</p>
-                    ) : null}
                   </div>
                 ) : (
                   <p className="text-center text-xs text-muted-foreground">No plan selected</p>
@@ -285,7 +332,7 @@ export function MembershipSalePage(): React.JSX.Element {
               </div>
             </SaleSectionCard>
 
-            <SaleSectionCard id="offer" step={3} title="Select Offer" description="Optional discount">
+            <SaleSectionCard id="offer" step={3} title="Select Offer" description="Optional discount" icon={<BadgePercent className="size-3.5" />}>
               <div className="flex flex-col gap-3">
                 <form.Field name="offerId">
                   {(field) => (
@@ -298,7 +345,7 @@ export function MembershipSalePage(): React.JSX.Element {
                           form.setFieldValue('discountType', o.discountType)
                           form.setFieldValue('discountValue', String(o.value))
                         } else {
-                          form.setFieldValue('discountType', '')
+                          form.setFieldValue('discountType', 'NONE')
                           form.setFieldValue('discountValue', '')
                         }
                       }}
@@ -315,22 +362,41 @@ export function MembershipSalePage(): React.JSX.Element {
                   </div>
                 ) : null}
                 {offerObj ? (
-                  <div className="rounded-lg border bg-white px-3 py-2.5 text-xs shadow-sm">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-medium">{offerObj.name}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span>
-                        {offerObj.discountType} · {offerObj.value}
-                        {offerObj.discountType === 'PERCENTAGE' ? '%' : offerObj.discountType === 'FREE_PERIOD' ? ' months' : ''}
-                      </span>
+                  <div className="rounded-none bg-gradient-to-r from-fuchsia-500 via-pink-500 to-fuchsia-600 p-[1.5px] shadow-sm animate-gradient bg-[length:200%_200%]">
+                    <div className="flex items-center gap-2 rounded-none bg-white px-3 py-2.5 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-medium">{offerObj.name}</span>
+                          <span className="text-muted-foreground">·</span>
+                          <span>
+                            {offerObj.discountType} · {offerObj.value}
+                            {offerObj.discountType === 'PERCENTAGE' ? '%' : offerObj.discountType === 'FREE_PERIOD' ? ' months' : ''}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {offerObj.applicablePlanIds.length === 0
+                            ? 'Applies to all plans'
+                            : offerObj.applicablePlanIds.includes(planId ?? -1)
+                              ? 'Applies to selected plan'
+                              : 'Not applicable to selected plan'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          form.setFieldValue('offerId', null)
+                          setOfferObj(null)
+                          form.setFieldValue('discountType', 'NONE')
+                          form.setFieldValue('discountValue', '')
+                        }}
+                        aria-label="Remove offer selection"
+                      >
+                        <X className="size-3.5" />
+                      </Button>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {offerObj.applicablePlanIds.length === 0
-                        ? 'Applies to all plans'
-                        : offerObj.applicablePlanIds.includes(planId ?? -1)
-                          ? 'Applies to selected plan'
-                          : 'Not applicable to selected plan'}
-                    </p>
                   </div>
                 ) : (
                   <p className="text-center text-xs text-muted-foreground">No offer selected — optional</p>
@@ -340,8 +406,8 @@ export function MembershipSalePage(): React.JSX.Element {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard id="dates" step={4} title="Dates" description="Start & end dates">
-              <div className="flex gap-3">
+            <SaleSectionCard id="dates" step={4} title="Membership Duration" description="Start & end dates" icon={<CalendarDays className="size-3.5" />}>
+              <div className="flex items-end gap-2">
                 <div className="grid flex-1 gap-1.5">
                   <Label className="text-xs">Start date</Label>
                   <form.Field name="startDate">
@@ -358,9 +424,13 @@ export function MembershipSalePage(): React.JSX.Element {
                           }
                         }}
                         placeholder="Pick start date"
+                        triggerClassName="border-blue-300 bg-blue-50/60 hover:bg-blue-50 text-blue-700 hover:text-blue-800 [&_svg]:text-blue-500 data-[state=open]:bg-blue-50"
                       />
                     )}
                   </form.Field>
+                </div>
+                <div className="flex h-9 shrink-0 items-center justify-center pb-1">
+                  <ArrowRight className="size-4 text-muted-foreground" />
                 </div>
                 <div className="grid flex-1 gap-1.5">
                   <Label className="text-xs">End date {dateLinked && planId ? <span className="font-normal text-muted-foreground">· auto</span> : null}</Label>
@@ -373,6 +443,7 @@ export function MembershipSalePage(): React.JSX.Element {
                           setDateLinked(false)
                         }}
                         placeholder="Pick end date"
+                        triggerClassName="border-purple-300 bg-purple-50/60 hover:bg-purple-50 text-purple-700 hover:text-purple-800 [&_svg]:text-purple-500 data-[state=open]:bg-purple-50"
                       />
                     )}
                   </form.Field>
@@ -393,7 +464,7 @@ export function MembershipSalePage(): React.JSX.Element {
               })() : null}
             </SaleSectionCard>
 
-            <SaleSectionCard id="pricing" step={5} title="Pricing" description="Rupees, 2 decimals">
+            <SaleSectionCard id="pricing" step={5} title="Pricing" description="Rupees, 2 decimals" icon={<IndianRupee className="size-3.5" />}>
               <div className="flex flex-col gap-3">
                 <div className="grid gap-1.5">
                   <Label htmlFor="sale-base" className="text-xs">Base Price <span className="text-destructive">*</span></Label>
@@ -410,15 +481,20 @@ export function MembershipSalePage(): React.JSX.Element {
                         return cleaned
                       }
                       return (
-                        <Input
-                          id="sale-base"
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="e.g. 5000"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
-                          className="font-mono tabular-nums"
-                        />
+                        <InputGroup>
+                          <InputGroupAddon align="start" className="pointer-events-none">
+                            <IndianRupee className="size-3.5" />
+                          </InputGroupAddon>
+                          <Input
+                            id="sale-base"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="e.g. 5000"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
+                            className="pl-9 font-mono tabular-nums"
+                          />
+                        </InputGroup>
                       )
                     }}
                   </form.Field>
@@ -428,11 +504,15 @@ export function MembershipSalePage(): React.JSX.Element {
                     <Label className="text-xs">Discount type</Label>
                     <form.Field name="discountType">
                       {(field) => (
-                        <Select value={field.state.value} onValueChange={(v) => field.handleChange(v as Offer['discountType'])}>
+                        <Select value={field.state.value} onValueChange={(v) => field.handleChange(v as typeof field.state.value)}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Type" />
+                            <div className="flex items-center gap-2">
+                              <BadgePercent className="size-3.5 text-muted-foreground" />
+                              <SelectValue placeholder="Type" />
+                            </div>
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="NONE">None</SelectItem>
                             <SelectItem value="PERCENTAGE">Percentage</SelectItem>
                             <SelectItem value="FIXED_AMOUNT">Fixed amount</SelectItem>
                             <SelectItem value="OVERRIDE_PRICE">Override price</SelectItem>
@@ -456,15 +536,26 @@ export function MembershipSalePage(): React.JSX.Element {
                           }
                           return cleaned
                         }
+                        const DiscountIcon =
+                          discountType === 'PERCENTAGE'
+                            ? Percent
+                            : discountType === 'FIXED_AMOUNT' || discountType === 'OVERRIDE_PRICE'
+                              ? IndianRupee
+                              : BadgePercent
                         return (
-                          <Input
-                            type="text"
-                            inputMode="decimal"
-                            placeholder={discountType === 'PERCENTAGE' ? 'e.g. 20' : discountType === 'FREE_PERIOD' ? 'e.g. 1' : 'e.g. 500'}
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
-                            className="font-mono tabular-nums"
-                          />
+                          <InputGroup>
+                            <InputGroupAddon align="start" className="pointer-events-none">
+                              <DiscountIcon className="size-3.5" />
+                            </InputGroupAddon>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder={discountType === 'PERCENTAGE' ? 'e.g. 20' : discountType === 'FREE_PERIOD' ? 'e.g. 1' : 'e.g. 500'}
+                              value={field.state.value}
+                              onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
+                              className="pl-9 font-mono tabular-nums"
+                            />
+                          </InputGroup>
                         )
                       }}
                     </form.Field>
@@ -472,7 +563,7 @@ export function MembershipSalePage(): React.JSX.Element {
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-xs">Final Price</Label>
-                  <div className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-sm font-mono font-semibold tabular-nums">
+                  <div className="flex h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-mono font-bold tabular-nums text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-300">
                     {finalPrice !== null ? `₹${finalPrice.toLocaleString('en-IN')}` : '—'}
                   </div>
                   {discountAmount > 0 ? (

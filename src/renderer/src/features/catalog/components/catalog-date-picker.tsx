@@ -14,12 +14,14 @@ export function CatalogDatePicker({
   value,
   onChange,
   placeholder = 'Pick a date',
-  clearable = false
+  clearable = false,
+  triggerClassName
 }: {
   value: string
   onChange: (date: string) => void
   placeholder?: string
   clearable?: boolean
+  triggerClassName?: string
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
@@ -34,7 +36,8 @@ export function CatalogDatePicker({
           size="sm"
           className={cn(
             'h-9 w-full justify-start gap-2 rounded-md px-3 text-sm font-normal',
-            !valid && 'text-muted-foreground'
+            !valid && 'text-muted-foreground',
+            triggerClassName
           )}
         >
           <CalendarDays className="size-4 text-muted-foreground" />
