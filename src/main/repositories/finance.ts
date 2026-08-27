@@ -127,6 +127,16 @@ export const paymentRepo = {
     return rows.map(mapPayment)
   },
 
+  listAll(organizationId: number): Payment[] {
+    const rows = getDrizzle()
+      .select()
+      .from(payments)
+      .where(eq(payments.organization_id, organizationId))
+      .orderBy(asc(payments.created_at))
+      .all() as PaymentRow[]
+    return rows.map(mapPayment)
+  },
+
   listByDate(organizationId: number, from: string, to: string): Payment[] {
     const rows = getDrizzle()
       .select()
@@ -198,6 +208,21 @@ function mapAllocation(row: AllocationRow): PaymentAllocation {
 }
 
 export const allocationRepo = {
+  listByPayments(organizationId: number, paymentIds: number[]): PaymentAllocation[] {
+    if (paymentIds.length === 0) return []
+    const rows = getDrizzle()
+      .select()
+      .from(paymentAllocations)
+      .where(
+        and(
+          eq(paymentAllocations.organization_id, organizationId),
+          sql`${paymentAllocations.payment_id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+        )
+      )
+      .all() as AllocationRow[]
+    return rows.map(mapAllocation)
+  },
+
   listByPayment(organizationId: number, paymentId: number): PaymentAllocation[] {
     const rows = getDrizzle()
       .select()
@@ -275,6 +300,31 @@ function mapRefund(row: RefundRow): Refund {
 }
 
 export const refundRepo = {
+  listAll(organizationId: number): Refund[] {
+    const rows = getDrizzle()
+      .select()
+      .from(refunds)
+      .where(eq(refunds.organization_id, organizationId))
+      .orderBy(asc(refunds.created_at))
+      .all() as RefundRow[]
+    return rows.map(mapRefund)
+  },
+
+  listByPayments(organizationId: number, paymentIds: number[]): Refund[] {
+    if (paymentIds.length === 0) return []
+    const rows = getDrizzle()
+      .select()
+      .from(refunds)
+      .where(
+        and(
+          eq(refunds.organization_id, organizationId),
+          sql`${refunds.payment_id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+        )
+      )
+      .all() as RefundRow[]
+    return rows.map(mapRefund)
+  },
+
   getByPayment(organizationId: number, paymentId: number): Refund[] {
     const rows = getDrizzle()
       .select()
@@ -339,6 +389,16 @@ function mapCredit(row: CreditRow): Credit {
 }
 
 export const creditRepo = {
+  listAll(organizationId: number): Credit[] {
+    const rows = getDrizzle()
+      .select()
+      .from(credits)
+      .where(eq(credits.organization_id, organizationId))
+      .orderBy(asc(credits.created_at))
+      .all() as CreditRow[]
+    return rows.map(mapCredit)
+  },
+
   getById(organizationId: number, id: number): Credit | null {
     const row = getDrizzle()
       .select()
@@ -433,6 +493,21 @@ function mapCreditAllocation(row: CreditAllocationRow): CreditAllocation {
 }
 
 export const creditAllocationRepo = {
+  listByCredits(organizationId: number, creditIds: number[]): CreditAllocation[] {
+    if (creditIds.length === 0) return []
+    const rows = getDrizzle()
+      .select()
+      .from(creditAllocations)
+      .where(
+        and(
+          eq(creditAllocations.organization_id, organizationId),
+          sql`${creditAllocations.credit_id} IN (${sql.join(creditIds.map((id) => sql`${id}`), sql`, `)})`
+        )
+      )
+      .all() as CreditAllocationRow[]
+    return rows.map(mapCreditAllocation)
+  },
+
   listByCredit(organizationId: number, creditId: number): CreditAllocation[] {
     const rows = getDrizzle()
       .select()

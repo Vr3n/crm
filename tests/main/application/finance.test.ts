@@ -12,7 +12,8 @@ import {
   getRefundHistory,
   getCreditBalance,
   listCredits,
-  listPaymentMethods
+  listPaymentMethods,
+  getOutstandingInvoices
 } from '../../../src/main/application/finance'
 import { createInvoice, addInvoiceLine, finalizeInvoice } from '../../../src/main/application/billing'
 import { customerRepo } from '../../../src/main/repositories/membership'
@@ -398,5 +399,110 @@ describe('listPaymentMethods', () => {
     const methods = listPaymentMethods()
     expect(methods).toHaveLength(4)
     expect(methods.map((m) => m.name)).toEqual(['UPI', 'CASH', 'CREDIT CARD', 'DEBIT CARD'])
+  })
+})
+
+describe('getOutstandingInvoices', () => {
+  it('returns OPEN invoices for a customer', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { customer, invoice } = createOpenInvoice(organizationId)
+
+    const result = getOutstandingInvoices({ customerId: customer.id })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(String(invoice.id))
+    expect(result[0].invoiceNo).toBeTruthy()
+    expect(result[0].customerName).toBe('Test Customer')
+    expect(result[0].totalMinor).toBe(118000)
+    expect(result[0].paidMinor).toBe(0)
+    expect(result[0].status).toBe('OPEN')
+  })
+
+  it('calculates paid amount from allocations', () => {
+    const { organizationId } = seedOrgWithSession()
+    const customer = createTestCustomer(organizationId)
+    const invoice = createInvoice({ customerId: customer.id })
+    addInvoiceLine({
+      invoiceId: invoice.id, description: 'Monthly Plan', quantity: 1,
+      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 0
+    })
+    const finalized = finalizeInvoice({ invoiceId: invoice.id })
+
+    const payment = recordPayment({
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 50000,
+      paymentMethod: 'CASH',
+      reference: null,
+      notes: null
+    })
+    allocatePayment({ paymentId: payment.id, invoiceId: finalized.id, amountMinor: 50000 })
+
+    const result = getOutstandingInvoices({ customerId: customer.id })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].totalMinor).toBe(100000)
+    expect(result[0].paidMinor).toBe(50000)
+    expect(result[0].status).toBe('PARTIALLY_PAID')
+  })
+
+  it('excludes fully PAID invoices', () => {
+    const { organizationId } = seedOrgWithSession()
+    const customer = createTestCustomer(organizationId)
+    const invoice = createInvoice({ customerId: customer.id })
+    addInvoiceLine({
+      invoiceId: invoice.id, description: 'Plan', quantity: 1,
+      unitPriceMinor: 50000, discountMinor: 0, taxRateBps: 0
+    })
+    const finalized = finalizeInvoice({ invoiceId: invoice.id })
+
+    const payment = recordPayment({
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 50000,
+      paymentMethod: 'CASH',
+      reference: null,
+      notes: null
+    })
+    allocatePayment({ paymentId: payment.id, invoiceId: finalized.id, amountMinor: 50000 })
+
+    const result = getOutstandingInvoices({ customerId: customer.id })
+    expect(result).toHaveLength(0)
+  })
+
+  it('excludes DRAFT invoices', () => {
+    const { organizationId } = seedOrgWithSession()
+    const customer = createTestCustomer(organizationId)
+    createInvoice({ customerId: customer.id })
+
+    const result = getOutstandingInvoices({ customerId: customer.id })
+    expect(result).toHaveLength(0)
+  })
+
+  it('returns empty array for customer with no invoices', () => {
+    const { organizationId } = seedOrgWithSession()
+    const customer = createTestCustomer(organizationId)
+
+    const result = getOutstandingInvoices({ customerId: customer.id })
+    expect(result).toHaveLength(0)
+  })
+
+  it('returns multiple outstanding invoices sorted by created_at', () => {
+    const { organizationId } = seedOrgWithSession()
+    const customer = createTestCustomer(organizationId)
+
+    const inv1 = createInvoice({ customerId: customer.id })
+    addInvoiceLine({ invoiceId: inv1.id, description: 'Plan A', quantity: 1, unitPriceMinor: 50000, discountMinor: 0, taxRateBps: 0 })
+    finalizeInvoice({ invoiceId: inv1.id })
+
+    const inv2 = createInvoice({ customerId: customer.id })
+    addInvoiceLine({ invoiceId: inv2.id, description: 'Plan B', quantity: 1, unitPriceMinor: 80000, discountMinor: 0, taxRateBps: 0 })
+    finalizeInvoice({ invoiceId: inv2.id })
+
+    const result = getOutstandingInvoices({ customerId: customer.id })
+
+    expect(result).toHaveLength(2)
+    expect(result[0].line).toBe('Plan A')
+    expect(result[1].line).toBe('Plan B')
   })
 })

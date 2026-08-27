@@ -1,4 +1,4 @@
-import { withTransaction } from '../db/connection'
+import { withTransaction, getDrizzle } from '../db/connection'
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
 import { customerRepo } from '../repositories/membership'
 import { invoiceRepo } from '../repositories/billing'
@@ -20,6 +20,8 @@ import {
 } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import type { InvoiceStatus } from '../domain/billing'
+import { asc, eq, and, inArray, sql } from 'drizzle-orm'
+import { invoices, paymentAllocations, invoiceLines, customers, people } from '../db/schema'
 
 /**
  * Module 05 (Finance) application use cases. Each Command gates on a permission,
@@ -469,4 +471,396 @@ export function listPaymentMethods() {
 
   const methods = paymentMethodRepo.listActive(organizationId)
   return methods.map((m) => ({ id: m.id, name: m.name, sortOrder: m.sortOrder, active: m.active }))
+}
+
+/**
+ * Returns outstanding (OPEN / PARTIALLY_PAID) invoices for a customer,
+ * with paid amounts derived from payment allocations.
+ * Used by the RecordPaymentDialog to populate the allocation section.
+ */
+export function getOutstandingInvoices(input: { customerId: number }) {
+  requirePermission(PERMISSIONS.PAYMENT_VIEW)
+  const organizationId = currentOrganizationId()
+  const toRupees = (minor: number): number => Math.round(minor / 100)
+
+  // Fetch customer → person for the name
+  const customerRow = getDrizzle()
+    .select()
+    .from(customers)
+    .where(and(eq(customers.organization_id, organizationId), eq(customers.id, input.customerId)))
+    .get() as { id: number; person_id: number } | undefined
+
+  const personRow = customerRow
+    ? (getDrizzle()
+        .select()
+        .from(people)
+        .where(and(eq(people.organization_id, organizationId), eq(people.id, customerRow.person_id)))
+        .get() as { full_name: string; phone: string | null } | undefined)
+    : undefined
+
+  const customerName = personRow?.full_name ?? 'Unknown'
+  const customerPhone = personRow?.phone ?? undefined
+
+  // Fetch OPEN / PARTIALLY_PAID invoices for this customer
+  const invoiceRows = getDrizzle()
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.organization_id, organizationId),
+        eq(invoices.customer_id, input.customerId),
+        inArray(invoices.status, ['OPEN', 'PARTIALLY_PAID'])
+      )
+    )
+    .orderBy(asc(invoices.created_at))
+    .all() as Array<{
+    id: number
+    number: string
+    status: string
+    total_minor: number
+    finalized_at: string | null
+    created_at: string
+  }>
+
+  if (invoiceRows.length === 0) return []
+
+  // Batch-fetch allocations for all outstanding invoices
+  const invoiceIds = invoiceRows.map((i) => i.id)
+  const allocRows = getDrizzle()
+    .select({
+      invoice_id: paymentAllocations.invoice_id,
+      amount_minor: paymentAllocations.amount_minor
+    })
+    .from(paymentAllocations)
+    .where(
+      and(
+        eq(paymentAllocations.organization_id, organizationId),
+        inArray(paymentAllocations.invoice_id, invoiceIds)
+      )
+    )
+    .all() as Array<{ invoice_id: number; amount_minor: number }>
+
+  const paidByInvoice = new Map<number, number>()
+  for (const a of allocRows) {
+    paidByInvoice.set(a.invoice_id, (paidByInvoice.get(a.invoice_id) ?? 0) + a.amount_minor)
+  }
+
+  // Batch-fetch first line description for each invoice
+  const lineRows = getDrizzle()
+    .select({
+      invoice_id: invoiceLines.invoice_id,
+      description: invoiceLines.description
+    })
+    .from(invoiceLines)
+    .where(inArray(invoiceLines.invoice_id, invoiceIds))
+    .orderBy(asc(invoiceLines.sort_order))
+    .all() as Array<{ invoice_id: number; description: string }>
+
+  const firstLineByInvoice = new Map<number, string>()
+  for (const l of lineRows) {
+    if (!firstLineByInvoice.has(l.invoice_id)) {
+      firstLineByInvoice.set(l.invoice_id, l.description)
+    }
+  }
+
+  // Map to flat read-model rows (amounts in minor units)
+  return invoiceRows.map((inv) => ({
+    id: String(inv.id),
+    invoiceNo: inv.number,
+    customerName,
+    customerPhone,
+    line: firstLineByInvoice.get(inv.id) ?? 'Invoice',
+    issuedAt: inv.finalized_at ?? inv.created_at,
+    totalMinor: inv.total_minor,
+    paidMinor: paidByInvoice.get(inv.id) ?? 0,
+    status: inv.status
+  }))
+}
+
+/* -------------------------------------------------------------------------- */
+/* Org-wide list queries (for the Payments / Refunds / Credits pages)           */
+/* -------------------------------------------------------------------------- */
+
+const toRupees = (minor: number): number => Math.round(minor / 100)
+
+/** Batch-resolves person names for an array of person IDs. */
+function resolvePersonNames(
+  organizationId: number,
+  personIds: number[]
+): Map<number, { name: string; phone?: string; email?: string }> {
+  if (personIds.length === 0) return new Map()
+  const uniqueIds = [...new Set(personIds)]
+  const rows = getDrizzle()
+    .select()
+    .from(people)
+    .where(
+      and(
+        eq(people.organization_id, organizationId),
+        sql`${people.id} IN (${sql.join(uniqueIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as Array<{ id: number; full_name: string; phone: string | null; email: string | null }>
+  const map = new Map<number, { name: string; phone?: string; email?: string }>()
+  for (const r of rows) {
+    map.set(r.id, {
+      name: r.full_name,
+      phone: r.phone ?? undefined,
+      email: r.email ?? undefined
+    })
+  }
+  return map
+}
+
+/** Batch-resolves invoice numbers for an array of invoice IDs. */
+function resolveInvoiceNumbers(
+  organizationId: number,
+  invoiceIds: number[]
+): Map<number, string> {
+  if (invoiceIds.length === 0) return new Map()
+  const uniqueIds = [...new Set(invoiceIds)]
+  const rows = getDrizzle()
+    .select({ id: invoices.id, number: invoices.number })
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.organization_id, organizationId),
+        sql`${invoices.id} IN (${sql.join(uniqueIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as Array<{ id: number; number: string }>
+  const map = new Map<number, string>()
+  for (const r of rows) map.set(r.id, r.number)
+  return map
+}
+
+/**
+ * Returns all payments for the org, hydrated with customer names, allocations,
+ * and refund references. Used by the Payments page table.
+ */
+export function getAllPayments() {
+  requirePermission(PERMISSIONS.PAYMENT_VIEW)
+  const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
+
+  const allPayments = paymentRepo.listAll(organizationId)
+  if (allPayments.length === 0) return []
+
+  // Batch-resolve customer person IDs
+  const customerIds = [...new Set(allPayments.map((p) => p.customerId))]
+  const customerRows = getDrizzle()
+    .select()
+    .from(customers)
+    .where(
+      and(
+        eq(customers.organization_id, organizationId),
+        sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as Array<{ id: number; person_id: number }>
+  const personIdByCustomer = new Map(customerRows.map((c) => [c.id, c.person_id]))
+  const personIds = customerRows.map((c) => c.person_id)
+
+  // Also resolve createdBy person IDs
+  const creatorIds = allPayments.map((p) => p.createdBy)
+  const allPersonIds = [...personIds, ...creatorIds]
+
+  const personMap = resolvePersonNames(organizationId, allPersonIds)
+
+  // Batch-fetch allocations for all payments
+  const paymentIds = allPayments.map((p) => p.id)
+  const allAllocations = allocationRepo.listByPayments(organizationId, paymentIds)
+  const allocsByPayment = new Map<number, typeof allAllocations>()
+  for (const a of allAllocations) {
+    const list = allocsByPayment.get(a.paymentId) ?? []
+    list.push(a)
+    allocsByPayment.set(a.paymentId, list)
+  }
+
+  // Batch-fetch refunds for all payments
+  const allRefunds = refundRepo.listByPayments(organizationId, paymentIds)
+  const refundsByPayment = new Map<number, typeof allRefunds>()
+  for (const r of allRefunds) {
+    const list = refundsByPayment.get(r.paymentId) ?? []
+    list.push(r)
+    refundsByPayment.set(r.paymentId, list)
+  }
+
+  // Resolve invoice numbers for allocations
+  const allocInvoiceIds = [...new Set(allAllocations.map((a) => a.invoiceId))]
+  const invoiceNumberMap = resolveInvoiceNumbers(organizationId, allocInvoiceIds)
+
+  return allPayments.map((p) => {
+    const personId = personIdByCustomer.get(p.customerId)
+    const person = personId ? personMap.get(personId) : undefined
+    const creator = personMap.get(p.createdBy)
+    const allocs = allocsByPayment.get(p.id) ?? []
+    const refunds = refundsByPayment.get(p.id) ?? []
+
+    return {
+      id: String(p.id),
+      paymentNo: `PAY-${String(p.id).padStart(4, '0')}`,
+      customer: {
+        id: String(p.customerId),
+        name: person?.name ?? 'Unknown',
+        phone: person?.phone,
+        email: person?.email
+      },
+      paymentDate: p.paymentDate,
+      amount: toRupees(p.amountMinor),
+      method: p.paymentMethod,
+      reference: p.reference ?? undefined,
+      notes: p.notes ?? undefined,
+      createdBy: creator?.name ?? 'System',
+      allocations: allocs.map((a) => ({
+        invoiceId: String(a.invoiceId),
+        invoiceNo: invoiceNumberMap.get(a.invoiceId) ?? '',
+        amount: toRupees(a.amountMinor)
+      })),
+      refundIds: refunds.map((r) => String(r.id))
+    }
+  })
+}
+
+/**
+ * Returns all refunds for the org, hydrated with customer names and linked
+ * payment info. Used by the Refunds page table.
+ */
+export function getAllRefunds() {
+  requirePermission(PERMISSIONS.REFUND_VIEW)
+  const organizationId = currentOrganizationId()
+
+  const allRefunds = refundRepo.listAll(organizationId)
+  if (allRefunds.length === 0) return []
+
+  // Batch-fetch payments to get customer IDs and payment methods
+  const paymentIds = [...new Set(allRefunds.map((r) => r.paymentId))]
+  const paymentRows = getDrizzle()
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.organization_id, organizationId),
+        sql`${payments.id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as PaymentRow[]
+  const paymentMap = new Map(paymentRows.map((p) => [p.id, p]))
+
+  // Batch-resolve customer person IDs
+  const customerIds = [...new Set(paymentRows.map((p) => p.customer_id))]
+  const customerRows = getDrizzle()
+    .select()
+    .from(customers)
+    .where(
+      and(
+        eq(customers.organization_id, organizationId),
+        sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as Array<{ id: number; person_id: number }>
+  const personIdByCustomer = new Map(customerRows.map((c) => [c.id, c.person_id]))
+  const personIds = customerRows.map((c) => c.person_id)
+
+  // Also resolve createdBy person IDs
+  const creatorIds = allRefunds.map((r) => r.createdBy)
+  const allPersonIds = [...personIds, ...creatorIds]
+  const personMap = resolvePersonNames(organizationId, allPersonIds)
+
+  return allRefunds.map((r) => {
+    const payment = paymentMap.get(r.paymentId)
+    const personId = payment ? personIdByCustomer.get(payment.customer_id) : undefined
+    const person = personId ? personMap.get(personId) : undefined
+    const creator = personMap.get(r.createdBy)
+
+    return {
+      id: String(r.id),
+      refundNo: `REF-${String(r.id).padStart(4, '0')}`,
+      customer: {
+        id: String(payment?.customer_id ?? 0),
+        name: person?.name ?? 'Unknown',
+        phone: person?.phone,
+        email: person?.email
+      },
+      refundDate: r.createdAt,
+      amount: toRupees(r.amountMinor),
+      sourcePaymentId: String(r.paymentId),
+      sourcePaymentNo: `PAY-${String(r.paymentId).padStart(4, '0')}`,
+      method: payment?.payment_method ?? 'UNKNOWN',
+      reason: r.reason,
+      createdBy: creator?.name ?? 'System'
+    }
+  })
+}
+
+/**
+ * Returns all credits for the org, hydrated with customer names and
+ * applications. Used by the Credits page table.
+ */
+export function getAllCredits() {
+  requirePermission(PERMISSIONS.CREDIT_VIEW)
+  const organizationId = currentOrganizationId()
+
+  const allCredits = creditRepo.listAll(organizationId)
+  if (allCredits.length === 0) return []
+
+  // Batch-resolve customer person IDs
+  const customerIds = [...new Set(allCredits.map((c) => c.customerId))]
+  const customerRows = getDrizzle()
+    .select()
+    .from(customers)
+    .where(
+      and(
+        eq(customers.organization_id, organizationId),
+        sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as Array<{ id: number; person_id: number }>
+  const personIdByCustomer = new Map(customerRows.map((c) => [c.id, c.person_id]))
+  const personIds = customerRows.map((c) => c.person_id)
+
+  // Also resolve createdBy person IDs
+  const creatorIds = allCredits.map((c) => c.createdBy)
+  const allPersonIds = [...personIds, ...creatorIds]
+  const personMap = resolvePersonNames(organizationId, allPersonIds)
+
+  // Batch-fetch credit allocations
+  const creditIds = allCredits.map((c) => c.id)
+  const allCreditAllocs = creditAllocationRepo.listByCredits(organizationId, creditIds)
+  const allocsByCredit = new Map<number, typeof allCreditAllocs>()
+  for (const a of allCreditAllocs) {
+    const list = allocsByCredit.get(a.creditId) ?? []
+    list.push(a)
+    allocsByCredit.set(a.creditId, list)
+  }
+
+  // Resolve invoice numbers for credit allocations
+  const allocInvoiceIds = [...new Set(allCreditAllocs.map((a) => a.invoiceId))]
+  const invoiceNumberMap = resolveInvoiceNumbers(organizationId, allocInvoiceIds)
+
+  return allCredits.map((c) => {
+    const personId = personIdByCustomer.get(c.customerId)
+    const person = personId ? personMap.get(personId) : undefined
+    const creator = personMap.get(c.createdBy)
+    const allocs = allocsByCredit.get(c.id) ?? []
+
+    return {
+      id: String(c.id),
+      creditNo: `CR-${String(c.id).padStart(4, '0')}`,
+      customer: {
+        id: String(c.customerId),
+        name: person?.name ?? 'Unknown',
+        phone: person?.phone,
+        email: person?.email
+      },
+      issuedAt: c.createdAt,
+      amount: toRupees(c.amountMinor),
+      reason: c.reason,
+      createdBy: creator?.name ?? 'System',
+      applications: allocs.map((a) => ({
+        invoiceNo: invoiceNumberMap.get(a.invoiceId) ?? '',
+        amount: toRupees(a.amountMinor),
+        appliedAt: a.createdAt
+      }))
+    }
+  })
 }

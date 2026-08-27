@@ -74,6 +74,8 @@ export const IPC_CHANNELS = {
   BILLING_GET_INVOICE: 'billing:getInvoice',
   BILLING_LIST_BY_CUSTOMER: 'billing:listByCustomer',
   BILLING_LIST_OPEN: 'billing:listOpen',
+  BILLING_UPDATE_SNAPSHOT: 'billing:updateSnapshot',
+  BILLING_NEXT_NUMBER: 'billing:nextNumber',
 
   // Finance (Module 05)
   FINANCE_RECORD_PAYMENT: 'finance:recordPayment',
@@ -87,7 +89,14 @@ export const IPC_CHANNELS = {
   FINANCE_REFUND_HISTORY: 'finance:refundHistory',
   FINANCE_CREDIT_BALANCE: 'finance:creditBalance',
   FINANCE_LIST_CREDITS: 'finance:listCredits',
+  FINANCE_LIST_ALL_CREDITS: 'finance:listAllCredits',
+  FINANCE_LIST_PAYMENTS: 'finance:listPayments',
+  FINANCE_LIST_REFUNDS: 'finance:listRefunds',
   FINANCE_LIST_PAYMENT_METHODS: 'finance:listPaymentMethods',
+  FINANCE_OUTSTANDING_INVOICES: 'finance:outstandingInvoices',
+
+  // Membership Sale (Module 02+03+04+05 — atomic)
+  MEMBERSHIPS_SELL: 'memberships:sell',
 
   // Customers (Module 02)
   CUSTOMERS_LIST: 'customers:list',

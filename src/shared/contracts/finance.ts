@@ -145,3 +145,34 @@ export const invoicePaymentStateRequestSchema = z.object({
   invoiceId: z.number().int().positive()
 })
 export type InvoicePaymentStateRequest = z.infer<typeof invoicePaymentStateRequestSchema>
+
+export const outstandingInvoicesRequestSchema = z.object({
+  customerId: z.number().int().positive()
+})
+export type OutstandingInvoicesRequest = z.infer<typeof outstandingInvoicesRequestSchema>
+
+export const outstandingInvoiceRowSchema = z.object({
+  id: z.string(),
+  invoiceNo: z.string(),
+  customerName: z.string(),
+  customerPhone: z.string().optional(),
+  line: z.string(),
+  issuedAt: z.string(),
+  totalMinor: z.number().int().nonnegative(),
+  paidMinor: z.number().int().nonnegative(),
+  status: z.string()
+})
+export type OutstandingInvoiceRow = z.infer<typeof outstandingInvoiceRowSchema>
+
+/* -------------------------------------------------------------------------- */
+/* Org-wide list queries                                                       */
+/* -------------------------------------------------------------------------- */
+
+export const listPaymentsInputSchema = z.object({})
+export type ListPaymentsInput = z.infer<typeof listPaymentsInputSchema>
+
+export const listRefundsInputSchema = z.object({})
+export type ListRefundsInput = z.infer<typeof listRefundsInputSchema>
+
+export const listCreditsInputSchema = z.object({})
+export type ListCreditsInput = z.infer<typeof listCreditsInputSchema>

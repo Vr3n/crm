@@ -10,7 +10,11 @@ import {
   getRefundHistory,
   getCreditBalance,
   listCredits,
-  listPaymentMethods
+  listPaymentMethods,
+  getOutstandingInvoices,
+  getAllPayments,
+  getAllRefunds,
+  getAllCredits
 } from '../application/finance'
 import {
   recordPaymentInputSchema,
@@ -22,7 +26,11 @@ import {
   invoicePaymentStateRequestSchema,
   paymentIdRequestSchema,
   customerPaymentsRequestSchema,
-  customerCreditBalanceRequestSchema
+  customerCreditBalanceRequestSchema,
+  outstandingInvoicesRequestSchema,
+  listPaymentsInputSchema,
+  listRefundsInputSchema,
+  listCreditsInputSchema
 } from '../../shared/contracts/finance'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
@@ -56,4 +64,10 @@ export function registerFinanceIpc(): void {
     listCredits(input)
   )
   handle(IPC_CHANNELS.FINANCE_LIST_PAYMENT_METHODS, () => listPaymentMethods())
+  handle(IPC_CHANNELS.FINANCE_OUTSTANDING_INVOICES, outstandingInvoicesRequestSchema, (input) =>
+    getOutstandingInvoices(input)
+  )
+  handle(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, listPaymentsInputSchema, () => getAllPayments())
+  handle(IPC_CHANNELS.FINANCE_LIST_REFUNDS, listRefundsInputSchema, () => getAllRefunds())
+  handle(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, listCreditsInputSchema, () => getAllCredits())
 }
