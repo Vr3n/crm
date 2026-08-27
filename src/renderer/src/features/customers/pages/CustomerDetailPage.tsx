@@ -12,13 +12,15 @@ import { IdentityCard } from '../components/detail/identity-card'
 import { InvoiceOverviewCard } from '../components/detail/invoice-overview-card'
 import { LifetimeCard } from '../components/detail/lifetime-card'
 import { MembershipOverviewCard } from '../components/detail/membership-overview-card'
-import { ProfileCard } from '../components/detail/profile-card'
+import { QuickStatsCard } from '../components/detail/quick-stats-card'
 
 /**
- * Customer 360 (Module 02) — the operational view of one person. Identity +
- * account context up top, the current entitlement with freeze status next to
- * the tenure/value snapshot, and the full membership history as the anchor of
- * the page. Back navigation is origin-aware (directory vs memberships list).
+ * Customer 360 (Module 02) — the operational view of one person. Bento grid
+ * layout with asymmetric anchor cells:
+ *
+ *   Row 1: Identity (7) | QuickStats (5)
+ *   Row 2: CurrentMembership (7) | Lifetime (5)
+ *   Row 3: Memberships + Invoices side-by-side (flex bento)
  */
 export function CustomerDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -36,12 +38,13 @@ export function CustomerDetailPage(): React.JSX.Element {
     return (
       <div className="flex w-full flex-col gap-6 p-6">
         <Skeleton className="mb-4 h-8 w-40" />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Skeleton className="h-44 xl:col-span-2" />
-          <Skeleton className="h-44" />
-          <Skeleton className="h-64 xl:col-span-2" />
-          <Skeleton className="h-64" />
-          <Skeleton className="h-72 xl:col-span-3" />
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
+          <Skeleton className="h-52 md:col-span-7" />
+          <Skeleton className="h-52 md:col-span-5" />
+          <Skeleton className="h-52 md:col-span-7" />
+          <Skeleton className="h-52 md:col-span-5" />
+          <Skeleton className="h-64 md:col-span-6" />
+          <Skeleton className="h-64 md:col-span-6" />
         </div>
       </div>
     )
@@ -65,6 +68,13 @@ export function CustomerDetailPage(): React.JSX.Element {
     )
   }
 
+  const sortedMemberships = [...customer.memberships].sort(
+    (a, b) => b.startDate.localeCompare(a.startDate)
+  )
+  const sortedInvoices = [...(customer.invoices ?? [])].sort(
+    (a, b) => b.issuedAt.localeCompare(a.issuedAt)
+  )
+
   return (
     <div className="flex w-full flex-col gap-6 p-6">
       <div className="flex items-center gap-2">
@@ -76,53 +86,67 @@ export function CustomerDetailPage(): React.JSX.Element {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
+        {/* Row 1: Identity anchor (7) + QuickStats (5) */}
+        <div className="md:col-span-7">
           <IdentityCard customer={customer} status={row.status} />
         </div>
-        <LifetimeCard customer={customer} now={now} />
+        <div className="md:col-span-5">
+          <QuickStatsCard customer={customer} now={now} />
+        </div>
 
-        <div className="xl:col-span-2">
+        {/* Row 2: CurrentMembership anchor (7) + Lifetime accent (5) */}
+        <div className="md:col-span-7">
           <CurrentMembershipCard currentMembership={row.currentMembership} now={now} />
         </div>
-        <ProfileCard customer={customer} />
-
-        <div className="xl:col-span-3">
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            Memberships purchased ({customer.memberships.length})
-          </h3>
-          {customer.memberships.length === 0 ? (
-            <p className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
-              No membership purchased yet.
-            </p>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {[...customer.memberships]
-                .sort((a, b) => b.startDate.localeCompare(a.startDate))
-                .map((m) => (
-                  <MembershipOverviewCard key={m.id} membership={m} now={now} />
-                ))}
-            </div>
-          )}
+        <div className="md:col-span-5">
+          <LifetimeCard customer={customer} now={now} />
         </div>
 
-        <div className="xl:col-span-3">
-          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-            Invoices ({(customer.invoices ?? []).length})
-          </h3>
-          {(customer.invoices ?? []).length === 0 ? (
-            <p className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
-              No invoices yet — invoices appear here after a membership is sold.
-            </p>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {[...(customer.invoices ?? [])]
-                .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
-                .map((inv) => (
-                  <InvoiceOverviewCard key={inv.id} invoice={inv} customerId={customer.id} />
-                ))}
+        {/* Row 3: Memberships + Invoices side-by-side in bento flex */}
+        <div className="md:col-span-12">
+          <div className="flex flex-col gap-5 lg:flex-row">
+            {/* Memberships */}
+            <div className="flex-1 space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Memberships purchased ({customer.memberships.length})
+              </h3>
+              {sortedMemberships.length === 0 ? (
+                <p className="rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
+                  No membership purchased yet.
+                </p>
+              ) : (
+                <div className="grid gap-4">
+                  {sortedMemberships.map((m, i) => (
+                    <MembershipOverviewCard
+                      key={m.id}
+                      membership={m}
+                      now={now}
+                      variant={i === 0 ? 'hero' : 'default'}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Invoices */}
+            <div className="flex-1 space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Invoices ({sortedInvoices.length})
+              </h3>
+              {sortedInvoices.length === 0 ? (
+                <p className="rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
+                  No invoices yet — invoices appear here after a membership is sold.
+                </p>
+              ) : (
+                <div className="grid gap-4">
+                  {sortedInvoices.map((inv) => (
+                    <InvoiceOverviewCard key={inv.id} invoice={inv} customerId={customer.id} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

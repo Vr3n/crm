@@ -10,14 +10,20 @@ import { MembershipStatusBadge } from '../status-badge'
  * terms, entitlement window and freeze state — everything needed to answer
  * "what did this member buy?" without opening another screen. Values are the
  * sale-time snapshot in finished rupees; never recomputed from the plan.
+ *
+ * `variant="hero"` renders the anchor cell of the bento grid: larger type,
+ * bigger price, more internal padding. The default variant is the compact
+ * supporting cell.
  */
 export function MembershipOverviewCard({
   membership,
   now,
+  variant = 'default',
   className
 }: {
   membership: Membership
   now: number
+  variant?: 'default' | 'hero'
   className?: string
 }): React.JSX.Element {
   const m = membership
@@ -31,8 +37,16 @@ export function MembershipOverviewCard({
     (f) => new Date(f.startDate).getTime() <= now && new Date(f.endDate).getTime() > now
   )
 
+  const hero = variant === 'hero'
+
   return (
-    <div className={cn('flex flex-col rounded-xl border bg-card p-5 shadow-sm', className)}>
+    <div
+      className={cn(
+        'flex flex-col rounded-xl border bg-card shadow-sm',
+        hero ? 'p-6' : 'p-5',
+        className
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <CreditCard className="size-3.5" /> Membership #{m.id}
@@ -40,7 +54,14 @@ export function MembershipOverviewCard({
         <MembershipStatusBadge status={eff} />
       </div>
 
-      <p className="mt-3 font-heading text-lg font-semibold tracking-tight">{m.plan}</p>
+      <p
+        className={cn(
+          'mt-3 font-heading font-semibold tracking-tight',
+          hero ? 'text-xl' : 'text-lg'
+        )}
+      >
+        {m.plan}
+      </p>
       <p className="text-xs text-muted-foreground">
         {m.billingFrequency.charAt(0) + m.billingFrequency.slice(1).toLowerCase()} billing
       </p>
@@ -66,7 +87,14 @@ export function MembershipOverviewCard({
           ) : null}
         </div>
         <div className="text-right">
-          <p className="font-mono text-xl font-semibold tabular-nums">{formatMoney(paid)}</p>
+          <p
+            className={cn(
+              'font-mono font-semibold tabular-nums',
+              hero ? 'text-2xl' : 'text-xl'
+            )}
+          >
+            {formatMoney(paid)}
+          </p>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Final price</p>
         </div>
       </div>
