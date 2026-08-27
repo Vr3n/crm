@@ -18,6 +18,7 @@ export const organizations = sqliteTable('organizations', {
   mobile_number: text('mobile_number').notNull(),
   timezone: text('timezone'),
   currency: text('currency').notNull().default('INR'),
+  org_invoice_prefix: text('org_invoice_prefix'),
   status: text('status').notNull().default('ACTIVE'),
   plan_tier: text('plan_tier'),
   created_at: text('created_at')

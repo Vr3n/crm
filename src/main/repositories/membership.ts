@@ -144,6 +144,7 @@ interface MembershipRow {
   discount_minor: number
   final_price_minor: number
   tax_rate_bps: number
+  joining_date: string
   start_date: string
   end_date: string
   billing_frequency: string
@@ -168,6 +169,7 @@ function mapMembership(row: MembershipRow): Membership {
     discountMinor: row.discount_minor,
     finalPriceMinor: row.final_price_minor,
     taxRateBps: row.tax_rate_bps,
+    joiningDate: row.joining_date,
     startDate: row.start_date,
     endDate: row.end_date,
     billingFrequency: row.billing_frequency,
@@ -230,6 +232,7 @@ export const membershipRepo = {
     discountMinor: number
     finalPriceMinor: number
     taxRateBps: number
+    joiningDate: string
     startDate: string
     endDate: string
     billingFrequency: string
@@ -249,6 +252,7 @@ export const membershipRepo = {
         discount_minor: input.discountMinor,
         final_price_minor: input.finalPriceMinor,
         tax_rate_bps: input.taxRateBps,
+        joining_date: input.joiningDate,
         start_date: input.startDate,
         end_date: input.endDate,
         billing_frequency: input.billingFrequency,

@@ -79,7 +79,7 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records versions 0, 3, 4, 5, 6 (seed sales reference data), 7 (grant lead.delete), 8 (grant lead.edit), 9 (catalog plans), 10 (seed plans), 11 (catalog offers & policies), 12 (seed policies), 13 (offer versions), 14 (followup edit cancel), 15 (customers, memberships, billing, finance)', () => {
+  it('records versions 0, 3-18 including membership sale idempotency, permission and joining-date migrations', () => {
     runMigrations()
     const rows = getDb().prepare('SELECT version, name FROM schema_migrations').all() as {
       version: number
@@ -99,7 +99,10 @@ describe('runMigrations', () => {
       { version: 12, name: 'seed_catalog_policies' },
       { version: 13, name: 'offer_versions' },
       { version: 14, name: 'followup_edit_cancel' },
-      { version: 15, name: 'customers_memberships_billing_finance' }
+      { version: 15, name: 'customers_memberships_billing_finance' },
+      { version: 16, name: 'membership_sale_idempotency' },
+      { version: 17, name: 'membership_sell_permission' },
+      { version: 18, name: 'membership_joining_date' }
     ])
   })
 
@@ -109,7 +112,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(14)
+    expect(row.n).toBe(17)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -155,7 +158,7 @@ describe('runMigrations', () => {
     // Legacy versions 1 & 2 are left as-is; 0 is marked applied (no re-run);
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
-    expect(appliedVersions()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect(appliedVersions()).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
     expect(tableNames().has('leads')).toBe(true)
@@ -174,7 +177,7 @@ describe('runMigrations', () => {
 
     runMigrations()
 
-    expect(appliedVersions()).toEqual([0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect(appliedVersions()).toEqual([0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)
   })
@@ -327,6 +330,9 @@ describe('runMigrations', () => {
         created_at TEXT DEFAULT (datetime('now')) NOT NULL
       );
       INSERT INTO organizations (slug, name, mobile_number) VALUES ('old-gym', 'Old Gym', '9999999999');
+      CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
+      CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
+      CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -571,6 +577,9 @@ describe('runMigrations', () => {
         created_at TEXT DEFAULT (datetime('now')) NOT NULL
       );
       INSERT INTO organizations (slug, name, mobile_number) VALUES ('old-gym', 'Old Gym', '9999999999');
+      CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
+      CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
+      CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
       CREATE TABLE membership_plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,

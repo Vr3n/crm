@@ -48,6 +48,7 @@ import {
   credits,
   creditAllocations
 } from './finance'
+import { idempotencyKeys } from './idempotency'
 
 export * from './identity'
 export * from './sales'
@@ -55,6 +56,7 @@ export * from './catalog'
 export * from './membership'
 export * from './billing'
 export * from './finance'
+export * from './idempotency'
 
 /**
  * The combined schema object passed to `drizzle()`. All tables from every module
@@ -67,6 +69,7 @@ export const schema = {
   credits,
   customers,
   freezePolicies,
+  idempotencyKeys,
   invoiceLines,
   invoiceSequence,
   invoices,

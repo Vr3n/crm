@@ -139,3 +139,19 @@ export class CreditExceedsBalanceError extends DomainError {
     this.name = 'CreditExceedsBalanceError'
   }
 }
+
+/** Paid amount exceeds final price and overpayment is not allowed in this flow. */
+export class OverpaymentNotAllowedError extends DomainError {
+  constructor(message = 'Paid amount exceeds amount due — overpayment is not allowed') {
+    super(message, ERROR_CODES.OVERPAYMENT_NOT_ALLOWED)
+    this.name = 'OverpaymentNotAllowedError'
+  }
+}
+
+/** Duplicate transaction key (idempotency). */
+export class DuplicateTransactionError extends DomainError {
+  constructor(message = 'Duplicate transaction — this sale was already processed') {
+    super(message, ERROR_CODES.DUPLICATE_TRANSACTION)
+    this.name = 'DuplicateTransactionError'
+  }
+}

@@ -55,6 +55,7 @@ export interface Membership {
   discountMinor: number
   finalPriceMinor: number
   taxRateBps: number
+  joiningDate: string
   startDate: string
   endDate: string
   billingFrequency: string

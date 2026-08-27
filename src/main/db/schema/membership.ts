@@ -69,7 +69,9 @@ export const memberships = sqliteTable(
     discount_minor: integer('discount_minor').notNull().default(0),
     final_price_minor: integer('final_price_minor').notNull(),
     tax_rate_bps: integer('tax_rate_bps').notNull(),
-    /** Entitlement window. */
+     /** Entitlement window. */
+    /** Calendar date the customer is expected to physically join the gym. */
+    joining_date: text('joining_date').notNull(),
     start_date: text('start_date').notNull(),
     end_date: text('end_date').notNull(),
     billing_frequency: text('billing_frequency').notNull(),

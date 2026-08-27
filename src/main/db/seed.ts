@@ -63,8 +63,9 @@ export const SEED_ROLES: SeedRole[] = [
       'offer.create',
       'offer.update',
       'offer.deactivate',
-      'membership.view',
-      'membership.create',
+       'membership.view',
+       'membership.create',
+       'membership.sell',
       'membership.activate',
       'membership.freeze',
       'membership.unfreeze',
@@ -106,8 +107,9 @@ export const SEED_ROLES: SeedRole[] = [
       'followup.complete',
       'plan.view',
       'offer.view',
-      'membership.view',
-      'membership.create',
+       'membership.view',
+       'membership.create',
+       'membership.sell',
       'membership.activate'
     ]
   },

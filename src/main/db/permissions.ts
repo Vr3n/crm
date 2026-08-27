@@ -50,6 +50,7 @@ export const PERMISSIONS = {
   // Memberships (Module 02)
   MEMBERSHIP_VIEW: 'membership.view',
   MEMBERSHIP_CREATE: 'membership.create',
+  MEMBERSHIP_SELL: 'membership.sell',
   MEMBERSHIP_ACTIVATE: 'membership.activate',
   MEMBERSHIP_FREEZE: 'membership.freeze',
   MEMBERSHIP_UNFREEZE: 'membership.unfreeze',
