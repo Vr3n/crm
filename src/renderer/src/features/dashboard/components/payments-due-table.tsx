@@ -4,6 +4,7 @@ import type { DateRange } from 'react-day-picker'
 import { Wallet } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatDate } from '@/features/leads/format'
 import { formatMoney } from '../format'
 import { PAGE_SIZE_OPTIONS } from '../constants'
 import { usePaymentsDue } from '../queries'
@@ -13,7 +14,6 @@ import { DateRangePicker, type DateRangePreset } from './date-range-picker'
 import { ContactCell } from './contact-cell'
 import { MemberDetailsSheet } from './member-details-sheet'
 import { NameCell } from './name-cell'
-import { PlanCell } from './plan-cell'
 import { RowActions } from './row-actions'
 import { SortButton } from './sort-button'
 import { ExportExcelButton } from './export-excel-button'
@@ -59,13 +59,17 @@ function buildColumns(onView: (row: PaymentDue) => void): ReturnType<typeof help
       id: 'plan',
       header: () => <span className="block w-full text-right">Plan</span>,
       enableSorting: false,
-      cell: ({ row }) => (
-        <PlanCell
-          className="items-end"
-          plan={row.original.plan}
-          purchasedAt={row.original.purchasedAt}
-        />
-      )
+      cell: ({ row }) => {
+        const name = row.original.plan.replace(/\s*\(.*$/, '')
+        return (
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-sm font-medium">{name}</span>
+            <span className="text-xs text-muted-foreground">
+              Bought {formatDate(row.original.purchasedAt)}
+            </span>
+          </div>
+        )
+      }
     }),
     helper.display({
       id: 'actions',
@@ -117,7 +121,7 @@ export function PaymentsDueTable(): React.JSX.Element {
   }, [])
 
   const filtered = useMemo(() => {
-    const rows = data ?? []
+    const rows = (data ?? []).filter((r) => r.amountDue > 0)
     if (!range?.from && !range?.to) return rows
     const from = range.from ? startOfDay(range.from).getTime() : Number.NEGATIVE_INFINITY
     const to = range.to ? endOfDay(range.to).getTime() : Number.POSITIVE_INFINITY
