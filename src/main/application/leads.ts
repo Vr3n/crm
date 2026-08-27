@@ -134,6 +134,45 @@ export function createLead(input: CreateLeadInput): CreatedLead {
       changedBy: userId
     })
 
+    // Follow-up: use provided or auto-create "Post enquiry followup" after 2 days
+    if (input.followup) {
+      const due = new Date(input.followup.dueAt)
+      if (Number.isNaN(due.getTime())) throw new ValidationError('followup.dueAt must be a valid date')
+      if (due.getTime() <= Date.now()) {
+        throw new ValidationError('Follow-up due date must be in the future')
+      }
+      followupRepo.create({
+        organizationId,
+        leadId: lead.id,
+        title: input.followup.title.trim(),
+        dueAt: due.toISOString(),
+        createdBy: userId
+      })
+    } else {
+      const twoDaysFromNow = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      followupRepo.create({
+        organizationId,
+        leadId: lead.id,
+        title: 'Post enquiry followup',
+        dueAt: twoDaysFromNow.toISOString(),
+        createdBy: userId
+      })
+    }
+
+    // Activity: log if provided
+    if (input.activity) {
+      const type = activityTypeRepo.findById(organizationId, input.activity.typeId)
+      if (!type) throw new NotFoundError('Activity type not found')
+      activityRepo.create({
+        organizationId,
+        leadId: lead.id,
+        typeId: type.id,
+        note: input.activity.note?.trim() || null,
+        occurredAt: new Date().toISOString(),
+        createdBy: userId
+      })
+    }
+
     return { leadId: lead.id, personId: person.id }
   })
 }
@@ -629,6 +668,7 @@ export function listLeads(input: LeadListRequest): LeadListResponse {
     isLost: row.isLost,
     ownerUserId: row.ownerUserId,
     ownerName: row.ownerName,
+    customerId: row.customerId,
     planId: row.planId,
     planName: row.planName,
     goal: row.goal,

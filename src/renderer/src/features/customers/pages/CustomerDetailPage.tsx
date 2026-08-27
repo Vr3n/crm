@@ -9,8 +9,9 @@ import { buildCustomerRow } from '../build'
 import { useCustomer } from '../queries'
 import { CurrentMembershipCard } from '../components/detail/current-membership-card'
 import { IdentityCard } from '../components/detail/identity-card'
+import { InvoiceOverviewCard } from '../components/detail/invoice-overview-card'
 import { LifetimeCard } from '../components/detail/lifetime-card'
-import { MembershipTimeline } from '../components/detail/membership-timeline'
+import { MembershipOverviewCard } from '../components/detail/membership-overview-card'
 import { ProfileCard } from '../components/detail/profile-card'
 
 /**
@@ -87,7 +88,41 @@ export function CustomerDetailPage(): React.JSX.Element {
         <ProfileCard customer={customer} />
 
         <div className="xl:col-span-3">
-          <MembershipTimeline memberships={customer.memberships} now={now} />
+          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+            Memberships purchased ({customer.memberships.length})
+          </h3>
+          {customer.memberships.length === 0 ? (
+            <p className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
+              No membership purchased yet.
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[...customer.memberships]
+                .sort((a, b) => b.startDate.localeCompare(a.startDate))
+                .map((m) => (
+                  <MembershipOverviewCard key={m.id} membership={m} now={now} />
+                ))}
+            </div>
+          )}
+        </div>
+
+        <div className="xl:col-span-3">
+          <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+            Invoices ({(customer.invoices ?? []).length})
+          </h3>
+          {(customer.invoices ?? []).length === 0 ? (
+            <p className="rounded-lg border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
+              No invoices yet — invoices appear here after a membership is sold.
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {[...(customer.invoices ?? [])]
+                .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
+                .map((inv) => (
+                  <InvoiceOverviewCard key={inv.id} invoice={inv} customerId={customer.id} />
+                ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

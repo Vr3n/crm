@@ -14,7 +14,19 @@ export const createLeadInputSchema = z.object({
   sourceId: z.number().int().positive(),
   planId: z.number().int().positive().nullable().optional(),
   goal: z.string().max(200).optional(),
-  notes: z.string().max(2000).optional()
+  notes: z.string().max(2000).optional(),
+  followup: z
+    .object({
+      title: z.string().min(1).max(200),
+      dueAt: z.string()
+    })
+    .optional(),
+  activity: z
+    .object({
+      typeId: z.number().int().positive(),
+      note: z.string().max(2000).optional()
+    })
+    .optional()
 })
 export type CreateLeadInput = z.infer<typeof createLeadInputSchema>
 
@@ -327,6 +339,7 @@ export const leadListRowSchema = z.object({
   isLost: z.boolean(),
   ownerUserId: z.number().int().positive().nullable(),
   ownerName: z.string().nullable(),
+  customerId: z.number().int().positive().nullable(),
   planId: z.number().int().positive().nullable(),
   planName: z.string().nullable(),
   goal: z.string().nullable(),

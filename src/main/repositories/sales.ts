@@ -667,32 +667,33 @@ export const leadRepo = {
     createdAfter?: string
     page: number
     limit: number
-  }): {
-    items: Array<{
-      id: number
-      personId: number
-      personName: string
-      phone: string
-      email: string | null
-      sourceId: number
-      sourceName: string
-      stageId: number
-      stageName: string
-      isWon: boolean
-      isLost: boolean
-      ownerUserId: number | null
-      ownerName: string | null
-      planId: number | null
-      planName: string | null
-      goal: string | null
-      notes: string | null
-      createdAt: string
-      lostReasonId: number | null
-      lostReasonName: string | null
-      lostAt: string | null
-    }>
-    total: number
-  } {
+    }): {
+      items: Array<{
+        id: number
+        personId: number
+        personName: string
+        phone: string
+        email: string | null
+        sourceId: number
+        sourceName: string
+        stageId: number
+        stageName: string
+        isWon: boolean
+        isLost: boolean
+        ownerUserId: number | null
+        ownerName: string | null
+        customerId: number | null
+        planId: number | null
+        planName: string | null
+        goal: string | null
+        notes: string | null
+        createdAt: string
+        lostReasonId: number | null
+        lostReasonName: string | null
+        lostAt: string | null
+      }>
+      total: number
+    } {
     const { organizationId, search, stageId, sourceId, ownerUserId, createdAfter } = input
     const where = and(
       eq(leads.organization_id, organizationId),
@@ -720,6 +721,7 @@ export const leadRepo = {
         isLost: leadStages.is_lost,
         ownerUserId: leads.owner_user_id,
         ownerName: users.full_name,
+        customerId: leads.customer_id,
         planId: leads.plan_id,
         planName: membershipPlans.name,
         goal: leads.goal,

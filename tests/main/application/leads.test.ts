@@ -825,8 +825,12 @@ describe('bulkScheduleFollowUp', () => {
 
     expect(result).toEqual({ scheduled: 2 })
     for (const { leadId } of [first, second]) {
+      // The lead also carries the auto-created default follow-up from createLead;
+      // the bulk-scheduled one is the newest row.
       const followup = getDb()
-        .prepare('SELECT title, due_at FROM lead_followups WHERE lead_id = ?')
+        .prepare(
+          'SELECT title, due_at FROM lead_followups WHERE lead_id = ? ORDER BY created_at DESC, id DESC LIMIT 1'
+        )
         .get(leadId) as { title: string; due_at: string }
       expect(followup.title).toBe('Re-call for trial') // trimmed
       expect(followup.due_at).toBe(future)
@@ -836,6 +840,12 @@ describe('bulkScheduleFollowUp', () => {
   it('rejects a past due date before writing anything', () => {
     const { organizationId } = seedOrgWithSession()
     const { leadId } = createLeadFor(organizationId)
+    // createLead already auto-created the default follow-up for this lead.
+    const before = (
+      getDb()
+        .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?')
+        .get(leadId) as { n: number }
+    ).n
     expect(() =>
       bulkScheduleFollowUp({
         leadIds: [leadId],
@@ -851,7 +861,7 @@ describe('bulkScheduleFollowUp', () => {
           n: number
         }
       ).n
-    ).toBe(0)
+    ).toBe(before)
   })
 
   it('throws NotFoundError when any id is unknown', () => {
@@ -1103,8 +1113,10 @@ describe('listLeads', () => {
       note: 'Called Rahul',
       createdByName: 'Priya Verma'
     })
-    expect(row.followUps).toHaveLength(1)
-    expect(row.followUps[0]).toMatchObject({ title: 'Re-call', completedAt: null })
+    // The auto-created default follow-up from createLead plus the explicit one.
+    expect(row.followUps).toHaveLength(2)
+    const scheduled = row.followUps.find((f) => f.title === 'Re-call')
+    expect(scheduled).toMatchObject({ title: 'Re-call', completedAt: null })
     expect(row.stageHistory).toHaveLength(2) // initial NEW + CONTACTED move
     expect(row.stageHistory[1]).toMatchObject({
       fromStageName: 'NEW',

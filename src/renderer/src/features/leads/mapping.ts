@@ -28,6 +28,7 @@ export function mapLeadRow(row: LeadListRow): Lead {
     stage: stageKeyFromName(row.stageName),
     stageId: row.stageId,
     createdAt: row.createdAt,
+    customerId: row.customerId ?? undefined,
     planId: row.planId ?? undefined,
     planName: row.planName ?? undefined,
     goal: row.goal ?? undefined,

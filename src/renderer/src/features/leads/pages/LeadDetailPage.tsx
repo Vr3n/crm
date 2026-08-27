@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/empty-state'
 import { useLead } from '../queries'
 import { computeQuality } from '../data-quality'
 import { IdentityCard } from '../components/detail/identity-card'
+import { LeadCommerceCard } from '../components/detail/lead-commerce-card'
 import { NextActionCard } from '../components/detail/next-action-card'
 import { StageHistory } from '../components/detail/stage-history'
 import { FollowUpPanel } from '../components/detail/follow-up-panel'
@@ -101,6 +102,12 @@ export function LeadDetailPage(): React.JSX.Element {
         {lead.planId && (
           <div className="xl:col-span-3">
             <PlanPriceTimeline planId={lead.planId} planName={lead.planName} />
+          </div>
+        )}
+
+        {lead.customerId && (
+          <div className="xl:col-span-3">
+            <LeadCommerceCard lead={lead} />
           </div>
         )}
       </div>

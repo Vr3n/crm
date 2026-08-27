@@ -50,6 +50,19 @@ export const membershipOutputSchema = z.object({
 })
 export type MembershipOutput = z.infer<typeof membershipOutputSchema>
 
+export const customerInvoiceSchema = z.object({
+  id: z.string(),
+  invoiceNo: z.string(),
+  status: z.enum(['DRAFT', 'OPEN', 'PARTIALLY_PAID', 'PAID', 'VOID', 'UNCOLLECTIBLE']),
+  issuedAt: z.string(),
+  subtotal: z.number(),
+  tax: z.number(),
+  total: z.number(),
+  paidAmount: z.number(),
+  outstanding: z.number()
+})
+export type CustomerInvoiceOutput = z.infer<typeof customerInvoiceSchema>
+
 export const customerOutputSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -67,7 +80,8 @@ export const customerOutputSchema = z.object({
   joinedAt: z.string(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
-  memberships: z.array(membershipOutputSchema)
+  memberships: z.array(membershipOutputSchema),
+  invoices: z.array(customerInvoiceSchema).optional()
 })
 export type CustomerOutput = z.infer<typeof customerOutputSchema>
 

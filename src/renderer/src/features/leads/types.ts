@@ -116,6 +116,8 @@ export interface Lead {
   stage: StageKey
   stageId: number
   createdAt: string
+  /** Customer created when this lead sold a membership (Module 02). */
+  customerId?: number
   /** The catalog plan this lead is interested in (Module 03 FK). */
   planId?: number
   planName?: string

@@ -1,6 +1,13 @@
 import { asc, eq, and, sql } from 'drizzle-orm'
 import { getDrizzle } from '../db/connection'
-import { customers, people, memberships, membershipFreezes } from '../db/schema'
+import {
+  customers,
+  people,
+  memberships,
+  membershipFreezes,
+  invoices,
+  paymentAllocations
+} from '../db/schema'
 import { currentOrganizationId } from '../auth/session'
 import { customerIdRequestSchema } from '../../shared/contracts/customers'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
@@ -62,12 +69,100 @@ interface FreezeRow {
   created_by: number
 }
 
+interface InvoiceRow {
+  id: number
+  number: string
+  status: string
+  subtotal_minor: number
+  tax_minor: number
+  total_minor: number
+  finalized_at: string | null
+  created_at: string
+}
+
+interface AllocationRow {
+  invoice_id: number
+  amount_minor: number
+}
+
+/** Invoice read model in finished rupees — paid/outstanding derived from allocations. */
+function buildInvoiceOutputs(
+  organizationId: number,
+  customerId: number
+): Array<{
+  id: string
+  invoiceNo: string
+  status: 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE'
+  issuedAt: string
+  subtotal: number
+  tax: number
+  total: number
+  paidAmount: number
+  outstanding: number
+}> {
+  const toRupees = (minor: number): number => Math.round(minor / 100)
+
+  const invoiceRows = getDrizzle()
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.organization_id, organizationId),
+        eq(invoices.customer_id, customerId),
+        sql`${invoices.status} != 'DRAFT'`
+      )
+    )
+    .orderBy(asc(invoices.created_at))
+    .all() as InvoiceRow[]
+
+  if (invoiceRows.length === 0) return []
+
+  const invoiceIds = invoiceRows.map((i) => i.id)
+  const allocRows = getDrizzle()
+    .select({
+      invoice_id: paymentAllocations.invoice_id,
+      amount_minor: paymentAllocations.amount_minor
+    })
+    .from(paymentAllocations)
+    .where(
+      and(
+        eq(paymentAllocations.organization_id, organizationId),
+        sql`${paymentAllocations.invoice_id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+      )
+    )
+    .all() as AllocationRow[]
+
+  const paidByInvoice = new Map<number, number>()
+  for (const a of allocRows) {
+    paidByInvoice.set(a.invoice_id, (paidByInvoice.get(a.invoice_id) ?? 0) + a.amount_minor)
+  }
+
+  return invoiceRows.map((inv) => {
+    const total = toRupees(inv.total_minor)
+    const paid = toRupees(paidByInvoice.get(inv.id) ?? 0)
+    return {
+      id: String(inv.id),
+      invoiceNo: inv.number,
+      status: inv.status as 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE',
+      issuedAt: inv.finalized_at ?? inv.created_at,
+      subtotal: toRupees(inv.subtotal_minor),
+      tax: toRupees(inv.tax_minor),
+      total,
+      paidAmount: paid,
+      outstanding: Math.max(0, total - paid)
+    }
+  })
+}
+
 function buildCustomerOutput(
   customer: CustomerRow,
   person: PersonRow | undefined,
   memberShips: MembershipRow[],
   freezesByMembership: Map<number, FreezeRow[]>
 ) {
+  // Read models ship finished rupees — minor units convert here exactly once
+  // (Module 04 §34) so no component ever multiplies or divides by 100.
+  const toRupees = (minor: number): number => Math.round(minor / 100)
   return {
     id: String(customer.id),
     name: person?.full_name ?? customer.billing_name ?? 'Unknown',
@@ -90,8 +185,8 @@ function buildCustomerOutput(
       customerId: String(m.customer_id),
       plan: m.plan_name_snapshot,
       planId: String(m.plan_id),
-      price: m.base_price_minor,
-      discount: m.discount_minor,
+      price: toRupees(m.base_price_minor),
+      discount: toRupees(m.discount_minor),
       billingFrequency: m.billing_frequency as 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ANNUAL',
       registrationFee: 0,
       startDate: m.start_date,
@@ -103,7 +198,7 @@ function buildCustomerOutput(
         startDate: f.start_date,
         endDate: f.end_date,
         reason: f.reason ?? '',
-        fee: f.fee_minor,
+        fee: toRupees(f.fee_minor),
         billingBehavior: f.billing_behavior as 'SUSPEND_BILLING' | 'CONTINUE_BILLING',
         accessBehavior: f.access_behavior as 'NO_ACCESS' | 'ACCESS',
         extensionDays: f.extension_days,
@@ -285,7 +380,8 @@ export function registerCustomersIpc(): void {
       nextExpiry: memberShips
         .filter((m) => m.status === 'ACTIVE')
         .sort((a, b) => a.end_date.localeCompare(b.end_date))[0]
-        ?.end_date
+        ?.end_date,
+      invoices: buildInvoiceOutputs(organizationId, customerId)
     }
   })
 }
