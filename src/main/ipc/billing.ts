@@ -5,6 +5,8 @@ import {
   finalizeInvoice,
   voidInvoice,
   markUncollectible,
+  updateBillingSnapshot,
+  nextInvoiceNumberPreview,
   getInvoice,
   listInvoicesByCustomer,
   listOpenInvoices
@@ -16,6 +18,7 @@ import {
   finalizeInvoiceInputSchema,
   voidInvoiceInputSchema,
   markUncollectibleInputSchema,
+  updateBillingSnapshotInputSchema,
   invoiceIdRequestSchema,
   customerInvoicesRequestSchema
 } from '../../shared/contracts/billing'
@@ -38,6 +41,10 @@ export function registerBillingIpc(): void {
     markUncollectible(input)
   )
   handle(IPC_CHANNELS.BILLING_GET_INVOICE, invoiceIdRequestSchema, (input) => getInvoice(input))
+  handle(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, updateBillingSnapshotInputSchema, (input) =>
+    updateBillingSnapshot(input)
+  )
+  handle(IPC_CHANNELS.BILLING_NEXT_NUMBER, () => nextInvoiceNumberPreview())
   handle(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, customerInvoicesRequestSchema, (input) =>
     listInvoicesByCustomer(input)
   )

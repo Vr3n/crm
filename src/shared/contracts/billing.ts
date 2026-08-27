@@ -103,6 +103,16 @@ export const markUncollectibleInputSchema = z.object({
 })
 export type MarkUncollectibleInput = z.infer<typeof markUncollectibleInputSchema>
 
+/** DRAFT-only edit of the customer billing snapshot; never writes back to `customers`. */
+export const updateBillingSnapshotInputSchema = z.object({
+  invoiceId: z.number().int().positive(),
+  billingName: z.string().min(1).max(200),
+  billingPhone: z.string().max(20).nullable(),
+  billingEmail: z.string().email().nullable(),
+  billingAddress: z.string().max(500).nullable()
+})
+export type UpdateBillingSnapshotInput = z.infer<typeof updateBillingSnapshotInputSchema>
+
 /* -------------------------------------------------------------------------- */
 /* Queries                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -116,3 +126,14 @@ export const customerInvoicesRequestSchema = z.object({
   customerId: z.number().int().positive()
 })
 export type CustomerInvoicesRequest = z.infer<typeof customerInvoicesRequestSchema>
+
+/**
+ * Display-only preview of the next invoice number (Module 04 §36). Never
+ * reserves — the real number is assigned inside the finalize transaction.
+ */
+export interface InvoiceNumberPreview {
+  year: string
+  prefix: string
+  nextValue: number
+  preview: string
+}

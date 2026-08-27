@@ -180,6 +180,29 @@ export const invoiceRepo = {
       })
       .where(and(eq(invoices.organization_id, organizationId), eq(invoices.id, id)))
       .run()
+  },
+
+  /** DRAFT-only billing snapshot edit; the caller enforces the status guard. */
+  updateBillingSnapshot(
+    organizationId: number,
+    id: number,
+    snapshot: {
+      billingName: string
+      billingPhone: string | null
+      billingEmail: string | null
+      billingAddress: string | null
+    }
+  ): void {
+    getDrizzle()
+      .update(invoices)
+      .set({
+        billing_name: snapshot.billingName,
+        billing_phone: snapshot.billingPhone,
+        billing_email: snapshot.billingEmail,
+        billing_address: snapshot.billingAddress
+      })
+      .where(and(eq(invoices.organization_id, organizationId), eq(invoices.id, id)))
+      .run()
   }
 }
 
@@ -370,5 +393,14 @@ export const invoiceSequenceRepo = {
       .get() as { last_value: number }
 
     return row.last_value
+  },
+
+  /**
+   * Display-only peek at the next value WITHOUT incrementing (Module 04 §36 —
+   * a preview never reserves). Creates the counter row if absent, like
+   * finalize would.
+   */
+  peekNext(organizationId: number, year: string, prefix: string): number {
+    return invoiceSequenceRepo.getOrCreate(organizationId, year, prefix).lastValue + 1
   }
 }

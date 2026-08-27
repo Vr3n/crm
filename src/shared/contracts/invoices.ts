@@ -47,6 +47,11 @@ export const invoiceOutputSchema = z.object({
   id: z.string(),
   invoiceNo: z.string(),
   customer: customerRefSchema,
+  // Billing snapshot (Module 04 §21) — document history, not the live customer.
+  billingName: z.string().nullable().optional(),
+  billingPhone: z.string().nullable().optional(),
+  billingEmail: z.string().nullable().optional(),
+  billingAddress: z.string().nullable().optional(),
   issuedAt: z.string(),
   dueAt: z.string().optional(),
   status: z.enum(['DRAFT', 'OPEN', 'PARTIALLY_PAID', 'PAID', 'VOID', 'UNCOLLECTIBLE']),

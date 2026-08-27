@@ -2,7 +2,7 @@ import { withTransaction } from '../db/connection'
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
 import { customerRepo } from '../repositories/membership'
 import { invoiceRepo, invoiceLineRepo, invoiceSequenceRepo } from '../repositories/billing'
-import { InvoiceCalculationService, generateInvoiceNumber } from '../domain/billing'
+import { InvoiceCalculationService } from '../domain/billing'
 import {
   InvoiceAlreadyFinalizedError,
   InvoiceEmptyError,
@@ -11,16 +11,17 @@ import {
   ValidationError
 } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
-import type { Invoice, InvoiceLine, InvoiceStatus } from '../domain/billing'
+import type { Invoice, InvoiceLine } from '../domain/billing'
 import type {
   AddInvoiceLineInput,
   CreateInvoiceInput,
   CustomerInvoicesRequest,
   FinalizeInvoiceInput,
-  InvoiceDetail,
   InvoiceIdRequest,
+  InvoiceNumberPreview,
   MarkUncollectibleInput,
   RemoveInvoiceLineInput,
+  UpdateBillingSnapshotInput,
   VoidInvoiceInput
 } from '../../shared/contracts/billing'
 
@@ -182,6 +183,47 @@ export function removeInvoiceLine(input: RemoveInvoiceLineInput) {
   invoiceRepo.updateTotals(organizationId, input.invoiceId, totals)
 }
 
+/** Updates the billing snapshot on a DRAFT invoice. Never touches `customers`. */
+export function updateBillingSnapshot(input: UpdateBillingSnapshotInput) {
+  requirePermission(PERMISSIONS.INVOICE_CREATE)
+  const organizationId = currentOrganizationId()
+
+  const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
+  if (!invoice) throw new NotFoundError('Invoice not found')
+  if (invoice.status !== 'DRAFT') throw new InvoiceAlreadyFinalizedError()
+
+  invoiceRepo.updateBillingSnapshot(organizationId, input.invoiceId, {
+    billingName: input.billingName,
+    billingPhone: input.billingPhone,
+    billingEmail: input.billingEmail,
+    billingAddress: input.billingAddress
+  })
+
+  return mapInvoiceToRow(
+    invoiceRepo.getById(organizationId, input.invoiceId) ?? invoice
+  )
+}
+
+/**
+ * Display-only preview of the next invoice number (Module 04 §36). Reads the
+ * sequence counter without incrementing — the authoritative number is assigned
+ * inside the finalize transaction, so this value is never reserved.
+ */
+export function nextInvoiceNumberPreview(): InvoiceNumberPreview {
+  requirePermission(PERMISSIONS.INVOICE_VIEW)
+  const organizationId = currentOrganizationId()
+
+  const year = new Date().toISOString().slice(0, 4)
+  const prefix = 'INV'
+  const nextValue = invoiceSequenceRepo.peekNext(organizationId, year, prefix)
+  return {
+    year,
+    prefix,
+    nextValue,
+    preview: `${prefix}-${year}-${String(nextValue).padStart(6, '0')}`
+  }
+}
+
 /** Finalizes a DRAFT invoice: assigns the business number and freezes it. */
 export function finalizeInvoice(input: FinalizeInvoiceInput) {
   requirePermission(PERMISSIONS.INVOICE_FINALIZE)
@@ -229,8 +271,7 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
   })
 }
 
-/** Voids an OPEN invoice. Financial values are kept. */
-export function voidInvoice(input: VoidInvoiceInput) {
+/** Voids an OPEN invoice. Financial values are kept. */export function voidInvoice(input: VoidInvoiceInput) {
   requirePermission(PERMISSIONS.INVOICE_VOID)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -255,7 +296,6 @@ export function voidInvoice(input: VoidInvoiceInput) {
 export function markUncollectible(input: MarkUncollectibleInput) {
   requirePermission(PERMISSIONS.INVOICE_VOID)
   const organizationId = currentOrganizationId()
-  const userId = requireSession().userId
 
   const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
   if (!invoice) throw new NotFoundError('Invoice not found')
@@ -263,7 +303,6 @@ export function markUncollectible(input: MarkUncollectibleInput) {
     throw new ValidationError('Only OPEN or PARTIALLY_PAID invoices can be marked uncollectible')
   }
 
-  const now = new Date().toISOString()
   invoiceRepo.updateStatus(organizationId, input.invoiceId, 'UNCOLLECTIBLE', {
     voidReason: input.reason
   })

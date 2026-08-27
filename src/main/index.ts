@@ -13,6 +13,7 @@ import { registerBillingIpc } from './ipc/billing'
 import { registerFinanceIpc } from './ipc/finance'
 import { registerCustomersIpc } from './ipc/customers'
 import { registerInvoicesIpc } from './ipc/invoices'
+import { registerMembershipsIpc } from './ipc/memberships'
 import { registerDashboardIpc } from './ipc/dashboard'
 import { registerCollectionsIpc } from './ipc/collections'
 import { registerIdentityReadIpc } from './ipc/identity-read'
@@ -77,6 +78,7 @@ app.whenReady().then(async () => {
   registerFinanceIpc()
   registerCustomersIpc()
   registerInvoicesIpc()
+  registerMembershipsIpc()
   registerDashboardIpc()
   registerCollectionsIpc()
   registerIdentityReadIpc()

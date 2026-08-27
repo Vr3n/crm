@@ -20,6 +20,7 @@ interface InvoiceRow {
   billing_name: string | null
   billing_phone: string | null
   billing_email: string | null
+  billing_address: string | null
   subtotal_minor: number
   tax_minor: number
   total_minor: number
@@ -70,7 +71,12 @@ function buildInvoiceOutput(
   allocations: Array<AllocationRow & { payment: PaymentRow | undefined }>,
   person: PersonRow | undefined
 ) {
-  const paidAmount = allocations.reduce((sum, a) => sum + a.amount_minor, 0)
+  const paidMinor = allocations.reduce((sum, a) => sum + a.amount_minor, 0)
+  // The renderer read model carries whole rupees / percent (features/invoices
+  // types.ts); convert from the stored minor units (paise) and bps here so no
+  // component ever does money arithmetic (Module 04 §34).
+  const toRupees = (minor: number): number => Math.round(minor / 100)
+  const paidAmount = toRupees(paidMinor)
   return {
     id: String(invoice.id),
     invoiceNo: invoice.number,
@@ -83,30 +89,34 @@ function buildInvoiceOutput(
     issuedAt: invoice.finalized_at ?? invoice.created_at,
     dueAt: undefined,
     status: invoice.status as 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE',
+    billingName: invoice.billing_name,
+    billingPhone: invoice.billing_phone,
+    billingEmail: invoice.billing_email,
+    billingAddress: invoice.billing_address,
     lines: lines.map((l) => ({
       id: String(l.id),
       description: l.description,
       quantity: l.quantity,
-      unitPrice: l.unit_price_minor,
-      discountAmount: l.discount_minor,
-      taxRate: l.tax_rate_bps,
-      taxAmount: l.tax_amount_minor,
-      lineTotal: l.line_total_minor
+      unitPrice: toRupees(l.unit_price_minor),
+      discountAmount: toRupees(l.discount_minor),
+      taxRate: l.tax_rate_bps / 100,
+      taxAmount: toRupees(l.tax_amount_minor),
+      lineTotal: toRupees(l.line_total_minor)
     })),
     allocations: allocations.map((a) => ({
       id: String(a.id),
-      amount: a.amount_minor,
+      amount: toRupees(a.amount_minor),
       method: a.payment?.payment_method ?? 'UNKNOWN',
       reference: a.payment?.reference ?? '',
       receivedAt: a.created_at,
       receivedBy: a.payment ? String(a.payment.created_by) : ''
     })),
     createdBy: String(invoice.created_by),
-    subtotal: invoice.subtotal_minor,
-    taxTotal: invoice.tax_minor,
-    total: invoice.total_minor,
+    subtotal: toRupees(invoice.subtotal_minor),
+    taxTotal: toRupees(invoice.tax_minor),
+    total: toRupees(invoice.total_minor),
     paidAmount,
-    outstanding: Math.max(0, invoice.total_minor - paidAmount)
+    outstanding: Math.max(0, toRupees(invoice.total_minor) - paidAmount)
   }
 }
 

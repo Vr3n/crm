@@ -6,8 +6,7 @@ import {
   memberships,
   invoices,
   invoiceLines,
-  paymentAllocations,
-  payments
+  paymentAllocations
 } from '../db/schema'
 import { currentOrganizationId } from '../auth/session'
 import { memberRecordRequestSchema } from '../../shared/contracts/dashboard'
@@ -52,6 +51,7 @@ interface InvoiceLineRow {
 }
 
 interface AllocationRow {
+  invoice_id: number
   amount_minor: number
 }
 
@@ -203,6 +203,8 @@ export function registerDashboardIpc(): void {
     return invoiceRows.map((inv) => {
       const person = personByCustomer.get(inv.customer_id)
       const paid = paidByInvoice.get(inv.id) ?? 0
+      // Read models ship finished rupees — minor converts here exactly once.
+      const toRupees = (minor: number): number => Math.round(minor / 100)
       return {
         id: String(inv.id),
         member: {
@@ -213,8 +215,8 @@ export function registerDashboardIpc(): void {
         },
         plan: firstLineByInvoice.get(inv.id) ?? 'Invoice',
         purchasedAt: inv.created_at,
-        amountDue: inv.total_minor - paid,
-        total: inv.total_minor
+        amountDue: toRupees(inv.total_minor - paid),
+        total: toRupees(inv.total_minor)
       }
     })
   })
@@ -230,12 +232,6 @@ export function registerDashboardIpc(): void {
       .get() as { person_id: number; created_at: string } | undefined
 
     if (!customerRow) return undefined
-
-    const person = getDrizzle()
-      .select()
-      .from(people)
-      .where(and(eq(people.organization_id, organizationId), eq(people.id, customerRow.person_id)))
-      .get() as PersonRow | undefined
 
     // Get latest membership
     const membership = getDrizzle()
@@ -271,7 +267,7 @@ export function registerDashboardIpc(): void {
           label: 'Invoice',
           periodStart: inv.created_at,
           periodEnd: inv.created_at,
-          amount: inv.total_minor,
+          amount: Math.round(inv.total_minor / 100),
           status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
           paidAt: inv.status === 'PAID' ? inv.created_at : undefined
         }))
@@ -291,7 +287,7 @@ export function registerDashboardIpc(): void {
         label: 'Invoice',
         periodStart: inv.created_at,
         periodEnd: inv.created_at,
-        amount: inv.total_minor,
+        amount: Math.round(inv.total_minor / 100),
         status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
         paidAt: inv.status === 'PAID' ? inv.created_at : undefined
       }))
@@ -310,12 +306,6 @@ export function registerDashboardIpc(): void {
 
     if (!customerRow) return undefined
 
-    const person = getDrizzle()
-      .select()
-      .from(people)
-      .where(and(eq(people.organization_id, organizationId), eq(people.id, customerRow.person_id)))
-      .get() as PersonRow | undefined
-
     // Get latest membership
     const membership = getDrizzle()
       .select()
@@ -350,7 +340,7 @@ export function registerDashboardIpc(): void {
           label: 'Invoice',
           periodStart: inv.created_at,
           periodEnd: inv.created_at,
-          amount: inv.total_minor,
+          amount: Math.round(inv.total_minor / 100),
           status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
           paidAt: inv.status === 'PAID' ? inv.created_at : undefined
         }))
@@ -370,7 +360,7 @@ export function registerDashboardIpc(): void {
         label: 'Invoice',
         periodStart: inv.created_at,
         periodEnd: inv.created_at,
-        amount: inv.total_minor,
+        amount: Math.round(inv.total_minor / 100),
         status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
         paidAt: inv.status === 'PAID' ? inv.created_at : undefined
       }))
