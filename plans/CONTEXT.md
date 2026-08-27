@@ -121,6 +121,27 @@ tax rate, tax amount, line total) captured at creation. Never recomputed from th
 current catalog.
 _Avoid_: Line item, entry
 
+**Draft**:
+An unfinalized Invoice whose lines, billing snapshot and totals are still editable.
+Abandoned drafts are kept as rows — they have no terminal state and are never deleted.
+_Avoid_: Pending invoice, working copy
+
+**Invoice Number**:
+The business-assigned sequential identifier printed on an Invoice (e.g.
+`INV-2026-000147`), assigned only at finalization inside the numbering transaction.
+Never the database row id, and never reserved by a display preview.
+_Avoid_: Invoice id, serial
+
+**Billing Snapshot**:
+The customer's name/phone/email/address copied onto an Invoice at draft time as
+document history. Edits apply to the invoice only and never write back to the Customer.
+_Avoid_: Customer details (on an invoice), address book copy
+
+**Finalization**:
+The act that assigns the Invoice Number, freezes all financial values, and opens the
+Invoice for payment. The only edit window for content is before it.
+_Avoid_: Approval, commit, "saving the invoice"
+
 **Payment**:
 Money recorded as received, against one or more Invoices via Allocations. A Payment is a
 historical fact that is never edited or deleted.

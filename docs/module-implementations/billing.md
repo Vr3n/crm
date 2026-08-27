@@ -104,7 +104,7 @@ Commands (permission-gated, one `withTransaction`):
 | `addInvoiceLine(invoiceId, line)` | `invoice.update` | DRAFT only; snapshots unit price/tax from plan (or manual); validates `line_total` math |
 | `removeInvoiceLine(invoiceId, lineId)` | `invoice.update` | DRAFT only |
 | `finalizeInvoice(invoiceId)` | `invoice.finalize` | DRAFT→(OPEN); assigns `invoice_no` in-tx; recomputes + caches totals; writes audit; returns numbered invoice |
-| `voidInvoice(invoiceId, reason)` | `invoice.void` | DRAFT only (no allocations) → VOID; keeps number; audit reason |
+| `voidInvoice(invoiceId, reason)` | `invoice.void` | OPEN/PARTIALLY_PAID only (spec §13, backend-plan/04) → VOID; keeps number + amounts; audit reason. DRAFTs are not voidable — they stay as kept, filterable rows (grilling decision 2026-08-22) |
 | `markUncollectible(invoiceId, reason)` | `invoice.writeoff` | OPEN/PARTIALLY_PAID with `paid == 0` → UNCOLLECTIBLE; write-off logged |
 | `updateBillingSnapshot(invoiceId, snapshot)` | `invoice.update` | DRAFT only; customer address/name edits never touch `customers` |
 
