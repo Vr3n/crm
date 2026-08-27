@@ -351,7 +351,7 @@ export function NewLeadDialog({
                   description="Search an existing source or add a new one"
                   placeholder="Where did they come from?"
                   searchPlaceholder="Search or add a source…"
-                  minSearchLength={2}
+                  minSearchLength={0}
                   canCreate={canCreateSource}
                   onCreated={() =>
                     void queryClient.invalidateQueries({ queryKey: referenceKeys.all })
@@ -375,7 +375,7 @@ export function NewLeadDialog({
                     description="Pick a plan from the catalog"
                     placeholder="e.g. Annual Premium"
                     searchPlaceholder="Search plans…"
-                    minSearchLength={2}
+                    minSearchLength={0}
                   />
                 )}
               </form.Field>
@@ -395,7 +395,7 @@ export function NewLeadDialog({
                     description="Pick an existing goal or add a new one"
                     placeholder="e.g. Weight loss"
                     searchPlaceholder="Search or add a goal…"
-                    minSearchLength={2}
+                    minSearchLength={0}
                   />
                 )}
               </form.Field>

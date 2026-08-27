@@ -190,6 +190,7 @@ export function AutocorrectCombobox<TId extends string | number = string>({
     open &&
     !disabled &&
     searchable &&
+    trimmedQuery.length > 0 &&
     querySettled &&
     !searchQuery.isPending &&
     !searchQuery.isError &&

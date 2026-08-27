@@ -302,7 +302,7 @@ export function EditLeadDialog({
                   description="Search an existing source or add a new one"
                   placeholder="Where did they come from?"
                   searchPlaceholder="Search or add a source…"
-                  minSearchLength={2}
+                  minSearchLength={0}
                   canCreate={canCreateSource}
                   selectedOption={sourceOption}
                   onCreated={() =>
@@ -327,7 +327,7 @@ export function EditLeadDialog({
                     description="Pick a plan from the catalog"
                     placeholder="e.g. Annual Premium"
                     searchPlaceholder="Search plans…"
-                    minSearchLength={2}
+                    minSearchLength={0}
                     selectedOption={planOption}
                   />
                 )}
@@ -348,7 +348,7 @@ export function EditLeadDialog({
                     description="Pick an existing goal or add a new one"
                     placeholder="e.g. Weight loss"
                     searchPlaceholder="Search or add a goal…"
-                    minSearchLength={2}
+                    minSearchLength={0}
                     selectedOption={goalOption}
                   />
                 )}
