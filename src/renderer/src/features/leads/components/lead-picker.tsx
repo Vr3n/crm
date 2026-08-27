@@ -29,10 +29,8 @@ export function LeadPicker({
 }: {
   value: number
   onChange: (lead: Lead) => void
-  /** Hide leads currently sitting in these stages (e.g. lost leads). */
   excludeStage?: StageKey[]
   placeholder?: string
-  /** Sets `aria-invalid` + destructive border on the trigger (reactive form states). */
   invalid?: boolean
 }): React.JSX.Element {
   const { data } = useLeads()
@@ -72,7 +70,14 @@ export function LeadPicker({
         className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0"
         align="start"
       >
-        <Command>
+        <Command
+          filter={(val, search) => {
+            const l = leads.find((x) => String(x.id) === val)
+            if (!l) return 0
+            const haystack = `${l.name} ${l.phone ?? ''}`.toLowerCase()
+            return haystack.includes(search.toLowerCase()) ? 1 : 0
+          }}
+        >
           <CommandInput placeholder="Search by name or phone…" />
           <CommandList>
             <CommandEmpty>No leads found.</CommandEmpty>

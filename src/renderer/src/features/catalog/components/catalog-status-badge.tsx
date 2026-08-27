@@ -15,7 +15,7 @@ export function OfferLifecycleBadge({ offer }: { offer: Offer }): React.JSX.Elem
   const cfg = {
     LIVE: { label: 'Live', tone: 'success' },
     UPCOMING: { label: 'Upcoming', tone: 'primary' },
-    ENDED: { label: 'Ended', tone: 'default' },
+    ENDED: { label: 'Expired', tone: 'default' },
     PAUSED: { label: 'Paused', tone: 'warning' }
   } as const
   return (
