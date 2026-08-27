@@ -14,6 +14,7 @@ import { CustomerDetailPage } from '@/features/customers/pages/CustomerDetailPag
 import { MembershipsPage } from '@/features/memberships/pages/MembershipsPage'
 import { MembershipSalePage } from '@/features/memberships/sale/page'
 import { InvoicesPage } from '@/features/invoices/pages/InvoicesPage'
+import { InvoiceDetailPage } from '@/features/invoices/pages/InvoiceDetailPage'
 import { CollectionsPage } from '@/features/collections/pages/CollectionsPage'
 import { PaymentsPage } from '@/features/finance/pages/PaymentsPage'
 import { RefundsPage } from '@/features/finance/pages/RefundsPage'
@@ -70,6 +71,7 @@ export function AppRoutes(): React.JSX.Element {
         <Route path="plans" element={<PlansPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="refunds" element={<RefundsPage />} />

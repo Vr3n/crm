@@ -1,22 +1,29 @@
+import { useState } from 'react'
 import {
   CalendarClock,
   Mail,
   Phone,
   ReceiptText,
   UserRound,
+  UserRoundPen,
   Wallet,
   type LucideIcon
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { formatDate, formatDateTime, initials } from '@/features/leads/format'
-import { PAYMENT_METHOD_META } from '@/lib/payment-methods'
+import { PAYMENT_METHOD_META, type PaymentMethod } from '@/lib/payment-methods'
 import { formatMoney } from '@/lib/money'
+import { can, useSession } from '@/context/session-context'
+import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
 import { INVOICE_STATUS_META } from '../constants'
 import { useInvoice } from '../queries'
 import type { Invoice } from '../types'
+import { EditBillingSnapshotDialog } from './edit-billing-snapshot-dialog'
+import { MarkUncollectibleDialog, VoidInvoiceDialog } from './lifecycle-reason-dialogs'
 import { InvoiceStatusBadge } from './invoice-status-badge'
 
 /**
@@ -94,7 +101,7 @@ function AllocationRow({ invoice }: { invoice: Invoice }): React.JSX.Element {
   return (
     <div>
       {invoice.allocations.map((a) => {
-        const meta = PAYMENT_METHOD_META[a.method]
+        const meta = PAYMENT_METHOD_META[a.method as PaymentMethod] ?? PAYMENT_METHOD_META.OTHER
         const Icon = meta.icon
         return (
           <div
@@ -207,16 +214,25 @@ export function InvoiceDetailsSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
+  const session = useSession()
   // `invoice` stays set while `open` goes false so the content persists through
   // the close (exit) animation instead of flashing empty.
   const { data, isLoading, isError } = useInvoice(invoice?.id)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [snapshotOpen, setSnapshotOpen] = useState(false)
+  const [voidOpen, setVoidOpen] = useState(false)
+  const [uncollectibleOpen, setUncollectibleOpen] = useState(false)
 
   const meta = data ? INVOICE_STATUS_META[data.status] : undefined
-  const hasFooterActions =
-    data != null &&
-    (data.status === 'OPEN' || data.status === 'PARTIALLY_PAID' || data.status === 'PAID')
+  const isDraft = data?.status === 'DRAFT'
+  const isOpenish = data?.status === 'OPEN' || data?.status === 'PARTIALLY_PAID'
+  const canEditSnapshot = can(session.permissions, session.isSuper, 'invoice.create')
+  const canLifecycle = can(session.permissions, session.isSuper, 'invoice.void')
+  // The billing commands take the numeric row id; the read model uses strings.
+  const numericId = invoice ? Number(invoice.id) : undefined
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full gap-0 border-l p-0 sm:max-w-md">
         {invoice && (
@@ -319,59 +335,161 @@ export function InvoiceDetailsSheet({
               )}
             </div>
 
-            {hasFooterActions && (
+            {isDraft ? (
               <SheetFooter className="border-t border-border/80">
-                {data?.status === 'OPEN' || data?.status === 'PARTIALLY_PAID' ? (
-                  <div className="grid w-full grid-cols-2 gap-2.5">
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        toast('Follow-up scheduled', {
-                          description: 'Follow-up scheduling arrives with the Members module.'
-                        })
-                      }
-                    >
-                      Schedule follow-up
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        toast('Record payment', {
-                          description: 'Payment recording arrives with the Finance module.'
-                        })
-                      }
-                    >
-                      Record payment
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid w-full grid-cols-2 gap-2.5">
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        toast('Print / PDF', {
-                          description: 'Printable invoices arrive with the Reports module.'
-                        })
-                      }
-                    >
-                      Print / PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        toast('Email invoice', {
-                          description: 'Email delivery arrives with the Reports module.'
-                        })
-                      }
-                    >
-                      Email invoice
-                    </Button>
-                  </div>
-                )}
+                <div className="grid w-full grid-cols-2 gap-2.5">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={canEditSnapshot ? -1 : 0} className="contents">
+                        <Button
+                          variant="outline"
+                          disabled={!canEditSnapshot}
+                          onClick={() => setSnapshotOpen(true)}
+                        >
+                          <UserRoundPen />
+                          Edit billing details
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!canEditSnapshot ? (
+                      <TooltipContent>Requires the invoice.create permission</TooltipContent>
+                    ) : null}
+                  </Tooltip>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      toast('Continue draft', {
+                        description: 'Reopen the draft from the register to add lines and finalize.'
+                      })
+                    }
+                  >
+                    Add lines / Finalize
+                  </Button>
+                </div>
               </SheetFooter>
-            )}
+            ) : data && isOpenish ? (
+              <SheetFooter className="border-t border-border/80">
+                <div className="grid w-full grid-cols-2 gap-2.5">
+                  <Button onClick={() => setPaymentDialogOpen(true)}>Record payment</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      toast('Follow-up scheduled', {
+                        description: 'Follow-up scheduling arrives with the Members module.'
+                      })
+                    }
+                  >
+                    Schedule follow-up
+                  </Button>
+                  <LifecycleButton
+                    label="Void"
+                    enabled={canLifecycle}
+                    tooltip="Requires the invoice.void permission"
+                    onClick={() => setVoidOpen(true)}
+                  />
+                  <LifecycleButton
+                    label="Mark uncollectible"
+                    enabled={canLifecycle}
+                    tooltip="Requires the invoice.void permission"
+                    onClick={() => setUncollectibleOpen(true)}
+                  />
+                </div>
+              </SheetFooter>
+            ) : data != null &&
+              (data.status === 'PAID' || data.status === 'VOID' || data.status === 'UNCOLLECTIBLE') ? (
+              <SheetFooter className="border-t border-border/80">
+                <div className="grid w-full grid-cols-2 gap-2.5">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      toast('Print / PDF', {
+                        description: 'Printable invoices arrive with the Reports module.'
+                      })
+                    }
+                  >
+                    Print / PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      toast('Email invoice', {
+                        description: 'Email delivery arrives with the Reports module.'
+                      })
+                    }
+                  >
+                    Email invoice
+                  </Button>
+                </div>
+              </SheetFooter>
+            ) : null}
           </>
         )}
       </SheetContent>
     </Sheet>
+    {invoice && isDraft ? (
+      <EditBillingSnapshotDialog
+        open={snapshotOpen}
+        onOpenChange={setSnapshotOpen}
+        invoiceId={numericId}
+        invoiceNo={invoice.invoiceNo}
+        initial={{
+          name: data.billingName ?? invoice.customer.name,
+          phone: data.billingPhone ?? '',
+          email: data.billingEmail ?? '',
+          address: data.billingAddress ?? ''
+        }}
+      />
+    ) : null}
+    {invoice && isOpenish ? (
+      <>
+        <VoidInvoiceDialog
+          open={voidOpen}
+          onOpenChange={setVoidOpen}
+          invoiceId={numericId}
+          invoiceNo={invoice.invoiceNo}
+        />
+        <MarkUncollectibleDialog
+          open={uncollectibleOpen}
+          onOpenChange={setUncollectibleOpen}
+          invoiceId={numericId}
+          invoiceNo={invoice.invoiceNo}
+        />
+      </>
+    ) : null}
+    {invoice && (
+      <RecordPaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        preSelectedCustomerId={invoice.customer.id}
+        preSelectedInvoiceId={invoice.id}
+      />
+    )}
+    </>
+  )
+}
+
+/** Lifecycle action that degrades to a disabled button + permission tooltip. */
+function LifecycleButton({
+  label,
+  enabled,
+  tooltip,
+  onClick
+}: {
+  label: string
+  enabled: boolean
+  tooltip: string
+  onClick: () => void
+}): React.JSX.Element {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={enabled ? -1 : 0}>
+          <Button variant="outline" className="text-destructive hover:text-destructive" disabled={!enabled} onClick={onClick}>
+            {label}
+          </Button>
+        </span>
+      </TooltipTrigger>
+      {!enabled ? <TooltipContent>{tooltip}</TooltipContent> : null}
+    </Tooltip>
   )
 }

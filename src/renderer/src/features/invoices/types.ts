@@ -53,6 +53,11 @@ export interface Invoice {
   id: string
   invoiceNo: string
   customer: CustomerRef
+  /** Billing snapshot (Module 04 §21) — document history, not the live customer. */
+  billingName?: string | null
+  billingPhone?: string | null
+  billingEmail?: string | null
+  billingAddress?: string | null
   issuedAt: string
   dueAt?: string
   status: InvoiceStatus
