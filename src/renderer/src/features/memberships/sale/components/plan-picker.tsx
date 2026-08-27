@@ -55,7 +55,13 @@ export function PlanPicker({
         className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0"
         align="start"
       >
-        <Command>
+        <Command
+          filter={(val, search) => {
+            const p = activePlans.find((x) => String(x.id) === val)
+            if (!p) return 0
+            return p.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          }}
+        >
           <CommandInput placeholder="Search by plan name…" />
           <CommandList>
             <CommandEmpty>No plans found.</CommandEmpty>

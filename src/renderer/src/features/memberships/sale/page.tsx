@@ -42,6 +42,7 @@ import { OfferFormDialog } from '@/features/catalog/components/offer-form-dialog
 import { useLead } from '@/features/leads/queries'
 import { usePlans } from '@/features/catalog/queries'
 import { displayPhone } from '@/features/leads/format'
+import { useSellMembership } from './queries'
 import type { Plan, Offer } from '@/features/catalog/types'
 
 function daysForDuration(duration: Plan['duration']): number {
@@ -87,11 +88,15 @@ export function MembershipSalePage(): React.JSX.Element {
 
   const { data: plansList = [] } = usePlans()
 
+  const sellMutation = useSellMembership()
+  const [serverError, setServerError] = useState<string | null>(null)
+
   const form = useForm({
     defaultValues: {
       leadId: null as number | null,
       planId: null as number | null,
       offerId: null as number | null,
+      joiningDate: todayISO(),
       startDate: todayISO(),
       endDate: todayISO(),
       baseInput: '',
@@ -101,8 +106,36 @@ export function MembershipSalePage(): React.JSX.Element {
       paymentMethod: '' as string
     },
     onSubmit: async ({ value }) => {
-      // prototype: just log
-      console.log('submit', value)
+      setServerError(null)
+      const baseMinor = value.baseInput === '' ? 0 : Math.round(Number(value.baseInput.replace(/,/g, '')) * 100)
+      let discountValueMinor: number | null = null
+      if (value.discountType !== 'NONE') {
+        const raw = value.discountValue.replace(/,/g, '')
+        const n = Number(raw)
+        if (value.discountType === 'PERCENTAGE') discountValueMinor = Math.round(n)
+        else discountValueMinor = Math.round(n * 100)
+      }
+      const paidMinor = value.paidInput === '' ? 0 : Math.round(Number(value.paidInput.replace(/,/g, '')) * 100)
+      try {
+        const res = await sellMutation.mutateAsync({
+          leadId: value.leadId!,
+          planId: value.planId!,
+          offerId: value.offerId,
+          joiningDate: value.joiningDate,
+          startDate: value.startDate,
+          endDate: value.endDate,
+          basePriceMinor: baseMinor,
+          discountType: value.discountType as any,
+          discountValueMinor,
+          paidAmountMinor: paidMinor,
+          paymentMethod: value.paymentMethod as any,
+          transactionId: crypto.randomUUID()
+        })
+        navigate(`/memberships/${res.membershipId}?invoice=${res.invoiceNumber}`)
+      } catch (e: any) {
+        const msg = e?.message ?? 'Sale failed'
+        setServerError(msg)
+      }
     }
   })
 
@@ -111,6 +144,7 @@ export function MembershipSalePage(): React.JSX.Element {
   const planId = useStore(form.store, (s) => s.values.planId)
   const offerId = useStore(form.store, (s) => s.values.offerId)
   const startDate = useStore(form.store, (s) => s.values.startDate)
+  const joiningDate = useStore(form.store, (s) => s.values.joiningDate)
   const endDate = useStore(form.store, (s) => s.values.endDate)
   const baseInput = useStore(form.store, (s) => s.values.baseInput)
   const discountType = useStore(form.store, (s) => s.values.discountType)
@@ -170,6 +204,12 @@ export function MembershipSalePage(): React.JSX.Element {
           }
         />
       </div>
+
+      {serverError ? (
+        <div role="alert" className="mx-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {serverError}
+        </div>
+      ) : null}
 
       <div className="grid gap-6 px-6 pb-6 pt-3 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-4">
@@ -406,8 +446,22 @@ export function MembershipSalePage(): React.JSX.Element {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard id="dates" step={4} title="Membership Duration" description="Start & end dates" icon={<CalendarDays className="size-3.5" />}>
-              <div className="flex items-end gap-2">
+            <SaleSectionCard id="dates" step={4} title="Membership Duration" description="Joining, start & end dates" icon={<CalendarDays className="size-3.5" />}>
+              <div className="grid gap-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs">Joining date {joiningDate === startDate ? <span className="font-normal text-muted-foreground">· same as start</span> : null}</Label>
+                  <form.Field name="joiningDate">
+                    {(field) => (
+                      <CatalogDatePicker
+                        value={field.state.value}
+                        onChange={(v) => field.handleChange(v)}
+                        placeholder="Pick joining date"
+                        triggerClassName="border-amber-300 bg-amber-50/60 hover:bg-amber-50 text-amber-700 hover:text-amber-800 [&_svg]:text-amber-500 data-[state=open]:bg-amber-50"
+                      />
+                    )}
+                  </form.Field>
+                </div>
+                <div className="flex items-end gap-2">
                 <div className="grid flex-1 gap-1.5">
                   <Label className="text-xs">Start date</Label>
                   <form.Field name="startDate">
@@ -447,6 +501,7 @@ export function MembershipSalePage(): React.JSX.Element {
                       />
                     )}
                   </form.Field>
+                </div>
                 </div>
               </div>
               {startDate && endDate && endDate < startDate ? (

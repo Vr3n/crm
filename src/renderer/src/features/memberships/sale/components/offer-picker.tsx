@@ -29,9 +29,15 @@ export function OfferPicker({
   const [open, setOpen] = useState(false)
 
   const filtered = useMemo(() => {
-    const active = offers.filter((o) => o.isActive)
-    if (!planId) return active
-    return active.filter((o) => o.applicablePlanIds.length === 0 || o.applicablePlanIds.includes(planId))
+    const today = new Date().toISOString().slice(0, 10)
+    const sellable = offers.filter(
+      (o) =>
+        o.isActive &&
+        o.startDate <= today &&
+        (o.endDate === null || o.endDate >= today)
+    )
+    if (!planId) return sellable
+    return sellable.filter((o) => o.applicablePlanIds.length === 0 || o.applicablePlanIds.includes(planId))
   }, [offers, planId])
 
   const selected = filtered.find((o) => o.id === value) ?? offers.find((o) => o.id === value) ?? null
@@ -62,7 +68,13 @@ export function OfferPicker({
         className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0"
         align="start"
       >
-        <Command>
+        <Command
+          filter={(val, search) => {
+            const o = filtered.find((x) => String(x.id) === val)
+            if (!o) return 0
+            return o.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          }}
+        >
           <CommandInput placeholder="Search by offer name…" />
           <CommandList>
             <CommandEmpty>No offers found.</CommandEmpty>
