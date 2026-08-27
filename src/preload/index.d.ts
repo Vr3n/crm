@@ -39,9 +39,12 @@ import type {
   FinalizeInvoiceInput,
   VoidInvoiceInput,
   MarkUncollectibleInput,
+  UpdateBillingSnapshotInput,
   InvoiceIdRequest,
   CustomerInvoicesRequest,
   InvoiceDetail,
+  InvoiceNumberPreview,
+  InvoiceLineRow,
   InvoiceRow
 } from '../shared/contracts/billing'
 import type {
@@ -55,11 +58,13 @@ import type {
   PaymentIdRequest,
   CustomerPaymentsRequest,
   CustomerCreditBalanceRequest,
+  OutstandingInvoicesRequest,
   PaymentRow,
   InvoicePaymentState,
   RefundRow,
   CreditRow,
-  PaymentMethodRow
+  PaymentMethodRow,
+  OutstandingInvoiceRow
 } from '../shared/contracts/finance'
 import type {
   CustomerIdRequest,
@@ -117,6 +122,7 @@ import type {
   ScheduleFollowUpInput,
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
+import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 
 declare global {
   interface Window {
@@ -206,12 +212,14 @@ declare global {
       }
       billing: {
         createInvoice: (input: CreateInvoiceInput) => Promise<InvoiceRow>
-        addLine: (input: AddInvoiceLineInput) => Promise<InvoiceDetail>
-        removeLine: (input: RemoveInvoiceLineInput) => Promise<InvoiceDetail>
+        addLine: (input: AddInvoiceLineInput) => Promise<InvoiceLineRow>
+        removeLine: (input: RemoveInvoiceLineInput) => Promise<void>
         finalize: (input: FinalizeInvoiceInput) => Promise<InvoiceRow>
         void: (input: VoidInvoiceInput) => Promise<InvoiceRow>
         markUncollectible: (input: MarkUncollectibleInput) => Promise<InvoiceRow>
         getInvoice: (input: InvoiceIdRequest) => Promise<InvoiceDetail>
+        updateSnapshot: (input: UpdateBillingSnapshotInput) => Promise<InvoiceRow>
+        nextNumber: () => Promise<InvoiceNumberPreview>
         listByCustomer: (input: CustomerInvoicesRequest) => Promise<InvoiceRow[]>
         listOpen: () => Promise<InvoiceRow[]>
       }
@@ -228,6 +236,10 @@ declare global {
         creditBalance: (input: CustomerCreditBalanceRequest) => Promise<{ balanceMinor: number }>
         listCredits: (input: CustomerCreditBalanceRequest) => Promise<CreditRow[]>
         listPaymentMethods: () => Promise<PaymentMethodRow[]>
+        outstandingInvoicesFor: (input: OutstandingInvoicesRequest) => Promise<OutstandingInvoiceRow[]>
+        listPayments: () => Promise<unknown[]>
+        listRefunds: () => Promise<unknown[]>
+        listAllCredits: () => Promise<unknown[]>
       }
       customers: {
         list: () => Promise<CustomerRowOutput[]>
@@ -252,6 +264,9 @@ declare global {
         organization: () => Promise<OrganizationOutput | null>
         staff: () => Promise<StaffMemberOutput[]>
         roles: () => Promise<RoleOutput[]>
+      }
+      memberships: {
+        sell: (input: SellMembershipInput) => Promise<SellMembershipResult>
       }
     }
   }

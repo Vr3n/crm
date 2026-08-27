@@ -39,9 +39,12 @@ import type {
   FinalizeInvoiceInput,
   VoidInvoiceInput,
   MarkUncollectibleInput,
+  UpdateBillingSnapshotInput,
   InvoiceIdRequest,
   CustomerInvoicesRequest,
   InvoiceDetail,
+  InvoiceNumberPreview,
+  InvoiceLineRow,
   InvoiceRow
 } from '../shared/contracts/billing'
 import type {
@@ -55,6 +58,8 @@ import type {
   PaymentIdRequest,
   CustomerPaymentsRequest,
   CustomerCreditBalanceRequest,
+  OutstandingInvoicesRequest,
+  OutstandingInvoiceRow,
   PaymentRow,
   InvoicePaymentState,
   RefundRow,
@@ -65,6 +70,7 @@ import type {
   CustomerIdRequest,
   CustomerRowOutput
 } from '../shared/contracts/customers'
+import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type {
   InvoiceIdRequest as InvoiceReadIdRequest,
   InvoicesByStatusRequest,
@@ -252,9 +258,9 @@ const api = {
   billing: {
     createInvoice: (input: CreateInvoiceInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_CREATE_INVOICE, input),
-    addLine: (input: AddInvoiceLineInput): Promise<InvoiceDetail> =>
+    addLine: (input: AddInvoiceLineInput): Promise<InvoiceLineRow> =>
       call(IPC_CHANNELS.BILLING_ADD_LINE, input),
-    removeLine: (input: RemoveInvoiceLineInput): Promise<InvoiceDetail> =>
+    removeLine: (input: RemoveInvoiceLineInput): Promise<void> =>
       call(IPC_CHANNELS.BILLING_REMOVE_LINE, input),
     finalize: (input: FinalizeInvoiceInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_FINALIZE, input),
@@ -264,6 +270,10 @@ const api = {
       call(IPC_CHANNELS.BILLING_MARK_UNCOLLECTIBLE, input),
     getInvoice: (input: InvoiceIdRequest): Promise<InvoiceDetail> =>
       call(IPC_CHANNELS.BILLING_GET_INVOICE, input),
+    updateSnapshot: (input: UpdateBillingSnapshotInput): Promise<InvoiceRow> =>
+      call(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, input),
+    nextNumber: (): Promise<InvoiceNumberPreview> =>
+      call(IPC_CHANNELS.BILLING_NEXT_NUMBER),
     listByCustomer: (input: CustomerInvoicesRequest): Promise<InvoiceRow[]> =>
       call(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, input),
     listOpen: (): Promise<InvoiceRow[]> =>
@@ -293,13 +303,25 @@ const api = {
     listCredits: (input: CustomerCreditBalanceRequest): Promise<CreditRow[]> =>
       call(IPC_CHANNELS.FINANCE_LIST_CREDITS, input),
     listPaymentMethods: (): Promise<PaymentMethodRow[]> =>
-      call(IPC_CHANNELS.FINANCE_LIST_PAYMENT_METHODS)
+      call(IPC_CHANNELS.FINANCE_LIST_PAYMENT_METHODS),
+    outstandingInvoicesFor: (input: OutstandingInvoicesRequest): Promise<OutstandingInvoiceRow[]> =>
+      call(IPC_CHANNELS.FINANCE_OUTSTANDING_INVOICES, input),
+    listPayments: (): Promise<unknown[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, {}),
+    listRefunds: (): Promise<unknown[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_REFUNDS, {}),
+    listAllCredits: (): Promise<unknown[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
   },
   customers: {
     list: (): Promise<CustomerRowOutput[]> =>
       call(IPC_CHANNELS.CUSTOMERS_LIST),
     get: (input: CustomerIdRequest): Promise<CustomerRowOutput | undefined> =>
       call(IPC_CHANNELS.CUSTOMERS_GET, input)
+  },
+  memberships: {
+    sell: (input: SellMembershipInput): Promise<SellMembershipResult> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_SELL, input)
   },
   invoices: {
     list: (): Promise<InvoiceOutput[]> =>
