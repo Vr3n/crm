@@ -11,6 +11,7 @@ import {
 import { currentOrganizationId } from '../auth/session'
 import { memberRecordRequestSchema } from '../../shared/contracts/dashboard'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
+import { toRupees } from '../../shared/contracts/money'
 import { handle } from './handle'
 
 /**
@@ -204,7 +205,6 @@ export function registerDashboardIpc(): void {
       const person = personByCustomer.get(inv.customer_id)
       const paid = paidByInvoice.get(inv.id) ?? 0
       // Read models ship finished rupees — minor converts here exactly once.
-      const toRupees = (minor: number): number => Math.round(minor / 100)
       return {
         id: String(inv.id),
         member: {

@@ -11,6 +11,7 @@ import {
 import { currentOrganizationId } from '../auth/session'
 import { customerIdRequestSchema } from '../../shared/contracts/customers'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
+import { toRupees } from '../../shared/contracts/money'
 import { handle } from './handle'
 
 /**
@@ -100,8 +101,6 @@ function buildInvoiceOutputs(
   paidAmount: number
   outstanding: number
 }> {
-  const toRupees = (minor: number): number => Math.round(minor / 100)
-
   const invoiceRows = getDrizzle()
     .select()
     .from(invoices)
@@ -162,7 +161,6 @@ function buildCustomerOutput(
 ) {
   // Read models ship finished rupees — minor units convert here exactly once
   // (Module 04 §34) so no component ever multiplies or divides by 100.
-  const toRupees = (minor: number): number => Math.round(minor / 100)
   return {
     id: String(customer.id),
     name: person?.full_name ?? customer.billing_name ?? 'Unknown',

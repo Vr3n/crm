@@ -22,6 +22,7 @@ import { PERMISSIONS } from '../db/permissions'
 import type { InvoiceStatus } from '../domain/billing'
 import { asc, eq, and, inArray, sql } from 'drizzle-orm'
 import { invoices, paymentAllocations, creditAllocations, invoiceLines, customers, people } from '../db/schema'
+import { toRupees } from '../../shared/contracts/money'
 
 /**
  * Module 05 (Finance) application use cases. Each Command gates on a permission,
@@ -507,7 +508,6 @@ export function listPaymentMethods() {
 export function getOutstandingInvoices(input: { customerId: number }) {
   requirePermission(PERMISSIONS.PAYMENT_VIEW)
   const organizationId = currentOrganizationId()
-  const toRupees = (minor: number): number => Math.round(minor / 100)
 
   // Fetch customer → person for the name
   const customerRow = getDrizzle()
@@ -625,8 +625,6 @@ export function getOutstandingInvoices(input: { customerId: number }) {
 /* -------------------------------------------------------------------------- */
 /* Org-wide list queries (for the Payments / Refunds / Credits pages)           */
 /* -------------------------------------------------------------------------- */
-
-const toRupees = (minor: number): number => Math.round(minor / 100)
 
 /** Batch-resolves person names for an array of person IDs. */
 function resolvePersonNames(

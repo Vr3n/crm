@@ -1,5 +1,6 @@
 import type { Payment, Refund, Credit, FinanceInvoice, InvoiceStatus } from './types'
 import type { PersonRef } from '@/features/dashboard/types'
+import { toRupees } from '../../../../shared/contracts/money'
 
 interface RecordPaymentInput {
   customerId: string
@@ -88,7 +89,7 @@ export const api = {
       paymentNo: `PAY-${paymentRow.id}`,
       customer: { id: input.customerId, name: '' },
       paymentDate: input.paymentDate,
-      amount: input.amountMinor,
+      amount: toRupees(input.amountMinor),
       method: input.paymentMethod as Payment['method'],
       reference: input.reference,
       notes: input.notes,
@@ -96,7 +97,7 @@ export const api = {
       allocations: (input.allocations ?? []).map((a) => ({
         invoiceId: a.invoiceId,
         invoiceNo: '',
-        amount: a.amount
+        amount: toRupees(a.amount)
       })),
       refundIds: []
     } as Payment

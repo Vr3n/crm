@@ -4,6 +4,7 @@ import { invoices, invoiceLines, paymentAllocations, payments, people, customers
 import { currentOrganizationId } from '../auth/session'
 import { invoiceIdRequestSchema, invoicesByStatusRequestSchema } from '../../shared/contracts/invoices'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
+import { toRupees } from '../../shared/contracts/money'
 import { handle } from './handle'
 
 /**
@@ -75,7 +76,6 @@ function buildInvoiceOutput(
   // The renderer read model carries whole rupees / percent (features/invoices
   // types.ts); convert from the stored minor units (paise) and bps here so no
   // component ever does money arithmetic (Module 04 §34).
-  const toRupees = (minor: number): number => Math.round(minor / 100)
   const paidAmount = toRupees(paidMinor)
   return {
     id: String(invoice.id),

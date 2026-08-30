@@ -1,12 +1,4 @@
-const MONEY = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0
-})
-
-/** INR money in the app's mono tabular style — ₹24,000 */
-export const formatMoney = (amount: number): string => MONEY.format(amount)
+export { formatMoney } from '@/lib/money'
 
 /** Abbreviated day-month year — 16 Aug 2026 */
 export const formatDate = (iso: string): string => {

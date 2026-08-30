@@ -17,3 +17,9 @@ export const moneySchema = z.object({
 })
 
 export type MoneyInput = z.infer<typeof moneySchema>
+
+/** Converts integer paise (minor units) to whole rupees (major units). */
+export const toRupees = (minor: number): number => Math.round(minor / 100)
+
+/** Converts whole rupees (major units) to integer paise (minor units). */
+export const fromRupees = (rupees: number): number => Math.round(rupees * 100)

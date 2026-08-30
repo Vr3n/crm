@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { Wallet } from 'lucide-react'
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { PAYMENT_METHODS } from '../constants'
 import { useCustomers, useOutstandingInvoices, useRecordPayment } from '../queries'
+import { pdfApi } from '@/features/pdf/api'
 import { CustomerPicker } from './customer-picker'
 import { AllocationSection, type AllocationDraft } from './allocation-section'
 import type { PersonRef } from '@/features/dashboard/types'
@@ -53,6 +55,7 @@ export function RecordPaymentDialog({
   preSelectedCustomerId,
   preSelectedInvoiceId
 }: RecordPaymentDialogProps): React.JSX.Element {
+  const navigate = useNavigate()
   const record = useRecordPayment()
   const { data: allCustomers = [] } = useCustomers()
   const [picked, setPicked] = useState<PersonRef | null>(null)
@@ -85,7 +88,7 @@ export function RecordPaymentDialog({
           amount: Math.round(a.amount * 100)
         }))
       try {
-        await record.mutateAsync({
+        const result = await record.mutateAsync({
           customerId: picked.id,
           paymentDate: value.paymentDate,
           amountMinor: Math.round(Number(value.amount.replace(/,/g, '')) * 100),
@@ -97,6 +100,18 @@ export function RecordPaymentDialog({
         setPicked(null)
         setAllocations([])
         onOpenChange(false)
+
+        // Navigate to first allocated invoice, then generate PDFs in background
+        const paidInvoiceIds = result.allocations.map((a) => a.invoiceId)
+        if (paidInvoiceIds.length > 0) {
+          navigate(`/invoices/${paidInvoiceIds[0]}`)
+          // Generate receipt PDF
+          pdfApi.exportReceipt(result.id, 'preview').catch(() => {})
+          // Generate invoice PDF for each allocated invoice
+          for (const invId of paidInvoiceIds) {
+            pdfApi.exportInvoice(invId, 'preview').catch(() => {})
+          }
+        }
       } catch {
         // error toast handled by the mutation hook
       }
