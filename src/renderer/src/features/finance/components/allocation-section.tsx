@@ -14,7 +14,6 @@ export interface AllocationDraft {
 interface AllocationSectionProps {
   invoices: FinanceInvoice[]
   paymentAmount: number
-  preSelectedInvoiceId?: string
   allocations: AllocationDraft[]
   onAllocationsChange: (allocs: AllocationDraft[]) => void
   isLoading: boolean
@@ -34,7 +33,6 @@ function invoiceDue(inv: FinanceInvoice): number {
 export function AllocationSection({
   invoices,
   paymentAmount,
-  preSelectedInvoiceId,
   allocations,
   onAllocationsChange,
   isLoading
@@ -55,35 +53,37 @@ export function AllocationSection({
   const remaining = paymentAmount - totalAllocated
 
   const getDraft = useMemo(
-    () => (invoiceId: string): AllocationDraft | undefined =>
-      allocations.find((a) => a.invoiceId === invoiceId),
+    () =>
+      (invoiceId: string): AllocationDraft | undefined =>
+        allocations.find((a) => a.invoiceId === invoiceId),
     [allocations]
   )
 
-  const toggleInvoice = (invoice: FinanceInvoice, checked: boolean) => {
+  const toggleInvoice = (invoice: FinanceInvoice, checked: boolean): void => {
     const due = invoiceDue(invoice)
-    onAllocationsChange((prev) => {
-      const existing = prev.find((a) => a.invoiceId === invoice.id)
-      if (checked) {
-        const otherAllocated = prev
-          .filter((a) => a.enabled && a.invoiceId !== invoice.id)
-          .reduce((s, a) => s + (a.amount || 0), 0)
-        const available = Math.max(0, paymentAmount - otherAllocated)
-        const amount = Math.min(due, available)
-        if (existing) {
-          return prev.map((a) =>
-            a.invoiceId === invoice.id ? { ...a, enabled: true, amount } : a
-          )
-        }
-        return [...prev, { invoiceId: invoice.id, amount, enabled: true }]
-      }
+    const existing = allocations.find((a) => a.invoiceId === invoice.id)
+    if (checked) {
+      const otherAllocated = allocations
+        .filter((a) => a.enabled && a.invoiceId !== invoice.id)
+        .reduce((s, a) => s + (a.amount || 0), 0)
+      const available = Math.max(0, paymentAmount - otherAllocated)
+      const amount = Math.min(due, available)
       if (existing) {
-        return prev.map((a) =>
+        onAllocationsChange(
+          allocations.map((a) => (a.invoiceId === invoice.id ? { ...a, enabled: true, amount } : a))
+        )
+        return
+      }
+      onAllocationsChange([...allocations, { invoiceId: invoice.id, amount, enabled: true }])
+      return
+    }
+    if (existing) {
+      onAllocationsChange(
+        allocations.map((a) =>
           a.invoiceId === invoice.id ? { ...a, enabled: false, amount: 0 } : a
         )
-      }
-      return prev
-    })
+      )
+    }
   }
 
   if (isLoading) {
@@ -173,7 +173,9 @@ export function AllocationSection({
                     <span
                       className={cn(
                         'text-[10px] font-medium tabular-nums',
-                        progress >= 1 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
+                        progress >= 1
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-amber-600 dark:text-amber-400'
                       )}
                     >
                       {Math.round(progress * 100)}%
@@ -183,7 +185,9 @@ export function AllocationSection({
                     <div
                       className={cn(
                         'h-full rounded-full transition-all duration-300 ease-out',
-                        progress >= 1 ? 'bg-green-500 dark:bg-green-400' : 'bg-amber-500 dark:bg-amber-400'
+                        progress >= 1
+                          ? 'bg-green-500 dark:bg-green-400'
+                          : 'bg-amber-500 dark:bg-amber-400'
                       )}
                       style={{ width: `${progress * 100}%` }}
                     />

@@ -63,7 +63,8 @@ export function MembershipSaleDialog({
             New Membership sale
           </DialogTitle>
           <DialogDescription>
-            Pick who it is for and which plan they are buying. The membership will appear under Customers once created.
+            Pick who it is for and which plan they are buying. The membership will appear under
+            Customers once created.
           </DialogDescription>
         </DialogHeader>
 

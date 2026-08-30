@@ -7,7 +7,20 @@ import { formatDate } from '@/features/leads/format'
 import { formatMoney } from '@/features/dashboard/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
-import { ExportExcelButton } from '@/features/dashboard/components/export-excel-button'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Invoice', key: 'invoiceNo', format: 'text' },
+  { header: 'Line', key: 'line', format: 'text' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Issued', key: 'issuedAt', format: 'date' },
+  { header: 'Billed', key: 'total', format: 'money' },
+  { header: 'Paid', key: 'paid', format: 'money' },
+  { header: 'Outstanding', key: 'outstanding', format: 'money' },
+  { header: 'Status', key: 'status', format: 'text' }
+]
 import { INVOICE_STATUS_META } from '../constants'
 import { invoiceDue } from '../build'
 import type { FinanceInvoice } from '../types'
@@ -139,6 +152,22 @@ export function ReceivablesTable({
   const columns = useMemo(() => buildColumns(), [])
   const rows = useMemo(() => invoices.filter((i) => i.status !== 'VOID'), [invoices])
 
+  const exportData = useMemo(
+    () =>
+      rows.map((r) => ({
+        invoiceNo: r.invoiceNo,
+        line: r.line,
+        customer: r.customer.name,
+        phone: r.customer.phone,
+        issuedAt: r.issuedAt,
+        total: r.total,
+        paid: r.paid,
+        outstanding: invoiceDue(r),
+        status: r.status
+      })),
+    [rows]
+  )
+
   return (
     <Card>
       <CardHeader>
@@ -159,7 +188,9 @@ export function ReceivablesTable({
           initialPageSize={8}
           pageSizeOptions={[8, 16, 32]}
           headerTone="primary"
-          toolbar={<ExportExcelButton />}
+          toolbar={
+            <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Receivables" />
+          }
           searchPlaceholder="Search invoice, customer…"
           emptyIcon={ReceiptText}
           emptyTitle="Nothing outstanding"

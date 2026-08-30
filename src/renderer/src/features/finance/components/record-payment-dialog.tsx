@@ -38,6 +38,9 @@ import type { PersonRef } from '@/features/dashboard/types'
 interface RecordPaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Full person ref — preferred, avoids a lookup. */
+  preSelectedCustomer?: PersonRef
+  /** Customer ID string — falls back to lookup in the customers list. */
   preSelectedCustomerId?: string
   preSelectedInvoiceId?: string
 }
@@ -52,17 +55,17 @@ interface RecordPaymentDialogProps {
 export function RecordPaymentDialog({
   open,
   onOpenChange,
+  preSelectedCustomer,
   preSelectedCustomerId,
   preSelectedInvoiceId
 }: RecordPaymentDialogProps): React.JSX.Element {
   const navigate = useNavigate()
   const record = useRecordPayment()
   const { data: allCustomers = [] } = useCustomers()
-  const [picked, setPicked] = useState<PersonRef | null>(null)
-  // When a pre-selected customer is provided, fetch outstanding invoices
-  // immediately using that ID — not picked?.id which starts null.
-  const effectiveCustomerId = preSelectedCustomerId ?? picked?.id
-  const { data: outstanding, isLoading: loadingInvoices } = useOutstandingInvoices(effectiveCustomerId)
+  const [picked, setPicked] = useState<PersonRef | null>(preSelectedCustomer ?? null)
+  const effectiveCustomerId = preSelectedCustomer?.id ?? preSelectedCustomerId ?? picked?.id
+  const { data: outstanding, isLoading: loadingInvoices } =
+    useOutstandingInvoices(effectiveCustomerId)
 
   const [allocations, setAllocations] = useState<AllocationDraft[]>([])
 
@@ -121,18 +124,21 @@ export function RecordPaymentDialog({
   // Subscribe to amount field reactively — form.state doesn't trigger re-renders
   const amount = useStore(form.store, (s) => s.values.amount)
 
-  // When opening with a pre-selected customer (contextual entry), seed the customer
-  // directly from the customers list — not from outstanding invoices (which may be
-  // empty or stubbed). Runs once on open when preSelectedCustomerId changes.
+  // When only a preSelectedCustomerId is provided (no full PersonRef), seed from the customers list.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: seed picked customer from ID fallback */
   useEffect(() => {
     if (!open) return
-    if (preSelectedCustomerId && allCustomers.length > 0 && !picked) {
-      const match = allCustomers.find((c) => c.id === preSelectedCustomerId)
-      if (match) setPicked(match)
+    if (preSelectedCustomerId && !preSelectedCustomer && allCustomers.length > 0) {
+      setPicked((prev) => {
+        if (prev) return prev
+        return allCustomers.find((c) => c.id === preSelectedCustomerId) ?? null
+      })
     }
-  }, [open, preSelectedCustomerId, allCustomers, picked])
+  }, [open, preSelectedCustomer, preSelectedCustomerId, allCustomers])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // When invoices load and we have a pre-selected invoice, auto-check it.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: seed allocations from loaded invoices */
   useEffect(() => {
     if (!open || !outstanding?.length || !preSelectedInvoiceId) return
     setAllocations((prev) => {
@@ -146,10 +152,12 @@ export function RecordPaymentDialog({
       }))
     })
   }, [open, outstanding, preSelectedInvoiceId])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Auto-distribute payment amount across outstanding invoices (oldest-first)
   // whenever the Amount field changes. Only runs when there are outstanding
   // invoices and a positive amount — manual toggles are handled separately.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: derive allocations from amount */
   useEffect(() => {
     if (!outstanding?.length) return
     const amt = Number(amount) || 0
@@ -172,16 +180,14 @@ export function RecordPaymentDialog({
 
     setAllocations(newAllocations)
   }, [amount, outstanding])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCustomerChange = useCallback((customer: PersonRef) => {
     setPicked(customer)
     setAllocations([])
   }, [])
 
-  const overAllocated =
-    !!amount &&
-    Number(amount) > 0 &&
-    totalAllocated > Number(amount)
+  const overAllocated = !!amount && Number(amount) > 0 && totalAllocated > Number(amount)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,7 +215,7 @@ export function RecordPaymentDialog({
               <Label>
                 Customer <span className="text-destructive">*</span>
               </Label>
-              {preSelectedCustomerId && picked ? (
+              {(preSelectedCustomer || preSelectedCustomerId) && picked ? (
                 <div className="flex h-9 items-center rounded-md border border-border bg-muted/50 px-3 text-sm">
                   {picked.name}
                 </div>
@@ -328,7 +334,6 @@ export function RecordPaymentDialog({
               <AllocationSection
                 invoices={outstanding ?? []}
                 paymentAmount={Number(amount) || 0}
-                preSelectedInvoiceId={preSelectedInvoiceId}
                 allocations={allocations}
                 onAllocationsChange={setAllocations}
                 isLoading={loadingInvoices}

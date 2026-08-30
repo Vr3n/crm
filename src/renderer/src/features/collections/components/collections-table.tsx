@@ -8,7 +8,19 @@ import { formatTime } from '@/features/leads/format'
 import { PAYMENT_METHOD_META } from '@/lib/payment-methods'
 import { formatMoney } from '@/lib/money'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
-import { ExportExcelButton } from '@/features/dashboard/components/export-excel-button'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Reference', key: 'reference', format: 'text' },
+  { header: 'Time', key: 'receivedAt', format: 'datetime' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Method', key: 'method', format: 'text' },
+  { header: 'Allocated To', key: 'allocatedTo', format: 'text' },
+  { header: 'Amount', key: 'amount', format: 'money' },
+  { header: 'Recorded By', key: 'receivedBy', format: 'text' }
+]
 import { PaymentDetailsSheet } from './payment-details-sheet'
 import type { PaymentRecord } from '../types'
 
@@ -158,6 +170,23 @@ export function CollectionsTable({
   }, [])
   const columns = useMemo(() => buildColumns(handleView), [handleView])
 
+  const exportData = useMemo(
+    () =>
+      payments.map((r) => ({
+        reference: r.reference,
+        receivedAt: r.receivedAt,
+        customer: r.customer.name,
+        phone: r.customer.phone ?? '',
+        method: r.method,
+        allocatedTo: r.allocations.length > 0
+          ? r.allocations.map((a) => a.invoiceNo).join(', ')
+          : 'On account',
+        amount: r.amount,
+        receivedBy: r.receivedBy
+      })),
+    [payments]
+  )
+
   return (
     <>
       <Card className="gap-0 py-0">
@@ -171,7 +200,13 @@ export function CollectionsTable({
             initialPageSize={10}
             pageSizeOptions={[10, 20, 50]}
             headerTone="primary"
-            toolbar={<ExportExcelButton />}
+            toolbar={
+              <ExportExcelButton
+                columns={EXPORT_COLUMNS}
+                rows={exportData}
+                sheetName="Collections"
+              />
+            }
             searchPlaceholder="Search payments…"
             emptyIcon={HandCoins}
             emptyTitle="No payments this day"

@@ -23,7 +23,19 @@ import {
   DateRangePicker,
   type DateRangePreset
 } from '@/features/dashboard/components/date-range-picker'
-import { ExportExcelButton } from '@/features/dashboard/components/export-excel-button'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Invoice', key: 'invoiceNo', format: 'text' },
+  { header: 'Issued', key: 'issuedAt', format: 'date' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Plan', key: 'plan', format: 'text' },
+  { header: 'Outstanding', key: 'outstanding', format: 'money' },
+  { header: 'Amount', key: 'total', format: 'money' },
+  { header: 'Status', key: 'status', format: 'text' }
+]
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { INVOICE_PAGE_SIZES, INVOICE_STATUS_META, INVOICE_STATUS_OPTIONS } from '../constants'
 import { useInvoices } from '../queries'
@@ -127,7 +139,6 @@ function buildColumns(
     helper.display({
       id: 'actions',
       header: () => <div className="text-right">Actions</div>,
-      size: 180,
       cell: ({ row }) => {
         const isOpenish = row.original.status === 'OPEN' || row.original.status === 'PARTIALLY_PAID'
         return (
@@ -251,6 +262,21 @@ export function InvoicesTable({
     })
   }, [data, range, status])
 
+  const exportData = useMemo(
+    () =>
+      filtered.map((r) => ({
+        invoiceNo: r.invoiceNo,
+        issuedAt: r.issuedAt,
+        customer: r.customer.name,
+        phone: r.customer.phone ?? '',
+        plan: r.lines[0]?.description?.replace(/\s*\(.*$/, '') ?? '',
+        outstanding: r.outstanding,
+        total: r.total,
+        status: r.status
+      })),
+    [filtered]
+  )
+
   return (
     <>
       <Card className="gap-0 py-0">
@@ -291,7 +317,11 @@ export function InvoicesTable({
                     ))}
                   </SelectContent>
                 </Select>
-                <ExportExcelButton />
+                <ExportExcelButton
+                  columns={EXPORT_COLUMNS}
+                  rows={exportData}
+                  sheetName="Invoices"
+                />
               </>
             }
             searchPlaceholder="Search invoices…"

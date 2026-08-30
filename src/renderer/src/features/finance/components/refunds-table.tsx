@@ -14,7 +14,21 @@ import { DataTable, type DashboardFeatures } from '@/features/dashboard/componen
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { PAYMENT_METHODS } from '../constants'
 import { PaymentMethodBadge } from './payment-method-badge'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
 import type { PaymentMethod, Refund } from '../types'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Refund No', key: 'refundNo', format: 'text' },
+  { header: 'Date', key: 'refundDate', format: 'datetime' },
+  { header: 'Recorded By', key: 'createdBy', format: 'text' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Against', key: 'sourcePaymentNo', format: 'text' },
+  { header: 'Amount', key: 'amount', format: 'money' },
+  { header: 'Reason', key: 'reason', format: 'text' },
+  { header: 'Method', key: 'method', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, Refund>()
 
@@ -134,6 +148,22 @@ export function RefundsTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(), [])
 
+  const exportData = useMemo(
+    () =>
+      refunds.map((r) => ({
+        refundNo: r.refundNo,
+        refundDate: r.refundDate,
+        createdBy: r.createdBy,
+        customer: r.customer.name,
+        phone: r.customer.phone,
+        sourcePaymentNo: r.sourcePaymentNo,
+        amount: r.amount,
+        reason: r.reason,
+        method: r.method
+      })),
+    [refunds]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -150,19 +180,22 @@ export function RefundsTable({
       emptyDescription="Refunds you issue from the button above will appear here."
       headerTone="primary"
       toolbar={
-        <Select value={method} onValueChange={(v) => onMethodChange(v as PaymentMethod | 'ALL')}>
-          <SelectTrigger size="sm" className="h-8 w-40 gap-1 rounded-md text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start">
-            <SelectItem value="ALL">All methods</SelectItem>
-            {PAYMENT_METHODS.map((m) => (
-              <SelectItem key={m.key} value={m.key}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <>
+          <Select value={method} onValueChange={(v) => onMethodChange(v as PaymentMethod | 'ALL')}>
+            <SelectTrigger size="sm" className="h-8 w-40 gap-1 rounded-md text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              <SelectItem value="ALL">All methods</SelectItem>
+              {PAYMENT_METHODS.map((m) => (
+                <SelectItem key={m.key} value={m.key}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Refunds" />
+        </>
       }
     />
   )

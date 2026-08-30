@@ -10,6 +10,22 @@ import { billingFrequencyLabel, durationLabel } from '../constants'
 import { formatDate } from '../format'
 import type { Plan } from '../types'
 import { PlanStatusBadge } from './catalog-status-badge'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Name', key: 'name', format: 'text' },
+  { header: 'Description', key: 'description', format: 'text' },
+  { header: 'Duration', key: 'duration', format: 'text' },
+  { header: 'Billing', key: 'billing', format: 'text' },
+  { header: 'Price', key: 'price', format: 'money' },
+  { header: 'Tax Rate', key: 'taxRate', format: 'number' },
+  { header: 'Tax Code', key: 'taxCode', format: 'text' },
+  { header: 'Registration Fee', key: 'registrationFee', format: 'money' },
+  { header: 'Access', key: 'access', format: 'text' },
+  { header: 'Created', key: 'createdAt', format: 'date' },
+  { header: 'Status', key: 'status', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, Plan>()
 
@@ -200,6 +216,24 @@ export function PlanTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(onEdit, onDelete, onHistory), [onEdit, onDelete, onHistory])
 
+  const exportData = useMemo(
+    () =>
+      plans.map((r) => ({
+        name: r.name,
+        description: r.description ?? '',
+        duration: durationLabel(r.duration),
+        billing: billingFrequencyLabel(r.billing),
+        price: r.basePrice,
+        taxRate: r.taxRate,
+        taxCode: r.taxCode ?? '',
+        registrationFee: r.registrationFee,
+        access: r.accessWindow === 'TIMED' ? `${r.startTime}–${r.endTime}` : 'All hours',
+        createdAt: r.createdAt,
+        status: r.isActive ? 'Active' : 'Inactive'
+      })),
+    [plans]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -215,6 +249,13 @@ export function PlanTable({
       emptyTitle="No plans match"
       emptyDescription="Try clearing the filters, or add a new plan to the catalog."
       headerTone="primary"
+      toolbar={
+        <ExportExcelButton
+          columns={EXPORT_COLUMNS}
+          rows={exportData}
+          sheetName="Plans"
+        />
+      }
     />
   )
 }

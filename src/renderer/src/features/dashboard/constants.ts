@@ -15,6 +15,9 @@ export const EXPIRING_SOON_DAYS = 7
  */
 export const COLD_LEAD_DAYS = 4
 
+/** Follow-ups due within this many days are shown on the dashboard. */
+export const UPCOMING_FOLLOWUP_DAYS = 7
+
 /** Max rows shown per dashboard table to keep the page scannable. */
 export const MAX_ROWS = 6
 

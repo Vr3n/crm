@@ -29,9 +29,9 @@
   --radius: 0;
 
   /* --- Neutral system (light) --- */
-  --background: oklch(0.965 0.004 240);    /* #F5F8FA — page surface */
-  --foreground: oklch(0.215 0.018 250);    /* #202A32 — primary text */
-  --card: oklch(1 0 0);                     /* #FFFFFF — card surface */
+  --background: oklch(0.965 0.004 240); /* #F5F8FA — page surface */
+  --foreground: oklch(0.215 0.018 250); /* #202A32 — primary text */
+  --card: oklch(1 0 0); /* #FFFFFF — card surface */
   --card-foreground: oklch(0.215 0.018 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.215 0.018 250);
@@ -45,16 +45,16 @@
   --secondary-foreground: oklch(0.971 0.014 343.198);
 
   /* --- Muted / border --- */
-  --muted: oklch(0.965 0.004 240);         /* #F5F8FA — tinted input bg */
+  --muted: oklch(0.965 0.004 240); /* #F5F8FA — tinted input bg */
   --muted-foreground: oklch(0.515 0.015 250); /* #76828B — secondary text */
   --accent: oklch(0.955 0.02 3.958);
   --accent-foreground: oklch(0.21 0.02 4);
 
   /* --- Semantic: status --- */
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.596 0.145 163.225);     /* emerald — paid / healthy */
+  --success: oklch(0.596 0.145 163.225); /* emerald — paid / healthy */
   --success-foreground: oklch(0.982 0.017 145.153);
-  --warning: oklch(0.769 0.188 70.08);       /* amber — caution */
+  --warning: oklch(0.769 0.188 70.08); /* amber — caution */
   --warning-foreground: oklch(0.98 0.016 73.684);
   --info: oklch(0.55 0.19 257);
   --info-foreground: oklch(0.985 0.015 257);
@@ -62,7 +62,7 @@
   --violet-foreground: oklch(0.985 0.02 292);
 
   /* --- Input / border --- */
-  --border: oklch(0.895 0.005 240);         /* #DFE6E9 */
+  --border: oklch(0.895 0.005 240); /* #DFE6E9 */
   --input: oklch(0.895 0.005 240);
   --ring: oklch(0.608 0.126 221.723);
 
@@ -89,20 +89,20 @@
  * Preserves the same visual hierarchy rather than inverting every color.
  */
 .dark {
-  --background: oklch(0.165 0.012 250);     /* deep blue-charcoal page bg */
-  --foreground: oklch(0.93 0.005 240);       /* softened white text */
-  --card: oklch(0.205 0.01 250);             /* slightly elevated surface */
+  --background: oklch(0.165 0.012 250); /* deep blue-charcoal page bg */
+  --foreground: oklch(0.93 0.005 240); /* softened white text */
+  --card: oklch(0.205 0.01 250); /* slightly elevated surface */
   --card-foreground: oklch(0.93 0.005 240);
   --popover: oklch(0.205 0.01 250);
   --popover-foreground: oklch(0.93 0.005 240);
 
-  --primary: oklch(0.55 0.11 223);           /* teal focus/active states */
+  --primary: oklch(0.55 0.11 223); /* teal focus/active states */
   --primary-foreground: oklch(0.984 0.019 200.873);
 
   --secondary: oklch(0.459 0.187 3.815);
   --secondary-foreground: oklch(0.971 0.014 343.198);
 
-  --muted: oklch(0.225 0.008 250);           /* desaturated tinted bg */
+  --muted: oklch(0.225 0.008 250); /* desaturated tinted bg */
   --muted-foreground: oklch(0.65 0.01 240);
   --accent: oklch(0.27 0.02 3.958);
   --accent-foreground: oklch(0.985 0 0);
@@ -117,7 +117,7 @@
   --violet: oklch(0.68 0.19 292);
   --violet-foreground: oklch(0.16 0.02 292);
 
-  --border: oklch(1 0 0 / 8%);              /* softened borders */
+  --border: oklch(1 0 0 / 8%); /* softened borders */
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.55 0.11 223);
 
@@ -216,10 +216,14 @@
 }
 
 /* --- CrownCRM micro-interaction utilities --- */
+
 @layer utilities {
   /* Quick-action button lift on hover */
   .crm-hover-lift {
-    transition: transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out;
+    transition:
+      transform 180ms ease-out,
+      box-shadow 180ms ease-out,
+      border-color 180ms ease-out;
   }
   .crm-hover-lift:hover {
     transform: translateY(-2px);
@@ -234,8 +238,13 @@
 
   /* Status pulse dot */
   @keyframes crm-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
   .crm-pulse {
     animation: crm-pulse 2.5s ease-in-out infinite;
@@ -248,8 +257,13 @@
 
   /* Float animation for empty state icons */
   @keyframes crm-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
   }
   .crm-float {
     animation: crm-float 3s ease-in-out infinite;
@@ -258,5 +272,23 @@
     .crm-float {
       animation: none;
     }
+  }
+
+  /* Static gradient border for dashboard cards.
+   * Usage: class="crm-gradient-border" style="--gradient-start: var(--primary); --gradient-end: var(--success);" */
+  .crm-gradient-border {
+    --gradient-start: var(--primary);
+    --gradient-end: var(--primary);
+    border: 2px solid transparent !important;
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      conic-gradient(
+          var(--gradient-start),
+          transparent 25%,
+          var(--gradient-end) 50%,
+          transparent 75%,
+          var(--gradient-start)
+        )
+        border-box;
   }
 }

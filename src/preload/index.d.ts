@@ -272,6 +272,14 @@ declare global {
       memberships: {
         sell: (input: SellMembershipInput) => Promise<SellMembershipResult>
       }
+      export: {
+        excel: (input: {
+          sheetName: string
+          filename: string
+          columns: { header: string; key: string; width?: number; format?: string }[]
+          rows: Record<string, unknown>[]
+        }) => Promise<string>
+      }
     }
   }
 }

@@ -5,7 +5,16 @@ import { DataTable, type DashboardFeatures } from '@/features/dashboard/componen
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { grantedCount } from '../build'
 import { RoleBadge } from './role-badge'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
 import type { Role } from '../types'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Role', key: 'name', format: 'text' },
+  { header: 'Description', key: 'description', format: 'text' },
+  { header: 'Members', key: 'memberCount', format: 'number' },
+  { header: 'Permissions', key: 'permissions', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, Role>()
 
@@ -91,6 +100,17 @@ export function RolesTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(), [])
 
+  const exportData = useMemo(
+    () =>
+      roles.map((r) => ({
+        name: r.name,
+        description: r.description ?? '',
+        memberCount: r.memberCount ?? 0,
+        permissions: r.isSuper ? 'All' : String(grantedCount(r))
+      })),
+    [roles]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -106,6 +126,13 @@ export function RolesTable({
       emptyTitle="No roles"
       emptyDescription="Roles shipped with the organization will appear here."
       headerTone="primary"
+      toolbar={
+        <ExportExcelButton
+          columns={EXPORT_COLUMNS}
+          rows={exportData}
+          sheetName="Roles"
+        />
+      }
     />
   )
 }

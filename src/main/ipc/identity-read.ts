@@ -1,8 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { getDrizzle } from '../db/connection'
 import { organizations, organizationStaff, users, roles, rolePermissions, permissions } from '../db/schema'
-import { currentOrganizationId, requirePermission } from '../auth/session'
-import { PERMISSIONS } from '../db/permissions'
+import { currentOrganizationId } from '../auth/session'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
 

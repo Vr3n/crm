@@ -10,14 +10,26 @@ import { formatMoney } from '../format'
 import { PAGE_SIZE_OPTIONS } from '../constants'
 import { usePaymentsDue } from '../queries'
 import type { PaymentDue } from '../types'
-import { DataTable, type DashboardFeatures } from './data-table'
+import { DataTable, type DashboardFeatures, type DataTableColumnMeta } from './data-table'
+import { CardPaginationFooter } from './card-pagination-footer'
 import { DateRangePicker, type DateRangePreset } from './date-range-picker'
 import { ContactCell } from './contact-cell'
 import { MemberDetailsSheet } from './member-details-sheet'
 import { NameCell } from './name-cell'
 import { RowActions } from './row-actions'
 import { SortButton } from './sort-button'
-import { ExportExcelButton } from './export-excel-button'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Client', key: 'client', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Email', key: 'email', format: 'text' },
+  { header: 'Amount Due', key: 'amountDue', format: 'money' },
+  { header: 'Total', key: 'total', format: 'money' },
+  { header: 'Plan', key: 'plan', format: 'text' },
+  { header: 'Purchased', key: 'purchasedAt', format: 'date' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, PaymentDue>()
 
@@ -57,6 +69,7 @@ function buildColumns(
       cell: ({ row }) => (
         <AmountCell amountDue={row.original.amountDue} total={row.original.total} />
       ),
+      meta: { align: 'right' } as DataTableColumnMeta,
       sortFn: 'basic'
     }),
     helper.accessor((row) => row, {
@@ -73,7 +86,8 @@ function buildColumns(
             </span>
           </div>
         )
-      }
+      },
+      meta: { align: 'right' } as DataTableColumnMeta
     }),
     helper.display({
       id: 'actions',
@@ -89,11 +103,11 @@ function buildColumns(
   ])
 }
 
-/** Money cell, right-aligned, success tone, with the total as muted context. */
+/** Money cell, right-aligned, destructive tone, with the total as muted context. */
 function AmountCell({ amountDue, total }: { amountDue: number; total: number }): React.JSX.Element {
   return (
     <div className="flex flex-col items-end gap-0.5">
-      <span className="font-mono text-sm font-semibold tabular-nums text-success">
+      <span className="font-mono text-sm font-semibold tabular-nums text-destructive">
         {formatMoney(amountDue)}
       </span>
       <span className="text-xs text-muted-foreground">of {formatMoney(total)}</span>
@@ -163,19 +177,38 @@ export function PaymentsDueTable({
     })
   }, [data, range])
 
+  const exportData = useMemo(
+    () =>
+      filtered.map((r) => ({
+        client: r.member.name,
+        phone: r.member.phone,
+        email: r.member.email ?? '',
+        amountDue: r.amountDue,
+        total: r.total,
+        plan: r.plan,
+        purchasedAt: r.purchasedAt
+      })),
+    [filtered]
+  )
+
   return (
     <>
-      <Card>
+      <Card
+        className="crm-gradient-border"
+        style={
+          {
+            '--gradient-start': 'var(--destructive)',
+            '--gradient-end': 'var(--warning)'
+          } as React.CSSProperties
+        }
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-success/10 text-success">
-              <Wallet className="size-5" />
+            <span className="flex size-8 items-center justify-center rounded-lg bg-success/10 text-success">
+              <Wallet className="size-4" />
             </span>
             <div>
-              <span className="font-heading text-lg">Payments due</span>
-              <p className="text-xs font-normal text-muted-foreground">
-                Outstanding member obligations awaiting collection
-              </p>
+              <span className="font-heading text-base">Payments due</span>
             </div>
           </CardTitle>
         </CardHeader>
@@ -188,6 +221,8 @@ export function PaymentsDueTable({
             initialSorting={[{ id: 'amountDue', desc: true }]}
             initialPageSize={6}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
+            showPagination={false}
+            footer={<CardPaginationFooter />}
             onRowClick={handleRowClick}
             toolbar={
               <>
@@ -197,7 +232,11 @@ export function PaymentsDueTable({
                   onValueChange={setRange}
                   placeholder="Filter by purchase"
                 />
-                <ExportExcelButton />
+                <ExportExcelButton
+                  columns={EXPORT_COLUMNS}
+                  rows={exportData}
+                  sheetName="Payments Due"
+                />
               </>
             }
             searchPlaceholder="Search members…"

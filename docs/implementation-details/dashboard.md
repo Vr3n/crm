@@ -2,7 +2,7 @@
 
 This document describes the redesigned dashboard shipped on top of the UI shell. It follows
 the same pattern as the leads feature (`features/leads/`) and the tone of the other
-`implementation-details` docs: *what* was built, *why*, the trade-offs accepted, and the
+`implementation-details` docs: _what_ was built, _why_, the trade-offs accepted, and the
 known gaps.
 
 ## Scope
@@ -16,13 +16,14 @@ no data, no query wiring). This pass replaces it with a work-first dashboard:
 - **Quick actions** — an outline-button row: **New Lead** (opens the same add-lead dialog as
   the Leads page) plus Schedule Follow-Up / Schedule Activity / New Membership Sale, which
   toast an honest "upcoming module" notice rather than faking a flow.
-- **Three tables** — Membership Expirations and Payments Due (member-facing, mock data)
-  side-by-side, and Leads Turning Cold (full-width, live from the leads store).
+- **Five tables in three rows** —
+  - **Row 1:** Upcoming Followups and Recent Leads (live data from the leads/followups stores).
+  - **Row 2:** Membership Expirations and Payments Due (member-facing, mock data).
+  - **Row 3:** Leads Going Cold (full-width, live from the leads store).
 - **KPI cards removed** — no fabricated numbers.
 
-The clickable calendar and its reactive "Latest followups / Latest activities" tables are
-**deferred** to a dedicated sprint (they need a well-designed, performant calendar component
-and the member follow-up domain, which is a larger pattern job on its own).
+All five dashboard tables reuse the shared `DataTable` component with context-based
+pagination (`showPagination={false}` + `CardPaginationFooter` in `CardFooter`).
 
 ## Design read
 
@@ -48,15 +49,15 @@ Mono for money/dates, dark-mode aware. Dials: VARIANCE 3 · MOTION 2 · DENSITY 
 Mirrors the `features/leads/` pattern: types → constants → mock data → async api → TanStack
 Query hooks.
 
-| File | Purpose |
-| --- | --- |
-| `types.ts` | `PersonRef`, `MembershipExpiration`, `PaymentDue`. |
-| `constants.ts` | Thresholds: `EXPIRING_SOON_DAYS = 7`, `COLD_LEAD_DAYS = 4`, `MAX_ROWS = 6`. |
-| `mock-data.ts` | Seeded member rows with timestamps relative to *now* (mix of overdue / due-soon / far-out so urgency styling shows). |
-| `store.ts` | `DashboardStore` — in-memory read models (`upcomingExpirations` ascending, `listPaymentsDue` by amount). |
-| `api.ts` | Async facade with a `delay(120)` latency seam — the future SQLite/IPC drop-in point. |
-| `queries.ts` | `useUpcomingExpirations()`, `usePaymentsDue()` with a `dashboardKeys` factory. |
-| `format.ts` | `formatMoney`, `daysUntil`, `daysSince`. |
+| File           | Purpose                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `types.ts`     | `PersonRef`, `MembershipExpiration`, `PaymentDue`.                                                                   |
+| `constants.ts` | Thresholds: `EXPIRING_SOON_DAYS = 7`, `COLD_LEAD_DAYS = 4`, `MAX_ROWS = 6`.                                          |
+| `mock-data.ts` | Seeded member rows with timestamps relative to _now_ (mix of overdue / due-soon / far-out so urgency styling shows). |
+| `store.ts`     | `DashboardStore` — in-memory read models (`upcomingExpirations` ascending, `listPaymentsDue` by amount).             |
+| `api.ts`       | Async facade with a `delay(120)` latency seam — the future SQLite/IPC drop-in point.                                 |
+| `queries.ts`   | `useUpcomingExpirations()`, `usePaymentsDue()` with a `dashboardKeys` factory.                                       |
+| `format.ts`    | `formatMoney`, `daysUntil`, `daysSince`.                                                                             |
 
 The member-facing rows are **mock** because Members/Memberships/Payments are Modules 02–05,
 not yet built. The **Leads Turning Cold** table reads live data from `features/leads`
@@ -67,6 +68,13 @@ not yet built. The **Leads Turning Cold** table reads live data from `features/l
 - **`dashboard-header.tsx`** — swapped masthead (org big, staff identity, greeting small).
 - **`dashboard-actions.tsx`** — the quick-action row; `New Lead` → `onNewLead` callback,
   others → "upcoming module" toast.
+- **`upcoming-followups-table.tsx`** — open follow-ups due within the next 7 days, soonest
+  first. Data from `useFollowUpRows()` (the shared leads-derived read model). Columns:
+  Lead (name + stage badge) · Follow-up title · Due (mono date + relative). Row click
+  navigates to `/leads/:id`.
+- **`recent-leads-table.tsx`** — non-terminal leads sorted by createdAt descending. Data
+  from `useLeads()`. Columns: Lead (name + stage badge) · Contact · Source · Created
+  (relative). Row click navigates to `/leads/:id`.
 - **`membership-expirations-table.tsx`** — ascending by expiration; Client · Expiration
   (`n days remaining` badge) · Plan (purchase date) · `+ Follow-up`. Expiry urgency via
   `ExpiryBadge` (destructive expired / warning due-soon / outline far-out).
@@ -76,8 +84,9 @@ not yet built. The **Leads Turning Cold** table reads live data from `features/l
   leads with no follow-up/activity for `>= COLD_LEAD_DAYS` (last-touch = newest activity or
   follow-up timestamp, `createdAt` if never touched), sorted longest-silence-first; Lead ·
   Contact · Last follow-up/activity.
-- **`follow-up-action.tsx`** — shared small `+ Follow-up` button → honest "Members module"
-  toast (member follow-ups aren't real yet).
+- **`card-pagination-footer.tsx`** — shared helper that reads pagination state from
+  `DataTableContext` and renders it inside a `CardFooter`, used by all four dashboard card
+  tables.
 - **`contact-cell.tsx`** — name + best-available contact (phone → email → em dash).
 
 ## Page & routing
@@ -104,5 +113,4 @@ npm run dev                # launch and click through masthead/actions/tables/Ne
 - **`+ Follow-up` on member tables is a toast**, not a working flow — deliberately honest,
   wired once the Members module exists.
 - **Schedule Follow-Up / Activity / Membership Sale** quick actions are placeholders.
-- **Calendar + Latest Followups / Latest Activities** are deferred to a dedicated sprint
-  (per design decision), not dropped.
+- **Calendar** is deferred to a dedicated sprint (needs a performant calendar component).

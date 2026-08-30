@@ -17,9 +17,23 @@ import { useLeads } from '@/features/leads/queries'
 import type { Lead } from '@/features/leads/types'
 import { COLD_LEAD_DAYS, MAX_ROWS } from '../constants'
 import { daysSince } from '../format'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+import { SOURCES } from '@/features/leads/constants'
 
-const HEAD = 'px-0 py-2 text-left text-xs font-medium text-muted-foreground'
-const CELL = 'px-0 py-2 align-middle'
+const COLD_LEAD_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Name', key: 'name', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Email', key: 'email', format: 'text' },
+  { header: 'Stage', key: 'stage', format: 'text' },
+  { header: 'Source', key: 'source', format: 'text' },
+  { header: 'Owner', key: 'owner', format: 'text' },
+  { header: 'Days Silent', key: 'daysSilent', format: 'number' },
+  { header: 'Last Touched', key: 'lastTouchedAt', format: 'datetime' }
+]
+
+const HEAD = 'px-0 py-2.5 text-left text-xs font-medium text-muted-foreground'
+const CELL = 'px-0 py-2.5 align-middle'
 
 /** Last moment the lead had any follow-up or activity; createdAt if never touched. */
 function lastTouchedAt(lead: Lead): string {
@@ -51,6 +65,21 @@ export function LeadsGoingColdTable(): React.JSX.Element {
 
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
 
+  const coldLeadExportData = useMemo(
+    () =>
+      rows.map(({ lead, since }) => ({
+        name: lead.name,
+        phone: lead.phone ?? '',
+        email: lead.email ?? '',
+        stage: lead.stage,
+        source: SOURCES[lead.source] ?? lead.source,
+        owner: lead.owner?.name ?? 'Unassigned',
+        daysSilent: since,
+        lastTouchedAt: lastTouchedAt(lead)
+      })),
+    [rows]
+  )
+
   const toggleRow = (id: number): void =>
     setSelected((prev) => {
       const next = new Set(prev)
@@ -62,25 +91,37 @@ export function LeadsGoingColdTable(): React.JSX.Element {
   const toggleAll = (value: boolean): void =>
     setSelected(value ? new Set(rows.map((r) => r.lead.id)) : new Set())
   return (
-    <Card>
+    <Card
+      className="crm-gradient-border"
+      style={
+        {
+          '--gradient-start': 'var(--warning)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-warning/10 text-warning">
-            <Flame className="size-5" />
+          <span className="flex size-8 items-center justify-center rounded-lg bg-warning/10 text-warning">
+            <Flame className="size-4" />
           </span>
           <div className="flex flex-1 items-center justify-between">
             <div>
-              <span className="font-heading text-lg">Leads turning cold</span>
-              <p className="text-xs font-normal text-muted-foreground">
-                Leads with no recent follow-up or activity
-              </p>
+              <span className="font-heading text-base">Leads turning cold</span>
             </div>
-            {rows.length > 0 && (
-              <span className="hidden items-center gap-1.5 rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning sm:flex">
-                <Flame className="size-3" />
-                {rows.length} lead{rows.length !== 1 ? 's' : ''} need attention
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {rows.length > 0 && (
+                <span className="hidden items-center gap-1.5 rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning sm:flex">
+                  <Flame className="size-3" />
+                  {rows.length} lead{rows.length !== 1 ? 's' : ''} need attention
+                </span>
+              )}
+              <ExportExcelButton
+                columns={COLD_LEAD_EXPORT_COLUMNS}
+                rows={coldLeadExportData}
+                sheetName="Leads Going Cold"
+              />
+            </div>
           </div>
         </CardTitle>
       </CardHeader>
@@ -100,7 +141,7 @@ export function LeadsGoingColdTable(): React.JSX.Element {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-transparent">
+              <TableRow className="bg-muted border-b border-border hover:bg-transparent">
                 <TableHead className={`${HEAD} w-10 pr-3`}>
                   <Checkbox
                     checked={
@@ -124,7 +165,7 @@ export function LeadsGoingColdTable(): React.JSX.Element {
                 <TableRow
                   key={lead.id}
                   data-state={selected.has(lead.id) ? 'selected' : undefined}
-                  className="group data-[state=selected]:bg-primary/5"
+                  className="group even:bg-muted/40 hover:bg-muted/60 transition-colors data-[state=selected]:!bg-primary/5"
                 >
                   <TableCell className={`${CELL} w-10 pr-3`}>
                     <Checkbox

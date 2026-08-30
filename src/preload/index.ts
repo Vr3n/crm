@@ -82,10 +82,7 @@ import type {
   PaymentDueOutput,
   MemberRecordOutput
 } from '../shared/contracts/dashboard'
-import type {
-  PaymentRecordOutput,
-  DayCollectionOutput
-} from '../shared/contracts/collections'
+import type { PaymentRecordOutput } from '../shared/contracts/collections'
 import type {
   OrganizationOutput,
   StaffMemberOutput,
@@ -124,6 +121,26 @@ import type {
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
 import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
+
+/* -------------------------------------------------------------------------- */
+/* Export types (mirrors src/main/application/export.ts)                       */
+/* -------------------------------------------------------------------------- */
+
+type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number'
+
+interface ExportColumn {
+  header: string
+  key: string
+  width?: number
+  format?: CellFormat
+}
+
+interface ExportTableInput {
+  sheetName: string
+  filename: string
+  columns: ExportColumn[]
+  rows: Record<string, unknown>[]
+}
 
 /**
  * Invokes an IPC channel and unwraps the `{ ok, data | error }` envelope.
@@ -360,6 +377,10 @@ const api = {
       call(IPC_CHANNELS.IDENTITY_STAFF),
     roles: (): Promise<RoleOutput[]> =>
       call(IPC_CHANNELS.IDENTITY_ROLES)
+  },
+  export: {
+    excel: (input: ExportTableInput): Promise<string> =>
+      call(IPC_CHANNELS.EXPORT_EXCEL, input)
   }
 }
 

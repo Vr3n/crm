@@ -36,6 +36,9 @@ import { cn } from '@/lib/utils'
 import { SearchInput } from './search-input'
 import { useDebouncedValue } from './use-debounced-value'
 import { DataTablePagination } from './data-table-pagination'
+import { type DataTableColumnMeta, DataTableContext } from './data-table-shared'
+
+export type { DataTableColumnMeta } from './data-table-shared'
 
 /**
  * TanStack Table v9 (feature-based) data table wired for the dashboard cards:
@@ -88,6 +91,10 @@ export interface DataTableProps<TData extends RowData> {
   /** When present, shows "Mark all as done" beside the selection count. */
   onMarkSelectedDone?: (selectedIds: string[]) => void | Promise<void>
   isMarkingSelected?: boolean
+  /** Hide the built-in pagination (e.g. when rendering it in a CardFooter via useDataTablePagination). */
+  showPagination?: boolean
+  /** Rendered after the table, inside the DataTableContext provider. Use for CardFooter-wrapped pagination. */
+  footer?: React.ReactNode
 }
 
 export function DataTable<TData extends RowData>({
@@ -109,7 +116,9 @@ export function DataTable<TData extends RowData>({
   card = false,
   headerTone = 'muted',
   onMarkSelectedDone,
-  isMarkingSelected
+  isMarkingSelected,
+  showPagination = true,
+  footer
 }: DataTableProps<TData>): React.JSX.Element {
   const [search, setSearch] = useState('')
   const globalFilter = useDebouncedValue(search, 300)
@@ -166,6 +175,26 @@ export function DataTable<TData extends RowData>({
     onRowSelectionChange: setRowSelection
   })
 
+  const rows = table.getRowModel().rows
+  const total = table.getFilteredRowModel().rows.length
+  const { pageIndex, pageSize } = table.state.pagination
+  const selectedCount = table.getSelectedRowIds().length
+
+  const paginationState = useMemo<DataTablePaginationState>(
+    () => ({
+      pageIndex,
+      pageCount: table.getPageCount(),
+      pageSize,
+      rowCount: total,
+      pageSizeOptions,
+      onPageSizeChange: table.setPageSize,
+      onPageIndexChange: table.setPageIndex,
+      canPrevious: table.getCanPreviousPage(),
+      canNext: table.getCanNextPage()
+    }),
+    [pageIndex, pageSize, total, pageSizeOptions, table]
+  )
+
   if (isLoading) {
     return (
       <div className="flex w-full flex-col gap-2">
@@ -175,124 +204,138 @@ export function DataTable<TData extends RowData>({
       </div>
     )
   }
-  const rows = table.getRowModel().rows
-  const total = table.getFilteredRowModel().rows.length
-  const { pageIndex, pageSize } = table.state.pagination
-  const selectedCount = table.getSelectedRowIds().length
-  const pad = card ? 'px-2 py-2' : 'px-0 py-2'
-  const headClass = cn(
-    'align-middle whitespace-nowrap',
-    pad,
-    headerTone === 'primary' ? 'text-primary' : 'text-muted-foreground'
-  )
-  const cellClass = cn('align-middle whitespace-nowrap', pad)
+
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {toolbar}
-        {selectedCount > 0 ? (
-          <>
-            <button
-              type="button"
-              onClick={() => table.resetRowSelection(true)}
-              aria-label={`Clear selection of ${selectedCount} rows`}
-              className="flex h-8 animate-in items-center gap-1.5 rounded-md border border-primary/25 bg-primary/5 px-2.5 text-xs font-medium text-primary fade-in-0 transition-colors hover:bg-primary/10"
-            >
-              <span className="tabular-nums">{selectedCount} selected</span>
-              <X className="size-3" />
-            </button>
-            {onMarkSelectedDone ? (
-              <Button
-                size="sm"
-                className="h-8"
-                disabled={isMarkingSelected}
-                onClick={async () => {
-                  const ids = table.getSelectedRowIds()
-                  await onMarkSelectedDone(ids)
-                  table.resetRowSelection(true)
-                }}
+    <DataTableContext.Provider value={paginationState}>
+      <div className="flex w-full flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {toolbar}
+          {selectedCount > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => table.resetRowSelection(true)}
+                aria-label={`Clear selection of ${selectedCount} rows`}
+                className="flex h-8 animate-in items-center gap-1.5 rounded-md border border-primary/25 bg-primary/5 px-2.5 text-xs font-medium text-primary fade-in-0 transition-colors hover:bg-primary/10"
               >
-                {isMarkingSelected ? 'Marking…' : 'Mark all as done'}
-              </Button>
-            ) : null}
-          </>
-        ) : null}
-        <div className="ml-auto min-w-0 flex-1 sm:max-w-56">
-          {showSearch ? (
-            <SearchInput value={search} onChange={setSearch} placeholder={searchPlaceholder} />
-          ) : null}
-        </div>
-      </div>
-
-      <div className={cn(card && 'rounded-lg border bg-card')}>
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className={cn(
-                  headerTone === 'primary' ? 'bg-primary/5' : 'bg-muted/40',
-                  'hover:bg-transparent'
-                )}
-              >
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className={cn(
-                      headClass,
-                      header.id === 'select' && (card ? 'w-10' : 'w-10 pr-3')
-                    )}
-                  >
-                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {rows.length ? (
-              rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() ? 'selected' : undefined}
-                  className="group cursor-pointer transition-colors data-[state=selected]:bg-primary/5"
-                  onClick={() => onRowClick?.(row.original)}
+                <span className="tabular-nums">{selectedCount} selected</span>
+                <X className="size-3" />
+              </button>
+              {onMarkSelectedDone ? (
+                <Button
+                  size="sm"
+                  className="h-8"
+                  disabled={isMarkingSelected}
+                  onClick={async () => {
+                    const ids = table.getSelectedRowIds()
+                    await onMarkSelectedDone(ids)
+                    table.resetRowSelection(true)
+                  }}
                 >
-                  {row.getAllCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(cellClass, cell.column.id === 'select' && !card && 'pr-3')}
-                      onClick={(e) => {
-                        if (cell.column.id === 'select' || cell.column.id === 'actions') e.stopPropagation()
-                      }}
-                    >
-                      <table.FlexRender cell={cell} />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={columnDefs.length} className="px-0 py-6">
-                  <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  {isMarkingSelected ? 'Marking…' : 'Mark all as done'}
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+          <div className="ml-auto min-w-0 flex-1 sm:max-w-56">
+            {showSearch ? (
+              <SearchInput value={search} onChange={setSearch} placeholder={searchPlaceholder} />
+            ) : null}
+          </div>
+        </div>
 
-      <DataTablePagination
-        pageIndex={pageIndex}
-        pageCount={table.getPageCount()}
-        pageSize={pageSize}
-        rowCount={total}
-        pageSizeOptions={pageSizeOptions}
-        onPageSizeChange={table.setPageSize}
-        onPageIndexChange={table.setPageIndex}
-        canPrevious={table.getCanPreviousPage()}
-        canNext={table.getCanNextPage()}
-      />
-    </div>
+        <div className={cn(card && 'rounded-lg border bg-card')}>
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className={cn(
+                    headerTone === 'primary' ? 'bg-primary/5' : 'bg-muted',
+                    'border-b border-border hover:bg-transparent'
+                  )}
+                >
+                  {headerGroup.headers.map((header) => {
+                    const meta = header.column.columnDef.meta as DataTableColumnMeta | undefined
+                    const headPad = meta?.align === 'right' ? 'pl-2 pr-4' : 'pl-4 pr-2'
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={cn(
+                          'align-middle whitespace-nowrap',
+                          headPad,
+                          headerTone === 'primary' ? 'text-primary' : 'text-muted-foreground',
+                          header.id === 'select' && (card ? 'w-10' : 'w-10 pr-3')
+                        )}
+                      >
+                        {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {rows.length ? (
+                rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() ? 'selected' : undefined}
+                    className="group cursor-pointer even:bg-muted/40 hover:bg-muted/60 transition-colors data-[state=selected]:!bg-primary/5"
+                    onClick={() => onRowClick?.(row.original)}
+                  >
+                    {row.getAllCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta as DataTableColumnMeta | undefined
+                      const cellPad = meta?.align === 'right' ? 'pl-2 pr-4' : 'pl-4 pr-2'
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            'align-middle whitespace-nowrap py-2.5',
+                            cellPad,
+                            cell.column.id === 'select' && !card && 'pr-3'
+                          )}
+                          onClick={(e) => {
+                            if (cell.column.id === 'select' || cell.column.id === 'actions')
+                              e.stopPropagation()
+                          }}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow className="hover:bg-transparent even:bg-transparent">
+                  <TableCell colSpan={columnDefs.length} className="px-0 py-6">
+                    <EmptyState
+                      icon={emptyIcon}
+                      title={emptyTitle}
+                      description={emptyDescription}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {showPagination && !footer ? (
+          <DataTablePagination
+            pageIndex={pageIndex}
+            pageCount={table.getPageCount()}
+            pageSize={pageSize}
+            rowCount={total}
+            pageSizeOptions={pageSizeOptions}
+            onPageSizeChange={table.setPageSize}
+            onPageIndexChange={table.setPageIndex}
+            canPrevious={table.getCanPreviousPage()}
+            canNext={table.getCanNextPage()}
+          />
+        ) : null}
+      </div>
+      {footer}
+    </DataTableContext.Provider>
   )
 }
