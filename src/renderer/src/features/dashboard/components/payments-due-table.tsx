@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { Wallet } from 'lucide-react'
@@ -20,7 +21,10 @@ import { ExportExcelButton } from './export-excel-button'
 
 const helper = createColumnHelper<DashboardFeatures, PaymentDue>()
 
-function buildColumns(onView: (row: PaymentDue) => void): ReturnType<typeof helper.columns> {
+function buildColumns(
+  onView: (row: PaymentDue) => void,
+  onMakePayment: (row: PaymentDue) => void
+): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.member.name, {
       id: 'memberName',
@@ -75,7 +79,11 @@ function buildColumns(onView: (row: PaymentDue) => void): ReturnType<typeof help
       id: 'actions',
       header: () => null,
       cell: ({ row }) => (
-        <RowActions memberName={row.original.member.name} onView={() => onView(row.original)} />
+        <RowActions
+          memberName={row.original.member.name}
+          onView={() => onView(row.original)}
+          onMakePayment={() => onMakePayment(row.original)}
+        />
       )
     })
   ])
@@ -98,8 +106,14 @@ function AmountCell({ amountDue, total }: { amountDue: number; total: number }):
  * table with date-range filter + search, sortable by amount due (largest
  * first by default), pagination and icon-only actions.
  */
-export function PaymentsDueTable(): React.JSX.Element {
+export function PaymentsDueTable({
+  onMakePayment
+}: {
+  onMakePayment: (invoiceId: string) => void
+}): React.JSX.Element {
   const { data, isLoading } = usePaymentsDue()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [range, setRange] = useState<DateRange>()
   const [row, setRow] = useState<PaymentDue | null>(null)
   const [open, setOpen] = useState(false)
@@ -108,7 +122,25 @@ export function PaymentsDueTable(): React.JSX.Element {
     setRow(selected)
     setOpen(true)
   }, [])
-  const columns = useMemo(() => buildColumns(handleView), [handleView])
+
+  const handleRowClick = useCallback(
+    (row: PaymentDue) => {
+      navigate(`/invoices/${row.id}`, { state: { from: location.pathname } })
+    },
+    [navigate, location.pathname]
+  )
+
+  const handleMakePayment = useCallback(
+    (selected: PaymentDue) => {
+      onMakePayment(selected.id)
+    },
+    [onMakePayment]
+  )
+
+  const columns = useMemo(
+    () => buildColumns(handleView, handleMakePayment),
+    [handleView, handleMakePayment]
+  )
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()
@@ -156,6 +188,7 @@ export function PaymentsDueTable(): React.JSX.Element {
             initialSorting={[{ id: 'amountDue', desc: true }]}
             initialPageSize={6}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onRowClick={handleRowClick}
             toolbar={
               <>
                 <DateRangePicker
