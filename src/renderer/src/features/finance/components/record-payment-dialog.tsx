@@ -328,7 +328,6 @@ export function RecordPaymentDialog({
               <AllocationSection
                 invoices={outstanding ?? []}
                 paymentAmount={Number(amount) || 0}
-                preSelectedInvoiceId={preSelectedInvoiceId}
                 allocations={allocations}
                 onAllocationsChange={setAllocations}
                 isLoading={loadingInvoices}

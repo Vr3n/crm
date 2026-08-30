@@ -127,7 +127,6 @@ function buildColumns(
     helper.display({
       id: 'actions',
       header: () => <div className="text-right">Actions</div>,
-      size: 180,
       cell: ({ row }) => {
         const isOpenish = row.original.status === 'OPEN' || row.original.status === 'PARTIALLY_PAID'
         return (

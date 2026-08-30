@@ -14,7 +14,6 @@ export interface AllocationDraft {
 interface AllocationSectionProps {
   invoices: FinanceInvoice[]
   paymentAmount: number
-  preSelectedInvoiceId?: string
   allocations: AllocationDraft[]
   onAllocationsChange: (allocs: AllocationDraft[]) => void
   isLoading: boolean
@@ -34,7 +33,6 @@ function invoiceDue(inv: FinanceInvoice): number {
 export function AllocationSection({
   invoices,
   paymentAmount,
-  preSelectedInvoiceId,
   allocations,
   onAllocationsChange,
   isLoading
@@ -62,28 +60,31 @@ export function AllocationSection({
 
   const toggleInvoice = (invoice: FinanceInvoice, checked: boolean) => {
     const due = invoiceDue(invoice)
-    onAllocationsChange((prev) => {
-      const existing = prev.find((a) => a.invoiceId === invoice.id)
-      if (checked) {
-        const otherAllocated = prev
-          .filter((a) => a.enabled && a.invoiceId !== invoice.id)
-          .reduce((s, a) => s + (a.amount || 0), 0)
-        const available = Math.max(0, paymentAmount - otherAllocated)
-        const amount = Math.min(due, available)
-        if (existing) {
-          return prev.map((a) =>
+    const existing = allocations.find((a) => a.invoiceId === invoice.id)
+    if (checked) {
+      const otherAllocated = allocations
+        .filter((a) => a.enabled && a.invoiceId !== invoice.id)
+        .reduce((s, a) => s + (a.amount || 0), 0)
+      const available = Math.max(0, paymentAmount - otherAllocated)
+      const amount = Math.min(due, available)
+      if (existing) {
+        onAllocationsChange(
+          allocations.map((a) =>
             a.invoiceId === invoice.id ? { ...a, enabled: true, amount } : a
           )
-        }
-        return [...prev, { invoiceId: invoice.id, amount, enabled: true }]
+        )
+        return
       }
-      if (existing) {
-        return prev.map((a) =>
+      onAllocationsChange([...allocations, { invoiceId: invoice.id, amount, enabled: true }])
+      return
+    }
+    if (existing) {
+      onAllocationsChange(
+        allocations.map((a) =>
           a.invoiceId === invoice.id ? { ...a, enabled: false, amount: 0 } : a
         )
-      }
-      return prev
-    })
+      )
+    }
   }
 
   if (isLoading) {

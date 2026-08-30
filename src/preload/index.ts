@@ -82,10 +82,7 @@ import type {
   PaymentDueOutput,
   MemberRecordOutput
 } from '../shared/contracts/dashboard'
-import type {
-  PaymentRecordOutput,
-  DayCollectionOutput
-} from '../shared/contracts/collections'
+import type { PaymentRecordOutput } from '../shared/contracts/collections'
 import type {
   OrganizationOutput,
   StaffMemberOutput,
