@@ -1,4 +1,4 @@
-import { lazy, useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DashboardHeader } from '../components/dashboard-header'
 import { DashboardActions } from '../components/dashboard-actions'
@@ -8,6 +8,7 @@ import { LeadsGoingColdTable } from '../components/leads-going-cold-table'
 import { NewLeadDialog } from '@/features/leads/components/new-lead-dialog'
 import { FollowUpDialog } from '@/features/leads/components/follow-up-dialog'
 import { LogActivityDialog } from '@/features/leads/components/log-activity-dialog'
+import type { PaymentDue } from '../types'
 
 const RecordPaymentDialog = lazy(() =>
   import('@/features/finance/components/record-payment-dialog').then((m) => ({
@@ -26,13 +27,7 @@ export function DashboardPage(): React.JSX.Element {
   const [newLeadOpen, setNewLeadOpen] = useState(false)
   const [followUpOpen, setFollowUpOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
-  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null)
-
-  const handleMakePayment = (invoiceId: string) => {
-    setPaymentInvoiceId(invoiceId)
-    setPaymentDialogOpen(true)
-  }
+  const [paymentTarget, setPaymentTarget] = useState<PaymentDue | null>(null)
 
   return (
     <main className="flex w-full flex-col gap-6 px-6 py-8">
@@ -47,7 +42,7 @@ export function DashboardPage(): React.JSX.Element {
 
       <section aria-label="Operational data" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <MembershipExpirationsTable />
-        <PaymentsDueTable onMakePayment={handleMakePayment} />
+        <PaymentsDueTable onMakePayment={(row) => setPaymentTarget(row)} />
       </section>
 
       <LeadsGoingColdTable />
@@ -55,13 +50,18 @@ export function DashboardPage(): React.JSX.Element {
       {newLeadOpen && <NewLeadDialog open onOpenChange={setNewLeadOpen} />}
       {followUpOpen && <FollowUpDialog open onOpenChange={setFollowUpOpen} />}
       {activityOpen && <LogActivityDialog open onOpenChange={setActivityOpen} />}
-      {paymentDialogOpen && (
-        <RecordPaymentDialog
-          open={paymentDialogOpen}
-          onOpenChange={setPaymentDialogOpen}
-          preSelectedInvoiceId={paymentInvoiceId ?? undefined}
-        />
-      )}
+      {paymentTarget ? (
+        <Suspense fallback={null}>
+          <RecordPaymentDialog
+            open={!!paymentTarget}
+            onOpenChange={(open) => {
+              if (!open) setPaymentTarget(null)
+            }}
+            preSelectedCustomerId={paymentTarget.member.id}
+            preSelectedInvoiceId={paymentTarget.id}
+          />
+        </Suspense>
+      ) : null}
     </main>
   )
 }

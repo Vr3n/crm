@@ -109,7 +109,7 @@ function AmountCell({ amountDue, total }: { amountDue: number; total: number }):
 export function PaymentsDueTable({
   onMakePayment
 }: {
-  onMakePayment: (invoiceId: string) => void
+  onMakePayment: (row: PaymentDue) => void
 }): React.JSX.Element {
   const { data, isLoading } = usePaymentsDue()
   const navigate = useNavigate()
@@ -132,7 +132,7 @@ export function PaymentsDueTable({
 
   const handleMakePayment = useCallback(
     (selected: PaymentDue) => {
-      onMakePayment(selected.id)
+      onMakePayment(selected)
     },
     [onMakePayment]
   )
