@@ -8,6 +8,7 @@ import {
   MessageCircle,
   PhoneCall,
   Tag,
+  UserRound,
   Users,
   XCircle
 } from 'lucide-react'
@@ -29,6 +30,7 @@ export const ACTIVITY_ICONS: Partial<Record<ActivityTypeKey, LucideIcon>> = {
   NO_SHOW: XCircle,
   PRICE_DISCUSSION: Tag,
   MEMBERSHIP_PROPOSAL: Tag,
+  OWNER_CHANGE: UserRound,
   STAGE_CHANGE: ArrowRight,
   FOLLOW_UP_CREATED: BellRing,
   FOLLOW_UP_DONE: CheckCircle2,
@@ -47,6 +49,7 @@ export const ACTIVITY_TONE: Record<ActivityTypeKey, string> = {
   NO_SHOW: 'bg-warning/15 text-warning',
   PRICE_DISCUSSION: 'bg-muted text-muted-foreground',
   MEMBERSHIP_PROPOSAL: 'bg-primary/10 text-primary',
+  OWNER_CHANGE: 'bg-primary/10 text-primary',
   STAGE_CHANGE: 'bg-muted text-muted-foreground',
   FOLLOW_UP_CREATED: 'bg-muted text-muted-foreground',
   FOLLOW_UP_DONE: 'bg-success/15 text-success',

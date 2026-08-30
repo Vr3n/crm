@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { PhoneCall, Mail } from 'lucide-react'
+import { Pencil, PhoneCall, Mail } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SOURCES, STAGES, isTerminal } from '../constants'
-import { computeQuality } from '../data-quality'
+import { computeQuality, qualityMessage, qualityTier } from '../data-quality'
 import { displayPhone, timeAgo } from '../format'
 import type { Lead, StageKey } from '../types'
 import { QualityDot } from './quality-dot'
@@ -26,30 +26,46 @@ import { StageBadge } from './stage-badge'
 /**
  * Airtable-minimal lead table: one row per lead, quiet hairlines, no heavy
  * card chrome. Stage is edited inline and always routes through the strict
- * move dialog (WON/LOST open their reason-requiring dialogs).
+ * move dialog (LOST opens its reason-requiring dialog; WON is unreachable
+ * until the Module 02 conversion handoff exists).
+ *
+ * Selection is lifted to the page so the tab-row toolbar (Delete / Move Stage)
+ * can act on it; the page owns the `Set<number>` and passes it back down.
  */
 export function LeadTable({
   leads,
+  selected,
+  onSelectionChange,
   onOpen,
-  onStageChange
+  onStageChange,
+  onEdit,
+  canEditLead
 }: {
   leads: Lead[]
+  selected: Set<number>
+  onSelectionChange: (next: Set<number>) => void
   onOpen: (lead: Lead) => void
   onStageChange: (lead: Lead, to: StageKey) => void
+  onEdit: (lead: Lead) => void
+  canEditLead: (lead: Lead) => boolean
 }): React.JSX.Element {
   const all = leads
-  const [selected, setSelected] = useState<Set<string>>(() => new Set())
+  // The Actions column renders only when at least one row is editable, so a
+  // read-only role (e.g. Front Desk) never sees empty column chrome.
+  const anyEditable = all.some(canEditLead)
 
-  const toggleRow = (id: string): void =>
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  const toggleRow = (id: number): void =>
+    onSelectionChange(
+      (() => {
+        const next = new Set(selected)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })()
+    )
 
   const toggleAll = (value: boolean): void =>
-    setSelected(value ? new Set(all.map((l) => l.id)) : new Set())
+    onSelectionChange(value ? new Set(all.map((l) => l.id)) : new Set())
 
   const nextFollowUp = (lead: Lead): string => {
     const open = lead.followUps
@@ -63,7 +79,7 @@ export function LeadTable({
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-primary/5 hover:bg-transparent">
@@ -86,8 +102,10 @@ export function LeadTable({
             <TableHead className="text-primary">Stage</TableHead>
             <TableHead className="text-primary">Owner</TableHead>
             <TableHead className="text-primary">Next follow-up</TableHead>
-            <TableHead className="text-primary">Plan interest</TableHead>
             <TableHead className="text-right text-primary">Last activity</TableHead>
+            {anyEditable ? (
+              <TableHead className="w-12 text-right text-primary">Actions</TableHead>
+            ) : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -110,12 +128,22 @@ export function LeadTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="min-w-0">
+                  <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-medium">{lead.name}</span>
                       <QualityDot quality={q} />
                     </div>
-                    <span className="text-xs text-muted-foreground">{lead.goal || '—'}</span>
+                    {qualityTier(q) !== 'clean' ? (
+                      <span
+                        className={
+                          qualityTier(q) === 'bad'
+                            ? 'truncate text-[11px] font-medium text-destructive'
+                            : 'truncate text-[11px] font-medium text-warning'
+                        }
+                      >
+                        {qualityMessage(q)}
+                      </span>
+                    ) : null}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -145,7 +173,7 @@ export function LeadTable({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent align="start">
-                      {STAGES.map((s) => (
+                      {STAGES.filter((s) => s.key !== 'WON').map((s) => (
                         <SelectItem key={s.key} value={s.key}>
                           {s.label}
                         </SelectItem>
@@ -161,12 +189,25 @@ export function LeadTable({
                 <TableCell>
                   <span className="text-sm">{nextFollowUp(lead)}</span>
                 </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{lead.planInterest || '—'}</span>
-                </TableCell>
                 <TableCell className="text-right">
                   <span className="text-sm text-muted-foreground">{lastActivity(lead)}</span>
                 </TableCell>
+                {anyEditable ? (
+                  <TableCell className="w-12 text-right" onClick={(e) => e.stopPropagation()}>
+                    {canEditLead(lead) ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Edit ${lead.name}`}
+                        onClick={() => onEdit(lead)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    ) : null}
+                  </TableCell>
+                ) : null}
               </TableRow>
             )
           })}

@@ -9,15 +9,16 @@ import type { StageKey } from '@/features/leads/types'
 export type FollowUpBucket = 'all' | 'overdue' | 'today' | 'upcoming' | 'done'
 
 export interface FollowUpRow {
-  id: string
-  leadId: string
+  id: number
+  leadId: number
   leadName: string
   stage: StageKey
   title: string
   dueAt: string
+  extensionReason?: string
   completedAt?: string
-  note?: string
-  ownerId?: string
+  cancelledAt?: string
+  ownerId?: number
   ownerName?: string
 }
 

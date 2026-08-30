@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
 import { filterPlansByStatus } from '../constants'
@@ -11,6 +12,7 @@ import { PlanFilters, type PlanFiltersState } from '../components/plan-filters'
 import { PlanFormDialog } from '../components/plan-form-dialog'
 import { PlanMetrics } from '../components/plan-metrics'
 import { PlanTable } from '../components/plan-table'
+import { PlanVersionsDialog } from '../components/plan-versions-dialog'
 
 const DEFAULT_FILTERS: PlanFiltersState = { search: '', status: 'ALL' }
 
@@ -27,6 +29,7 @@ export function PlansPage(): React.JSX.Element {
   const [filters, setFilters] = useState<PlanFiltersState>(DEFAULT_FILTERS)
   const [dialog, setDialog] = useState<DialogState>(null)
   const [deleting, setDeleting] = useState<Plan | null>(null)
+  const [historyPlan, setHistoryPlan] = useState<Plan | null>(null)
   const deletePlan = useDeletePlan()
 
   const rows = useMemo(() => {
@@ -56,20 +59,23 @@ export function PlansPage(): React.JSX.Element {
 
       <PlanMetrics plans={rows} />
 
-      <PlanFilters filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <PlanFilters filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>
-          {rows.length} plan{rows.length === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <PlanTable
-        plans={rows}
-        isLoading={isLoading}
-        onEdit={(plan) => setDialog({ mode: 'edit', plan })}
-        onDelete={setDeleting}
-      />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <PlanTable
+            plans={rows}
+            isLoading={isLoading}
+            onEdit={(plan) => setDialog({ mode: 'edit', plan })}
+            onDelete={setDeleting}
+            onHistory={setHistoryPlan}
+          />
+        </CardContent>
+      </Card>
 
       <PlanFormDialog
         key={dialog ? (dialog.mode === 'edit' ? String(dialog.plan.id) : 'new') : 'closed'}
@@ -77,6 +83,14 @@ export function PlansPage(): React.JSX.Element {
         open={dialog !== null}
         onOpenChange={(open) => {
           if (!open) setDialog(null)
+        }}
+      />
+
+      <PlanVersionsDialog
+        plan={historyPlan}
+        open={historyPlan !== null}
+        onOpenChange={(open) => {
+          if (!open) setHistoryPlan(null)
         }}
       />
 

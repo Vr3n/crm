@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { IndianMobileNumber } from '../../src/main/domain/phone'
+import { IndianMobileNumber, IndianPhoneNumber } from '../../src/main/domain/phone'
 import { ValidationError } from '../../src/main/domain/errors'
 
 describe('IndianMobileNumber.parse', () => {
@@ -45,9 +45,10 @@ describe('IndianMobileNumber.parse', () => {
     expect(() => IndianMobileNumber.parse('   ')).toThrow(ValidationError)
   })
 
-  it('rejects a number whose first digit is not 6-9 (landline/short codes)', () => {
-    expect(() => IndianMobileNumber.parse('5123456789')).toThrow(ValidationError)
-    expect(() => IndianMobileNumber.parse('09876543210'.replace('9', '5'))).toThrow(ValidationError)
+  it('rejects a number whose first digit is 1, 3, 4, or 5 (unallocated series)', () => {
+    for (const first of ['1', '3', '4', '5']) {
+      expect(() => IndianMobileNumber.parse(`${first}000000000`)).toThrow(ValidationError)
+    }
   })
 
   it('rejects numbers that are too short or too long', () => {
@@ -61,6 +62,23 @@ describe('IndianMobileNumber.parse', () => {
 
   it('rejects a non-Indian country code', () => {
     expect(() => IndianMobileNumber.parse('+19876543210')).toThrow(ValidationError)
+  })
+
+  it('accepts an STD-prefixed landline and keeps the leading zero', () => {
+    expect(IndianMobileNumber.parse('0221234567').value).toBe('0221234567')
+    expect(IndianMobileNumber.parse('01112345678').value).toBe('01112345678')
+  })
+
+  it('accepts a 10-digit landline starting with 2', () => {
+    expect(IndianMobileNumber.parse('2212345678').value).toBe('2212345678')
+  })
+})
+
+describe('IndianPhoneNumber.parse', () => {
+  it('normalizes mobiles to bare 10 digits and keeps landlines as entered', () => {
+    expect(IndianPhoneNumber.parse('+91 98765 43210').value).toBe('9876543210')
+    expect(IndianPhoneNumber.parse('0221234567').value).toBe('0221234567')
+    expect(IndianPhoneNumber.parse('2212345678').value).toBe('2212345678')
   })
 })
 

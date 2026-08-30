@@ -125,7 +125,6 @@ export function StaffTable({
       emptyIcon={Users}
       emptyTitle="No staff found"
       emptyDescription="Add a staff member from the button above."
-      card
       headerTone="primary"
     />
   )

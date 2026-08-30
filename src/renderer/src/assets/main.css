@@ -10,75 +10,103 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * CrownCRM design tokens — "cyan primary + pink accent" palette.
+ * CrownCRM design tokens — calm, premium operations workspace.
  *
- * Rules (shape-consistency + color-consistency locks):
- *  - TWO accents that pair: cyan (hue ≈ 220–230) drives primary/actions, pink
- *    (hue ≈ 4) drives secondary/hover emphasis. Green/red are reserved ONLY
- *    for semantic money/status (paid, due, overdue, refund).
+ * Neutral system (from plan §2):
+ *   Page bg: #F5F8FA | Surfaces: #FFFFFF | Text: #202A32
+ *   Muted text: #76828B | Borders: #DFE6E9
+ *
+ * Rules:
+ *  - Teal is the primary brand signal. Pink, amber, emerald are reserved
+ *    for contextual meaning (secondary, warning, success).
  *  - ONE radius scale: cards/inputs ~10px, small controls ~8px. No mixed
  *    corner systems.
- *  - Money, dates and IDs use --font-mono (tabular-nums) so columns scan on a
- *    single edge.
+ *  - Money, dates and IDs use --font-mono (tabular-nums) so columns scan
+ *    on a single edge.
+ *  - No purple gradients, neon accents, or arbitrary one-off colors.
  */
 :root {
   --radius: 0;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+
+  /* --- Neutral system (light) --- */
+  --background: oklch(0.965 0.004 240);    /* #F5F8FA — page surface */
+  --foreground: oklch(0.215 0.018 250);    /* #202A32 — primary text */
+  --card: oklch(1 0 0);                     /* #FFFFFF — card surface */
+  --card-foreground: oklch(0.215 0.018 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.215 0.018 250);
+
+  /* --- Accent: teal (primary brand) --- */
   --primary: oklch(0.52 0.105 223.128);
   --primary-foreground: oklch(0.984 0.019 200.873);
+
+  /* --- Accent: pink (secondary / hover emphasis) --- */
   --secondary: oklch(0.525 0.223 3.958);
   --secondary-foreground: oklch(0.971 0.014 343.198);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+
+  /* --- Muted / border --- */
+  --muted: oklch(0.965 0.004 240);         /* #F5F8FA — tinted input bg */
+  --muted-foreground: oklch(0.515 0.015 250); /* #76828B — secondary text */
   --accent: oklch(0.955 0.02 3.958);
   --accent-foreground: oklch(0.21 0.02 4);
+
+  /* --- Semantic: status --- */
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.596 0.145 163.225);
+  --success: oklch(0.596 0.145 163.225);     /* emerald — paid / healthy */
   --success-foreground: oklch(0.982 0.017 145.153);
-  --warning: oklch(0.769 0.188 70.08);
+  --warning: oklch(0.769 0.188 70.08);       /* amber — caution */
   --warning-foreground: oklch(0.98 0.016 73.684);
   --info: oklch(0.55 0.19 257);
   --info-foreground: oklch(0.985 0.015 257);
   --violet: oklch(0.55 0.2 292);
   --violet-foreground: oklch(0.985 0.02 292);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+
+  /* --- Input / border --- */
+  --border: oklch(0.895 0.005 240);         /* #DFE6E9 */
+  --input: oklch(0.895 0.005 240);
   --ring: oklch(0.608 0.126 221.723);
+
+  /* --- Charts --- */
   --chart-1: oklch(0.865 0.127 207.078);
   --chart-2: oklch(0.715 0.143 215.221);
   --chart-3: oklch(0.609 0.126 221.723);
   --chart-4: oklch(0.52 0.105 223.128);
   --chart-5: oklch(0.45 0.085 224.283);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+
+  /* --- Sidebar --- */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.215 0.018 250);
   --sidebar-primary: oklch(0.609 0.126 221.723);
   --sidebar-primary-foreground: oklch(0.984 0.019 200.873);
   --sidebar-accent: oklch(0.953 0.022 3.958);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-border: oklch(0.895 0.005 240);
   --sidebar-ring: oklch(0.608 0.126 221.723);
 }
 
+/*
+ * Dark mode — deep blue-charcoal surfaces, softened borders, teal focus.
+ * Preserves the same visual hierarchy rather than inverting every color.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.45 0.085 224.283);
+  --background: oklch(0.165 0.012 250);     /* deep blue-charcoal page bg */
+  --foreground: oklch(0.93 0.005 240);       /* softened white text */
+  --card: oklch(0.205 0.01 250);             /* slightly elevated surface */
+  --card-foreground: oklch(0.93 0.005 240);
+  --popover: oklch(0.205 0.01 250);
+  --popover-foreground: oklch(0.93 0.005 240);
+
+  --primary: oklch(0.55 0.11 223);           /* teal focus/active states */
   --primary-foreground: oklch(0.984 0.019 200.873);
+
   --secondary: oklch(0.459 0.187 3.815);
   --secondary-foreground: oklch(0.971 0.014 343.198);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+
+  --muted: oklch(0.225 0.008 250);           /* desaturated tinted bg */
+  --muted-foreground: oklch(0.65 0.01 240);
   --accent: oklch(0.27 0.02 3.958);
   --accent-foreground: oklch(0.985 0 0);
+
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.696 0.17 162.48);
   --success-foreground: oklch(0.145 0 0);
@@ -88,22 +116,25 @@
   --info-foreground: oklch(0.16 0.02 257);
   --violet: oklch(0.68 0.19 292);
   --violet-foreground: oklch(0.16 0.02 292);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.09 224.283);
+
+  --border: oklch(1 0 0 / 8%);              /* softened borders */
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.55 0.11 223);
+
   --chart-1: oklch(0.865 0.127 207.078);
   --chart-2: oklch(0.715 0.143 215.221);
   --chart-3: oklch(0.609 0.126 221.723);
   --chart-4: oklch(0.52 0.105 223.128);
   --chart-5: oklch(0.45 0.085 224.283);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+
+  --sidebar: oklch(0.185 0.01 250);
+  --sidebar-foreground: oklch(0.93 0.005 240);
   --sidebar-primary: oklch(0.715 0.143 215.221);
   --sidebar-primary-foreground: oklch(0.302 0.056 229.695);
   --sidebar-accent: oklch(0.27 0.02 3.958);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.55 0.09 224.283);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.55 0.11 223);
 }
 
 @theme inline {
@@ -181,5 +212,51 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/40;
+  }
+}
+
+/* --- CrownCRM micro-interaction utilities --- */
+@layer utilities {
+  /* Quick-action button lift on hover */
+  .crm-hover-lift {
+    transition: transform 180ms ease-out, box-shadow 180ms ease-out, border-color 180ms ease-out;
+  }
+  .crm-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 6%);
+    border-color: oklch(0.52 0.105 223.128 / 0.3);
+  }
+  .crm-hover-lift:active {
+    transform: translateY(1px);
+    box-shadow: none;
+    transition-duration: 100ms;
+  }
+
+  /* Status pulse dot */
+  @keyframes crm-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .crm-pulse {
+    animation: crm-pulse 2.5s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .crm-pulse {
+      animation: none;
+    }
+  }
+
+  /* Float animation for empty state icons */
+  @keyframes crm-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .crm-float {
+    animation: crm-float 3s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .crm-float {
+      animation: none;
+    }
   }
 }

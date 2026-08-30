@@ -1,18 +1,25 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
 import { filterOffersByLifecycle } from '../pricing'
-import { useDeleteOffer, useOffers, usePlans } from '../queries'
+import { useDeactivateOffer, useOffers, usePlans } from '../queries'
 import type { Offer } from '../types'
 import { ConfirmDeleteDialog } from '../components/confirm-delete-dialog'
 import { OfferFilters, type OfferFiltersState } from '../components/offer-filters'
 import { OfferFormDialog } from '../components/offer-form-dialog'
 import { OfferMetrics } from '../components/offer-metrics'
 import { OfferTable } from '../components/offer-table'
+import { OfferVersionsDialog } from '../components/offer-versions-dialog'
 
-const DEFAULT_FILTERS: OfferFiltersState = { search: '', lifecycle: 'ALL' }
+const DEFAULT_FILTERS: OfferFiltersState = {
+  search: '',
+  lifecycle: 'ALL',
+  discountType: 'ALL',
+  dateRange: undefined
+}
 
 type DialogState = { mode: 'new' } | { mode: 'edit'; offer: Offer } | null
 
@@ -27,17 +34,31 @@ export function OffersPage(): React.JSX.Element {
   const { data: plans = [] } = usePlans()
   const [filters, setFilters] = useState<OfferFiltersState>(DEFAULT_FILTERS)
   const [dialog, setDialog] = useState<DialogState>(null)
-  const [deleting, setDeleting] = useState<Offer | null>(null)
-  const deleteOffer = useDeleteOffer()
+  const [deactivating, setDeactivating] = useState<Offer | null>(null)
+  const [historyOffer, setHistoryOffer] = useState<Offer | null>(null)
+  const deactivateOffer = useDeactivateOffer()
 
   const rows = useMemo(() => {
     const needle = filters.search.trim().toLowerCase()
-    return filterOffersByLifecycle(offers, filters.lifecycle).filter(
-      (offer) =>
-        needle.length === 0 ||
-        offer.name.toLowerCase().includes(needle) ||
-        offer.code.toLowerCase().includes(needle)
-    )
+    return filterOffersByLifecycle(offers, filters.lifecycle)
+      .filter(
+        (offer) =>
+          filters.discountType === 'ALL' || offer.discountType === filters.discountType
+      )
+      .filter((offer) => {
+        if (!filters.dateRange?.from && !filters.dateRange?.to) return true
+        const offerStart = new Date(offer.startDate)
+        const offerEnd = offer.endDate ? new Date(offer.endDate) : null
+        if (filters.dateRange.from && offerEnd && offerEnd < filters.dateRange.from) return false
+        if (filters.dateRange.to && offerStart > filters.dateRange.to) return false
+        return true
+      })
+      .filter(
+        (offer) =>
+          needle.length === 0 ||
+          offer.name.toLowerCase().includes(needle) ||
+          offer.code.toLowerCase().includes(needle)
+      )
   }, [offers, filters])
 
   const editingOffer = dialog?.mode === 'edit' ? dialog.offer : null
@@ -57,21 +78,24 @@ export function OffersPage(): React.JSX.Element {
 
       <OfferMetrics offers={rows} />
 
-      <OfferFilters filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <OfferFilters filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>
-          {rows.length} offer{rows.length === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <OfferTable
-        offers={rows}
-        plans={plans}
-        isLoading={isLoading}
-        onEdit={(offer) => setDialog({ mode: 'edit', offer })}
-        onDelete={setDeleting}
-      />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <OfferTable
+            offers={rows}
+            plans={plans}
+            isLoading={isLoading}
+            onEdit={(offer) => setDialog({ mode: 'edit', offer })}
+            onDeactivate={setDeactivating}
+            onHistory={setHistoryOffer}
+          />
+        </CardContent>
+      </Card>
 
       <OfferFormDialog
         key={dialog ? (dialog.mode === 'edit' ? String(dialog.offer.id) : 'new') : 'closed'}
@@ -84,17 +108,27 @@ export function OffersPage(): React.JSX.Element {
       />
 
       <ConfirmDeleteDialog
-        open={deleting !== null}
-        title={deleting ? `Delete ${deleting.name}?` : 'Delete offer?'}
-        description="Invoices that already used this offer keep their snapshot price. Only future sales are affected."
-        isPending={deleteOffer.isPending}
+        open={deactivating !== null}
+        title={deactivating ? `Deactivate ${deactivating.name}?` : 'Deactivate offer?'}
+        description="The offer stops applying to new sales immediately. Invoices that already used it keep their snapshot price."
+        confirmLabel="Deactivate"
+        pendingLabel="Deactivating…"
+        isPending={deactivateOffer.isPending}
         onConfirm={() => {
-          if (deleting) {
-            deleteOffer.mutate(deleting.id, { onSuccess: () => setDeleting(null) })
+          if (deactivating) {
+            deactivateOffer.mutate(deactivating.id, { onSuccess: () => setDeactivating(null) })
           }
         }}
         onOpenChange={(open) => {
-          if (!open) setDeleting(null)
+          if (!open) setDeactivating(null)
+        }}
+      />
+
+      <OfferVersionsDialog
+        offer={historyOffer}
+        open={historyOffer !== null}
+        onOpenChange={(open) => {
+          if (!open) setHistoryOffer(null)
         }}
       />
     </div>

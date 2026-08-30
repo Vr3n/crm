@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { UserRound, CalendarClock } from 'lucide-react'
+import { Pencil, UserRound, CalendarClock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SOURCES, STAGES } from '../constants'
 import { computeQuality } from '../data-quality'
@@ -15,14 +16,18 @@ import { QualityDot } from './quality-dot'
 export function LeadBoard({
   leads,
   onOpen,
-  onStageChange
+  onStageChange,
+  onEdit,
+  canEditLead
 }: {
   leads: Lead[]
   onOpen: (lead: Lead) => void
   onStageChange: (lead: Lead, to: StageKey) => void
+  onEdit: (lead: Lead) => void
+  canEditLead: (lead: Lead) => boolean
 }): React.JSX.Element {
   const all = leads
-  const [dragId, setDragId] = useState<string | null>(null)
+  const [dragId, setDragId] = useState<number | null>(null)
   const [overCol, setOverCol] = useState<StageKey | null>(null)
 
   const groups = useMemo(
@@ -44,7 +49,7 @@ export function LeadBoard({
             onDragLeave={() => setOverCol((c) => (c === stage.key ? null : c))}
             onDrop={(e) => {
               e.preventDefault()
-              const id = e.dataTransfer.getData('text/lead-id')
+              const id = Number(e.dataTransfer.getData('text/lead-id'))
               const lead = all.find((l) => l.id === id)
               setOverCol(null)
               setDragId(null)
@@ -70,7 +75,7 @@ export function LeadBoard({
                     draggable
                     onDragStart={(e) => {
                       setDragId(lead.id)
-                      e.dataTransfer.setData('text/lead-id', lead.id)
+                      e.dataTransfer.setData('text/lead-id', String(lead.id))
                       e.dataTransfer.effectAllowed = 'move'
                     }}
                     onDragEnd={() => {
@@ -87,9 +92,6 @@ export function LeadBoard({
                       <span className="text-sm font-medium">{lead.name}</span>
                       <QualityDot quality={q} className="mt-0.5" />
                     </div>
-                    {lead.planInterest ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{lead.planInterest}</p>
-                    ) : null}
                     <div className="mt-2 flex flex-col gap-1 border-t pt-1.5 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <UserRound className="size-3" />
@@ -108,6 +110,23 @@ export function LeadBoard({
                         {SOURCES[lead.source]}
                       </span>
                     </div>
+                    {canEditLead(lead) ? (
+                      <div className="mt-1.5 flex justify-end border-t pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Edit ${lead.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEdit(lead)
+                          }}
+                          className="size-6 text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 )
               })}

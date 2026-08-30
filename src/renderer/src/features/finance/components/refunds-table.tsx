@@ -148,7 +148,6 @@ export function RefundsTable({
       emptyIcon={Undo2}
       emptyTitle="No refunds issued"
       emptyDescription="Refunds you issue from the button above will appear here."
-      card
       headerTone="primary"
       toolbar={
         <Select value={method} onValueChange={(v) => onMethodChange(v as PaymentMethod | 'ALL')}>

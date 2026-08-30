@@ -88,10 +88,7 @@ describe('seedRolesForOrganization', () => {
     const manager = getDb()
       .prepare("SELECT id FROM roles WHERE organization_id = ? AND name = 'Manager'")
       .get(orgId) as { id: number }
-    expect(roleRepo.findPermissionCodes(manager.id).sort()).toEqual([
-      'org.view',
-      'role.view',
-      'user.view'
-    ])
+    const expected = SEED_ROLES.find((r) => r.name === 'Manager')!.permissions
+    expect(roleRepo.findPermissionCodes(manager.id).sort()).toEqual([...expected].sort())
   })
 })

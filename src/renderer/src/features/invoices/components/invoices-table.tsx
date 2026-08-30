@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
-import { Eye, ReceiptText } from 'lucide-react'
+import { Download, Eye, ReceiptText, Wallet } from 'lucide-react'
+import { toast } from 'sonner'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -15,6 +17,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDate } from '@/features/leads/format'
 import { formatMoney } from '@/lib/money'
+import { cn } from '@/lib/utils'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import {
   DateRangePicker,
@@ -25,31 +28,17 @@ import { SortButton } from '@/features/dashboard/components/sort-button'
 import { INVOICE_PAGE_SIZES, INVOICE_STATUS_META, INVOICE_STATUS_OPTIONS } from '../constants'
 import { useInvoices } from '../queries'
 import type { Invoice, InvoiceStatus } from '../types'
-import { InvoiceCustomerCell } from './invoice-customer-cell'
-import { InvoiceDetailsSheet } from './invoice-details-sheet'
-import { InvoiceStatusBadge } from './invoice-status-badge'
+import { pdfApi } from '@/features/pdf/api'
 
 const helper = createColumnHelper<DashboardFeatures, Invoice>()
 
-/** The paid/due line under Total, communicating settlement without a second column. */
-function AmountContext({ invoice }: { invoice: Invoice }): React.JSX.Element {
-  if (invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE') {
-    return <span className="text-xs text-muted-foreground">Not collected</span>
-  }
-  if (invoice.outstanding > 0) {
-    return (
-      <span className="text-xs font-medium text-destructive tabular-nums">
-        Due {formatMoney(invoice.outstanding)}
-      </span>
-    )
-  }
-  return <span className="text-xs text-success tabular-nums">Settled</span>
-}
-
-function buildColumns(onView: (row: Invoice) => void): ReturnType<typeof helper.columns> {
+function buildColumns(
+  onView: (row: Invoice) => void,
+  onMakePayment: (row: Invoice) => void
+): ReturnType<typeof helper.columns> {
   return helper.columns([
-    helper.accessor('issuedAt', {
-      id: 'issuedAt',
+    helper.accessor('invoiceNo', {
+      id: 'invoiceNo',
       header: ({ column }) => (
         <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
           Invoice
@@ -63,102 +52,151 @@ function buildColumns(onView: (row: Invoice) => void): ReturnType<typeof helper.
           <span className="text-xs text-muted-foreground">{formatDate(row.original.issuedAt)}</span>
         </div>
       ),
-      sortFn: 'datetime'
+      sortFn: 'alphanumeric'
     }),
     helper.accessor((row) => row.customer.name, {
       id: 'customer',
-      header: () => 'Customer',
-      cell: ({ row }) => <InvoiceCustomerCell customer={row.original.customer} />,
+      header: () => 'Customer / Lead',
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{row.original.customer.name}</p>
+          {row.original.customer.phone && (
+            <p className="truncate font-mono text-[11px] text-muted-foreground">
+              {row.original.customer.phone}
+            </p>
+          )}
+        </div>
+      ),
       sortFn: 'alphanumeric'
     }),
-    helper.accessor((row) => row.lines.map((l) => l.description).join(' '), {
-      id: 'description',
-      header: () => 'Description',
+    helper.accessor((row) => row.lines[0]?.description ?? '', {
+      id: 'plan',
+      header: () => 'Membership Plan',
       enableSorting: false,
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="block max-w-64 truncate text-sm font-medium">
-            {row.original.lines[0]?.description}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {row.original.lines.length} {row.original.lines.length === 1 ? 'line' : 'lines'} ·{' '}
-            {formatMoney(row.original.subtotal)} pre-tax
-          </span>
+      cell: ({ row }) => {
+        const desc = row.original.lines[0]?.description ?? '—'
+        const name = desc.replace(/\s*\(.*$/, '')
+        return <span className="block truncate text-sm">{name}</span>
+      }
+    }),
+    helper.accessor('outstanding', {
+      id: 'outstanding',
+      header: ({ column }) => (
+        <div className="flex w-full justify-end">
+          <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
+            Outstanding
+          </SortButton>
         </div>
-      )
+      ),
+      cell: ({ row }) => {
+        const amount = row.original.outstanding
+        const isSettled = amount === 0
+        return (
+          <div className="text-right">
+            <span
+              className={cn(
+                'font-mono text-sm font-semibold tabular-nums',
+                isSettled ? 'text-success' : 'text-destructive'
+              )}
+            >
+              {formatMoney(amount)}
+            </span>
+          </div>
+        )
+      },
+      sortFn: 'basic'
     }),
     helper.accessor('total', {
       id: 'total',
       header: ({ column }) => (
-        <SortButton
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting()}
-          className="w-full justify-end"
-        >
-          Total
-        </SortButton>
+        <div className="flex w-full justify-end">
+          <SortButton sorted={column.getIsSorted()} onClick={() => column.toggleSorting()}>
+            Amount
+          </SortButton>
+        </div>
       ),
       cell: ({ row }) => (
-        <div className="flex flex-col items-end gap-0.5">
+        <div className="text-right">
           <span className="font-mono text-sm font-semibold tabular-nums">
             {formatMoney(row.original.total)}
           </span>
-          <AmountContext invoice={row.original} />
         </div>
       ),
       sortFn: 'basic'
-    }),
-    helper.accessor('paidAmount', {
-      id: 'paidAmount',
-      header: ({ column }) => (
-        <SortButton
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting()}
-          className="w-full justify-end"
-        >
-          Paid
-        </SortButton>
-      ),
-      cell: ({ row }) => (
-        <div className="flex flex-col items-end gap-0.5">
-          <span className="font-mono text-sm tabular-nums text-muted-foreground">
-            {formatMoney(row.original.paidAmount)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {row.original.allocations.length}{' '}
-            {row.original.allocations.length === 1 ? 'payment' : 'payments'}
-          </span>
-        </div>
-      ),
-      sortFn: 'basic'
-    }),
-    helper.accessor('status', {
-      id: 'status',
-      header: () => 'Status',
-      cell: ({ row }) => <InvoiceStatusBadge status={row.original.status} />,
-      sortFn: 'text'
     }),
     helper.display({
       id: 'actions',
-      header: () => null,
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className="text-primary hover:bg-primary/10 hover:text-primary"
-                aria-label={`View ${row.original.invoiceNo}`}
-                onClick={() => onView(row.original)}
-              >
-                <Eye className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">View invoice</TooltipContent>
-          </Tooltip>
-        </div>
-      )
+      header: () => <div className="text-right">Actions</div>,
+      size: 180,
+      cell: ({ row }) => {
+        const isOpenish = row.original.status === 'OPEN' || row.original.status === 'PARTIALLY_PAID'
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            {isOpenish && row.original.outstanding > 0 ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 border-cyan-500/30 bg-cyan-500/10 px-2 text-xs text-cyan-600 hover:bg-cyan-500/20 hover:text-cyan-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onMakePayment(row.original)
+                    }}
+                  >
+                    <Wallet className="size-3.5" />
+                    Make payment
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Record a payment for this invoice</TooltipContent>
+              </Tooltip>
+            ) : null}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={`Export ${row.original.invoiceNo} as PDF`}
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    try {
+                      const filePath = await pdfApi.exportInvoice(row.original.id, 'preview')
+                      toast.success('PDF exported', {
+                        description: `Saved to ${filePath}`
+                      })
+                    } catch (err) {
+                      toast.error('Export failed', {
+                        description: err instanceof Error ? err.message : 'Could not generate PDF'
+                      })
+                    }
+                  }}
+                >
+                  <Download className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Export invoice as PDF</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="text-primary hover:bg-primary/10 hover:text-primary"
+                  aria-label={`View ${row.original.invoiceNo}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onView(row.original)
+                  }}
+                >
+                  <Eye className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View invoice details</TooltipContent>
+            </Tooltip>
+          </div>
+        )
+      }
     })
   ])
 }
@@ -166,20 +204,30 @@ function buildColumns(onView: (row: Invoice) => void): ReturnType<typeof helper.
 /**
  * Invoice register (Module 04 / 09 §62) — the authoritative list of finalized
  * obligations. Data table with issued-date range + status filters, search,
- * sortable totals and a details drawer on every row.
+ * sortable totals and action buttons on every row.
  */
-export function InvoicesTable(): React.JSX.Element {
+export function InvoicesTable({
+  onMakePayment
+}: {
+  onMakePayment: (invoice: Invoice) => void
+}): React.JSX.Element {
   const { data, isLoading } = useInvoices()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [range, setRange] = useState<DateRange>()
   const [status, setStatus] = useState<InvoiceStatus | undefined>()
-  const [selected, setSelected] = useState<Invoice | null>(null)
-  const [open, setOpen] = useState(false)
 
-  const handleView = useCallback((row: Invoice) => {
-    setSelected(row)
-    setOpen(true)
-  }, [])
-  const columns = useMemo(() => buildColumns(handleView), [handleView])
+  const handleView = useCallback(
+    (row: Invoice) => {
+      navigate(`/invoices/${row.id}`, { state: { from: location.pathname } })
+    },
+    [navigate, location.pathname]
+  )
+
+  const columns = useMemo(
+    () => buildColumns(handleView, onMakePayment),
+    [handleView, onMakePayment]
+  )
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()
@@ -205,22 +253,14 @@ export function InvoicesTable(): React.JSX.Element {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <ReceiptText className="size-5" />
-            </span>
-            <span className="font-heading text-lg">Invoice register</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
           <DataTable
             columns={columns}
             data={filtered}
             getRowId={(row) => row.id}
             isLoading={isLoading}
-            initialSorting={[{ id: 'issuedAt', desc: true }]}
+            initialSorting={[{ id: 'invoiceNo', desc: true }]}
             initialPageSize={10}
             pageSizeOptions={INVOICE_PAGE_SIZES}
             headerTone="primary"
@@ -262,7 +302,6 @@ export function InvoicesTable(): React.JSX.Element {
           />
         </CardContent>
       </Card>
-      <InvoiceDetailsSheet invoice={selected} open={open} onOpenChange={setOpen} />
     </>
   )
 }

@@ -1,7 +1,10 @@
 import { useMemo } from 'react'
-import { Wallet } from 'lucide-react'
+import { Download, Wallet } from 'lucide-react'
+import { toast } from 'sonner'
 import { createColumnHelper } from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
 import { formatMoney } from '@/features/dashboard/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
@@ -10,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { ALLOCATION_STATUS_META } from '../constants'
 import { allocatedAmount, allocationStatusOf, unallocatedAmount } from '../build'
 import { PaymentMethodBadge } from './payment-method-badge'
+import { pdfApi } from '@/features/pdf/api'
 import type { Payment } from '../types'
 
 const helper = createColumnHelper<DashboardFeatures, Payment>()
@@ -136,6 +140,42 @@ function buildColumns(): ReturnType<typeof helper.columns> {
           {row.original.reference ?? '—'}
         </span>
       )
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => <div className="text-right">Actions</div>,
+      size: 80,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label={`Print receipt for ${row.original.paymentNo}`}
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  try {
+                    const paymentId = parseInt(row.original.id, 10)
+                    const filePath = await pdfApi.exportReceipt(paymentId, 'preview')
+                    toast.success('Receipt exported', {
+                      description: `Saved to ${filePath}`
+                    })
+                  } catch (err) {
+                    toast.error('Export failed', {
+                      description: err instanceof Error ? err.message : 'Could not generate receipt'
+                    })
+                  }
+                }}
+              >
+                <Download className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Export payment receipt as PDF</TooltipContent>
+          </Tooltip>
+        </div>
+      )
     })
   ])
 }
@@ -171,7 +211,6 @@ export function PaymentsTable({
       emptyIcon={Wallet}
       emptyTitle="No payments recorded"
       emptyDescription="Record the first payment from the button above."
-      card
       headerTone="primary"
       toolbar={
         unallocatedTotal > 0 ? (

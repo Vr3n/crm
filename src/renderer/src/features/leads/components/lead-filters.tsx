@@ -13,8 +13,10 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { SOURCES, STAGES, STAFF } from '../constants'
-import type { LeadFilters, SourceKey, StageKey } from '../types'
+import { useMemo } from 'react'
+import { STAGES } from '../constants'
+import { useReferenceData } from '../reference-data'
+import type { Lead, LeadFilters, StageKey } from '../types'
 
 const RANGES: { key: LeadFilters['range']; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -23,23 +25,43 @@ const RANGES: { key: LeadFilters['range']; label: string }[] = [
   { key: 'all', label: 'All time' }
 ]
 
-const SOURCE_KEYS = Object.keys(SOURCES) as SourceKey[]
 const STAGE_KEYS = STAGES.map((s) => s.key)
 
 /**
  * Filter bar for the pipeline: free-text search plus stage / source / owner
  * selects and a date-range preset. All metrics below respect these filters.
+ * Source options come from the org's reference data (the same vocabulary the
+ * forms use), so admin-added sources show up here too. Owner options are
+ * derived from the leads themselves (there is no staff list on this page).
  */
 export function LeadFilters({
+  leads,
   filters,
   onChange
 }: {
+  leads: Lead[]
   filters: LeadFilters
   onChange: (f: LeadFilters) => void
 }): React.JSX.Element {
+  const { data: ref } = useReferenceData()
+  const sources = useMemo(() => (ref?.sources ?? []).filter((s) => s.active), [ref])
+
+  const owners = useMemo(() => {
+    const seen = new Map<number, string>()
+    leads.forEach((l) => {
+      if (l.owner) seen.set(l.owner.id, l.owner.name)
+    })
+    return [...seen.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [leads])
+
   const rangeLabel = RANGES.find((r) => r.key === filters.range)?.label ?? 'All time'
   const hasActive =
-    !!filters.search || filters.stage !== 'ALL' || filters.source !== 'ALL' || filters.ownerId !== 'ALL'
+    !!filters.search ||
+    filters.stage !== 'ALL' ||
+    filters.sourceId !== 'ALL' ||
+    filters.ownerId !== 'ALL'
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -57,7 +79,7 @@ export function LeadFilters({
         value={filters.stage}
         onValueChange={(v) => onChange({ ...filters, stage: v as StageKey | 'ALL' })}
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label="Stage">
           <SelectValue placeholder="Stage" />
         </SelectTrigger>
         <SelectContent>
@@ -71,34 +93,36 @@ export function LeadFilters({
       </Select>
 
       <Select
-        value={filters.source}
-        onValueChange={(v) => onChange({ ...filters, source: v as SourceKey | 'ALL' })}
+        value={filters.sourceId === 'ALL' ? 'ALL' : String(filters.sourceId)}
+        onValueChange={(v) =>
+          onChange({ ...filters, sourceId: v === 'ALL' ? 'ALL' : Number(v) })
+        }
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-44" aria-label="Source">
           <SelectValue placeholder="Source" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All sources</SelectItem>
-          {SOURCE_KEYS.map((s) => (
-            <SelectItem key={s} value={s}>
-              {SOURCES[s]}
+          {sources.map((s) => (
+            <SelectItem key={s.id} value={String(s.id)}>
+              {s.name}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
       <Select
-        value={filters.ownerId}
-        onValueChange={(v) => onChange({ ...filters, ownerId: v })}
+        value={filters.ownerId === 'ALL' ? 'ALL' : String(filters.ownerId)}
+        onValueChange={(v) => onChange({ ...filters, ownerId: v === 'ALL' ? 'ALL' : Number(v) })}
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label="Owner">
           <SelectValue placeholder="Owner" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All owners</SelectItem>
-          {STAFF.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
-              {s.name}
+          {owners.map((o) => (
+            <SelectItem key={o.id} value={String(o.id)}>
+              {o.name}
             </SelectItem>
           ))}
         </SelectContent>
@@ -136,7 +160,7 @@ export function LeadFilters({
           size="sm"
           className="h-9 text-muted-foreground"
           onClick={() =>
-            onChange({ search: '', stage: 'ALL', source: 'ALL', ownerId: 'ALL', range: 'all' })
+            onChange({ search: '', stage: 'ALL', sourceId: 'ALL', ownerId: 'ALL', range: 'all' })
           }
         >
           Clear

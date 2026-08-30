@@ -5,7 +5,19 @@ import icon from '../../resources/icon.png?asset'
 import { openDatabase } from './db/connection'
 import { runMigrations } from './db/migrations'
 import { seedPermissions } from './db/seed'
+import { logger } from './lib/logger'
 import { registerIdentityIpc } from './ipc/identity'
+import { registerSalesIpc } from './ipc/sales'
+import { registerCatalogIpc } from './ipc/catalog'
+import { registerBillingIpc } from './ipc/billing'
+import { registerFinanceIpc } from './ipc/finance'
+import { registerCustomersIpc } from './ipc/customers'
+import { registerInvoicesIpc } from './ipc/invoices'
+import { registerMembershipsIpc } from './ipc/memberships'
+import { registerDashboardIpc } from './ipc/dashboard'
+import { registerCollectionsIpc } from './ipc/collections'
+import { registerIdentityReadIpc } from './ipc/identity-read'
+import { registerPdfIpc } from './ipc/pdf'
 import { restoreRememberedLogin } from './application/identity'
 
 function createWindow(): void {
@@ -45,6 +57,10 @@ app.whenReady().then(async () => {
   })
 
   // Database foundation: connection -> migrations -> seeds
+  logger.info('main process started', {
+    logLevel: process.env.GYMCRM_LOG_LEVEL ?? 'info',
+    database: join(app.getPath('userData'), 'gym-crm.db')
+  })
   openDatabase(join(app.getPath('userData'), 'gym-crm.db'))
   runMigrations()
   seedPermissions()
@@ -57,6 +73,17 @@ app.whenReady().then(async () => {
 
   // IPC (channels are the only way the renderer touches the database)
   registerIdentityIpc()
+  registerSalesIpc()
+  registerCatalogIpc()
+  registerBillingIpc()
+  registerFinanceIpc()
+  registerCustomersIpc()
+  registerInvoicesIpc()
+  registerMembershipsIpc()
+  registerDashboardIpc()
+  registerCollectionsIpc()
+  registerIdentityReadIpc()
+  registerPdfIpc()
 
   createWindow()
 

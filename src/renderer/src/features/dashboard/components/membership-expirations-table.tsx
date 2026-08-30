@@ -134,10 +134,15 @@ export function MembershipExpirationsTable(): React.JSX.Element {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <CalendarClock className="size-5" />
             </span>
-            <span className="font-heading text-lg">Membership expirations</span>
+            <div>
+              <span className="font-heading text-lg">Membership expirations</span>
+              <p className="text-xs font-normal text-muted-foreground">
+                Memberships renewing soon that need attention
+              </p>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>

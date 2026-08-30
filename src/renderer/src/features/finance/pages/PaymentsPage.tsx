@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { PaymentsMetrics } from '../components/payments-metrics'
 import { PaymentsFilters } from '../components/payments-filters'
@@ -44,16 +45,24 @@ export function PaymentsPage(): React.JSX.Element {
 
       <PaymentsMetrics payments={payments ?? []} refunds={refunds ?? []} />
 
-      <PaymentsFilters payments={payments ?? []} filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <PaymentsFilters payments={payments ?? []} filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <PaymentsTable
-        payments={visible}
-        isLoading={isLoading}
-        onOpen={(payment) => {
-          setSelected(payment)
-          setSheetOpen(true)
-        }}
-      />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <PaymentsTable
+            payments={visible}
+            isLoading={isLoading}
+            onOpen={(payment) => {
+              setSelected(payment)
+              setSheetOpen(true)
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {recordOpen && <RecordPaymentDialog open={recordOpen} onOpenChange={setRecordOpen} />}
 

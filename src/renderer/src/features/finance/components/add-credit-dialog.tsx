@@ -45,9 +45,7 @@ export function AddCreditDialog({
       try {
         await issue.mutateAsync({
           customerId: picked.id,
-          issuedAt: value.issuedAt,
-          amount: Number(value.amount),
-          source: value.source.trim() || undefined,
+          amountMinor: Math.round(Number(value.amount) * 100),
           reason: value.reason.trim()
         })
         setPicked(null)

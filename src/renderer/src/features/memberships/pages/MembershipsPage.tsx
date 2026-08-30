@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
 import { useNow } from '@/lib/use-now'
@@ -40,19 +43,27 @@ export function MembershipsPage(): React.JSX.Element {
       <PageHeader
         title="Memberships"
         description={`${session.organizationName} · every entitlement period`}
+        actions={
+          <Button onClick={() => navigate('/memberships/sale')}>
+            <Plus className="size-4" />
+            New Membership Sale
+          </Button>
+        }
       />
 
       <MembershipMetrics rows={rows} now={now} />
 
-      <MembershipFilters filters={filters} onChange={setFilters} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-2.5">
+          <MembershipFilters filters={filters} onChange={setFilters} />
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>
-          {rows.length} membership{rows.length === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <MembershipTable rows={rows} now={now} isLoading={isLoading} onOpenCustomer={openCustomer} />
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
+          <MembershipTable rows={rows} now={now} isLoading={isLoading} onOpenCustomer={openCustomer} />
+        </CardContent>
+      </Card>
     </div>
   )
 }

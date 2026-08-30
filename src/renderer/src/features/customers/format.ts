@@ -1,14 +1,6 @@
 /** Module 02 presentational helpers — money and short date ranges. */
 
-const MONEY = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0
-})
-
-export function formatMoney(amount: number): string {
-  return MONEY.format(amount)
-}
+export { formatMoney } from '@/lib/money'
 
 /** "5 Jan" — the directory default so months stay abbreviated (design guide). */
 export function formatShortDate(iso: string): string {

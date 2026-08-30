@@ -1,10 +1,28 @@
-import { FileText, History } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { History } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Timeline as TimelineBase, type TimelineEntry } from '@/components/timeline'
 import { ACTIVITY_ICONS, ACTIVITY_TONE } from '../../activity-visuals'
 import { ACTIVITY_LABELS } from '../../constants'
 import { formatDateTime, timeAgo } from '../../format'
 import type { Lead } from '../../types'
+
+/**
+ * Maps a LeadActivity array into generic TimelineEntry[] for the universal
+ * Timeline component. Each activity gets its icon, tone, label, and metadata.
+ */
+function mapActivitiesToEntries(activities: Lead['activities']): TimelineEntry[] {
+  return [...activities]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .map((act) => ({
+      id: act.id,
+      label: ACTIVITY_LABELS[act.type] ?? act.type,
+      date: act.at,
+      description: act.note,
+      icon: ACTIVITY_ICONS[act.type],
+      iconTone: ACTIVITY_TONE[act.type],
+      meta: act.by ? `by ${act.by} · ${timeAgo(act.at)}` : timeAgo(act.at)
+    }))
+}
 
 /**
  * The lead's discussion history as a timeline (Module 01 §24) — every call,
@@ -13,7 +31,8 @@ import type { Lead } from '../../types'
  * happened" without digging.
  */
 export function Timeline({ lead }: { lead: Lead }): React.JSX.Element {
-  const entries = [...lead.activities].sort((a, b) => b.at.localeCompare(a.at))
+  const entries = mapActivitiesToEntries(lead.activities)
+
   return (
     <Card>
       <CardHeader>
@@ -29,46 +48,7 @@ export function Timeline({ lead }: { lead: Lead }): React.JSX.Element {
         {entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
         ) : (
-          <ol className="relative">
-            {entries.map((act, i) => {
-              const Icon = ACTIVITY_ICONS[act.type] ?? FileText
-              const isLast = i === entries.length - 1
-              return (
-                <li key={act.id} className={cn('relative flex gap-3', isLast ? 'pb-0' : 'pb-5')}>
-                  {!isLast && (
-                    <span
-                      aria-hidden
-                      className="absolute top-8 bottom-0 left-[13px] w-px bg-border"
-                    />
-                  )}
-                  <span
-                    className={cn(
-                      'flex size-7 shrink-0 items-center justify-center rounded-md',
-                      ACTIVITY_TONE[act.type]
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-sm font-medium">{ACTIVITY_LABELS[act.type]}</p>
-                      <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                        {formatDateTime(act.at)}
-                      </p>
-                    </div>
-                    {act.note ? (
-                      <p className="mt-0.5 text-sm text-muted-foreground">{act.note}</p>
-                    ) : null}
-                    {act.by ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground/70">
-                        by {act.by} · {timeAgo(act.at)}
-                      </p>
-                    ) : null}
-                  </div>
-                </li>
-              )
-            })}
-          </ol>
+          <TimelineBase entries={entries} formatDate={formatDateTime} />
         )}
       </CardContent>
     </Card>

@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from '@tanstack/react-form'
+import { useStore } from '@tanstack/react-store'
 import { Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
@@ -21,19 +23,23 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { formatMoney } from '@/features/dashboard/format'
-import { cn } from '@/lib/utils'
 import { PAYMENT_METHODS } from '../constants'
-import { invoiceDue } from '../build'
-import { useOutstandingInvoices, useRecordPayment } from '../queries'
+import { useCustomers, useOutstandingInvoices, useRecordPayment } from '../queries'
+import { pdfApi } from '@/features/pdf/api'
 import { CustomerPicker } from './customer-picker'
+import { AllocationSection, type AllocationDraft } from './allocation-section'
 import type { PersonRef } from '@/features/dashboard/types'
-import type { FinanceInvoice } from '../types'
 
-interface AllocationDraft {
-  invoice: FinanceInvoice
-  amount: number
-  enabled: boolean
+/**
+ * Props for contextual entry. When opened from an Invoice Details Sheet,
+ * both customerId and invoiceId are pre-set so the user sees the invoice
+ * already checked in the allocation section.
+ */
+interface RecordPaymentDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  preSelectedCustomerId?: string
+  preSelectedInvoiceId?: string
 }
 
 /**
@@ -45,14 +51,18 @@ interface AllocationDraft {
  */
 export function RecordPaymentDialog({
   open,
-  onOpenChange
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}): React.JSX.Element {
+  onOpenChange,
+  preSelectedCustomerId,
+  preSelectedInvoiceId
+}: RecordPaymentDialogProps): React.JSX.Element {
+  const navigate = useNavigate()
   const record = useRecordPayment()
+  const { data: allCustomers = [] } = useCustomers()
   const [picked, setPicked] = useState<PersonRef | null>(null)
-  const { data: outstanding, isLoading: loadingInvoices } = useOutstandingInvoices(picked?.id)
+  // When a pre-selected customer is provided, fetch outstanding invoices
+  // immediately using that ID — not picked?.id which starts null.
+  const effectiveCustomerId = preSelectedCustomerId ?? picked?.id
+  const { data: outstanding, isLoading: loadingInvoices } = useOutstandingInvoices(effectiveCustomerId)
 
   const [allocations, setAllocations] = useState<AllocationDraft[]>([])
 
@@ -74,16 +84,15 @@ export function RecordPaymentDialog({
       const allocs = allocations
         .filter((a) => a.enabled && (a.amount || 0) > 0)
         .map((a) => ({
-          invoiceId: a.invoice.id,
-          invoiceNo: a.invoice.invoiceNo,
-          amount: a.amount
+          invoiceId: a.invoiceId,
+          amount: Math.round(a.amount * 100)
         }))
       try {
-        await record.mutateAsync({
+        const result = await record.mutateAsync({
           customerId: picked.id,
           paymentDate: value.paymentDate,
-          amount: Number(value.amount),
-          method: value.method as (typeof PAYMENT_METHODS)[number]['key'],
+          amountMinor: Math.round(Number(value.amount.replace(/,/g, '')) * 100),
+          paymentMethod: value.method,
           reference: value.reference,
           notes: value.notes,
           allocations: allocs
@@ -91,20 +100,88 @@ export function RecordPaymentDialog({
         setPicked(null)
         setAllocations([])
         onOpenChange(false)
+
+        // Navigate to first allocated invoice, then generate PDFs in background
+        const paidInvoiceIds = result.allocations.map((a) => a.invoiceId)
+        if (paidInvoiceIds.length > 0) {
+          navigate(`/invoices/${paidInvoiceIds[0]}`)
+          // Generate receipt PDF
+          pdfApi.exportReceipt(result.id, 'preview').catch(() => {})
+          // Generate invoice PDF for each allocated invoice
+          for (const invId of paidInvoiceIds) {
+            pdfApi.exportInvoice(invId, 'preview').catch(() => {})
+          }
+        }
       } catch {
         // error toast handled by the mutation hook
       }
     }
   })
 
-  const handleCustomerChange = (customer: PersonRef): void => {
+  // Subscribe to amount field reactively — form.state doesn't trigger re-renders
+  const amount = useStore(form.store, (s) => s.values.amount)
+
+  // When opening with a pre-selected customer (contextual entry), seed the customer
+  // directly from the customers list — not from outstanding invoices (which may be
+  // empty or stubbed). Runs once on open when preSelectedCustomerId changes.
+  useEffect(() => {
+    if (!open) return
+    if (preSelectedCustomerId && allCustomers.length > 0 && !picked) {
+      const match = allCustomers.find((c) => c.id === preSelectedCustomerId)
+      if (match) setPicked(match)
+    }
+  }, [open, preSelectedCustomerId, allCustomers, picked])
+
+  // When invoices load and we have a pre-selected invoice, auto-check it.
+  useEffect(() => {
+    if (!open || !outstanding?.length || !preSelectedInvoiceId) return
+    setAllocations((prev) => {
+      // Don't re-seed if already seeded
+      if (prev.some((a) => a.invoiceId === preSelectedInvoiceId)) return prev
+
+      return outstanding.map((inv) => ({
+        invoiceId: inv.id,
+        amount: inv.id === preSelectedInvoiceId ? Math.max(0, inv.total - inv.paid) : 0,
+        enabled: inv.id === preSelectedInvoiceId
+      }))
+    })
+  }, [open, outstanding, preSelectedInvoiceId])
+
+  // Auto-distribute payment amount across outstanding invoices (oldest-first)
+  // whenever the Amount field changes. Only runs when there are outstanding
+  // invoices and a positive amount — manual toggles are handled separately.
+  useEffect(() => {
+    if (!outstanding?.length) return
+    const amt = Number(amount) || 0
+    if (amt <= 0) {
+      setAllocations((prev) => prev.map((a) => ({ ...a, amount: 0 })))
+      return
+    }
+
+    const sorted = [...outstanding]
+      .filter((i) => i.status === 'OPEN' || i.status === 'PARTIALLY_PAID')
+      .sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime())
+
+    let remaining = amt
+    const newAllocations: AllocationDraft[] = sorted.map((inv) => {
+      const due = Math.max(0, inv.total - inv.paid)
+      const allocAmount = Math.min(due, remaining)
+      remaining = Math.max(0, remaining - allocAmount)
+      return { invoiceId: inv.id, amount: allocAmount, enabled: allocAmount > 0 }
+    })
+
+    setAllocations(newAllocations)
+  }, [amount, outstanding])
+
+  const handleCustomerChange = useCallback((customer: PersonRef) => {
     setPicked(customer)
     setAllocations([])
-  }
+  }, [])
 
-  const selectCustomerAll = (): void => {
-    setAllocations((prev) => prev.map((a) => ({ ...a, enabled: true })))
-  }
+  const overAllocated =
+    !!amount &&
+    Number(amount) > 0 &&
+    totalAllocated > Number(amount)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,13 +204,21 @@ export function RecordPaymentDialog({
           }}
         >
           <div className="grid gap-3">
+            {/* Customer picker — locked when pre-selected from contextual entry */}
             <div className="grid gap-1.5">
               <Label>
                 Customer <span className="text-destructive">*</span>
               </Label>
-              <CustomerPicker value={picked?.id ?? ''} onChange={handleCustomerChange} />
+              {preSelectedCustomerId && picked ? (
+                <div className="flex h-9 items-center rounded-md border border-border bg-muted/50 px-3 text-sm">
+                  {picked.name}
+                </div>
+              ) : (
+                <CustomerPicker value={picked?.id ?? ''} onChange={handleCustomerChange} />
+              )}
             </div>
 
+            {/* Payment fields */}
             <div className="grid grid-cols-2 gap-3">
               <form.Field
                 name="paymentDate"
@@ -238,108 +323,16 @@ export function RecordPaymentDialog({
               </form.Field>
             </div>
 
-            {/* Allocation step — only meaningful once a customer is chosen. */}
+            {/* Allocation section — replaces the old manual grid */}
             {picked ? (
-              <div className="grid gap-2 rounded-md border border-border bg-muted/30 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Allocate across outstanding invoices
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={selectCustomerAll}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Apply all
-                  </button>
-                </div>
-
-                {loadingInvoices ? (
-                  <p className="text-xs text-muted-foreground">Loading invoices…</p>
-                ) : outstanding?.length ? (
-                  <div className="flex flex-col gap-2">
-                    {outstanding.map((invoice) => {
-                      const due = invoiceDue(invoice)
-                      const draft = allocations.find((a) => a.invoice.id === invoice.id)
-                      const enabled = draft?.enabled ?? false
-                      return (
-                        <label
-                          key={invoice.id}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={enabled}
-                            onChange={(e) => {
-                              const checked = e.target.checked
-                              setAllocations((prev) => {
-                                const existing = prev.find((a) => a.invoice.id === invoice.id)
-                                if (existing) {
-                                  return prev.map((a) =>
-                                    a.invoice.id === invoice.id ? { ...a, enabled: checked } : a
-                                  )
-                                }
-                                return [...prev, { invoice, amount: due, enabled: checked }]
-                              })
-                            }}
-                            className="size-4 accent-primary"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-mono text-xs font-semibold tabular-nums">
-                              {invoice.invoiceNo}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">{invoice.line}</p>
-                          </div>
-                          {enabled ? (
-                            <Input
-                              type="number"
-                              min={1}
-                              value={draft?.amount ?? ''}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => {
-                                const v = Number(e.target.value)
-                                setAllocations((prev) =>
-                                  prev.map((a) =>
-                                    a.invoice.id === invoice.id ? { ...a, amount: v } : a
-                                  )
-                                )
-                              }}
-                              className="h-7 w-28 rounded-md font-mono text-xs tabular-nums"
-                            />
-                          ) : (
-                            <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                              {formatMoney(due)} due
-                            </span>
-                          )}
-                        </label>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    No outstanding invoices — this will record an advance payment.
-                  </p>
-                )}
-
-                {totalAllocated > 0 && (
-                  <p
-                    className={cn(
-                      'pt-1 text-xs tabular-nums',
-                      totalAllocated > Number(form.state.values.amount) && form.state.values.amount
-                        ? 'text-destructive'
-                        : 'text-muted-foreground'
-                    )}
-                  >
-                    Allocating{' '}
-                    <span className="font-medium text-foreground">
-                      {formatMoney(totalAllocated)}
-                    </span>
-                    {form.state.values.amount
-                      ? ` of ${formatMoney(Number(form.state.values.amount))}`
-                      : ''}
-                  </p>
-                )}
-              </div>
+              <AllocationSection
+                invoices={outstanding ?? []}
+                paymentAmount={Number(amount) || 0}
+                preSelectedInvoiceId={preSelectedInvoiceId}
+                allocations={allocations}
+                onAllocationsChange={setAllocations}
+                isLoading={loadingInvoices}
+              />
             ) : null}
 
             <form.Field name="notes">
@@ -366,19 +359,14 @@ export function RecordPaymentDialog({
             <form.Subscribe
               selector={(s) => ({
                 canSubmit: s.canSubmit,
-                isSubmitting: s.isSubmitting,
-                amount: s.values.amount
+                isSubmitting: s.isSubmitting
               })}
             >
-              {({ canSubmit, isSubmitting, amount }) => {
-                const overAllocated =
-                  !!amount && Number(amount) > 0 && totalAllocated > Number(amount)
-                return (
-                  <Button type="submit" disabled={!canSubmit || !picked || overAllocated}>
-                    {isSubmitting ? 'Recording…' : 'Record payment'}
-                  </Button>
-                )
-              }}
+              {({ canSubmit, isSubmitting }) => (
+                <Button type="submit" disabled={!canSubmit || !picked || overAllocated}>
+                  {isSubmitting ? 'Recording…' : 'Record payment'}
+                </Button>
+              )}
             </form.Subscribe>
           </DialogFooter>
         </form>

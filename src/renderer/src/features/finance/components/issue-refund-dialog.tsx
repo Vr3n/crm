@@ -26,7 +26,7 @@ import { PAYMENT_METHODS } from '../constants'
 import { useIssueRefund, usePaymentsFor } from '../queries'
 import { CustomerPicker } from './customer-picker'
 import type { PersonRef } from '@/features/dashboard/types'
-import type { PaymentMethod, Refund } from '../types'
+import type { Refund } from '../types'
 
 /**
  * Issue a refund (Module 05 §17). The refund is a separate, dated, reasoned
@@ -73,12 +73,8 @@ export function IssueRefundDialog({
       if (!source) return
       try {
         await issue.mutateAsync({
-          customerId: picked.id,
-          refundDate: value.refundDate,
-          amount: Number(value.amount),
-          sourcePaymentId: source.id,
-          sourcePaymentNo: source.paymentNo,
-          method: value.method as PaymentMethod,
+          paymentId: source.id,
+          amountMinor: Math.round(Number(value.amount) * 100),
           reason: value.reason
         })
         setPicked(null)

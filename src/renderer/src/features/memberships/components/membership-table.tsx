@@ -161,7 +161,6 @@ export function MembershipTable({
       emptyIcon={CreditCard}
       emptyTitle="No memberships match"
       emptyDescription="Try widening the filters to see more entitlement periods."
-      card
       headerTone="primary"
     />
   )

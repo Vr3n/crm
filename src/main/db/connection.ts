@@ -1,4 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
+import { drizzle } from 'drizzle-orm/node-sqlite'
+import type { NodeSQLiteDatabase } from 'drizzle-orm/node-sqlite'
+import { relations } from './schema'
 
 let db: DatabaseSync | null = null
 
@@ -7,6 +10,23 @@ export function getDb(): DatabaseSync {
     throw new Error('Database not initialized')
   }
   return db
+}
+
+/**
+ * The lazily-built Drizzle instance bound to the same `DatabaseSync` connection.
+ * Because it shares the connection, query-builder statements issued inside
+ * `withTransaction(fn)` participate in the enclosing transaction — repositories
+ * must never call `db.transaction()` themselves (the use case owns the boundary).
+ * The relational config (`relations`) is wired in so future modules can use
+ * `db.query`; repositories query with explicit joins.
+ */
+let drizzleDb: DrizzleDb | null = null
+
+export type DrizzleDb = NodeSQLiteDatabase<typeof relations>
+
+export function getDrizzle(): DrizzleDb {
+  if (!drizzleDb) drizzleDb = drizzle({ client: getDb(), relations })
+  return drizzleDb
 }
 
 /**
@@ -21,6 +41,7 @@ export function openDatabase(path: string): DatabaseSync {
   database.exec('PRAGMA foreign_keys = ON;')
   database.exec('PRAGMA busy_timeout = 5000;')
   db = database
+  drizzleDb = null
   return database
 }
 
@@ -30,11 +51,13 @@ export function closeDatabase(): void {
     db.close()
   }
   db = null
+  drizzleDb = null
 }
 
 /** Overrides the shared connection reference (used by tests). */
 export function setDatabase(database: DatabaseSync | null): void {
   db = database
+  drizzleDb = null
 }
 
 /**

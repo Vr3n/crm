@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Eye, HandCoins } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatTime } from '@/features/leads/format'
 import { PAYMENT_METHOD_META } from '@/lib/payment-methods'
@@ -160,16 +160,8 @@ export function CollectionsTable({
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <HandCoins className="size-5" />
-            </span>
-            <span className="font-heading text-lg">Payment ledger</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="gap-0 py-0">
+        <CardContent className="px-3 py-3">
           <DataTable
             columns={columns}
             data={payments}

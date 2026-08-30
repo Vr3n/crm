@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
@@ -84,6 +85,9 @@ export interface DataTableProps<TData extends RowData> {
   card?: boolean
   /** Header tint: `muted` (dashboard cards) or `primary` (operational workbench tables). */
   headerTone?: 'muted' | 'primary'
+  /** When present, shows "Mark all as done" beside the selection count. */
+  onMarkSelectedDone?: (selectedIds: string[]) => void | Promise<void>
+  isMarkingSelected?: boolean
 }
 
 export function DataTable<TData extends RowData>({
@@ -103,7 +107,9 @@ export function DataTable<TData extends RowData>({
   emptyDescription,
   onRowClick,
   card = false,
-  headerTone = 'muted'
+  headerTone = 'muted',
+  onMarkSelectedDone,
+  isMarkingSelected
 }: DataTableProps<TData>): React.JSX.Element {
   const [search, setSearch] = useState('')
   const globalFilter = useDebouncedValue(search, 300)
@@ -129,13 +135,15 @@ export function DataTable<TData extends RowData>({
         />
       ),
       cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
-          disabled={!row.getCanSelect()}
-          aria-label="Select row"
-          className="group-hover:border-muted-foreground/60"
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
+            disabled={!row.getCanSelect()}
+            aria-label="Select row"
+            className="group-hover:border-muted-foreground/60"
+          />
+        </div>
       )
     })
     return [selectColumn, ...columns]
@@ -183,15 +191,31 @@ export function DataTable<TData extends RowData>({
       <div className="flex flex-wrap items-center gap-2">
         {toolbar}
         {selectedCount > 0 ? (
-          <button
-            type="button"
-            onClick={() => table.resetRowSelection(true)}
-            aria-label={`Clear selection of ${selectedCount} rows`}
-            className="flex h-8 animate-in items-center gap-1.5 rounded-md border border-primary/25 bg-primary/5 px-2.5 text-xs font-medium text-primary fade-in-0 transition-colors hover:bg-primary/10"
-          >
-            <span className="tabular-nums">{selectedCount} selected</span>
-            <X className="size-3" />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => table.resetRowSelection(true)}
+              aria-label={`Clear selection of ${selectedCount} rows`}
+              className="flex h-8 animate-in items-center gap-1.5 rounded-md border border-primary/25 bg-primary/5 px-2.5 text-xs font-medium text-primary fade-in-0 transition-colors hover:bg-primary/10"
+            >
+              <span className="tabular-nums">{selectedCount} selected</span>
+              <X className="size-3" />
+            </button>
+            {onMarkSelectedDone ? (
+              <Button
+                size="sm"
+                className="h-8"
+                disabled={isMarkingSelected}
+                onClick={async () => {
+                  const ids = table.getSelectedRowIds()
+                  await onMarkSelectedDone(ids)
+                  table.resetRowSelection(true)
+                }}
+              >
+                {isMarkingSelected ? 'Marking…' : 'Mark all as done'}
+              </Button>
+            ) : null}
+          </>
         ) : null}
         <div className="ml-auto min-w-0 flex-1 sm:max-w-56">
           {showSearch ? (
@@ -238,6 +262,9 @@ export function DataTable<TData extends RowData>({
                     <TableCell
                       key={cell.id}
                       className={cn(cellClass, cell.column.id === 'select' && !card && 'pr-3')}
+                      onClick={(e) => {
+                        if (cell.column.id === 'select' || cell.column.id === 'actions') e.stopPropagation()
+                      }}
                     >
                       <table.FlexRender cell={cell} />
                     </TableCell>

@@ -43,7 +43,7 @@ export function ActivitiesPage(): React.JSX.Element {
         }
       />
 
-      <ActivityFilters filters={filters} onChange={setFilters} />
+      <ActivityFilters rows={rows} filters={filters} onChange={setFilters} />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">

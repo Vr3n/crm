@@ -7,8 +7,7 @@ type BadgeTone = ComponentProps<typeof Badge>['variant']
 /**
  * Per-status presentation. The blocky chip follows the table UI guide (no
  * rounded pills) and the semantic palette rule: green = settled, amber =
- * partial/attention, red = bad, neutral = inactive. `DRAFT` exists in the
- * lifecycle but never appears in the finalized register.
+ * partial/attention, red = bad, neutral = inactive.
  */
 export const INVOICE_STATUS_META: Record<InvoiceStatus, { label: string; tone: BadgeTone }> = {
   DRAFT: { label: 'Draft', tone: 'outline' },
@@ -19,10 +18,14 @@ export const INVOICE_STATUS_META: Record<InvoiceStatus, { label: string; tone: B
   UNCOLLECTIBLE: { label: 'Uncollectible', tone: 'destructive' }
 }
 
-/** Statuses offered in the register filter ("all" is handled separately). */
-export const INVOICE_STATUS_OPTIONS = (Object.keys(INVOICE_STATUS_META) as InvoiceStatus[]).filter(
-  (s) => s !== 'DRAFT'
-)
+/**
+ * Statuses offered in the register filter ("all" is handled separately).
+ * DRAFT is included: two-phase invoice creation leaves real draft rows that
+ * staff must be able to find and finish.
+ */
+export const INVOICE_STATUS_OPTIONS = Object.keys(
+  INVOICE_STATUS_META
+) as InvoiceStatus[]
 
 /** Rows-per-page options for the invoice register table. */
 export const INVOICE_PAGE_SIZES = [10, 20, 50]

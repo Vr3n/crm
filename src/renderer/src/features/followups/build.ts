@@ -15,8 +15,9 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       stage: lead.stage,
       title: f.title,
       dueAt: f.dueAt,
+      extensionReason: f.extensionReason,
       completedAt: f.completedAt,
-      note: f.note,
+      cancelledAt: f.cancelledAt,
       ownerId: lead.owner?.id,
       ownerName: lead.owner?.name
     }))
@@ -35,7 +36,7 @@ function isSameCalendarDay(a: string, b: string): boolean {
 
 /** Urgency bucket for an open follow-up: overdue → today → upcoming. */
 export function bucketOf(row: FollowUpRow): Exclude<FollowUpBucket, 'all'> {
-  if (row.completedAt) return 'done'
+  if (row.completedAt || row.cancelledAt) return 'done'
   const due = new Date(row.dueAt).getTime()
   if (due < Date.now()) return 'overdue'
   if (isSameCalendarDay(row.dueAt, new Date().toISOString())) return 'today'
@@ -45,9 +46,11 @@ export function bucketOf(row: FollowUpRow): Exclude<FollowUpBucket, 'all'> {
 /** Open first, earliest due first; done items by completion time, newest first. */
 export function sortFollowUpRows(rows: FollowUpRow[]): FollowUpRow[] {
   return [...rows].sort((a, b) => {
-    if (a.completedAt && b.completedAt) return b.completedAt.localeCompare(a.completedAt)
-    if (a.completedAt) return 1
-    if (b.completedAt) return -1
+    const aDone = a.completedAt || a.cancelledAt
+    const bDone = b.completedAt || b.cancelledAt
+    if (aDone && bDone) return (b.completedAt ?? b.cancelledAt ?? '').localeCompare(a.completedAt ?? a.cancelledAt ?? '')
+    if (aDone) return 1
+    if (bDone) return -1
     return a.dueAt.localeCompare(b.dueAt)
   })
 }

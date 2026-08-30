@@ -7,27 +7,29 @@ import { EmptyState } from '@/components/empty-state'
 import { useLead } from '../queries'
 import { computeQuality } from '../data-quality'
 import { IdentityCard } from '../components/detail/identity-card'
+import { LeadCommerceCard } from '../components/detail/lead-commerce-card'
 import { NextActionCard } from '../components/detail/next-action-card'
 import { StageHistory } from '../components/detail/stage-history'
 import { FollowUpPanel } from '../components/detail/follow-up-panel'
 import { Timeline } from '../components/detail/timeline'
+import { PlanPriceTimeline } from '@/features/catalog/components/plan-price-timeline'
 import { QuickActions, type QuickActionType } from '../components/detail/quick-actions'
 import { MoveStageDialog } from '../components/move-stage-dialog'
 import { MarkLostDialog } from '../components/mark-lost-dialog'
-import { ConvertDialog } from '../components/convert-dialog'
 import { LogActivityDialog } from '../components/log-activity-dialog'
 import { FollowUpDialog } from '../components/follow-up-dialog'
 
 /**
  * Lead detail (bento layout, Module 01 §24). Identity + actions up top, then a
- * bento of Next action / Stage history / Follow-ups, with the full Timeline as
- * the anchor of the page. Every verb routes through its strict dialog.
+ * bento of Next action / Follow-ups, Stage history + Activity timeline, and
+ * optionally Plan price history. Every verb routes through its strict dialog.
  */
 export function LeadDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
+  const leadId = id === undefined || Number.isNaN(Number(id)) ? undefined : Number(id)
   const navigate = useNavigate()
   const location = useLocation()
-  const { data: lead, isLoading } = useLead(id)
+  const { data: lead, isLoading } = useLead(leadId)
   const [action, setAction] = useState<QuickActionType | null>(null)
 
   const from = (location.state as { from?: string } | null)?.from ?? '/leads'
@@ -91,10 +93,23 @@ export function LeadDetailPage(): React.JSX.Element {
         <div className="xl:col-span-2">
           <FollowUpPanel lead={lead} />
         </div>
+
         <StageHistory lead={lead} />
         <div className="xl:col-span-2">
           <Timeline lead={lead} />
         </div>
+
+        {lead.planId && (
+          <div className="xl:col-span-3">
+            <PlanPriceTimeline planId={lead.planId} planName={lead.planName} />
+          </div>
+        )}
+
+        {lead.customerId && (
+          <div className="xl:col-span-3">
+            <LeadCommerceCard lead={lead} />
+          </div>
+        )}
       </div>
 
       {action === 'move' && (
@@ -102,9 +117,6 @@ export function LeadDetailPage(): React.JSX.Element {
       )}
       {action === 'lost' && (
         <MarkLostDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
-      )}
-      {action === 'convert' && (
-        <ConvertDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />
       )}
       {action === 'activity' && (
         <LogActivityDialog key={lead.id} open onOpenChange={() => setAction(null)} lead={lead} />

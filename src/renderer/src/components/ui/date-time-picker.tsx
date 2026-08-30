@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarClock } from 'lucide-react'
+import { CalendarClock, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -28,11 +28,20 @@ function pad(n: number): string {
 export function DateTimePicker({
   value,
   onChange,
-  placeholder = 'Pick a date & time'
+  placeholder = 'Pick a date & time',
+  invalid,
+  id,
+  'aria-describedby': ariaDescribedBy
 }: {
   value: string
   onChange: (iso: string) => void
   placeholder?: string
+  /** Sets `aria-invalid` + destructive border on the trigger (reactive form states). */
+  invalid?: boolean
+  /** Connects the trigger to its field label. */
+  id?: string
+  /** Connects the trigger to its helper/error line. */
+  'aria-describedby'?: string
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
@@ -67,8 +76,13 @@ export function DateTimePicker({
         <Button
           variant="outline"
           size="sm"
+          id={id}
+          aria-invalid={invalid || undefined}
+          aria-describedby={ariaDescribedBy}
           className={cn(
             'h-9 w-full justify-start gap-2 rounded-md px-3 text-sm font-normal',
+            invalid &&
+              'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
             !valid && 'text-muted-foreground'
           )}
         >
@@ -82,7 +96,15 @@ export function DateTimePicker({
       </PopoverTrigger>
       <PopoverContent className="w-auto rounded-lg p-0" align="start" sideOffset={6}>
         <Calendar mode="single" selected={valid ?? undefined} onSelect={setDay} className="w-72" />
-        <div className="flex items-center gap-2 border-t p-2">
+        <div className="border-t">
+          <div className="flex items-center gap-1.5 bg-muted/40 px-3 py-2">
+            <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Clock className="size-3.5" />
+            </span>
+            <span className="text-xs font-semibold text-foreground">Set time</span>
+            <span className="text-xs text-muted-foreground">· hour & minute</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 pb-3 pt-2">
           <Select
             value={valid ? String(valid.getHours()) : undefined}
             onValueChange={(v) => setHour(Number(v))}
@@ -116,6 +138,7 @@ export function DateTimePicker({
               ))}
             </SelectContent>
           </Select>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

@@ -105,7 +105,6 @@ export function RolesTable({
       emptyIcon={UserCog}
       emptyTitle="No roles"
       emptyDescription="Roles shipped with the organization will appear here."
-      card
       headerTone="primary"
     />
   )

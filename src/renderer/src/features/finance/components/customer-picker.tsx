@@ -18,6 +18,10 @@ import type { PersonRef } from '@/features/dashboard/types'
  * Searchable customer combobox (Command + Popover). Used by the finance dialogs
  * to pick *who* money is recorded against before the form takes over. Shows the
  * name and phone per customer, mirroring the leads picker.
+ *
+ * Custom `filter` matches against name + phone so typing "Rahul" or "9876"
+ * finds the right row — cmdk's default filter only matches the `value` prop
+ * (which is the customer ID string).
  */
 export function CustomerPicker({
   value,
@@ -55,7 +59,14 @@ export function CustomerPicker({
         className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0"
         align="start"
       >
-        <Command>
+        <Command
+          filter={(val, search) => {
+            const c = customers.find((x) => String(x.id) === val)
+            if (!c) return 0
+            const haystack = `${c.name} ${c.phone ?? ''}`.toLowerCase()
+            return haystack.includes(search.toLowerCase()) ? 1 : 0
+          }}
+        >
           <CommandInput placeholder="Search by name or phone…" />
           <CommandList>
             <CommandEmpty>No customers found.</CommandEmpty>
@@ -63,7 +74,7 @@ export function CustomerPicker({
               {customers.map((customer) => (
                 <CommandItem
                   key={customer.id}
-                  value={customer.id}
+                  value={String(customer.id)}
                   onSelect={() => {
                     onChange(customer)
                     setOpen(false)

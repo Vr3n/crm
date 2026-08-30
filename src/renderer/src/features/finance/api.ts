@@ -1,65 +1,118 @@
-import { currentActor } from '@/features/leads/api'
-import {
-  FinanceStore,
-  type IssueCreditInput,
-  type IssueRefundInput,
-  type RecordPaymentInput
-} from './store'
-import type { Credit, FinanceInvoice, Payment, Refund } from './types'
+import type { Payment, Refund, Credit, FinanceInvoice, InvoiceStatus } from './types'
+import type { PersonRef } from '@/features/dashboard/types'
+import { toRupees } from '../../../../shared/contracts/money'
+
+interface RecordPaymentInput {
+  customerId: string
+  paymentDate: string
+  amountMinor: number
+  paymentMethod: string
+  reference?: string
+  notes?: string
+  allocations?: { invoiceId: string; amount: number }[]
+}
+
+interface IssueRefundInput {
+  paymentId: string
+  amountMinor: number
+  reason: string
+}
+
+interface IssueCreditInput {
+  customerId: string
+  amountMinor: number
+  reason: string
+  expiresAt?: string
+}
 
 /**
- * Async facade over the in-memory finance store.
- *
- * The seam where the future backend drops in: keep these signatures and swap
- * the bodies for IPC calls (e.g. `window.api.finance.payments()`) once the
- * SQLite read-model layer exists. A small artificial delay keeps the loading
- * and mutation states honest so the UI reads like a real system.
+ * Thin IPC facade for the finance surface. Every method delegates to the
+ * preload bridge (`window.api.finance.*`).
  */
-
-const store = new FinanceStore()
-store.seed()
-
-const delay = (ms = 120): Promise<void> => new Promise<void>((r) => setTimeout(r, ms))
-
 export const api = {
-  async payments(): Promise<Payment[]> {
-    await delay()
-    return store.listPayments()
+  payments: (): Promise<Payment[]> =>
+    window.api.finance.listPayments() as unknown as Promise<Payment[]>,
+  refunds: (): Promise<Refund[]> =>
+    window.api.finance.listRefunds() as unknown as Promise<Refund[]>,
+  credits: (): Promise<Credit[]> =>
+    window.api.finance.listAllCredits() as unknown as Promise<Credit[]>,
+  invoices: (): Promise<FinanceInvoice[]> => Promise.resolve([]),
+  customers: (): Promise<PersonRef[]> =>
+    window.api.customers.list().then((rows) =>
+      rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        phone: row.phone,
+        email: row.email
+      }))
+    ),
+  outstandingInvoicesFor: (customerId: string): Promise<FinanceInvoice[]> =>
+    window.api.finance.outstandingInvoicesFor({ customerId: parseInt(customerId, 10) }).then((rows) =>
+      rows.map((row) => ({
+        id: row.id,
+        invoiceNo: row.invoiceNo,
+        customer: { id: customerId, name: row.customerName, phone: row.customerPhone },
+        line: row.line,
+        issuedAt: row.issuedAt,
+        total: Math.round(row.totalMinor / 100),
+        paid: Math.round(row.paidMinor / 100),
+        status: row.status as InvoiceStatus
+      }))
+    ),
+  paymentsFor: (customerId: string): Promise<Payment[]> =>
+    window.api.finance.paymentHistory({ customerId: parseInt(customerId, 10) }) as unknown as Promise<Payment[]>,
+  recordPayment: async (input: RecordPaymentInput): Promise<Payment> => {
+    // Step 1: Record the payment
+    const paymentRow = await window.api.finance.recordPayment({
+      customerId: parseInt(input.customerId, 10),
+      paymentDate: input.paymentDate,
+      amountMinor: input.amountMinor,
+      paymentMethod: input.paymentMethod,
+      reference: input.reference ?? null,
+      notes: input.notes ?? null
+    })
+
+    // Step 2: Allocate to each invoice if allocations provided
+    if (input.allocations?.length) {
+      for (const alloc of input.allocations) {
+        await window.api.finance.allocatePayment({
+          paymentId: paymentRow.id,
+          invoiceId: parseInt(alloc.invoiceId, 10),
+          amountMinor: alloc.amount
+        })
+      }
+    }
+
+    // Return a Payment-shaped object (the read model will be rebuilt on cache invalidation)
+    return {
+      id: String(paymentRow.id),
+      paymentNo: `PAY-${paymentRow.id}`,
+      customer: { id: input.customerId, name: '' },
+      paymentDate: input.paymentDate,
+      amount: toRupees(input.amountMinor),
+      method: input.paymentMethod as Payment['method'],
+      reference: input.reference,
+      notes: input.notes,
+      createdBy: '',
+      allocations: (input.allocations ?? []).map((a) => ({
+        invoiceId: a.invoiceId,
+        invoiceNo: '',
+        amount: toRupees(a.amount)
+      })),
+      refundIds: []
+    } as Payment
   },
-  async refunds(): Promise<Refund[]> {
-    await delay()
-    return store.listRefunds()
-  },
-  async credits(): Promise<Credit[]> {
-    await delay()
-    return store.listCredits()
-  },
-  async invoices(): Promise<FinanceInvoice[]> {
-    await delay()
-    return store.listInvoices()
-  },
-  async customers() {
-    await delay(40)
-    return store.listCustomers()
-  },
-  async outstandingInvoicesFor(customerId: string): Promise<FinanceInvoice[]> {
-    await delay(40)
-    return store.outstandingInvoicesFor(customerId)
-  },
-  async paymentsFor(customerId: string): Promise<Payment[]> {
-    await delay(40)
-    return store.paymentsFor(customerId)
-  },
-  async recordPayment(input: RecordPaymentInput): Promise<Payment> {
-    await delay()
-    return store.recordPayment(input, currentActor)
-  },
-  async issueRefund(input: IssueRefundInput): Promise<Refund> {
-    await delay()
-    return store.issueRefund(input, currentActor)
-  },
-  async issueCredit(input: IssueCreditInput): Promise<Credit> {
-    await delay()
-    return store.issueCredit(input, currentActor)
-  }
+  issueRefund: (input: IssueRefundInput): Promise<Refund> =>
+    window.api.finance.issueRefund({
+      paymentId: parseInt(input.paymentId, 10),
+      amountMinor: input.amountMinor,
+      reason: input.reason
+    }) as unknown as Promise<Refund>,
+  issueCredit: (input: IssueCreditInput): Promise<Credit> =>
+    window.api.finance.issueCredit({
+      customerId: parseInt(input.customerId, 10),
+      amountMinor: input.amountMinor,
+      reason: input.reason,
+      expiresAt: input.expiresAt ?? null
+    }) as unknown as Promise<Credit>
 }

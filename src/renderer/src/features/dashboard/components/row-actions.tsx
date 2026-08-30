@@ -1,21 +1,21 @@
-import { Bell, Eye } from 'lucide-react'
+import { Bell, Eye, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 /**
- * Row actions: icon-only View-details (Eye) + Follow-up (Bell), each a slightly
- * larger outlined button tinted with a brand accent so the actions are easy to
- * tell apart at a glance — cyan for viewing, pink for following up. When
- * `onView` is given (expirations table) it opens the member record drawer;
- * otherwise both give an honest toast pointing to the upcoming module.
+ * Row actions: icon-only View-details (Eye), Make Payment (Wallet), and
+ * Follow-up (Bell). Each is a slightly larger outlined button tinted with a
+ * brand accent so the actions are easy to tell apart at a glance.
  */
 export function RowActions({
   memberName,
-  onView
+  onView,
+  onMakePayment
 }: {
   memberName: string
   onView?: () => void
+  onMakePayment?: () => void
 }): React.JSX.Element {
   return (
     <div className="flex items-center justify-end gap-2">
@@ -38,6 +38,27 @@ export function RowActions({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">View details</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="text-cyan-600 hover:bg-cyan-50 hover:text-cyan-700 dark:text-cyan-400 dark:hover:bg-cyan-950"
+            aria-label={`Make payment for ${memberName}`}
+            onClick={() =>
+              onMakePayment
+                ? onMakePayment()
+                : toast('Record payment', {
+                    description: 'Payment recording will open shortly.'
+                  })
+            }
+          >
+            <Wallet className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Make payment</TooltipContent>
       </Tooltip>
 
       <Tooltip>

@@ -1,67 +1,65 @@
-import { LeadStore } from './mock-data'
 import type {
-  ActivityTypeKey,
-  Lead,
-  LostReasonKey,
-  NewLeadInput,
-  StageKey
-} from './types'
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
+  CancelFollowUpInput,
+  CompleteFollowUpInput,
+  CreateLeadInput,
+  CreateLeadSourceInput,
+  CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
+  LeadListRequest,
+  LeadListResponse,
+  LeadSourceRow,
+  LeadTextOptionRow,
+  MarkLeadLostInput,
+  MoveLeadStageInput,
+  PlanOptionRow,
+  RecordLeadActivityInput,
+  RecordedActivity,
+  ReferenceData,
+  ScheduleFollowUpInput,
+  UpdateFollowUpInput
+} from '../../../../shared/contracts/sales'
 
 /**
- * Async facade over the in-memory store.
- *
- * This is the seam where the future backend drops in: keep these signatures
- * and swap the bodies for IPC calls (e.g. `window.api.leads.list()`) once the
- * SQLite command layer exists. A small artificial delay keeps the loading /
- * mutation states honest so the UI reads like a real system.
+ * Thin IPC facade for the leads surface. Every method delegates to the preload
+ * bridge (`window.api.leads.*`), which unwraps the `{ ok, data | error }`
+ * envelope and re-throws `ApiError` carrying a stable machine-readable code —
+ * so renderers branch on `error.code`, never on messages.
  */
-
-const store = new LeadStore()
-const delay = (ms = 120): Promise<void> => new Promise<void>((r) => setTimeout(r, ms))
-
 export const api = {
-  async list(): Promise<Lead[]> {
-    await delay()
-    return store.all()
-  },
-  async get(id: string): Promise<Lead | undefined> {
-    await delay(60)
-    return store.byId(id)
-  },
-  async create(input: NewLeadInput, actor: string): Promise<Lead> {
-    await delay()
-    return store.create(input, actor)
-  },
-  async moveStage(id: string, to: StageKey, note: string, actor: string): Promise<Lead> {
-    await delay()
-    return store.moveStage(id, to, note, actor)
-  },
-  async logActivity(id: string, type: ActivityTypeKey, note: string, actor: string): Promise<Lead> {
-    await delay()
-    return store.logActivity(id, type, note, actor)
-  },
-  async addFollowUp(
-    id: string,
-    title: string,
-    dueAt: string,
-    note: string | undefined,
-    actor: string
-  ): Promise<Lead> {
-    await delay()
-    return store.addFollowUp(id, title, dueAt, note, actor)
-  },
-  async completeFollowUp(followUpId: string, actor: string): Promise<Lead> {
-    await delay()
-    return store.completeFollowUp(followUpId, actor)
-  },
-  async markLost(id: string, reason: LostReasonKey, note: string, actor: string): Promise<Lead> {
-    await delay()
-    return store.markLost(id, reason, note, actor)
-  },
-  async convert(id: string, actor: string): Promise<Lead> {
-    await delay()
-    return store.convert(id, actor)
-  }
+  list: (input: LeadListRequest): Promise<LeadListResponse> => window.api.leads.list(input),
+  create: (input: CreateLeadInput): Promise<CreatedLead> => window.api.leads.create(input),
+  editLead: (input: EditLeadInput): Promise<void> => window.api.leads.editLead(input),
+  moveStage: (input: MoveLeadStageInput): Promise<void> => window.api.leads.moveStage(input),
+  deleteLeads: (input: DeleteLeadsInput): Promise<void> => window.api.leads.deleteLeads(input),
+  bulkMoveStage: (input: BulkMoveLeadStageInput): Promise<BulkMoveLeadStageResult> =>
+    window.api.leads.bulkMoveStage(input),
+  bulkScheduleFollowUp: (input: BulkScheduleFollowUpInput): Promise<BulkScheduleFollowUpResult> =>
+    window.api.leads.bulkScheduleFollowup(input),
+  bulkRecordActivity: (input: BulkRecordActivityInput): Promise<BulkRecordActivityResult> =>
+    window.api.leads.bulkRecordActivity(input),
+  logActivity: (input: RecordLeadActivityInput): Promise<RecordedActivity> =>
+    window.api.leads.recordActivity(input),
+  markLost: (input: MarkLeadLostInput): Promise<void> => window.api.leads.markLost(input),
+  scheduleFollowUp: (input: ScheduleFollowUpInput): Promise<{ followupId: number }> =>
+    window.api.leads.scheduleFollowup(input),
+  completeFollowUp: (input: CompleteFollowUpInput): Promise<void> =>
+    window.api.leads.completeFollowup(input),
+  updateFollowUp: (input: UpdateFollowUpInput): Promise<void> =>
+    window.api.leads.updateFollowup(input),
+  cancelFollowUp: (input: CancelFollowUpInput): Promise<void> =>
+    window.api.leads.cancelFollowup(input),
+  referenceData: (): Promise<ReferenceData> => window.api.leads.getReferenceData(),
+  searchSources: (query: string): Promise<LeadSourceRow[]> => window.api.leads.searchSources(query),
+  createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
+    window.api.leads.createSource(input),
+  searchPlanInterests: (query: string): Promise<PlanOptionRow[]> =>
+    window.api.leads.searchPlanInterests(query),
+  searchGoals: (query: string): Promise<LeadTextOptionRow[]> => window.api.leads.searchGoals(query)
 }
-
-export const currentActor = 'Priya Verma'

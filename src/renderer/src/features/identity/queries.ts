@@ -7,12 +7,6 @@ import {
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from './api'
-import type {
-  CreateStaffInput,
-  UpdateOrganizationInput,
-  UpdateRoleInput,
-  UpdateStaffInput
-} from './store'
 import type { OrganizationProfile, Role, StaffMember } from './types'
 
 const identityKeys = {
@@ -57,22 +51,22 @@ function useIdentityMutation<TInput, TResult>(
   })
 }
 
-export function useCreateStaff(): UseMutationResult<StaffMember, Error, CreateStaffInput> {
-  return useIdentityMutation((input) => api.createStaff(input), 'Staff member added')
+export function useCreateStaff(): UseMutationResult<StaffMember, Error, Record<string, unknown>> {
+  return useIdentityMutation((input) => api.createStaff(input as never), 'Staff member added')
 }
 
-export function useUpdateStaff(): UseMutationResult<StaffMember, Error, UpdateStaffInput> {
-  return useIdentityMutation((input) => api.updateStaff(input), 'Staff member updated')
+export function useUpdateStaff(): UseMutationResult<StaffMember, Error, Record<string, unknown>> {
+  return useIdentityMutation((input) => api.updateStaff(input as never), 'Staff member updated')
 }
 
-export function useUpdateRole(): UseMutationResult<Role, Error, UpdateRoleInput> {
-  return useIdentityMutation((input) => api.updateRole(input), 'Role updated')
+export function useUpdateRole(): UseMutationResult<Role, Error, Record<string, unknown>> {
+  return useIdentityMutation((input) => api.updateRole(input as never), 'Role updated')
 }
 
 export function useUpdateOrganization(): UseMutationResult<
   OrganizationProfile,
   Error,
-  UpdateOrganizationInput
+  Record<string, unknown>
 > {
-  return useIdentityMutation((input) => api.updateOrganization(input), 'Organization updated')
+  return useIdentityMutation((input) => api.updateOrganization(input as never), 'Organization updated')
 }

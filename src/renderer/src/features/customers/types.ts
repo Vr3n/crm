@@ -65,11 +65,26 @@ export interface Customer {
   source?: string
   ownerId?: string
   ownerName?: string
-  /** First membership purchase — the day the commercial relationship started. */
+  /** First membership purchase - the day the commercial relationship started. */
   joinedAt: string
   createdAt: string
   updatedAt?: string
   memberships: Membership[]
+  /** Finalized invoices (Module 04) — present on the detail read model. */
+  invoices?: CustomerInvoice[]
+}
+
+/** One invoice in finished rupees — paid/outstanding derived from allocations. */
+export interface CustomerInvoice {
+  id: string
+  invoiceNo: string
+  status: 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE'
+  issuedAt: string
+  subtotal: number
+  tax: number
+  total: number
+  paidAmount: number
+  outstanding: number
 }
 
 /**

@@ -1,19 +1,142 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { SessionContext } from '../main/domain/identity'
-
-type IpcResult<T> = { ok: true; data: T } | { ok: false; message: string }
+import { ApiError } from '../shared/contracts/errors'
+import type { IpcResult } from '../shared/contracts/errors'
+import type {
+  AuthStatus,
+  CreateStaffMemberInput,
+  CreatedStaffMember,
+  LoginInput,
+  OrganizationExistenceInput,
+  SessionContext,
+  SetupOrganizationInput
+} from '../shared/contracts/identity'
+import type {
+  CreateCancellationPolicyInput,
+  CreateFreezePolicyInput,
+  CreateOfferInput,
+  CreatePlanInput,
+  CreateProrationPolicyInput,
+  OfferIdRequest,
+  OfferRow,
+  OfferVersionListRequest,
+  OfferVersionRow,
+  PlanIdRequest,
+  PlanRow,
+  PlanVersionListRequest,
+  PlanVersionRow,
+  PolicyLookupSet,
+  UpdateCancellationPolicyInput,
+  UpdateFreezePolicyInput,
+  UpdateOfferInput,
+  UpdatePlanInput,
+  UpdateProrationPolicyInput
+} from '../shared/contracts/catalog'
+import type {
+  CreateInvoiceInput,
+  AddInvoiceLineInput,
+  RemoveInvoiceLineInput,
+  FinalizeInvoiceInput,
+  VoidInvoiceInput,
+  MarkUncollectibleInput,
+  UpdateBillingSnapshotInput,
+  InvoiceIdRequest,
+  CustomerInvoicesRequest,
+  InvoiceDetail,
+  InvoiceNumberPreview,
+  InvoiceLineRow,
+  InvoiceRow
+} from '../shared/contracts/billing'
+import type {
+  RecordPaymentInput,
+  AllocatePaymentInput,
+  RecordAndAllocatePaymentInput,
+  IssueRefundInput,
+  IssueCreditInput,
+  ApplyCreditInput,
+  InvoicePaymentStateRequest,
+  PaymentIdRequest,
+  CustomerPaymentsRequest,
+  CustomerCreditBalanceRequest,
+  OutstandingInvoicesRequest,
+  OutstandingInvoiceRow,
+  PaymentRow,
+  InvoicePaymentState,
+  RefundRow,
+  CreditRow,
+  PaymentMethodRow
+} from '../shared/contracts/finance'
+import type {
+  CustomerIdRequest,
+  CustomerRowOutput
+} from '../shared/contracts/customers'
+import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
+import type {
+  InvoiceIdRequest as InvoiceReadIdRequest,
+  InvoicesByStatusRequest,
+  InvoiceOutput
+} from '../shared/contracts/invoices'
+import type {
+  MemberRecordRequest,
+  MembershipExpirationOutput,
+  PaymentDueOutput,
+  MemberRecordOutput
+} from '../shared/contracts/dashboard'
+import type {
+  PaymentRecordOutput,
+  DayCollectionOutput
+} from '../shared/contracts/collections'
+import type {
+  OrganizationOutput,
+  StaffMemberOutput,
+  RoleOutput
+} from '../shared/contracts/identity-read'
+import type {
+  AssignLeadInput,
+  BulkMoveLeadStageInput,
+  BulkMoveLeadStageResult,
+  BulkRecordActivityInput,
+  BulkRecordActivityResult,
+  BulkScheduleFollowUpInput,
+  BulkScheduleFollowUpResult,
+  CancelFollowUpInput,
+  CompleteFollowUpInput,
+  CreateLeadInput,
+  CreateLeadSourceInput,
+  CreatedLead,
+  DeleteLeadsInput,
+  EditLeadInput,
+  FunnelCounts,
+  LeadDetails,
+  LeadIdRequest,
+  LeadListRequest,
+  LeadListResponse,
+  LeadSourceRow,
+  LeadTextOptionRow,
+  LeadTimelineEntry,
+  MarkLeadLostInput,
+  MoveLeadStageInput,
+  PeopleList,
+  PlanOptionRow,
+  RecordLeadActivityInput,
+  ReferenceData,
+  ScheduleFollowUpInput,
+  UpdateFollowUpInput
+} from '../shared/contracts/sales'
+import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 
 /**
- * Invokes an IPC channel and unwraps the `{ ok, data | message }` envelope.
- * On failure it throws a clean `Error(message)` so the renderer never sees
- * Electron's default serialization (channel name / internal error class).
+ * Invokes an IPC channel and unwraps the `{ ok, data | error }` envelope.
+ * On failure it re-throws an `ApiError` carrying the stable machine-readable
+ * code from the shared catalog, so the renderer branches on `error.code`
+ * (ADR-0006) instead of matching on messages or Electron's serialization.
  */
 async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
   const res = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>
   if (res && typeof res === 'object' && 'ok' in res) {
     if (res.ok) return res.data
-    throw new Error(res.message)
+    const { code, message, details } = res.error
+    throw new ApiError(code, message, details)
   }
   return res
 }
@@ -21,18 +144,226 @@ async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
 // Custom APIs for renderer
 const api = {
   identity: {
-    setup: (input: unknown): Promise<SessionContext> => call('identity:setup', input),
-    login: (input: unknown): Promise<SessionContext> => call('identity:login', input),
-    session: (): Promise<SessionContext | null> => call('identity:session'),
-    status: (): Promise<'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'> =>
-      call('identity:status'),
-    createStaff: (input: unknown): Promise<{ userId: number }> =>
-      call('identity:createStaff', input),
-    checkOrganizationExists: (input: unknown): Promise<boolean> =>
-      call('identity:checkOrganizationExists', input),
-    logout: (): Promise<boolean> => call('identity:logout')
+    setup: (input: SetupOrganizationInput): Promise<SessionContext> =>
+      call(IPC_CHANNELS.IDENTITY_SETUP, input),
+    login: (input: LoginInput): Promise<SessionContext> => call(IPC_CHANNELS.IDENTITY_LOGIN, input),
+    session: (): Promise<SessionContext | null> => call(IPC_CHANNELS.IDENTITY_SESSION),
+    status: (): Promise<AuthStatus> => call(IPC_CHANNELS.IDENTITY_STATUS),
+    createStaff: (input: CreateStaffMemberInput): Promise<CreatedStaffMember> =>
+      call(IPC_CHANNELS.IDENTITY_CREATE_STAFF, input),
+    checkOrganizationExists: (input: OrganizationExistenceInput): Promise<boolean> =>
+      call(IPC_CHANNELS.IDENTITY_CHECK_ORGANIZATION_EXISTS, input),
+    logout: (): Promise<boolean> => call(IPC_CHANNELS.IDENTITY_LOGOUT)
+  },
+  leads: {
+    create: (input: CreateLeadInput): Promise<CreatedLead> =>
+      call(IPC_CHANNELS.LEADS_CREATE, input),
+    editLead: (input: EditLeadInput): Promise<void> => call(IPC_CHANNELS.LEADS_EDIT, input),
+    moveStage: (input: MoveLeadStageInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_MOVE_STAGE, input),
+    deleteLeads: (input: DeleteLeadsInput): Promise<void> => call(IPC_CHANNELS.LEADS_DELETE, input),
+    bulkMoveStage: (input: BulkMoveLeadStageInput): Promise<BulkMoveLeadStageResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_MOVE_STAGE, input),
+    bulkScheduleFollowup: (input: BulkScheduleFollowUpInput): Promise<BulkScheduleFollowUpResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_SCHEDULE_FOLLOWUP, input),
+    bulkRecordActivity: (input: BulkRecordActivityInput): Promise<BulkRecordActivityResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_RECORD_ACTIVITY, input),
+    recordActivity: (input: RecordLeadActivityInput): Promise<{ activityId: number }> =>
+      call(IPC_CHANNELS.LEADS_RECORD_ACTIVITY, input),
+    assign: (input: AssignLeadInput): Promise<void> => call(IPC_CHANNELS.LEADS_ASSIGN, input),
+    markLost: (input: MarkLeadLostInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_MARK_LOST, input),
+    scheduleFollowup: (input: ScheduleFollowUpInput): Promise<{ followupId: number }> =>
+      call(IPC_CHANNELS.LEADS_SCHEDULE_FOLLOWUP, input),
+    completeFollowup: (input: CompleteFollowUpInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_COMPLETE_FOLLOWUP, input),
+    updateFollowup: (input: UpdateFollowUpInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_UPDATE_FOLLOWUP, input),
+    cancelFollowup: (input: CancelFollowUpInput): Promise<void> =>
+      call(IPC_CHANNELS.LEADS_CANCEL_FOLLOWUP, input),
+    getDetails: (input: LeadIdRequest): Promise<LeadDetails | null> =>
+      call(IPC_CHANNELS.LEADS_GET_DETAILS, input),
+    list: (input: LeadListRequest): Promise<LeadListResponse> =>
+      call(IPC_CHANNELS.LEADS_LIST, input),
+    getTimeline: (input: LeadIdRequest): Promise<LeadTimelineEntry[]> =>
+      call(IPC_CHANNELS.LEADS_GET_TIMELINE, input),
+    getNew: (): Promise<{ id: number; personName: string; phone: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_NEW),
+    getUncontacted: (): Promise<{ id: number; personName: string; phone: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_UNCONTACTED),
+    getTodaysFollowups: (): Promise<
+      { followupId: number; leadId: number; title: string; dueAt: string }[]
+    > => call(IPC_CHANNELS.LEADS_GET_TODAYS_FOLLOWUPS),
+    getOverdueFollowups: (): Promise<
+      { followupId: number; leadId: number; title: string; dueAt: string }[]
+    > => call(IPC_CHANNELS.LEADS_GET_OVERDUE_FOLLOWUPS),
+    getTrialsEnding: (): Promise<{ id: number; personName: string; dueAt: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_TRIALS_ENDING),
+    getRecentlyWon: (): Promise<{ id: number; personName: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_RECENT_WON),
+    getRecentlyLost: (): Promise<{ id: number; personName: string }[]> =>
+      call(IPC_CHANNELS.LEADS_GET_RECENT_LOST),
+    getFunnelCounts: (): Promise<FunnelCounts> => call(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS),
+    searchPeople: (query: string): Promise<PeopleList> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, query),
+    getReferenceData: (): Promise<ReferenceData> => call(IPC_CHANNELS.LEADS_GET_REFERENCE),
+    searchSources: (query: string): Promise<LeadSourceRow[]> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_SOURCES, { query }),
+    createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
+      call(IPC_CHANNELS.LEADS_CREATE_SOURCE, input),
+    searchPlanInterests: (query: string): Promise<PlanOptionRow[]> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_PLAN_INTERESTS, { query }),
+    searchGoals: (query: string): Promise<LeadTextOptionRow[]> =>
+      call(IPC_CHANNELS.LEADS_SEARCH_GOALS, { query })
+  },
+  catalog: {
+    listPlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_PLANS),
+    createPlan: (input: CreatePlanInput): Promise<PlanRow> =>
+      call(IPC_CHANNELS.CATALOG_CREATE_PLAN, input),
+    updatePlan: (input: UpdatePlanInput): Promise<PlanRow> =>
+      call(IPC_CHANNELS.CATALOG_UPDATE_PLAN, input),
+    deletePlan: (input: PlanIdRequest): Promise<void> =>
+      call(IPC_CHANNELS.CATALOG_DELETE_PLAN, input),
+
+    listOffers: (): Promise<OfferRow[]> => call(IPC_CHANNELS.CATALOG_LIST_OFFERS),
+    getOffer: (input: OfferIdRequest): Promise<OfferRow> =>
+      call(IPC_CHANNELS.CATALOG_GET_OFFER, input),
+    createOffer: (input: CreateOfferInput): Promise<OfferRow> =>
+      call(IPC_CHANNELS.CATALOG_CREATE_OFFER, input),
+    updateOffer: (input: UpdateOfferInput): Promise<OfferRow> =>
+      call(IPC_CHANNELS.CATALOG_UPDATE_OFFER, input),
+    deactivateOffer: (input: OfferIdRequest): Promise<void> =>
+      call(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER, input),
+
+    listOfferVersions: (input: OfferVersionListRequest): Promise<OfferVersionRow[]> =>
+      call(IPC_CHANNELS.CATALOG_LIST_OFFER_VERSIONS, input),
+
+    listPlanVersions: (input: PlanVersionListRequest): Promise<PlanVersionRow[]> =>
+      call(IPC_CHANNELS.CATALOG_LIST_PLAN_VERSIONS, input),
+    listPolicyLookups: (): Promise<PolicyLookupSet> =>
+      call(IPC_CHANNELS.CATALOG_LIST_POLICY_LOOKUPS),
+    createFreezePolicy: (input: CreateFreezePolicyInput): Promise<PolicyLookupSet['freezePolicies'][number]> =>
+      call(IPC_CHANNELS.CATALOG_CREATE_FREEZE_POLICY, input),
+    updateFreezePolicy: (input: UpdateFreezePolicyInput): Promise<PolicyLookupSet['freezePolicies'][number]> =>
+      call(IPC_CHANNELS.CATALOG_UPDATE_FREEZE_POLICY, input),
+    createProrationPolicy: (input: CreateProrationPolicyInput): Promise<PolicyLookupSet['prorationPolicies'][number]> =>
+      call(IPC_CHANNELS.CATALOG_CREATE_PRORATION_POLICY, input),
+    updateProrationPolicy: (input: UpdateProrationPolicyInput): Promise<PolicyLookupSet['prorationPolicies'][number]> =>
+      call(IPC_CHANNELS.CATALOG_UPDATE_PRORATION_POLICY, input),
+    createCancellationPolicy: (input: CreateCancellationPolicyInput): Promise<PolicyLookupSet['cancellationPolicies'][number]> =>
+      call(IPC_CHANNELS.CATALOG_CREATE_CANCELLATION_POLICY, input),
+    updateCancellationPolicy: (input: UpdateCancellationPolicyInput): Promise<PolicyLookupSet['cancellationPolicies'][number]> =>
+      call(IPC_CHANNELS.CATALOG_UPDATE_CANCELLATION_POLICY, input)
+  },
+  billing: {
+    createInvoice: (input: CreateInvoiceInput): Promise<InvoiceRow> =>
+      call(IPC_CHANNELS.BILLING_CREATE_INVOICE, input),
+    addLine: (input: AddInvoiceLineInput): Promise<InvoiceLineRow> =>
+      call(IPC_CHANNELS.BILLING_ADD_LINE, input),
+    removeLine: (input: RemoveInvoiceLineInput): Promise<void> =>
+      call(IPC_CHANNELS.BILLING_REMOVE_LINE, input),
+    finalize: (input: FinalizeInvoiceInput): Promise<InvoiceRow> =>
+      call(IPC_CHANNELS.BILLING_FINALIZE, input),
+    void: (input: VoidInvoiceInput): Promise<InvoiceRow> =>
+      call(IPC_CHANNELS.BILLING_VOID, input),
+    markUncollectible: (input: MarkUncollectibleInput): Promise<InvoiceRow> =>
+      call(IPC_CHANNELS.BILLING_MARK_UNCOLLECTIBLE, input),
+    getInvoice: (input: InvoiceIdRequest): Promise<InvoiceDetail> =>
+      call(IPC_CHANNELS.BILLING_GET_INVOICE, input),
+    updateSnapshot: (input: UpdateBillingSnapshotInput): Promise<InvoiceRow> =>
+      call(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, input),
+    nextNumber: (): Promise<InvoiceNumberPreview> =>
+      call(IPC_CHANNELS.BILLING_NEXT_NUMBER),
+    listByCustomer: (input: CustomerInvoicesRequest): Promise<InvoiceRow[]> =>
+      call(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, input),
+    listOpen: (): Promise<InvoiceRow[]> =>
+      call(IPC_CHANNELS.BILLING_LIST_OPEN)
+  },
+  finance: {
+    recordPayment: (input: RecordPaymentInput): Promise<PaymentRow> =>
+      call(IPC_CHANNELS.FINANCE_RECORD_PAYMENT, input),
+    allocatePayment: (input: AllocatePaymentInput): Promise<{ allocationId: number }> =>
+      call(IPC_CHANNELS.FINANCE_ALLOCATE_PAYMENT, input),
+    recordAndAllocate: (input: RecordAndAllocatePaymentInput): Promise<{ paymentId: number; allocationId: number }> =>
+      call(IPC_CHANNELS.FINANCE_RECORD_AND_ALLOCATE, input),
+    issueRefund: (input: IssueRefundInput): Promise<RefundRow> =>
+      call(IPC_CHANNELS.FINANCE_ISSUE_REFUND, input),
+    issueCredit: (input: IssueCreditInput): Promise<CreditRow> =>
+      call(IPC_CHANNELS.FINANCE_ISSUE_CREDIT, input),
+    applyCredit: (input: ApplyCreditInput): Promise<{ creditAllocationId: number }> =>
+      call(IPC_CHANNELS.FINANCE_APPLY_CREDIT, input),
+    getInvoicePaymentState: (input: InvoicePaymentStateRequest): Promise<InvoicePaymentState> =>
+      call(IPC_CHANNELS.FINANCE_GET_INVOICE_STATE, input),
+    paymentHistory: (input: CustomerPaymentsRequest): Promise<PaymentRow[]> =>
+      call(IPC_CHANNELS.FINANCE_PAYMENT_HISTORY, input),
+    refundHistory: (input: PaymentIdRequest): Promise<RefundRow[]> =>
+      call(IPC_CHANNELS.FINANCE_REFUND_HISTORY, input),
+    creditBalance: (input: CustomerCreditBalanceRequest): Promise<{ balanceMinor: number }> =>
+      call(IPC_CHANNELS.FINANCE_CREDIT_BALANCE, input),
+    listCredits: (input: CustomerCreditBalanceRequest): Promise<CreditRow[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_CREDITS, input),
+    listPaymentMethods: (): Promise<PaymentMethodRow[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_PAYMENT_METHODS),
+    outstandingInvoicesFor: (input: OutstandingInvoicesRequest): Promise<OutstandingInvoiceRow[]> =>
+      call(IPC_CHANNELS.FINANCE_OUTSTANDING_INVOICES, input),
+    listPayments: (): Promise<unknown[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, {}),
+    listRefunds: (): Promise<unknown[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_REFUNDS, {}),
+    listAllCredits: (): Promise<unknown[]> =>
+      call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
+  },
+  pdf: {
+    exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }): Promise<string> =>
+      call(IPC_CHANNELS.PDF_EXPORT_INVOICE, input),
+    exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }): Promise<string> =>
+      call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input)
+  },
+  customers: {
+    list: (): Promise<CustomerRowOutput[]> =>
+      call(IPC_CHANNELS.CUSTOMERS_LIST),
+    get: (input: CustomerIdRequest): Promise<CustomerRowOutput | undefined> =>
+      call(IPC_CHANNELS.CUSTOMERS_GET, input)
+  },
+  memberships: {
+    sell: (input: SellMembershipInput): Promise<SellMembershipResult> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_SELL, input)
+  },
+  invoices: {
+    list: (): Promise<InvoiceOutput[]> =>
+      call(IPC_CHANNELS.INVOICES_LIST),
+    get: (input: InvoiceReadIdRequest): Promise<InvoiceOutput | undefined> =>
+      call(IPC_CHANNELS.INVOICES_GET, input),
+    listByStatus: (input: InvoicesByStatusRequest): Promise<InvoiceOutput[]> =>
+      call(IPC_CHANNELS.INVOICES_LIST_BY_STATUS, input)
+  },
+  dashboard: {
+    expirations: (): Promise<MembershipExpirationOutput[]> =>
+      call(IPC_CHANNELS.DASHBOARD_EXPIRATIONS),
+    paymentsDue: (): Promise<PaymentDueOutput[]> =>
+      call(IPC_CHANNELS.DASHBOARD_PAYMENTS_DUE),
+    memberRecord: (input: MemberRecordRequest): Promise<MemberRecordOutput | undefined> =>
+      call(IPC_CHANNELS.DASHBOARD_MEMBER_RECORD, input),
+    paymentRecord: (input: MemberRecordRequest): Promise<MemberRecordOutput | undefined> =>
+      call(IPC_CHANNELS.DASHBOARD_PAYMENT_RECORD, input)
+  },
+  collections: {
+    payments: (): Promise<PaymentRecordOutput[]> =>
+      call(IPC_CHANNELS.COLLECTIONS_PAYMENTS),
+    payment: (paymentId: number): Promise<PaymentRecordOutput | undefined> =>
+      call(IPC_CHANNELS.COLLECTIONS_PAYMENT, paymentId)
+  },
+  identityRead: {
+    organization: (): Promise<OrganizationOutput | null> =>
+      call(IPC_CHANNELS.IDENTITY_ORGANIZATION),
+    staff: (): Promise<StaffMemberOutput[]> =>
+      call(IPC_CHANNELS.IDENTITY_STAFF),
+    roles: (): Promise<RoleOutput[]> =>
+      call(IPC_CHANNELS.IDENTITY_ROLES)
   }
 }
+
+export type RendererApi = typeof api
 
 if (process.contextIsolated) {
   try {

@@ -19,6 +19,8 @@ function firstMessage(errors: FieldErrorValue[] | undefined): string | undefined
 interface FieldProps {
   id?: string
   label?: React.ReactNode
+  /** Node rendered right-aligned on the label row (e.g. a live "digits remaining" counter). */
+  labelEnd?: React.ReactNode
   /** Helper text shown when the field is not in an error state. */
   hint?: React.ReactNode
   /** Convenience error message; takes precedence over `errors`. */
@@ -40,6 +42,7 @@ interface FieldProps {
 export function Field({
   id,
   label,
+  labelEnd,
   hint,
   error,
   errors,
@@ -50,8 +53,17 @@ export function Field({
   const message = error ?? firstMessage(errors)
 
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
-      {label ? <FieldLabel htmlFor={id}>{label}</FieldLabel> : null}
+    <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
+      {label ? (
+        labelEnd ? (
+          <div className="flex items-center justify-between gap-3">
+            <FieldLabel htmlFor={id}>{label}</FieldLabel>
+            <div className="shrink-0">{labelEnd}</div>
+          </div>
+        ) : (
+          <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        )
+      ) : null}
 
       {children}
 

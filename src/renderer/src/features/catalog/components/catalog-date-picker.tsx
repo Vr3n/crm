@@ -13,11 +13,15 @@ import { cn } from '@/lib/utils'
 export function CatalogDatePicker({
   value,
   onChange,
-  placeholder = 'Pick a date'
+  placeholder = 'Pick a date',
+  clearable = false,
+  triggerClassName
 }: {
   value: string
   onChange: (date: string) => void
   placeholder?: string
+  clearable?: boolean
+  triggerClassName?: string
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
@@ -32,7 +36,8 @@ export function CatalogDatePicker({
           size="sm"
           className={cn(
             'h-9 w-full justify-start gap-2 rounded-md px-3 text-sm font-normal',
-            !valid && 'text-muted-foreground'
+            !valid && 'text-muted-foreground',
+            triggerClassName
           )}
         >
           <CalendarDays className="size-4 text-muted-foreground" />
@@ -41,12 +46,26 @@ export function CatalogDatePicker({
           ) : (
             placeholder
           )}
+          {clearable && valid ? (
+            <span
+              role="button"
+              tabIndex={0}
+              className="ml-auto rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation()
+                onChange('')
+              }}
+            >
+              ✕
+            </span>
+          ) : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto rounded-lg p-0" align="start" sideOffset={6}>
         <Calendar
           mode="single"
           selected={valid ?? undefined}
+          defaultMonth={valid ?? undefined}
           onSelect={(day) => {
             if (day) {
               onChange(format(day, 'yyyy-MM-dd'))

@@ -68,7 +68,7 @@ export function IdentityCard({
         </div>
 
         {tier !== 'clean' ? (
-          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <p className="rounded-md border border-dashed border-destructive/30 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive">
             {qualityMessage(quality)}
           </p>
         ) : null}
@@ -78,7 +78,7 @@ export function IdentityCard({
           <Row icon={Mail} label="Email" value={lead.email} />
           <Row icon={UserRound} label="Owner" value={lead.owner?.name} />
           <Row icon={CalendarDays} label="Created" value={formatDate(lead.createdAt)} />
-          <Row icon={Tag} label="Plan interest" value={lead.planInterest} />
+          <Row icon={Tag} label="Plan interest" value={lead.planName} />
           <Row icon={Target} label="Goal" value={lead.goal} />
         </div>
 

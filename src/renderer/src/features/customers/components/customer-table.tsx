@@ -153,7 +153,7 @@ export function CustomerTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(now), [now])
 
-  return (
+    return (
     <DataTable
       columns={columns}
       data={rows}
@@ -167,7 +167,6 @@ export function CustomerTable({
       emptyIcon={Users}
       emptyTitle="No customers match"
       emptyDescription="Try widening the filters, or convert a won lead into a customer."
-      card
       headerTone="primary"
     />
   )

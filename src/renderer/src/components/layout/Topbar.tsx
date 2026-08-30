@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Search, Sun, Moon, LogOut, UserRound, Command } from 'lucide-react'
+import { Search, Sun, Moon, LogOut, UserRound, Command, Crown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/context/session-context'
 import { useTheme } from '@/lib/theme'
@@ -44,6 +44,16 @@ export function Topbar({ onOpenSearch }: { onOpenSearch: () => void }): React.JS
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+      {/* Mobile brand mark — visible only when sidebar is hidden */}
+      <div className="flex items-center gap-2 lg:hidden">
+        <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <Crown className="size-4" />
+        </div>
+        <span className="truncate font-heading text-sm font-semibold tracking-tight">
+          {session.organizationName}
+        </span>
+      </div>
+
       <h1 className="hidden shrink-0 font-heading text-base font-semibold tracking-tight lg:block">
         {currentTitle(location.pathname)}
       </h1>
@@ -51,7 +61,7 @@ export function Topbar({ onOpenSearch }: { onOpenSearch: () => void }): React.JS
       <button
         type="button"
         onClick={onOpenSearch}
-        className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border bg-muted/50 px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
       >
         <Search className="size-4" />
         <span className="flex-1 truncate text-left">Search people, invoices…</span>
