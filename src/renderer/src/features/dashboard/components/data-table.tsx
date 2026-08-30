@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Inbox, X } from 'lucide-react'
 import {
@@ -36,6 +36,9 @@ import { cn } from '@/lib/utils'
 import { SearchInput } from './search-input'
 import { useDebouncedValue } from './use-debounced-value'
 import { DataTablePagination } from './data-table-pagination'
+import { type DataTableColumnMeta, DataTableContext } from './data-table-shared'
+
+export type { DataTableColumnMeta } from './data-table-shared'
 
 /**
  * TanStack Table v9 (feature-based) data table wired for the dashboard cards:
@@ -47,11 +50,6 @@ import { DataTablePagination } from './data-table-pagination'
  * Column definitions must be created with `createColumnHelper<DashboardFeatures, T>()`
  * so they share the same feature type as this table instance.
  */
-/** Column meta: optional alignment hint so the DataTable can flip padding. */
-export interface DataTableColumnMeta {
-  align?: 'left' | 'right'
-}
-
 const tableFeaturesInstance = tableFeatures({
   rowSortingFeature,
   rowPaginationFeature,
@@ -67,29 +65,6 @@ const tableFeaturesInstance = tableFeatures({
 
 /** The exact feature set this table uses — bind column helpers to it. */
 export type DashboardFeatures = typeof tableFeaturesInstance
-
-interface DataTablePaginationState {
-  pageIndex: number
-  pageCount: number
-  pageSize: number
-  rowCount: number
-  pageSizeOptions: number[]
-  onPageSizeChange: (size: number) => void
-  onPageIndexChange: (index: number) => void
-  canPrevious: boolean
-  canNext: boolean
-}
-
-const DataTableContext = createContext<DataTablePaginationState | null>(null)
-
-/**
- * Access the DataTable's pagination state from a sibling component (e.g.
- * rendering `<DataTablePagination />` inside a `<CardFooter>` outside the
- * DataTable's own render tree). Returns `null` when used outside a provider.
- */
-export function useDataTablePagination(): DataTablePaginationState | null {
-  return useContext(DataTableContext)
-}
 
 export interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DashboardFeatures, TData, unknown>[]

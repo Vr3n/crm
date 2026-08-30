@@ -125,15 +125,20 @@ export function RecordPaymentDialog({
   const amount = useStore(form.store, (s) => s.values.amount)
 
   // When only a preSelectedCustomerId is provided (no full PersonRef), seed from the customers list.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: seed picked customer from ID fallback */
   useEffect(() => {
     if (!open) return
-    if (preSelectedCustomerId && !preSelectedCustomer && allCustomers.length > 0 && !picked) {
-      const match = allCustomers.find((c) => c.id === preSelectedCustomerId)
-      if (match) setPicked(match)
+    if (preSelectedCustomerId && !preSelectedCustomer && allCustomers.length > 0) {
+      setPicked((prev) => {
+        if (prev) return prev
+        return allCustomers.find((c) => c.id === preSelectedCustomerId) ?? null
+      })
     }
-  }, [open, preSelectedCustomer, preSelectedCustomerId, allCustomers, picked])
+  }, [open, preSelectedCustomer, preSelectedCustomerId, allCustomers])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // When invoices load and we have a pre-selected invoice, auto-check it.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: seed allocations from loaded invoices */
   useEffect(() => {
     if (!open || !outstanding?.length || !preSelectedInvoiceId) return
     setAllocations((prev) => {
@@ -147,10 +152,12 @@ export function RecordPaymentDialog({
       }))
     })
   }, [open, outstanding, preSelectedInvoiceId])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Auto-distribute payment amount across outstanding invoices (oldest-first)
   // whenever the Amount field changes. Only runs when there are outstanding
   // invoices and a positive amount — manual toggles are handled separately.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: derive allocations from amount */
   useEffect(() => {
     if (!outstanding?.length) return
     const amt = Number(amount) || 0
@@ -173,6 +180,7 @@ export function RecordPaymentDialog({
 
     setAllocations(newAllocations)
   }, [amount, outstanding])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCustomerChange = useCallback((customer: PersonRef) => {
     setPicked(customer)

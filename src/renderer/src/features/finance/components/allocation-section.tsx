@@ -59,7 +59,7 @@ export function AllocationSection({
     [allocations]
   )
 
-  const toggleInvoice = (invoice: FinanceInvoice, checked: boolean) => {
+  const toggleInvoice = (invoice: FinanceInvoice, checked: boolean): void => {
     const due = invoiceDue(invoice)
     const existing = allocations.find((a) => a.invoiceId === invoice.id)
     if (checked) {
