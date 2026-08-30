@@ -38,7 +38,7 @@ export const api = {
     window.api.finance.listAllCredits() as unknown as Promise<Credit[]>,
   invoices: (): Promise<FinanceInvoice[]> => Promise.resolve([]),
   customers: (): Promise<PersonRef[]> =>
-    window.api.customers.list().then((rows) => rows.map((row) => row.customer).filter(Boolean)),
+    window.api.customers.list() as unknown as Promise<PersonRef[]>,
   outstandingInvoicesFor: (customerId: string): Promise<FinanceInvoice[]> =>
     window.api.finance
       .outstandingInvoicesFor({ customerId: parseInt(customerId, 10) })

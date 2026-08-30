@@ -220,12 +220,12 @@ export function MemberDetailsSheet({
     data: expData,
     isLoading: expLoading,
     isError: expError
-  } = useMemberRecord(isPayment ? undefined : row?.id)
+  } = useMemberRecord(isPayment ? undefined : row?.member.id)
   const {
     data: payData,
     isLoading: payLoading,
     isError: payError
-  } = usePaymentRecord(isPayment ? row?.id : undefined)
+  } = usePaymentRecord(isPayment ? row?.member.id : undefined)
   const data = expData ?? payData
   const isLoading = isPayment ? payLoading : expLoading
   const isError = isPayment ? payError : expError

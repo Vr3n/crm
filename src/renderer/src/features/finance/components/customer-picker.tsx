@@ -35,7 +35,7 @@ export function CustomerPicker({
   const { data } = useCustomers()
   const [open, setOpen] = useState(false)
 
-  const customers = data?.filter(Boolean) ?? []
+  const customers = data ?? []
   const selected = customers.find((c) => c.id === value)
 
   return (
