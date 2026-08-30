@@ -23,6 +23,7 @@ export function OrderSummary({
   discountValue = '',
   discountAmount = 0,
   finalPrice = null,
+  maxPayment = null,
   paidInput = '',
   paidAmount = null,
   paymentMethod = '',
@@ -37,6 +38,7 @@ export function OrderSummary({
   discountValue?: string
   discountAmount?: number
   finalPrice?: number | null
+  maxPayment?: number | null
   paidInput?: string
   paidAmount?: number | null
   paymentMethod?: string | null
@@ -46,7 +48,7 @@ export function OrderSummary({
   leadName?: string | null
 }): React.JSX.Element {
   const amountDue = finalPrice !== null && paidAmount !== null ? Math.max(0, finalPrice - paidAmount) : null
-  const changeDue = finalPrice !== null && paidAmount !== null ? Math.max(0, paidAmount - finalPrice) : null
+  const exceedsMax = maxPayment !== null && paidAmount !== null && paidAmount > maxPayment
 
   const discountTypeLabel = !discountType || discountType === 'NONE' ? 'None' : discountType.replace('_', ' ')
   const discountValueLabel =
@@ -119,7 +121,7 @@ export function OrderSummary({
           <div className="grid gap-1.5">
             <Label htmlFor="summary-paid" className="text-xs">
               Paid Amount <span className="text-destructive">*</span>
-              {finalPrice !== null ? <span className="font-normal text-muted-foreground"> · of {formatRupees(finalPrice)}</span> : null}
+              {maxPayment !== null ? <span className="font-normal text-muted-foreground"> · max {formatRupees(maxPayment)}</span> : null}
             </Label>
             <InputGroup>
               <InputGroupAddon align="start" className="pointer-events-none">
@@ -172,15 +174,15 @@ export function OrderSummary({
         {/* Emphasis */}
         <div className="px-5 py-3">
           {finalPrice !== null && paidAmount !== null ? (
-            amountDue !== null && amountDue > 0 ? (
+            exceedsMax ? (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-center text-base font-bold text-destructive shadow-sm">
+                <AlertCircle className="size-5 shrink-0" />
+                Exceeds max {formatRupees(maxPayment!)}
+              </div>
+            ) : amountDue !== null && amountDue > 0 ? (
               <div className="flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-center text-base font-bold text-amber-700 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
                 <HandCoins className="size-5 shrink-0" />
                 Amount due {formatRupees(amountDue)}
-              </div>
-            ) : changeDue !== null && changeDue > 0 ? (
-              <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">
-                <HandCoins className="size-4 shrink-0" />
-                Change due {formatRupees(changeDue)}
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">

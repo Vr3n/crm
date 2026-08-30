@@ -43,6 +43,7 @@ import { useLead } from '@/features/leads/queries'
 import { usePlans } from '@/features/catalog/queries'
 import { displayPhone } from '@/features/leads/format'
 import { useSellMembership } from './queries'
+import { pdfApi } from '@/features/pdf/api'
 import type { Plan, Offer } from '@/features/catalog/types'
 
 function daysForDuration(duration: Plan['duration']): number {
@@ -131,7 +132,13 @@ export function MembershipSalePage(): React.JSX.Element {
           paymentMethod: value.paymentMethod as any,
           transactionId: crypto.randomUUID()
         })
-        navigate(`/memberships/${res.membershipId}?invoice=${res.invoiceNumber}`)
+        // Navigate to invoice detail page
+        navigate(`/invoices/${res.invoiceId}`)
+        // Generate PDFs in background
+        pdfApi.exportInvoice(res.invoiceId, 'preview').catch(() => {})
+        if (res.paymentId > 0) {
+          pdfApi.exportReceipt(res.paymentId, 'preview').catch(() => {})
+        }
       } catch (e: any) {
         const msg = e?.message ?? 'Sale failed'
         setServerError(msg)
@@ -183,8 +190,10 @@ export function MembershipSalePage(): React.JSX.Element {
   })()
   const discountAmount = manualDiscount
   const finalPrice = displayBase !== null ? Math.max(0, displayBase - discountAmount) : null
+  const maxPayment = finalPrice !== null ? Math.round(finalPrice * (1 + (selectedPlan?.taxRate ?? 0) / 100)) : null
   const paidAmount = paidInput === '' ? null : Number(paidInput.replace(/,/g, ''))
   const paidValid = paidAmount === null || (!Number.isNaN(paidAmount) && paidAmount >= 0)
+  const paidOverMax = paidAmount !== null && maxPayment !== null && paidAmount > maxPayment
 
   // Use leadDetail as effective lead (simplified, no selectedLead cache needed because leadId now drives lookup)
   const effectiveLead = leadDetail ?? null
@@ -652,6 +661,7 @@ export function MembershipSalePage(): React.JSX.Element {
               discountValue={discountValue}
               discountAmount={discountAmount}
               finalPrice={finalPrice}
+              maxPayment={maxPayment}
               paidInput={paidInput}
               paidAmount={paidAmount}
               paymentMethod={paymentMethod || ''}
@@ -664,7 +674,7 @@ export function MembershipSalePage(): React.JSX.Element {
               {({ canSubmit, isSubmitting }) => (
                 <Button
                   type="button"
-                  disabled={!canSubmit || !leadId || !planId || !paymentMethod || !paidValid || paidInput === '' || isSubmitting}
+                  disabled={!canSubmit || !leadId || !planId || !paymentMethod || !paidValid || paidOverMax || paidInput === '' || isSubmitting}
                   onClick={() => form.handleSubmit()}
                   size="sm"
                   className="w-full gap-1.5"
