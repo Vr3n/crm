@@ -21,7 +21,7 @@ import {
 import { PERMISSIONS } from '../db/permissions'
 import type { InvoiceStatus } from '../domain/billing'
 import { asc, eq, and, inArray, sql } from 'drizzle-orm'
-import { invoices, paymentAllocations, invoiceLines, customers, people } from '../db/schema'
+import { invoices, paymentAllocations, creditAllocations, invoiceLines, customers, people } from '../db/schema'
 
 /**
  * Module 05 (Finance) application use cases. Each Command gates on a permission,
@@ -61,6 +61,22 @@ function mapCreditToRow(credit: ReturnType<typeof creditRepo.getById> extends in
     expiresAt: credit.expiresAt,
     createdAt: credit.createdAt
   }
+}
+
+/** Collects all refunds across all payments allocated to an invoice. */
+function collectRefundsForInvoice(organizationId: number, invoiceId: number): Array<{ amountMinor: number }> {
+  const allocations = allocationRepo.listByInvoice(organizationId, invoiceId)
+  const allRefunds: Array<{ amountMinor: number }> = []
+  for (const alloc of allocations) {
+    const paymentRefunds = refundRepo.getByPayment(organizationId, alloc.paymentId)
+    allRefunds.push(...paymentRefunds)
+  }
+  return allRefunds
+}
+
+/** Collects all credit allocations for an invoice. */
+function collectCreditsForInvoice(organizationId: number, invoiceId: number): Array<{ amountMinor: number }> {
+  return creditAllocationRepo.listByInvoice(organizationId, invoiceId)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -124,8 +140,9 @@ export function allocatePayment(input: {
 
     // Calculate invoice outstanding
     const invoiceAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
-    const invoiceRefunds = refundRepo.getByPayment(organizationId, payment.id)
-    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds)
+    const invoiceRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
+    const invoiceCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
+    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
     const outstanding = PaymentAllocationService.calculateOutstanding(invoice.totalMinor, netAllocated)
 
     // Validate allocation
@@ -154,8 +171,9 @@ export function allocatePayment(input: {
 
     // Re-derive invoice status
     const newAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
-    const newRefunds = refundRepo.getByPayment(organizationId, payment.id)
-    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(newAllocations, newRefunds)
+    const newRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
+    const newCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
+    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(newAllocations, newRefunds, newCredits)
     const newStatus = PaymentAllocationService.deriveInvoiceStatus(newNetAllocated, invoice.totalMinor)
 
     invoiceRepo.updateStatus(organizationId, input.invoiceId, newStatus)
@@ -217,8 +235,9 @@ export function recordAndAllocatePayment(input: {
 
     // Calculate outstanding
     const invoiceAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
-    const invoiceRefunds = refundRepo.getByPayment(organizationId, payment.id)
-    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds)
+    const invoiceRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
+    const invoiceCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
+    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
     const outstanding = PaymentAllocationService.calculateOutstanding(invoice.totalMinor, netAllocated)
 
     // Validate and handle overpayment
@@ -247,8 +266,9 @@ export function recordAndAllocatePayment(input: {
 
     // Re-derive invoice status
     const newAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
-    const newRefunds = refundRepo.getByPayment(organizationId, payment.id)
-    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(newAllocations, newRefunds)
+    const newRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
+    const newCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
+    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(newAllocations, newRefunds, newCredits)
     const newStatus = PaymentAllocationService.deriveInvoiceStatus(newNetAllocated, invoice.totalMinor)
 
     invoiceRepo.updateStatus(organizationId, input.invoiceId, newStatus)
@@ -308,8 +328,9 @@ export function issueRefund(input: {
       if (!invoice || invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE') continue
 
       const invoiceAllocations = allocationRepo.listByInvoice(organizationId, invoiceId)
-      const invoiceRefunds = refundRepo.getByPayment(organizationId, payment.id)
-      const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds)
+      const invoiceRefunds = collectRefundsForInvoice(organizationId, invoiceId)
+      const invoiceCredits = collectCreditsForInvoice(organizationId, invoiceId)
+      const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
       const newStatus = PaymentAllocationService.deriveInvoiceStatus(netAllocated, invoice.totalMinor)
 
       invoiceRepo.updateStatus(organizationId, invoiceId, newStatus)
@@ -382,6 +403,15 @@ export function applyCredit(input: {
     // Decrement remaining
     creditRepo.decrementRemaining(organizationId, input.creditId, input.amountMinor)
 
+    // Re-derive invoice status
+    const invoiceAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
+    const invoiceRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
+    const invoiceCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
+    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
+    const newStatus = PaymentAllocationService.deriveInvoiceStatus(netAllocated, invoice.totalMinor)
+
+    invoiceRepo.updateStatus(organizationId, input.invoiceId, newStatus)
+
     return {
       allocation: {
         id: allocation.id,
@@ -390,7 +420,8 @@ export function applyCredit(input: {
         amountMinor: allocation.amountMinor,
         createdAt: allocation.createdAt
       },
-      creditRemaining: credit.remainingMinor - input.amountMinor
+      creditRemaining: credit.remainingMinor - input.amountMinor,
+      invoiceStatus: newStatus
     }
   })
 }
@@ -408,22 +439,17 @@ export function getInvoicePaymentState(input: { invoiceId: number }) {
   if (!invoice) throw new NotFoundError('Invoice not found')
 
   const allocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
-  const refunds = refundRepo.getByPayment(organizationId, 0) // We need all refunds for this invoice's payments
-  // Actually we need refunds for all payments allocated to this invoice
-  const allRefunds: Array<{ amountMinor: number }> = []
-  for (const alloc of allocations) {
-    const paymentRefunds = refundRepo.getByPayment(organizationId, alloc.paymentId)
-    allRefunds.push(...paymentRefunds)
-  }
+  const refunds = collectRefundsForInvoice(organizationId, input.invoiceId)
+  const credits = collectCreditsForInvoice(organizationId, input.invoiceId)
 
-  const netAllocated = PaymentAllocationService.calculateNetAllocated(allocations, allRefunds)
+  const netAllocated = PaymentAllocationService.calculateNetAllocated(allocations, refunds, credits)
   const outstanding = PaymentAllocationService.calculateOutstanding(invoice.totalMinor, netAllocated)
 
   return {
     invoiceId: invoice.id,
     totalMinor: invoice.totalMinor,
     allocatedMinor: netAllocated,
-    refundedMinor: allRefunds.reduce((sum, r) => sum + r.amountMinor, 0),
+    refundedMinor: refunds.reduce((sum, r) => sum + r.amountMinor, 0),
     outstandingMinor: outstanding,
     status: invoice.status
   }
@@ -543,6 +569,25 @@ export function getOutstandingInvoices(input: { customerId: number }) {
   const paidByInvoice = new Map<number, number>()
   for (const a of allocRows) {
     paidByInvoice.set(a.invoice_id, (paidByInvoice.get(a.invoice_id) ?? 0) + a.amount_minor)
+  }
+
+  // Batch-fetch credit allocations for all outstanding invoices
+  const creditAllocRows = getDrizzle()
+    .select({
+      invoice_id: creditAllocations.invoice_id,
+      amount_minor: creditAllocations.amount_minor
+    })
+    .from(creditAllocations)
+    .where(
+      and(
+        eq(creditAllocations.organization_id, organizationId),
+        inArray(creditAllocations.invoice_id, invoiceIds)
+      )
+    )
+    .all() as Array<{ invoice_id: number; amount_minor: number }>
+
+  for (const c of creditAllocRows) {
+    paidByInvoice.set(c.invoice_id, (paidByInvoice.get(c.invoice_id) ?? 0) + c.amount_minor)
   }
 
   // Batch-fetch first line description for each invoice

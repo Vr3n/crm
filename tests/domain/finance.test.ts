@@ -23,6 +23,25 @@ describe('PaymentAllocationService', () => {
       const refunds = [{ amountMinor: 100000 }]
       expect(PaymentAllocationService.calculateNetAllocated(allocations, refunds)).toBe(-50000)
     })
+
+    it('includes credit allocations in net calculation', () => {
+      const allocations = [{ amountMinor: 50000 }]
+      const refunds = [{ amountMinor: 10000 }]
+      const creditAllocations = [{ amountMinor: 30000 }]
+      expect(PaymentAllocationService.calculateNetAllocated(allocations, refunds, creditAllocations)).toBe(70000)
+    })
+
+    it('handles credit allocations without refunds', () => {
+      const allocations = [{ amountMinor: 50000 }]
+      const creditAllocations = [{ amountMinor: 50000 }]
+      expect(PaymentAllocationService.calculateNetAllocated(allocations, [], creditAllocations)).toBe(100000)
+    })
+
+    it('defaults credit allocations to empty array', () => {
+      const allocations = [{ amountMinor: 100000 }]
+      const refunds = [{ amountMinor: 20000 }]
+      expect(PaymentAllocationService.calculateNetAllocated(allocations, refunds)).toBe(80000)
+    })
   })
 
   describe('calculateOutstanding', () => {

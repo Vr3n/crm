@@ -1,15 +1,14 @@
 import { useState } from 'react'
-import { Receipt, Wallet } from 'lucide-react'
+import { Download, Receipt, Wallet } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
+import { pdfApi } from '@/features/pdf/api'
 import { formatMoney, formatShortDate } from '../../format'
 import type { CustomerInvoice } from '../../types'
 
-const STATUS_CFG: Record<
-  CustomerInvoice['status'],
-  { label: string; className: string }
-> = {
+const STATUS_CFG: Record<CustomerInvoice['status'], { label: string; className: string }> = {
   DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
   OPEN: {
     label: 'Open',
@@ -103,6 +102,25 @@ export function InvoiceOverviewCard({
             <Wallet className="mr-1.5 size-3.5" /> Make payment
           </Button>
         ) : null}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="mt-1 w-full text-muted-foreground"
+          onClick={async () => {
+            try {
+              const filePath = await pdfApi.exportInvoice(inv.id, 'preview')
+              toast.success('PDF exported', {
+                description: `Saved to ${filePath}`
+              })
+            } catch (err) {
+              toast.error('Export failed', {
+                description: err instanceof Error ? err.message : 'Could not generate PDF'
+              })
+            }
+          }}
+        >
+          <Download className="mr-1.5 size-3.5" /> Export PDF
+        </Button>
       </div>
 
       <RecordPaymentDialog

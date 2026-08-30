@@ -290,6 +290,66 @@ describe('applyCredit', () => {
 
     expect(result.allocation.amountMinor).toBe(50000)
     expect(result.creditRemaining).toBe(0)
+    expect(result.invoiceStatus).toBe('PARTIALLY_PAID')
+  })
+
+  it('sets invoice to PAID when credit fully covers outstanding', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { customer, invoice } = createOpenInvoice(organizationId)
+
+    const credit = issueCredit({
+      customerId: customer.id,
+      amountMinor: 118000,
+      reason: 'Full coverage'
+    })
+
+    const result = applyCredit({
+      creditId: credit.id,
+      invoiceId: invoice.id,
+      amountMinor: 118000
+    })
+
+    expect(result.allocation.amountMinor).toBe(118000)
+    expect(result.creditRemaining).toBe(0)
+    expect(result.invoiceStatus).toBe('PAID')
+  })
+
+  it('sets invoice to PAID when credit plus payment fully covers outstanding', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { customer, invoice } = createOpenInvoice(organizationId)
+
+    // First allocate a partial payment
+    const payment = recordPayment({
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 50000,
+      paymentMethod: 'CASH'
+    })
+    allocatePayment({
+      paymentId: payment.id,
+      invoiceId: invoice.id,
+      amountMinor: 50000
+    })
+
+    // Then apply credit for the remaining
+    const credit = issueCredit({
+      customerId: customer.id,
+      amountMinor: 68000,
+      reason: 'Cover remaining'
+    })
+
+    const result = applyCredit({
+      creditId: credit.id,
+      invoiceId: invoice.id,
+      amountMinor: 68000
+    })
+
+    expect(result.invoiceStatus).toBe('PAID')
+
+    // Verify via getInvoicePaymentState
+    const state = getInvoicePaymentState({ invoiceId: invoice.id })
+    expect(state.outstandingMinor).toBe(0)
+    expect(state.status).toBe('PAID')
   })
 
   it('rejects credit application exceeding remaining balance', () => {

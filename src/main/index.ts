@@ -17,6 +17,7 @@ import { registerMembershipsIpc } from './ipc/memberships'
 import { registerDashboardIpc } from './ipc/dashboard'
 import { registerCollectionsIpc } from './ipc/collections'
 import { registerIdentityReadIpc } from './ipc/identity-read'
+import { registerPdfIpc } from './ipc/pdf'
 import { restoreRememberedLogin } from './application/identity'
 
 function createWindow(): void {
@@ -82,6 +83,7 @@ app.whenReady().then(async () => {
   registerDashboardIpc()
   registerCollectionsIpc()
   registerIdentityReadIpc()
+  registerPdfIpc()
 
   createWindow()
 

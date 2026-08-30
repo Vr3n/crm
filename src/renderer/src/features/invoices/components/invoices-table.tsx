@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
-import { Eye, ReceiptText, Wallet } from 'lucide-react'
+import { Download, Eye, ReceiptText, Wallet } from 'lucide-react'
+import { toast } from 'sonner'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -27,6 +28,7 @@ import { SortButton } from '@/features/dashboard/components/sort-button'
 import { INVOICE_PAGE_SIZES, INVOICE_STATUS_META, INVOICE_STATUS_OPTIONS } from '../constants'
 import { useInvoices } from '../queries'
 import type { Invoice, InvoiceStatus } from '../types'
+import { pdfApi } from '@/features/pdf/api'
 
 const helper = createColumnHelper<DashboardFeatures, Invoice>()
 
@@ -127,8 +129,7 @@ function buildColumns(
       header: () => <div className="text-right">Actions</div>,
       size: 180,
       cell: ({ row }) => {
-        const isOpenish =
-          row.original.status === 'OPEN' || row.original.status === 'PARTIALLY_PAID'
+        const isOpenish = row.original.status === 'OPEN' || row.original.status === 'PARTIALLY_PAID'
         return (
           <div className="flex items-center justify-end gap-1.5">
             {isOpenish && row.original.outstanding > 0 ? (
@@ -150,6 +151,32 @@ function buildColumns(
                 <TooltipContent>Record a payment for this invoice</TooltipContent>
               </Tooltip>
             ) : null}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={`Export ${row.original.invoiceNo} as PDF`}
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    try {
+                      const filePath = await pdfApi.exportInvoice(row.original.id, 'preview')
+                      toast.success('PDF exported', {
+                        description: `Saved to ${filePath}`
+                      })
+                    } catch (err) {
+                      toast.error('Export failed', {
+                        description: err instanceof Error ? err.message : 'Could not generate PDF'
+                      })
+                    }
+                  }}
+                >
+                  <Download className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Export invoice as PDF</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -197,7 +224,10 @@ export function InvoicesTable({
     [navigate, location.pathname]
   )
 
-  const columns = useMemo(() => buildColumns(handleView, onMakePayment), [handleView, onMakePayment])
+  const columns = useMemo(
+    () => buildColumns(handleView, onMakePayment),
+    [handleView, onMakePayment]
+  )
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()

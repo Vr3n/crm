@@ -241,6 +241,10 @@ declare global {
         listRefunds: () => Promise<unknown[]>
         listAllCredits: () => Promise<unknown[]>
       }
+      pdf: {
+        exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }) => Promise<string>
+        exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }) => Promise<string>
+      }
       customers: {
         list: () => Promise<CustomerRowOutput[]>
         get: (input: CustomerIdRequest) => Promise<CustomerRowOutput | undefined>

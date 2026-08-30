@@ -313,6 +313,12 @@ const api = {
     listAllCredits: (): Promise<unknown[]> =>
       call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
   },
+  pdf: {
+    exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }): Promise<string> =>
+      call(IPC_CHANNELS.PDF_EXPORT_INVOICE, input),
+    exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }): Promise<string> =>
+      call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input)
+  },
   customers: {
     list: (): Promise<CustomerRowOutput[]> =>
       call(IPC_CHANNELS.CUSTOMERS_LIST),

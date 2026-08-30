@@ -117,6 +117,10 @@ export const IPC_CHANNELS = {
   COLLECTIONS_PAYMENTS: 'collections:payments',
   COLLECTIONS_PAYMENT: 'collections:payment',
 
+  // PDF Generation
+  PDF_EXPORT_INVOICE: 'pdf:exportInvoice',
+  PDF_EXPORT_RECEIPT: 'pdf:exportReceipt',
+
   // Identity read/update
   IDENTITY_ORGANIZATION: 'identity:organization',
   IDENTITY_STAFF: 'identity:staff',

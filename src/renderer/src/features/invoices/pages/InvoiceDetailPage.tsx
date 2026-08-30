@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   CalendarClock,
+  Download,
   Mail,
   Phone,
   ReceiptText,
@@ -20,6 +21,7 @@ import { formatMoney } from '@/lib/money'
 import { PAYMENT_METHOD_META, type PaymentMethod } from '@/lib/payment-methods'
 import { can, useSession } from '@/context/session-context'
 import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
+import { pdfApi } from '@/features/pdf/api'
 import { INVOICE_STATUS_META } from '../constants'
 import { useInvoice } from '../queries'
 import type { Invoice } from '../types'
@@ -352,6 +354,25 @@ export function InvoiceDetailPage(): React.JSX.Element {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={async () => {
+                  try {
+                    const filePath = await pdfApi.exportInvoice(numericId!, 'preview')
+                    toast.success('PDF exported', {
+                      description: `Opened in system viewer. Also saved to ${filePath}`
+                    })
+                  } catch (err) {
+                    toast.error('Export failed', {
+                      description: err instanceof Error ? err.message : 'Could not generate PDF'
+                    })
+                  }
+                }}
+              >
+                <Download className="size-4" />
+                Export PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() =>
                   toast('Follow-up scheduled', {
                     description: 'Follow-up scheduling arrives with the Members module.'
@@ -378,13 +399,21 @@ export function InvoiceDetailPage(): React.JSX.Element {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  toast('Print / PDF', {
-                    description: 'Printable invoices arrive with the Reports module.'
-                  })
-                }
+                onClick={async () => {
+                  try {
+                    const filePath = await pdfApi.exportInvoice(numericId!, 'preview')
+                    toast.success('PDF exported', {
+                      description: `Opened in system viewer. Also saved to ${filePath}`
+                    })
+                  } catch (err) {
+                    toast.error('Export failed', {
+                      description: err instanceof Error ? err.message : 'Could not generate PDF'
+                    })
+                  }
+                }}
               >
-                Print / PDF
+                <Download className="size-4" />
+                Export PDF
               </Button>
               <Button
                 variant="outline"
@@ -407,7 +436,9 @@ export function InvoiceDetailPage(): React.JSX.Element {
         <StatTile
           label="Total"
           value={formatMoney(invoice.total)}
-          tone={invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE' ? 'muted' : 'accent'}
+          tone={
+            invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE' ? 'muted' : 'accent'
+          }
         />
         <StatTile
           label="Paid"
@@ -465,22 +496,19 @@ export function InvoiceDetailPage(): React.JSX.Element {
           </div>
 
           {/* Billing snapshot (if different from customer) */}
-          {(invoice.billingName || invoice.billingPhone || invoice.billingEmail || invoice.billingAddress) && (
+          {(invoice.billingName ||
+            invoice.billingPhone ||
+            invoice.billingEmail ||
+            invoice.billingAddress) && (
             <>
               <div className="h-px bg-border/60" />
               <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   Billing snapshot
                 </span>
-                {invoice.billingName && (
-                  <KeyValue label="Name" value={invoice.billingName} />
-                )}
-                {invoice.billingPhone && (
-                  <KeyValue label="Phone" value={invoice.billingPhone} />
-                )}
-                {invoice.billingEmail && (
-                  <KeyValue label="Email" value={invoice.billingEmail} />
-                )}
+                {invoice.billingName && <KeyValue label="Name" value={invoice.billingName} />}
+                {invoice.billingPhone && <KeyValue label="Phone" value={invoice.billingPhone} />}
+                {invoice.billingEmail && <KeyValue label="Email" value={invoice.billingEmail} />}
                 {invoice.billingAddress && (
                   <KeyValue label="Address" value={invoice.billingAddress} />
                 )}

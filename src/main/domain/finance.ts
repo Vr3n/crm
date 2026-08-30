@@ -85,16 +85,18 @@ export interface PaymentMethodRecord {
  */
 export const PaymentAllocationService = {
   /**
-   * Calculates the net amount allocated to an invoice from payments, minus refunds.
-   * allocated = SUM(payment_allocations) − SUM(refunded toward this invoice)
+   * Calculates the net amount allocated to an invoice from payments + credits, minus refunds.
+   * allocated = SUM(payment_allocations) + SUM(credit_allocations) − SUM(refunded toward this invoice)
    */
   calculateNetAllocated(
     allocations: Array<{ amountMinor: number }>,
-    refunds: Array<{ amountMinor: number }>
+    refunds: Array<{ amountMinor: number }>,
+    creditAllocations: Array<{ amountMinor: number }> = []
   ): number {
     const totalAllocated = allocations.reduce((sum, a) => sum + a.amountMinor, 0)
+    const totalCredits = creditAllocations.reduce((sum, c) => sum + c.amountMinor, 0)
     const totalRefunded = refunds.reduce((sum, r) => sum + r.amountMinor, 0)
-    return totalAllocated - totalRefunded
+    return totalAllocated + totalCredits - totalRefunded
   },
 
   /**
