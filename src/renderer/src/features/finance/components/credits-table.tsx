@@ -214,11 +214,7 @@ export function CreditsTable({
               <SelectItem value="APPLIED">Applied</SelectItem>
             </SelectContent>
           </Select>
-          <ExportExcelButton
-            columns={EXPORT_COLUMNS}
-            rows={exportData}
-            sheetName="Credits"
-          />
+          <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Credits" />
         </>
       }
     />

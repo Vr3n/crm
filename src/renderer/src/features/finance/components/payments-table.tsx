@@ -250,11 +250,7 @@ export function PaymentsTable({
               {formatMoney(unallocatedTotal)} unallocated
             </span>
           ) : null}
-          <ExportExcelButton
-            columns={EXPORT_COLUMNS}
-            rows={exportData}
-            sheetName="Payments"
-          />
+          <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Payments" />
         </>
       }
     />

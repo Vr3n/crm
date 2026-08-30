@@ -57,7 +57,10 @@ export function DashboardActions({
   ]
 
   return (
-    <section aria-label="Quick actions" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section
+      aria-label="Quick actions"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    >
       {actions.map((action) => {
         const Icon = action.icon
         return (

@@ -40,20 +40,24 @@ export const api = {
   customers: (): Promise<PersonRef[]> =>
     window.api.customers.list().then((rows) => rows.map((row) => row.customer).filter(Boolean)),
   outstandingInvoicesFor: (customerId: string): Promise<FinanceInvoice[]> =>
-    window.api.finance.outstandingInvoicesFor({ customerId: parseInt(customerId, 10) }).then((rows) =>
-      rows.map((row) => ({
-        id: row.id,
-        invoiceNo: row.invoiceNo,
-        customer: { id: customerId, name: row.customerName, phone: row.customerPhone },
-        line: row.line,
-        issuedAt: row.issuedAt,
-        total: Math.round(row.totalMinor / 100),
-        paid: Math.round(row.paidMinor / 100),
-        status: row.status as InvoiceStatus
-      }))
-    ),
+    window.api.finance
+      .outstandingInvoicesFor({ customerId: parseInt(customerId, 10) })
+      .then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          invoiceNo: row.invoiceNo,
+          customer: { id: customerId, name: row.customerName, phone: row.customerPhone },
+          line: row.line,
+          issuedAt: row.issuedAt,
+          total: Math.round(row.totalMinor / 100),
+          paid: Math.round(row.paidMinor / 100),
+          status: row.status as InvoiceStatus
+        }))
+      ),
   paymentsFor: (customerId: string): Promise<Payment[]> =>
-    window.api.finance.paymentHistory({ customerId: parseInt(customerId, 10) }) as unknown as Promise<Payment[]>,
+    window.api.finance.paymentHistory({
+      customerId: parseInt(customerId, 10)
+    }) as unknown as Promise<Payment[]>,
   recordPayment: async (input: RecordPaymentInput): Promise<Payment> => {
     // Step 1: Record the payment
     const paymentRow = await window.api.finance.recordPayment({

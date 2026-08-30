@@ -53,8 +53,9 @@ export function AllocationSection({
   const remaining = paymentAmount - totalAllocated
 
   const getDraft = useMemo(
-    () => (invoiceId: string): AllocationDraft | undefined =>
-      allocations.find((a) => a.invoiceId === invoiceId),
+    () =>
+      (invoiceId: string): AllocationDraft | undefined =>
+        allocations.find((a) => a.invoiceId === invoiceId),
     [allocations]
   )
 
@@ -69,9 +70,7 @@ export function AllocationSection({
       const amount = Math.min(due, available)
       if (existing) {
         onAllocationsChange(
-          allocations.map((a) =>
-            a.invoiceId === invoice.id ? { ...a, enabled: true, amount } : a
-          )
+          allocations.map((a) => (a.invoiceId === invoice.id ? { ...a, enabled: true, amount } : a))
         )
         return
       }
@@ -174,7 +173,9 @@ export function AllocationSection({
                     <span
                       className={cn(
                         'text-[10px] font-medium tabular-nums',
-                        progress >= 1 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
+                        progress >= 1
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-amber-600 dark:text-amber-400'
                       )}
                     >
                       {Math.round(progress * 100)}%
@@ -184,7 +185,9 @@ export function AllocationSection({
                     <div
                       className={cn(
                         'h-full rounded-full transition-all duration-300 ease-out',
-                        progress >= 1 ? 'bg-green-500 dark:bg-green-400' : 'bg-amber-500 dark:bg-amber-400'
+                        progress >= 1
+                          ? 'bg-green-500 dark:bg-green-400'
+                          : 'bg-amber-500 dark:bg-amber-400'
                       )}
                       style={{ width: `${progress * 100}%` }}
                     />

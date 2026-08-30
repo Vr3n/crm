@@ -194,11 +194,7 @@ export function RefundsTable({
               ))}
             </SelectContent>
           </Select>
-          <ExportExcelButton
-            columns={EXPORT_COLUMNS}
-            rows={exportData}
-            sheetName="Refunds"
-          />
+          <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Refunds" />
         </>
       }
     />

@@ -26,9 +26,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
           Lead
         </SortButton>
       ),
-      cell: ({ row }) => (
-        <NameCell name={row.original.leadName} />
-      ),
+      cell: ({ row }) => <NameCell name={row.original.leadName} />,
       sortFn: 'alphanumeric'
     }),
     helper.accessor((row) => row.title, {

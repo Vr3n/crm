@@ -189,11 +189,7 @@ export function ReceivablesTable({
           pageSizeOptions={[8, 16, 32]}
           headerTone="primary"
           toolbar={
-            <ExportExcelButton
-              columns={EXPORT_COLUMNS}
-              rows={exportData}
-              sheetName="Receivables"
-            />
+            <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Receivables" />
           }
           searchPlaceholder="Search invoice, customer…"
           emptyIcon={ReceiptText}
