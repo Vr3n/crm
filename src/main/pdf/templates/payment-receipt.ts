@@ -18,6 +18,7 @@ import {
 export function renderPaymentReceipt(ctx: ReceiptPrintContext): string {
   const methodLabel = METHOD_LABELS[ctx.method] ?? ctx.method
   const isUnallocated = ctx.allocations.length === 0
+  const totalAllocated = ctx.allocations.reduce((sum, a) => sum + a.amount, 0)
 
   return `<!DOCTYPE html>
 <html>
@@ -57,6 +58,7 @@ export function renderPaymentReceipt(ctx: ReceiptPrintContext): string {
       <div class="info-value">${escapeHtml(ctx.customer.name)}</div>
       ${ctx.customer.phone ? `<div class="info-value muted">${escapeHtml(ctx.customer.phone)}</div>` : ''}
       ${ctx.customer.email ? `<div class="info-value muted">${escapeHtml(ctx.customer.email)}</div>` : ''}
+      ${ctx.membershipName ? `<div class="info-value muted" style="margin-top: 1mm;"><span style="color: #2563EB;">${escapeHtml(ctx.membershipName)}</span></div>` : ''}
     </div>
 
     <hr class="divider" />
@@ -95,9 +97,15 @@ export function renderPaymentReceipt(ctx: ReceiptPrintContext): string {
       </table>
 
       <div class="totals-block" style="margin-top: 2mm;">
-        <div class="totals-row grand" style="padding: 2mm 3mm;">
+        <div class="totals-row">
           <span class="label">Total Allocated</span>
-          <span class="value">${formatRupees(ctx.allocations.reduce((sum, a) => sum + a.amount, 0))}</span>
+          <span class="value">${formatRupees(totalAllocated)}</span>
+        </div>
+        <div class="totals-row">
+          <span class="label">Outstanding</span>
+          <span class="value" style="color: ${ctx.outstanding > 0 ? '#991B1B' : '#6B7280'};">
+            ${formatRupees(ctx.outstanding)}
+          </span>
         </div>
       </div>
       `

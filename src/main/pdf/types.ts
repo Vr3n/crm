@@ -68,10 +68,14 @@ export interface ReceiptPrintContext {
   method: string
   reference?: string | null
   customer: PdfCustomer
+  /** Active membership name for this customer. */
+  membershipName?: string | null
   allocations: Array<{
     invoiceNo: string
     amount: number
   }>
+  /** Total outstanding across allocated invoices after this payment. */
+  outstanding: number
   receivedBy: string
   generatedAt: string
 }

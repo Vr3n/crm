@@ -208,14 +208,35 @@ export function exportReceiptPdf(input: {
 
   const allocations = allocationRepo.listByPayment(organizationId, input.paymentId)
 
-  // Enrich allocations with invoice numbers
+  // Enrich allocations with invoice numbers and calculate outstanding per invoice
+  let totalOutstanding = 0
   const enrichedAllocations = allocations.map((alloc) => {
     const invoice = invoiceRepo.getById(organizationId, alloc.invoiceId)
+    if (invoice) {
+      // Calculate this invoice's outstanding after this allocation
+      const invoiceAllocations = allocationRepo.listByInvoice(organizationId, alloc.invoiceId)
+      const totalPaid = invoiceAllocations.reduce((sum, a) => sum + a.amountMinor, 0)
+      const invoiceOutstanding = Math.max(0, invoice.totalMinor - totalPaid)
+      totalOutstanding += invoiceOutstanding
+    }
     return {
       invoiceNo: invoice?.number ?? `INV-${alloc.invoiceId}`,
       amount: alloc.amountMinor
     }
   })
+
+  // Fetch the latest membership name for this customer
+  const membership = getDrizzle()
+    .select({ planName: memberships.plan_name_snapshot })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.organization_id, organizationId),
+        eq(memberships.customer_id, payment.customerId)
+      )
+    )
+    .orderBy(desc(memberships.created_at))
+    .get() as { planName: string } | undefined
 
   const org = getOrgBranding(organizationId)
   const now = formatNow()
@@ -237,7 +258,9 @@ export function exportReceiptPdf(input: {
     method: payment.paymentMethod,
     reference: payment.reference,
     customer: customerInfo,
+    membershipName: membership?.planName ?? null,
     allocations: enrichedAllocations,
+    outstanding: totalOutstanding,
     receivedBy: createdByUser?.fullName ?? 'System',
     generatedAt: now
   }

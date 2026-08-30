@@ -112,7 +112,6 @@ describe('Invoice Document Template', () => {
 
   it('shows dash when no discount', () => {
     const html = renderInvoiceDocument(baseCtx)
-    // Should show — (em dash) for zero discount
     expect(html).toContain('—')
   })
 
@@ -142,11 +141,8 @@ describe('Invoice Document Template', () => {
 
   it('shows amounts in rupees (paise / 100)', () => {
     const html = renderInvoiceDocument(baseCtx)
-    // 2000000 paise = ₹ 20,000
     expect(html).toContain('₹ 20,000')
-    // 360000 paise = ₹ 3,600
     expect(html).toContain('₹ 3,600')
-    // 2360000 paise = ₹ 23,600
     expect(html).toContain('₹ 23,600')
   })
 
@@ -272,9 +268,11 @@ describe('Payment Receipt Template', () => {
       phone: '9876543210',
       email: null
     },
+    membershipName: 'Gold Plan',
     allocations: [
       { invoiceNo: 'GYM-290826-01', amount: 1500000 }
     ],
+    outstanding: 860000,
     receivedBy: 'John',
     generatedAt: '29 Aug 2026, 12:00 PM'
   }
@@ -298,7 +296,6 @@ describe('Payment Receipt Template', () => {
 
   it('shows amount in rupees (paise / 100)', () => {
     const html = renderPaymentReceipt(baseCtx)
-    // 1500000 paise = ₹ 15,000
     expect(html).toContain('₹ 15,000')
   })
 
@@ -310,6 +307,39 @@ describe('Payment Receipt Template', () => {
   it('renders allocation to invoice', () => {
     const html = renderPaymentReceipt(baseCtx)
     expect(html).toContain('GYM-290826-01')
+  })
+
+  it('shows membership name below customer info', () => {
+    const html = renderPaymentReceipt(baseCtx)
+    expect(html).toContain('Gold Plan')
+    expect(html).toContain('color: #2563EB')
+  })
+
+  it('hides membership name when not provided', () => {
+    const ctx = {
+      ...baseCtx,
+      membershipName: null
+    }
+    const html = renderPaymentReceipt(ctx)
+    expect(html).not.toContain('Gold Plan')
+  })
+
+  it('shows outstanding below total allocated', () => {
+    const html = renderPaymentReceipt(baseCtx)
+    expect(html).toContain('Outstanding')
+    expect(html).toContain('₹ 8,600')
+    expect(html).toContain('#991B1B')
+  })
+
+  it('shows zero outstanding when fully allocated', () => {
+    const ctx = {
+      ...baseCtx,
+      outstanding: 0
+    }
+    const html = renderPaymentReceipt(ctx)
+    expect(html).toContain('Outstanding')
+    expect(html).toContain('₹ 0')
+    expect(html).toContain('#6B7280')
   })
 
   it('shows unallocated notice when no allocations', () => {
