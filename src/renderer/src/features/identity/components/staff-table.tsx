@@ -8,7 +8,17 @@ import { SortButton } from '@/features/dashboard/components/sort-button'
 import { formatDate, initials, timeAgo } from '@/features/leads/format'
 import { STAFF_STATUS_META } from '../constants'
 import { RoleBadge } from './role-badge'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
 import type { StaffMember } from '../types'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Name', key: 'fullName', format: 'text' },
+  { header: 'Email', key: 'email', format: 'text' },
+  { header: 'Role', key: 'roleName', format: 'text' },
+  { header: 'Status', key: 'status', format: 'text' },
+  { header: 'Joined', key: 'joinedAt', format: 'date' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, StaffMember>()
 
@@ -111,6 +121,18 @@ export function StaffTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(youEmail), [youEmail])
 
+  const exportData = useMemo(
+    () =>
+      staff.map((r) => ({
+        fullName: r.fullName,
+        email: r.email,
+        roleName: r.roleName,
+        status: r.status,
+        joinedAt: r.joinedAt
+      })),
+    [staff]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -126,6 +148,13 @@ export function StaffTable({
       emptyTitle="No staff found"
       emptyDescription="Add a staff member from the button above."
       headerTone="primary"
+      toolbar={
+        <ExportExcelButton
+          columns={EXPORT_COLUMNS}
+          rows={exportData}
+          sheetName="Staff"
+        />
+      }
     />
   )
 }

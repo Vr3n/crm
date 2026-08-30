@@ -2,6 +2,8 @@ import { Suspense, lazy, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DashboardHeader } from '../components/dashboard-header'
 import { DashboardActions } from '../components/dashboard-actions'
+import { UpcomingFollowupsTable } from '../components/upcoming-followups-table'
+import { RecentLeadsTable } from '../components/recent-leads-table'
 import { MembershipExpirationsTable } from '../components/membership-expirations-table'
 import { PaymentsDueTable } from '../components/payments-due-table'
 import { LeadsGoingColdTable } from '../components/leads-going-cold-table'
@@ -40,7 +42,12 @@ export function DashboardPage(): React.JSX.Element {
         onNewMembership={() => navigate('/memberships/sale')}
       />
 
-      <section aria-label="Operational data" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <section aria-label="Upcoming work" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <UpcomingFollowupsTable />
+        <RecentLeadsTable />
+      </section>
+
+      <section aria-label="Member data" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <MembershipExpirationsTable />
         <PaymentsDueTable onMakePayment={(row) => setPaymentTarget(row)} />
       </section>
@@ -57,7 +64,7 @@ export function DashboardPage(): React.JSX.Element {
             onOpenChange={(open) => {
               if (!open) setPaymentTarget(null)
             }}
-            preSelectedCustomerId={paymentTarget.member.id}
+            preSelectedCustomer={paymentTarget.member}
             preSelectedInvoiceId={paymentTarget.id}
           />
         </Suspense>

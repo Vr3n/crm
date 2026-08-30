@@ -14,7 +14,22 @@ import { ALLOCATION_STATUS_META } from '../constants'
 import { allocatedAmount, allocationStatusOf, unallocatedAmount } from '../build'
 import { PaymentMethodBadge } from './payment-method-badge'
 import { pdfApi } from '@/features/pdf/api'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
 import type { Payment } from '../types'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Payment No', key: 'paymentNo', format: 'text' },
+  { header: 'Date', key: 'paymentDate', format: 'date' },
+  { header: 'Recorded By', key: 'createdBy', format: 'text' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Method', key: 'method', format: 'text' },
+  { header: 'Amount', key: 'amount', format: 'money' },
+  { header: 'Allocated', key: 'allocated', format: 'money' },
+  { header: 'Unallocated', key: 'unallocated', format: 'money' },
+  { header: 'Reference', key: 'reference', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, Payment>()
 
@@ -196,6 +211,23 @@ export function PaymentsTable({
   const columns = useMemo(() => buildColumns(), [])
   const unallocatedTotal = payments.reduce((s, p) => s + unallocatedAmount(p), 0)
 
+  const exportData = useMemo(
+    () =>
+      payments.map((r) => ({
+        paymentNo: r.paymentNo,
+        paymentDate: r.paymentDate,
+        createdBy: r.createdBy,
+        customer: r.customer.name,
+        phone: r.customer.phone,
+        method: r.method,
+        amount: r.amount,
+        allocated: allocatedAmount(r),
+        unallocated: unallocatedAmount(r),
+        reference: r.reference ?? ''
+      })),
+    [payments]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -212,11 +244,18 @@ export function PaymentsTable({
       emptyDescription="Record the first payment from the button above."
       headerTone="primary"
       toolbar={
-        unallocatedTotal > 0 ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/25 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning tabular-nums">
-            {formatMoney(unallocatedTotal)} unallocated
-          </span>
-        ) : null
+        <>
+          {unallocatedTotal > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/25 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning tabular-nums">
+              {formatMoney(unallocatedTotal)} unallocated
+            </span>
+          ) : null}
+          <ExportExcelButton
+            columns={EXPORT_COLUMNS}
+            rows={exportData}
+            sheetName="Payments"
+          />
+        </>
       }
     />
   )

@@ -16,6 +16,21 @@ import { LeadMetrics } from '../components/lead-metrics'
 import { LeadSelectionToolbar } from '../components/lead-selection-toolbar'
 import { LeadTable } from '../components/lead-table'
 import { LeadBoard } from '../components/lead-board'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+import { SOURCES } from '../constants'
+
+const LEAD_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Name', key: 'name', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Email', key: 'email', format: 'text' },
+  { header: 'Source', key: 'source', format: 'text' },
+  { header: 'Stage', key: 'stage', format: 'text' },
+  { header: 'Owner', key: 'owner', format: 'text' },
+  { header: 'Next Follow-up', key: 'nextFollowUp', format: 'text' },
+  { header: 'Last Activity', key: 'lastActivity', format: 'text' },
+  { header: 'Created', key: 'createdAt', format: 'datetime' }
+]
 
 // Lazy-load the dialogs so their module graphs (Radix Dialog/Select, the query
 // hooks) only parse and execute when a dialog is first opened — the leads page
@@ -84,6 +99,28 @@ export function LeadsPage(): React.JSX.Element {
     () => (data ? sortLeads(filterLeads(data, filters)) : []),
     [data, filters]
   )
+
+  const leadExportData = useMemo(() => {
+    return filtered.map((l) => {
+      const openFollowUps = l.followUps
+        .filter((f) => !f.completedAt)
+        .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+      const nextFollowUp = openFollowUps[0]?.dueAt ?? ''
+      const sortedActivities = [...l.activities].sort((a, b) => b.at.localeCompare(a.at))
+      const lastActivity = sortedActivities[0]?.at ?? ''
+      return {
+        name: l.name,
+        phone: l.phone ?? '',
+        email: l.email ?? '',
+        source: SOURCES[l.source] ?? l.source,
+        stage: l.stage,
+        owner: l.owner?.name ?? 'Unassigned',
+        nextFollowUp,
+        lastActivity,
+        createdAt: l.createdAt
+      }
+    })
+  }, [filtered])
 
   const selectedLeads = useMemo(
     () => filtered.filter((l) => selected.has(l.id)),
@@ -160,10 +197,17 @@ export function LeadsPage(): React.JSX.Element {
         title="Leads"
         description={`${session.organizationName} · sales pipeline`}
         actions={
-          <Button onClick={() => setNewOpen(true)}>
-            <Plus />
-            New lead
-          </Button>
+          <>
+            <ExportExcelButton
+              columns={LEAD_EXPORT_COLUMNS}
+              rows={leadExportData}
+              sheetName="Leads"
+            />
+            <Button onClick={() => setNewOpen(true)}>
+              <Plus />
+              New lead
+            </Button>
+          </>
         }
       />
 

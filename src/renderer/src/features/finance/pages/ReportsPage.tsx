@@ -7,7 +7,19 @@ import {
   DateRangePicker,
   type DateRangePreset
 } from '@/features/dashboard/components/date-range-picker'
-import { ExportExcelButton } from '@/features/dashboard/components/export-excel-button'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const REPORT_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Invoice', key: 'invoiceNo', format: 'text' },
+  { header: 'Issued', key: 'issuedAt', format: 'date' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Plan', key: 'plan', format: 'text' },
+  { header: 'Billed', key: 'total', format: 'money' },
+  { header: 'Paid', key: 'paid', format: 'money' },
+  { header: 'Outstanding', key: 'outstanding', format: 'money' },
+  { header: 'Status', key: 'status', format: 'text' }
+]
 import { ReportsMetrics } from '../components/reports-metrics'
 import { CollectionReportCard } from '../components/collection-report-card'
 import { MethodShareCard } from '../components/method-share-card'
@@ -41,6 +53,20 @@ export function ReportsPage(): React.JSX.Element {
   const from = range?.from ?? undefined
   const to = range?.to ?? undefined
 
+  const reportExportData = useMemo(() => {
+    const rows = invoices ?? []
+    return rows.map((r) => ({
+      invoiceNo: r.invoiceNo,
+      issuedAt: r.issuedAt,
+      customer: r.customer.name,
+      plan: r.line?.replace(/\s*\(.*$/, '') ?? '',
+      total: r.total,
+      paid: r.paid,
+      outstanding: r.total - r.paid,
+      status: r.status
+    }))
+  }, [invoices])
+
   return (
     <div className="flex w-full flex-col gap-6 p-6">
       <PageHeader
@@ -49,7 +75,12 @@ export function ReportsPage(): React.JSX.Element {
         actions={
           <>
             <DateRangePicker presets={presets} value={range} onValueChange={setRange} />
-            <ExportExcelButton />
+            <ExportExcelButton
+              columns={REPORT_EXPORT_COLUMNS}
+              rows={reportExportData}
+              sheetName="Reports"
+              filename="reports"
+            />
           </>
         }
       />

@@ -121,6 +121,9 @@ export const IPC_CHANNELS = {
   PDF_EXPORT_INVOICE: 'pdf:exportInvoice',
   PDF_EXPORT_RECEIPT: 'pdf:exportReceipt',
 
+  // Excel Export
+  EXPORT_EXCEL: 'export:excel',
+
   // Identity read/update
   IDENTITY_ORGANIZATION: 'identity:organization',
   IDENTITY_STAFF: 'identity:staff',

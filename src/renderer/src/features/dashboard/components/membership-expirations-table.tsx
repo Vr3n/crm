@@ -11,6 +11,7 @@ import { daysUntil } from '../format'
 import { useUpcomingExpirations } from '../queries'
 import type { MembershipExpiration } from '../types'
 import { DataTable, type DashboardFeatures } from './data-table'
+import { CardPaginationFooter } from './card-pagination-footer'
 import { DateRangePicker, type DateRangePreset } from './date-range-picker'
 import { ContactCell } from './contact-cell'
 import { MemberDetailsSheet } from './member-details-sheet'
@@ -18,7 +19,17 @@ import { NameCell } from './name-cell'
 import { PlanCell } from './plan-cell'
 import { RowActions } from './row-actions'
 import { SortButton } from './sort-button'
-import { ExportExcelButton } from './export-excel-button'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Client', key: 'client', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Email', key: 'email', format: 'text' },
+  { header: 'Expires', key: 'expiresAt', format: 'date' },
+  { header: 'Plan', key: 'plan', format: 'text' },
+  { header: 'Days Left', key: 'daysLeft', format: 'number' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, MembershipExpiration>()
 
@@ -129,19 +140,37 @@ export function MembershipExpirationsTable(): React.JSX.Element {
     })
   }, [data, range])
 
+  const exportData = useMemo(
+    () =>
+      filtered.map((r) => ({
+        client: r.member.name,
+        phone: r.member.phone,
+        email: r.member.email ?? '',
+        expiresAt: r.expiresAt,
+        plan: r.plan,
+        daysLeft: daysUntil(r.expiresAt)
+      })),
+    [filtered]
+  )
+
   return (
     <>
-      <Card>
+      <Card
+        className="crm-gradient-border"
+        style={
+          {
+            '--gradient-start': 'var(--primary)',
+            '--gradient-end': 'var(--success)'
+          } as React.CSSProperties
+        }
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <CalendarClock className="size-5" />
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <CalendarClock className="size-4" />
             </span>
             <div>
-              <span className="font-heading text-lg">Membership expirations</span>
-              <p className="text-xs font-normal text-muted-foreground">
-                Memberships renewing soon that need attention
-              </p>
+              <span className="font-heading text-base">Membership expirations</span>
             </div>
           </CardTitle>
         </CardHeader>
@@ -154,6 +183,8 @@ export function MembershipExpirationsTable(): React.JSX.Element {
             initialSorting={[{ id: 'expiresAt', desc: false }]}
             initialPageSize={6}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
+            showPagination={false}
+            footer={<CardPaginationFooter />}
             toolbar={
               <>
                 <DateRangePicker
@@ -162,7 +193,11 @@ export function MembershipExpirationsTable(): React.JSX.Element {
                   onValueChange={setRange}
                   placeholder="Filter by expiry"
                 />
-                <ExportExcelButton />
+                <ExportExcelButton
+                  columns={EXPORT_COLUMNS}
+                  rows={exportData}
+                  sheetName="Membership Expirations"
+                />
               </>
             }
             searchPlaceholder="Search members…"

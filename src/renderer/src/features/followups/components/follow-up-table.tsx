@@ -12,7 +12,18 @@ import { DataTable, type DashboardFeatures } from '@/features/dashboard/componen
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { cn } from '@/lib/utils'
 import { bucketOf } from '../build'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
 import type { FollowUpBucket, FollowUpRow } from '../types'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Lead', key: 'leadName', format: 'text' },
+  { header: 'Stage', key: 'stage', format: 'text' },
+  { header: 'What To Do', key: 'title', format: 'text' },
+  { header: 'Due', key: 'dueAt', format: 'datetime' },
+  { header: 'Owner', key: 'ownerName', format: 'text' },
+  { header: 'Status', key: 'status', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, FollowUpRow>()
 
@@ -293,6 +304,19 @@ export function FollowUpTable({
   const complete = useCompleteFollowUp()
   const [bulkPending, setBulkPending] = useState(false)
 
+  const exportData = useMemo(
+    () =>
+      rows.map((r) => ({
+        leadName: r.leadName,
+        stage: r.stage,
+        title: r.title,
+        dueAt: r.dueAt,
+        ownerName: r.ownerName ?? 'Unassigned',
+        status: r.completedAt ? 'Done' : r.cancelledAt ? 'Cancelled' : bucketOf(r)
+      })),
+    [rows]
+  )
+
   const handleBulkDone = useCallback(
     async (ids: string[]) => {
       const rowMap = new Map(rows.map((r) => [String(r.id), r]))
@@ -342,6 +366,13 @@ export function FollowUpTable({
       headerTone="primary"
       onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
       isMarkingSelected={bulkPending}
+      toolbar={
+        <ExportExcelButton
+          columns={EXPORT_COLUMNS}
+          rows={exportData}
+          sheetName="Follow-ups"
+        />
+      }
     />
   )
 }

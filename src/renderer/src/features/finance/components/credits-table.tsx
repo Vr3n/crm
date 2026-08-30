@@ -15,7 +15,22 @@ import { DataTable, type DashboardFeatures } from '@/features/dashboard/componen
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { CREDIT_STATUS_META } from '../constants'
 import { creditApplied, creditRemaining, creditStatusOf } from '../build'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
 import type { Credit, CreditStatus } from '../types'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Credit No', key: 'creditNo', format: 'text' },
+  { header: 'Issued', key: 'issuedAt', format: 'datetime' },
+  { header: 'Recorded By', key: 'createdBy', format: 'text' },
+  { header: 'Customer', key: 'customer', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Value', key: 'amount', format: 'money' },
+  { header: 'Applied', key: 'applied', format: 'money' },
+  { header: 'Remaining', key: 'remaining', format: 'money' },
+  { header: 'Status', key: 'status', format: 'text' },
+  { header: 'Reason', key: 'reason', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, Credit>()
 
@@ -154,6 +169,23 @@ export function CreditsTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(), [])
 
+  const exportData = useMemo(
+    () =>
+      credits.map((r) => ({
+        creditNo: r.creditNo,
+        issuedAt: r.issuedAt,
+        createdBy: r.createdBy,
+        customer: r.customer.name,
+        phone: r.customer.phone,
+        amount: r.amount,
+        applied: creditApplied(r),
+        remaining: creditRemaining(r),
+        status: creditStatusOf(r),
+        reason: r.reason
+      })),
+    [credits]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -170,17 +202,24 @@ export function CreditsTable({
       emptyDescription="Credits you add from the button above will appear here."
       headerTone="primary"
       toolbar={
-        <Select value={status} onValueChange={(v) => onStatusChange(v as CreditStatus | 'ALL')}>
-          <SelectTrigger size="sm" className="h-8 w-44 gap-1 rounded-md text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start">
-            <SelectItem value="ALL">All statuses</SelectItem>
-            <SelectItem value="AVAILABLE">Available</SelectItem>
-            <SelectItem value="PARTIALLY_APPLIED">Partially applied</SelectItem>
-            <SelectItem value="APPLIED">Applied</SelectItem>
-          </SelectContent>
-        </Select>
+        <>
+          <Select value={status} onValueChange={(v) => onStatusChange(v as CreditStatus | 'ALL')}>
+            <SelectTrigger size="sm" className="h-8 w-44 gap-1 rounded-md text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="AVAILABLE">Available</SelectItem>
+              <SelectItem value="PARTIALLY_APPLIED">Partially applied</SelectItem>
+              <SelectItem value="APPLIED">Applied</SelectItem>
+            </SelectContent>
+          </Select>
+          <ExportExcelButton
+            columns={EXPORT_COLUMNS}
+            rows={exportData}
+            sheetName="Credits"
+          />
+        </>
       }
     />
   )

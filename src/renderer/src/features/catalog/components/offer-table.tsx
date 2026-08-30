@@ -10,6 +10,19 @@ import { discountBadgeText } from '../pricing'
 import { formatDate } from '../format'
 import type { Offer, Plan } from '../types'
 import { OfferLifecycleBadge } from './catalog-status-badge'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Name', key: 'name', format: 'text' },
+  { header: 'Code', key: 'code', format: 'text' },
+  { header: 'Discount', key: 'discount', format: 'text' },
+  { header: 'Applies To', key: 'appliesTo', format: 'text' },
+  { header: 'Start', key: 'startDate', format: 'date' },
+  { header: 'End', key: 'endDate', format: 'date' },
+  { header: 'Uses', key: 'uses', format: 'text' },
+  { header: 'Lifecycle', key: 'lifecycle', format: 'text' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, Offer>()
 
@@ -182,6 +195,21 @@ export function OfferTable({
     [plans, onEdit, onDeactivate, onHistory]
   )
 
+  const exportData = useMemo(
+    () =>
+      offers.map((r) => ({
+        name: r.name,
+        code: r.code,
+        discount: discountBadgeText(r),
+        appliesTo: appliesToLabel(r, plans),
+        startDate: r.startDate,
+        endDate: r.endDate ?? '',
+        uses: r.maxUses > 0 ? `${r.usedCount} / ${r.maxUses}` : `${r.usedCount} used`,
+        lifecycle: r.endDate ? 'Fixed' : 'Open'
+      })),
+    [offers, plans]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -196,6 +224,13 @@ export function OfferTable({
       emptyTitle="No offers match"
       emptyDescription="Try clearing the filters, or create a new offer to layer on the catalog."
       headerTone="primary"
+      toolbar={
+        <ExportExcelButton
+          columns={EXPORT_COLUMNS}
+          rows={exportData}
+          sheetName="Offers"
+        />
+      }
     />
   )
 }

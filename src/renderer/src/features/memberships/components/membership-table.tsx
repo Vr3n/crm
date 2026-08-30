@@ -8,6 +8,22 @@ import { daysUntil, formatMoney, formatShortDate } from '@/features/customers/fo
 import { cn } from '@/lib/utils'
 import type { MembershipRow } from '../types'
 import { MembershipStatusBadge } from '@/features/customers/components/status-badge'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Member', key: 'customerName', format: 'text' },
+  { header: 'Customer ID', key: 'customerId', format: 'text' },
+  { header: 'Plan', key: 'plan', format: 'text' },
+  { header: 'Status', key: 'status', format: 'text' },
+  { header: 'Start', key: 'startDate', format: 'date' },
+  { header: 'End', key: 'endDate', format: 'date' },
+  { header: 'Amount', key: 'price', format: 'money' },
+  { header: 'Discount', key: 'discount', format: 'money' },
+  { header: 'Billing', key: 'billingFrequency', format: 'text' },
+  { header: 'Freezes', key: 'freezeCount', format: 'number' },
+  { header: 'Days Left', key: 'daysLeft', format: 'number' }
+]
 
 const helper = createColumnHelper<DashboardFeatures, MembershipRow>()
 
@@ -147,6 +163,24 @@ export function MembershipTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(now), [now])
 
+  const exportData = useMemo(
+    () =>
+      rows.map((r) => ({
+        customerName: r.customerName,
+        customerId: r.customerId,
+        plan: r.plan,
+        status: r.status,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        price: r.price,
+        discount: r.discount,
+        billingFrequency: r.billingFrequency,
+        freezeCount: r.freezeCount,
+        daysLeft: daysUntil(r.endDate, now)
+      })),
+    [rows, now]
+  )
+
   return (
     <DataTable
       columns={columns}
@@ -162,6 +196,13 @@ export function MembershipTable({
       emptyTitle="No memberships match"
       emptyDescription="Try widening the filters to see more entitlement periods."
       headerTone="primary"
+      toolbar={
+        <ExportExcelButton
+          columns={EXPORT_COLUMNS}
+          rows={exportData}
+          sheetName="Memberships"
+        />
+      }
     />
   )
 }
