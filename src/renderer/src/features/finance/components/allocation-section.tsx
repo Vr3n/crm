@@ -167,7 +167,7 @@ export function AllocationSection({
               {enabled && (
                 <div className="border-t border-border/60 px-3 py-2">
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[10px] font-bold tabular-nums text-amber-700 dark:text-amber-500">
                       {formatMoney(allocatedAmount)} of {formatMoney(due)}
                     </span>
                     <span
