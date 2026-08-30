@@ -157,7 +157,7 @@ export function AllocationSection({
                     {formatMoney(allocatedAmount)}
                   </span>
                 ) : (
-                  <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                  <span className="font-mono text-xs font-bold tabular-nums text-amber-700 dark:text-amber-500">
                     {formatMoney(due)} due
                   </span>
                 )}
