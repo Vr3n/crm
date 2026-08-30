@@ -11,13 +11,23 @@ import {
 } from './shared'
 
 /**
+ * Strips bracketed duration from plan description (e.g. "Gold Plan (12 months)" → "Gold Plan").
+ */
+function stripDuration(description: string): string {
+  return description.replace(/\s*\(.*$/, '')
+}
+
+/**
  * Invoice Document template — premium print-only HTML with absolute CSS dimensions.
  * Produces a single A4 page with accent bar, org header, customer info, line items,
- * totals in dark box, payment allocations, and settlement status.
+ * duration info, totals in dark box, payment allocations, and settlement status.
  */
 export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
   const statusBadge = STATUS_BADGES[ctx.status] ?? 'badge-draft'
   const hasAllocations = ctx.allocations.length > 0
+  const totalDiscount = ctx.lines.reduce((sum, l) => sum + l.discountAmount, 0)
+  // Derive tax rate from first line (all lines share the same rate in membership invoices)
+  const taxRate = ctx.lines.length > 0 ? ctx.lines[0].taxRate : 0
 
   return `<!DOCTYPE html>
 <html>
@@ -44,7 +54,7 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
       ${ctx.dueAt ? `<span style="font-size: 9pt; color: #6B7280;">Due: ${escapeHtml(formatDate(ctx.dueAt))}</span>` : ''}
     </div>
 
-    <!-- Customer + Billing Info -->
+    <!-- Customer Info -->
     <div class="section">
       <div class="info-grid">
         <div class="info-block">
@@ -53,23 +63,6 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
           ${ctx.customer.phone ? `<div class="info-value muted">${escapeHtml(ctx.customer.phone)}</div>` : ''}
           ${ctx.customer.email ? `<div class="info-value muted">${escapeHtml(ctx.customer.email)}</div>` : ''}
         </div>
-        ${
-          ctx.billingSnapshot &&
-          (ctx.billingSnapshot.name ||
-            ctx.billingSnapshot.phone ||
-            ctx.billingSnapshot.email ||
-            ctx.billingSnapshot.address)
-            ? `
-        <div class="info-block">
-          <div class="section-title">Billing Snapshot</div>
-          ${ctx.billingSnapshot.name ? `<div class="info-value">${escapeHtml(ctx.billingSnapshot.name)}</div>` : ''}
-          ${ctx.billingSnapshot.phone ? `<div class="info-value muted">${escapeHtml(ctx.billingSnapshot.phone)}</div>` : ''}
-          ${ctx.billingSnapshot.email ? `<div class="info-value muted">${escapeHtml(ctx.billingSnapshot.email)}</div>` : ''}
-          ${ctx.billingSnapshot.address ? `<div class="info-value muted">${escapeHtml(ctx.billingSnapshot.address)}</div>` : ''}
-        </div>
-        `
-            : ''
-        }
       </div>
     </div>
 
@@ -82,11 +75,11 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
         <thead>
           <tr>
             <th class="serial-col">#</th>
-            <th style="width: 44%;">Description</th>
+            <th style="width: 48%;">Description</th>
             <th class="num" style="width: 10%;">Qty</th>
             <th class="num" style="width: 18%;">Rate</th>
-            <th class="num" style="width: 10%;">Tax</th>
-            <th class="num" style="width: 18%;">Amount</th>
+            <th class="num" style="width: 12%;">Discount</th>
+            <th class="num" style="width: 12%;">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -95,13 +88,10 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
               (line, i) => `
           <tr>
             <td class="serial-col">${i + 1}</td>
-            <td>
-              ${escapeHtml(line.description)}
-              ${line.discountAmount > 0 ? `<div class="discount-note">Discount ${formatRupees(line.discountAmount)}</div>` : ''}
-            </td>
+            <td>${escapeHtml(stripDuration(line.description))}</td>
             <td class="amount-col">${line.quantity}</td>
             <td class="amount-col">${formatRupees(line.unitPrice)}</td>
-            <td class="amount-col">${line.taxRate}%</td>
+            <td class="amount-col">${line.discountAmount > 0 ? formatRupees(line.discountAmount) : '—'}</td>
             <td class="amount-col" style="font-weight: 600;">${formatRupees(line.lineTotal)}</td>
           </tr>
           `
@@ -116,8 +106,14 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
           <span class="label">Subtotal</span>
           <span class="value">${formatRupees(ctx.subtotal)}</span>
         </div>
+        ${totalDiscount > 0 ? `
         <div class="totals-row">
-          <span class="label">Tax (GST)</span>
+          <span class="label">Discount</span>
+          <span class="value" style="color: #991B1B;">− ${formatRupees(totalDiscount)}</span>
+        </div>
+        ` : ''}
+        <div class="totals-row">
+          <span class="label">Tax (GST @ ${taxRate}%)</span>
           <span class="value">${formatRupees(ctx.taxTotal)}</span>
         </div>
         <div class="totals-row grand">
@@ -126,6 +122,29 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
         </div>
       </div>
     </div>
+
+    ${ctx.membership ? `
+    <hr class="divider" />
+
+    <!-- Membership Duration -->
+    <div class="section">
+      <div class="section-title">Membership Duration</div>
+      <div style="display: flex; gap: 6mm; font-size: 10pt;">
+        <div>
+          <div class="info-label">Joining Date</div>
+          <div class="info-value" style="color: #2563EB;">${escapeHtml(formatDate(ctx.membership.joiningDate))}</div>
+        </div>
+        <div>
+          <div class="info-label">Start Date</div>
+          <div class="info-value" style="color: #2563EB;">${escapeHtml(formatDate(ctx.membership.startDate))}</div>
+        </div>
+        <div>
+          <div class="info-label">End Date</div>
+          <div class="info-value" style="color: #7C3AED;">${escapeHtml(formatDate(ctx.membership.endDate))}</div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
 
     <hr class="divider" />
 

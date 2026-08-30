@@ -23,7 +23,12 @@ describe('Invoice Document Template', () => {
       phone: '9876543210',
       email: 'viren@test.com'
     },
-    billingSnapshot: null,
+    membership: {
+      planName: 'Gold Plan',
+      joiningDate: '2026-08-29',
+      startDate: '2026-08-29',
+      endDate: '2027-08-29'
+    },
     lines: [
       {
         description: 'Gold Plan (12 months)',
@@ -94,9 +99,37 @@ describe('Invoice Document Template', () => {
     expect(html).toContain('Viren')
   })
 
-  it('includes line item description', () => {
+  it('strips duration from line item description', () => {
     const html = renderInvoiceDocument(baseCtx)
-    expect(html).toContain('Gold Plan (12 months)')
+    expect(html).toContain('Gold Plan')
+    expect(html).not.toContain('Gold Plan (12 months)')
+  })
+
+  it('shows Discount column header', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    expect(html).toContain('Discount')
+  })
+
+  it('shows dash when no discount', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    // Should show — (em dash) for zero discount
+    expect(html).toContain('—')
+  })
+
+  it('shows discount amount when present', () => {
+    const ctx = {
+      ...baseCtx,
+      lines: [
+        { ...baseCtx.lines[0], discountAmount: 200000 }
+      ]
+    }
+    const html = renderInvoiceDocument(ctx)
+    expect(html).toContain('₹ 2,000')
+  })
+
+  it('shows tax rate above Tax (GST) in totals', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    expect(html).toContain('Tax (GST @ 18%)')
   })
 
   it('renders allocations table', () => {
@@ -165,18 +198,6 @@ describe('Invoice Document Template', () => {
     expect(html).toContain('29 Aug 2026, 12:00 PM')
   })
 
-  it('includes discount note when discount > 0', () => {
-    const ctx = {
-      ...baseCtx,
-      lines: [
-        { ...baseCtx.lines[0], discountAmount: 200000 }
-      ]
-    }
-    const html = renderInvoiceDocument(ctx)
-    expect(html).toContain('Discount')
-    expect(html).toContain('₹ 2,000')
-  })
-
   it('includes accent bar', () => {
     const html = renderInvoiceDocument(baseCtx)
     expect(html).toContain('accent-bar')
@@ -187,6 +208,48 @@ describe('Invoice Document Template', () => {
     const html = renderInvoiceDocument(baseCtx)
     expect(html).toContain('totals-row grand')
     expect(html).toContain('#111827')
+  })
+
+  it('does not include billing snapshot section', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    expect(html).not.toContain('Billing Snapshot')
+  })
+
+  it('shows membership duration section when membership present', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    expect(html).toContain('Membership Duration')
+    expect(html).toContain('Joining Date')
+    expect(html).toContain('Start Date')
+    expect(html).toContain('End Date')
+  })
+
+  it('formats membership dates correctly', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    expect(html).toContain('29 Aug 2026')
+    expect(html).toContain('29 Aug 2027')
+  })
+
+  it('hides membership section when no membership', () => {
+    const ctx = {
+      ...baseCtx,
+      membership: null
+    }
+    const html = renderInvoiceDocument(ctx)
+    expect(html).not.toContain('Membership Duration')
+  })
+
+  it('shows discount in totals when discount > 0', () => {
+    const ctx = {
+      ...baseCtx,
+      lines: [
+        { ...baseCtx.lines[0], discountAmount: 200000 }
+      ],
+      subtotal: 2000000,
+      total: 2160000
+    }
+    const html = renderInvoiceDocument(ctx)
+    expect(html).toContain('Discount')
+    expect(html).toContain('− ₹ 2,000')
   })
 })
 

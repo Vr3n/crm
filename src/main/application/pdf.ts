@@ -2,8 +2,8 @@ import { currentOrganizationId, requirePermission } from '../auth/session'
 import { invoiceRepo, invoiceLineRepo } from '../repositories/billing'
 import { allocationRepo, paymentRepo } from '../repositories/finance'
 import { getDrizzle } from '../db/connection'
-import { organizations, customers, people, users } from '../db/schema'
-import { eq, and } from 'drizzle-orm'
+import { organizations, customers, people, users, memberships } from '../db/schema'
+import { eq, and, desc } from 'drizzle-orm'
 import { NotFoundError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import { renderPdf } from '../pdf/renderer'
@@ -126,6 +126,26 @@ export function exportInvoicePdf(input: {
   const org = getOrgBranding(organizationId)
   const now = formatNow()
 
+  // Fetch the latest membership for this customer (for duration info)
+  const membership = getDrizzle()
+    .select({
+      planName: memberships.plan_name_snapshot,
+      joiningDate: memberships.joining_date,
+      startDate: memberships.start_date,
+      endDate: memberships.end_date
+    })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.organization_id, organizationId),
+        eq(memberships.customer_id, invoice.customerId)
+      )
+    )
+    .orderBy(desc(memberships.created_at))
+    .get() as
+    | { planName: string; joiningDate: string; startDate: string; endDate: string }
+    | undefined
+
   // Calculate paid amount from allocations
   const paidAmount = allocations.reduce((sum, a) => sum + a.amountMinor, 0)
   const outstanding = invoice.totalMinor - paidAmount
@@ -137,15 +157,14 @@ export function exportInvoicePdf(input: {
     issuedAt: invoice.createdAt,
     dueAt: invoice.finalizedAt,
     customer: customerInfo,
-    billingSnapshot:
-      invoice.billingName || invoice.billingPhone || invoice.billingEmail || invoice.billingAddress
-        ? {
-            name: invoice.billingName,
-            phone: invoice.billingPhone,
-            email: invoice.billingEmail,
-            address: invoice.billingAddress
-          }
-        : null,
+    membership: membership
+      ? {
+          planName: membership.planName,
+          joiningDate: membership.joiningDate,
+          startDate: membership.startDate,
+          endDate: membership.endDate
+        }
+      : null,
     lines: lines.map((l) => ({
       description: l.description,
       quantity: l.quantity,

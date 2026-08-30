@@ -42,11 +42,12 @@ export interface InvoicePrintContext {
   issuedAt: string
   dueAt?: string | null
   customer: PdfCustomer
-  billingSnapshot?: {
-    name?: string | null
-    phone?: string | null
-    email?: string | null
-    address?: string | null
+  /** Membership duration info — shown above Payments Received. */
+  membership?: {
+    planName: string
+    joiningDate: string
+    startDate: string
+    endDate: string
   } | null
   lines: PdfInvoiceLine[]
   subtotal: number
