@@ -76,7 +76,13 @@ export type ScheduleFollowUpInput = z.infer<typeof scheduleFollowUpInputSchema>
 
 export const completeFollowUpInputSchema = z.object({
   followupId: z.number().int().positive(),
-  notes: z.string().max(1000).optional()
+  notes: z.string().max(1000).optional(),
+  activity: z
+    .object({
+      typeId: z.number().int().positive(),
+      note: z.string().max(2000).optional()
+    })
+    .optional()
 })
 export type CompleteFollowUpInput = z.infer<typeof completeFollowUpInputSchema>
 

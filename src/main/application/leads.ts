@@ -555,13 +555,28 @@ export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: nu
 export function completeFollowUp(input: CompleteFollowUpInput): void {
   requirePermission(PERMISSIONS.FOLLOWUP_COMPLETE)
   const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
 
   const followup = followupRepo.getById(organizationId, input.followupId)
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) return
 
   withTransaction(() => {
-    followupRepo.complete(organizationId, followup.id, requireSession().userId, input.notes)
+    followupRepo.complete(organizationId, followup.id, userId, input.notes)
+
+    if (input.activity) {
+      const type = activityTypeRepo.findById(organizationId, input.activity.typeId)
+      if (!type) throw new NotFoundError('Activity type not found')
+
+      activityRepo.create({
+        organizationId,
+        leadId: followup.leadId,
+        typeId: type.id,
+        note: input.activity.note?.trim() || null,
+        occurredAt: new Date().toISOString(),
+        createdBy: userId
+      })
+    }
   })
 }
 
