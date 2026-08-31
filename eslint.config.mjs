@@ -11,7 +11,11 @@ export default defineConfig(
       '**/node_modules',
       '**/dist',
       '**/out',
-      'src/renderer/src/components/ui/**'
+      'src/renderer/src/components/ui/**',
+      'plans/**',
+      'docs/**',
+      'coverage/**',
+      '**/*.md'
     ]
   },
   tseslint.configs.recommended,
