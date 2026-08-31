@@ -31,8 +31,8 @@ export const paymentDueSchema = z.object({
   member: dashboardPersonRefSchema,
   plan: z.string(),
   purchasedAt: z.string(),
-  amountDue: z.number(),
-  total: z.number()
+  amountDueMinor: z.number().int(),
+  totalMinor: z.number().int()
 })
 export type PaymentDueOutput = z.infer<typeof paymentDueSchema>
 
@@ -42,7 +42,7 @@ export const membershipInvoiceSchema = z.object({
   label: z.string(),
   periodStart: z.string(),
   periodEnd: z.string(),
-  amount: z.number(),
+  amountMinor: z.number().int(),
   status: z.enum(['PAID', 'OVERDUE']),
   paidAt: z.string().optional()
 })
@@ -61,8 +61,8 @@ export const membershipDetailsSchema = z.object({
   plan: z.string(),
   purchasedAt: z.string(),
   expiresAt: z.string(),
-  amountDue: z.number().optional(),
-  total: z.number().optional()
+  amountDueMinor: z.number().int().optional(),
+  totalMinor: z.number().int().optional()
 })
 export type MembershipDetailsOutput = z.infer<typeof membershipDetailsSchema>
 

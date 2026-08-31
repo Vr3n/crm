@@ -19,7 +19,7 @@ export type CollectionCustomerRef = z.infer<typeof collectionCustomerRefSchema>
 
 export const collectionPaymentAllocationSchema = z.object({
   invoiceNo: z.string(),
-  amount: z.number()
+  amountMinor: z.number().int()
 })
 export type CollectionPaymentAllocation = z.infer<typeof collectionPaymentAllocationSchema>
 
@@ -27,7 +27,7 @@ export const paymentRecordOutputSchema = z.object({
   id: z.string(),
   reference: z.string(),
   customer: collectionCustomerRefSchema,
-  amount: z.number(),
+  amountMinor: z.number().int(),
   method: z.string(),
   receivedAt: z.string(),
   receivedBy: z.string(),
@@ -38,14 +38,14 @@ export type PaymentRecordOutput = z.infer<typeof paymentRecordOutputSchema>
 
 export const methodTotalSchema = z.object({
   method: z.string(),
-  total: z.number(),
+  totalMinor: z.number().int(),
   count: z.number()
 })
 export type MethodTotalOutput = z.infer<typeof methodTotalSchema>
 
 export const dayCollectionSchema = z.object({
   date: z.string(),
-  total: z.number(),
+  totalMinor: z.number().int(),
   paymentCount: z.number(),
   recordedBy: z.array(z.string()),
   byMethod: z.array(methodTotalSchema)

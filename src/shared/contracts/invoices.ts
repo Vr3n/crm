@@ -25,17 +25,17 @@ export const invoiceLineOutputSchema = z.object({
   id: z.string(),
   description: z.string(),
   quantity: z.number(),
-  unitPrice: z.number(),
-  discountAmount: z.number(),
-  taxRate: z.number(),
-  taxAmount: z.number(),
-  lineTotal: z.number()
+  unitPriceMinor: z.number().int(),
+  discountMinor: z.number().int(),
+  taxRateBps: z.number().int(),
+  taxAmountMinor: z.number().int(),
+  lineTotalMinor: z.number().int()
 })
 export type InvoiceLineOutput = z.infer<typeof invoiceLineOutputSchema>
 
 export const invoiceAllocationOutputSchema = z.object({
   id: z.string(),
-  amount: z.number(),
+  amountMinor: z.number().int(),
   method: z.string(),
   reference: z.string(),
   receivedAt: z.string(),
@@ -58,11 +58,11 @@ export const invoiceOutputSchema = z.object({
   lines: z.array(invoiceLineOutputSchema),
   allocations: z.array(invoiceAllocationOutputSchema),
   createdBy: z.string(),
-  subtotal: z.number(),
+  subtotalMinor: z.number().int(),
   taxTotal: z.number(),
-  total: z.number(),
-  paidAmount: z.number(),
-  outstanding: z.number()
+  totalMinor: z.number().int(),
+  paidMinor: z.number().int(),
+  outstandingMinor: z.number().int()
 })
 export type InvoiceOutput = z.infer<typeof invoiceOutputSchema>
 

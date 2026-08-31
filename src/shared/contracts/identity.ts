@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { currencyCodeSchema } from './money'
 
 /**
  * Canonical contracts for the identity/tenancy IPC surface (Module 14/15).
@@ -43,7 +44,7 @@ export type AuthStatus = 'SETUP_REQUIRED' | 'LOGIN_REQUIRED' | 'AUTHENTICATED'
 export const setupOrganizationInputSchema = z.object({
   name: z.string().min(1).max(120),
   slug: z.string().min(1).max(120).optional(),
-  currency: z.string().min(1).max(8).optional(),
+  currency: currencyCodeSchema.optional(),
   timezone: z.string().max(64).optional(),
   ownerFullName: z.string().min(1).max(120),
   ownerEmail: z.string().min(1).max(254),
