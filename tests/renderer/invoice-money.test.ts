@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { formatMinor, formatMoneyExact, rupeesToMinor } from '../../src/renderer/src/lib/money'
+import {
+  formatMinor,
+  formatMoneyExact,
+  rupeesToMinor,
+  sanitizeMoneyInput
+} from '../../src/renderer/src/lib/money'
 
 /**
  * Money presentation/parse rules shared by every capture form (Module 04 §34):
@@ -10,8 +15,8 @@ describe('rupeesToMinor', () => {
     expect(rupeesToMinor('19200')).toBe(1_920_000)
   })
 
-  it('rounds half-up at the paise boundary', () => {
-    expect(rupeesToMinor('19.999')).toBeUndefined() // 3 decimals rejected, not rounded silently
+  it('rounds half-even excess fractional digits', () => {
+    expect(rupeesToMinor('19.999')).toBe(2_000) // 19.999 → 20.00
     expect(rupeesToMinor('19200.5')).toBe(1_920_050)
     expect(rupeesToMinor('19200.05')).toBe(1_920_005)
   })
@@ -35,5 +40,48 @@ describe('formatMinor / formatMoneyExact', () => {
     expect(formatMinor(1_920_000)).toBe(formatMoneyExact(19200))
     expect(formatMoneyExact(19200.5)).toMatch(/19,200\.5/)
     expect(formatMoneyExact(0)).toMatch(/0/)
+  })
+})
+
+describe('sanitizeMoneyInput', () => {
+  it('passes through plain digit strings', () => {
+    expect(sanitizeMoneyInput('0')).toBe('0')
+    expect(sanitizeMoneyInput('19200')).toBe('19200')
+    expect(sanitizeMoneyInput('')).toBe('')
+  })
+
+  it('keeps a single decimal point and its fractional digits', () => {
+    expect(sanitizeMoneyInput('19200.45')).toBe('19200.45')
+    expect(sanitizeMoneyInput('0.5')).toBe('0.5')
+    expect(sanitizeMoneyInput('.5')).toBe('.5')
+  })
+
+  it('allows a trailing decimal point so the user can keep typing', () => {
+    expect(sanitizeMoneyInput('19200.')).toBe('19200.')
+  })
+
+  it('drops any non-digit, non-dot characters', () => {
+    expect(sanitizeMoneyInput('₹1,9 2a00')).toBe('19200')
+    expect(sanitizeMoneyInput('12e3')).toBe('123')
+    expect(sanitizeMoneyInput('1-2+3')).toBe('123')
+  })
+
+  it('truncates the fractional part to at most two digits', () => {
+    expect(sanitizeMoneyInput('19.999')).toBe('19.99')
+    expect(sanitizeMoneyInput('1.2345')).toBe('1.23')
+  })
+
+  it('collapses repeated dots and keeps only the first', () => {
+    expect(sanitizeMoneyInput('1.2.3')).toBe('1.23')
+    expect(sanitizeMoneyInput('..5')).toBe('.5')
+  })
+
+  it('respects a custom max fraction digits argument', () => {
+    expect(sanitizeMoneyInput('1.2345', 3)).toBe('1.234')
+    expect(sanitizeMoneyInput('1.2345', 0)).toBe('1.')
+  })
+
+  it('produces a value that rupeesToMinor accepts for decimal input', () => {
+    expect(rupeesToMinor(sanitizeMoneyInput('1000.456'))).toBe(100_045) // 1000.45
   })
 })

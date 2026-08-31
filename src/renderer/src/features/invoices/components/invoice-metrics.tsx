@@ -1,6 +1,6 @@
 import { CircleDollarSign, Clock3, ReceiptText, TriangleAlert } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
-import { formatMoney } from '@/lib/money'
+import { formatMinor } from '@/lib/money'
 import type { Invoice } from '../types'
 
 /**
@@ -13,29 +13,29 @@ export function InvoiceMetrics({ invoices }: { invoices: Invoice[] }): React.JSX
   const active = invoices.filter((i) => i.status === 'OPEN' || i.status === 'PARTIALLY_PAID')
   const billed = invoices
     .filter((i) => i.status !== 'VOID' && i.status !== 'DRAFT')
-    .reduce((sum, i) => sum + i.total, 0)
-  const collected = invoices.reduce((sum, i) => sum + i.paidAmount, 0)
-  const outstanding = active.reduce((sum, i) => sum + i.outstanding, 0)
+    .reduce((sum, i) => sum + i.totalMinor, 0)
+  const collected = invoices.reduce((sum, i) => sum + i.paidMinor, 0)
+  const outstanding = active.reduce((sum, i) => sum + i.outstandingMinor, 0)
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         label="Total billed"
-        value={formatMoney(billed)}
+        value={formatMinor(billed)}
         hint="Finalized invoices"
         icon={ReceiptText}
         tone="primary"
       />
       <StatCard
         label="Collected"
-        value={formatMoney(collected)}
+        value={formatMinor(collected)}
         hint="Allocated payments"
         icon={CircleDollarSign}
         tone="success"
       />
       <StatCard
         label="Outstanding"
-        value={formatMoney(outstanding)}
+        value={formatMinor(outstanding)}
         hint="Open + partially paid"
         icon={TriangleAlert}
         tone={outstanding > 0 ? 'warning' : 'default'}

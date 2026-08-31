@@ -2,7 +2,7 @@ import { FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Timeline, type TimelineEntry } from '@/components/timeline'
 import { formatDate } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatMinor } from '@/lib/money'
 import type { Invoice } from '../types'
 
 /**
@@ -34,9 +34,9 @@ function mapInvoicesToEntries(invoices: Invoice[]): TimelineEntry[] {
               : ('secondary' as const)
       },
       meta:
-        inv.outstanding > 0
-          ? `${formatMoney(inv.total)} · ${formatMoney(inv.outstanding)} due`
-          : formatMoney(inv.total)
+        inv.outstandingMinor > 0
+          ? `${formatMinor(inv.totalMinor)} · ${formatMinor(inv.outstandingMinor)} due`
+          : formatMinor(inv.totalMinor)
     }))
 }
 

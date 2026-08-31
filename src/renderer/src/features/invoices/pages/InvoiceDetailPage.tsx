@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { EmptyState } from '@/components/empty-state'
 import { cn } from '@/lib/utils'
 import { formatDate, formatDateTime, initials } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatMinor } from '@/lib/money'
 import { PAYMENT_METHOD_META, type PaymentMethod } from '@/lib/payment-methods'
 import { can, useSession } from '@/context/session-context'
 import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
@@ -121,31 +121,31 @@ function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{l.description}</p>
-              {l.discountAmount > 0 ? (
+              {l.discountMinor > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Discount {formatMoney(l.discountAmount)}
+                  Discount {formatMinor(l.discountMinor)}
                 </p>
               ) : null}
             </div>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
               {l.quantity}
             </span>
-            <span className="text-right text-xs tabular-nums">{formatMoney(l.unitPrice)}</span>
+            <span className="text-right text-xs tabular-nums">{formatMinor(l.unitPriceMinor)}</span>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
-              {l.taxRate}%
+              {l.taxRateBps / 100}%
             </span>
           </div>
         ))}
       </div>
       <div className="flex flex-col items-end gap-1 pt-2">
         <span className="text-xs text-muted-foreground">
-          Subtotal <span className="font-mono tabular-nums">{formatMoney(invoice.subtotal)}</span>
+          Subtotal <span className="font-mono tabular-nums">{formatMinor(invoice.subtotalMinor)}</span>
         </span>
         <span className="text-xs text-muted-foreground">
-          Tax (GST) <span className="font-mono tabular-nums">{formatMoney(invoice.taxTotal)}</span>
+          Tax (GST) <span className="font-mono tabular-nums">{formatMinor(invoice.taxTotalMinor)}</span>
         </span>
         <span className="text-sm font-semibold">
-          Total <span className="font-mono tabular-nums">{formatMoney(invoice.total)}</span>
+          Total <span className="font-mono tabular-nums">{formatMinor(invoice.totalMinor)}</span>
         </span>
       </div>
     </>
@@ -184,7 +184,7 @@ function AllocationRows({ invoice }: { invoice: Invoice }): React.JSX.Element {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-sm font-semibold tabular-nums">{formatMoney(a.amount)}</span>
+              <span className="text-sm font-semibold tabular-nums">{formatMinor(a.amountMinor)}</span>
               <span className="text-xs text-muted-foreground">{formatDateTime(a.receivedAt)}</span>
             </div>
           </div>
@@ -444,20 +444,20 @@ export function InvoiceDetailPage(): React.JSX.Element {
       <div className="flex gap-2.5">
         <StatTile
           label="Total"
-          value={formatMoney(invoice.total)}
+          value={formatMinor(invoice.totalMinor)}
           tone={
             invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE' ? 'muted' : 'accent'
           }
         />
         <StatTile
           label="Paid"
-          value={formatMoney(invoice.paidAmount)}
-          tone={invoice.paidAmount > 0 ? 'accent' : 'muted'}
+          value={formatMinor(invoice.paidMinor)}
+          tone={invoice.paidMinor > 0 ? 'accent' : 'muted'}
         />
         <StatTile
           label="Outstanding"
-          value={formatMoney(invoice.outstanding)}
-          tone={invoice.outstanding > 0 ? 'danger' : 'muted'}
+          value={formatMinor(invoice.outstandingMinor)}
+          tone={invoice.outstandingMinor > 0 ? 'danger' : 'muted'}
         />
       </div>
 
