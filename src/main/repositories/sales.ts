@@ -89,6 +89,7 @@ interface FollowupRow {
   title: string
   due_at: string
   extension_reason: string | null
+  notes: string | null
   completed_at: string | null
   completed_by: number | null
   cancelled_at: string | null
@@ -175,6 +176,7 @@ function mapFollowup(row: FollowupRow): LeadFollowup {
     title: row.title,
     dueAt: row.due_at,
     extensionReason: row.extension_reason,
+    notes: row.notes,
     completedAt: row.completed_at,
     completedBy: row.completed_by,
     cancelledAt: row.cancelled_at,
@@ -1000,10 +1002,14 @@ export const followupRepo = {
     return row ? mapFollowup(row) : null
   },
 
-  complete(organizationId: number, id: number, by: number): void {
+  complete(organizationId: number, id: number, by: number, notes?: string | null): void {
     getDrizzle()
       .update(leadFollowups)
-      .set({ completed_at: sql`(datetime('now'))`, completed_by: by })
+      .set({
+        completed_at: sql`(datetime('now'))`,
+        completed_by: by,
+        notes: notes?.trim() ? notes.trim() : null
+      })
       .where(and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.id, id)))
       .run()
   },
@@ -1089,6 +1095,7 @@ export const followupRepo = {
     title: string
     dueAt: string
     extensionReason: string | null
+    notes: string | null
     completedAt: string | null
     cancelledAt: string | null
   }> {
@@ -1100,6 +1107,7 @@ export const followupRepo = {
         title: leadFollowups.title,
         dueAt: leadFollowups.due_at,
         extensionReason: leadFollowups.extension_reason,
+        notes: leadFollowups.notes,
         completedAt: leadFollowups.completed_at,
         cancelledAt: leadFollowups.cancelled_at
       })

@@ -34,7 +34,8 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 const helper = createColumnHelper<DashboardFeatures, MembershipExpiration>()
 
 function buildColumns(
-  onView: (row: MembershipExpiration) => void
+  onView: (row: MembershipExpiration) => void,
+  onFollowUp: (row: MembershipExpiration) => void
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.member.name, {
@@ -76,7 +77,11 @@ function buildColumns(
       id: 'actions',
       header: () => null,
       cell: ({ row }) => (
-        <RowActions memberName={row.original.member.name} onView={() => onView(row.original)} />
+        <RowActions
+          memberName={row.original.member.name}
+          onView={() => onView(row.original)}
+          onFollowUp={() => onFollowUp(row.original)}
+        />
       )
     })
   ])
@@ -107,7 +112,11 @@ function ExpiryCell({ expiresAt }: { expiresAt: string }): React.JSX.Element {
  * queue. Now a data table: date-range filter + search toolbar, sortable by
  * expiration, client-side pagination, blocky expiry chip, icon-only actions.
  */
-export function MembershipExpirationsTable(): React.JSX.Element {
+export function MembershipExpirationsTable({
+  onFollowUp
+}: {
+  onFollowUp: (row: MembershipExpiration) => void
+}): React.JSX.Element {
   const { data, isLoading } = useUpcomingExpirations()
   const [range, setRange] = useState<DateRange>()
   const [member, setMember] = useState<MembershipExpiration | null>(null)
@@ -117,7 +126,15 @@ export function MembershipExpirationsTable(): React.JSX.Element {
     setMember(row)
     setOpen(true)
   }, [])
-  const columns = useMemo(() => buildColumns(handleView), [handleView])
+
+  const handleFollowUp = useCallback(
+    (selected: MembershipExpiration) => {
+      onFollowUp(selected)
+    },
+    [onFollowUp]
+  )
+
+  const columns = useMemo(() => buildColumns(handleView, handleFollowUp), [handleView, handleFollowUp])
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()

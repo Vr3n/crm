@@ -35,7 +35,8 @@ const helper = createColumnHelper<DashboardFeatures, PaymentDue>()
 
 function buildColumns(
   onView: (row: PaymentDue) => void,
-  onMakePayment: (row: PaymentDue) => void
+  onMakePayment: (row: PaymentDue) => void,
+  onFollowUp: (row: PaymentDue) => void
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.member.name, {
@@ -97,6 +98,7 @@ function buildColumns(
           memberName={row.original.member.name}
           onView={() => onView(row.original)}
           onMakePayment={() => onMakePayment(row.original)}
+          onFollowUp={() => onFollowUp(row.original)}
         />
       )
     })
@@ -121,9 +123,11 @@ function AmountCell({ amountDue, total }: { amountDue: number; total: number }):
  * first by default), pagination and icon-only actions.
  */
 export function PaymentsDueTable({
-  onMakePayment
+  onMakePayment,
+  onFollowUp
 }: {
   onMakePayment: (row: PaymentDue) => void
+  onFollowUp: (row: PaymentDue) => void
 }): React.JSX.Element {
   const { data, isLoading } = usePaymentsDue()
   const navigate = useNavigate()
@@ -151,9 +155,16 @@ export function PaymentsDueTable({
     [onMakePayment]
   )
 
+  const handleFollowUp = useCallback(
+    (selected: PaymentDue) => {
+      onFollowUp(selected)
+    },
+    [onFollowUp]
+  )
+
   const columns = useMemo(
-    () => buildColumns(handleView, handleMakePayment),
-    [handleView, handleMakePayment]
+    () => buildColumns(handleView, handleMakePayment, handleFollowUp),
+    [handleView, handleMakePayment, handleFollowUp]
   )
 
   const presets = useMemo<DateRangePreset[]>(() => {
