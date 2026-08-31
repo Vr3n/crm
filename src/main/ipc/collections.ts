@@ -134,13 +134,13 @@ export function registerCollectionsIpc(): void {
           phone: person?.phone ?? undefined,
           email: person?.email ?? undefined
         },
-        amount: Math.round(p.amount_minor / 100),
+        amountMinor: p.amount_minor,
         method: p.payment_method,
         receivedAt: p.payment_date,
         receivedBy: String(p.created_by),
         allocations: allocs.map((a) => ({
           invoiceNo: invoiceMap.get(a.invoice_id) ?? `INV-${a.invoice_id}`,
-          amount: Math.round(a.amount_minor / 100)
+          amountMinor: a.amount_minor
         })),
         notes: p.notes ?? undefined
       }
@@ -207,13 +207,13 @@ export function registerCollectionsIpc(): void {
         phone: person?.phone ?? undefined,
         email: person?.email ?? undefined
       },
-      amount: Math.round(payment.amount_minor / 100),
+      amountMinor: payment.amount_minor,
       method: payment.payment_method,
       receivedAt: payment.payment_date,
       receivedBy: String(payment.created_by),
       allocations: allocRows.map((a) => ({
         invoiceNo: invoiceMap.get(a.invoice_id) ?? `INV-${a.invoice_id}`,
-        amount: Math.round(a.amount_minor / 100)
+        amountMinor: a.amount_minor
       })),
       notes: payment.notes ?? undefined
     }

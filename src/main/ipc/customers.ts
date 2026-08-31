@@ -11,7 +11,6 @@ import {
 import { currentOrganizationId } from '../auth/session'
 import { customerIdRequestSchema } from '../../shared/contracts/customers'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
-import { toRupees } from '../../shared/contracts/money'
 import { handle } from './handle'
 
 /**
@@ -86,7 +85,7 @@ interface AllocationRow {
   amount_minor: number
 }
 
-/** Invoice read model in finished rupees — paid/outstanding derived from allocations. */
+/** Invoice read model in minor units — paid/outstanding derived from allocations. */
 function buildInvoiceOutputs(
   organizationId: number,
   customerId: number
@@ -95,11 +94,11 @@ function buildInvoiceOutputs(
   invoiceNo: string
   status: 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE'
   issuedAt: string
-  subtotal: number
-  tax: number
-  total: number
-  paidAmount: number
-  outstanding: number
+  subtotalMinor: number
+  taxMinor: number
+  totalMinor: number
+  paidMinor: number
+  outstandingMinor: number
 }> {
   const invoiceRows = getDrizzle()
     .select()
@@ -137,18 +136,18 @@ function buildInvoiceOutputs(
   }
 
   return invoiceRows.map((inv) => {
-    const total = toRupees(inv.total_minor)
-    const paid = toRupees(paidByInvoice.get(inv.id) ?? 0)
+    const totalMinor = inv.total_minor
+    const paidMinor = paidByInvoice.get(inv.id) ?? 0
     return {
       id: String(inv.id),
       invoiceNo: inv.number,
       status: inv.status as 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE',
       issuedAt: inv.finalized_at ?? inv.created_at,
-      subtotal: toRupees(inv.subtotal_minor),
-      tax: toRupees(inv.tax_minor),
-      total,
-      paidAmount: paid,
-      outstanding: Math.max(0, total - paid)
+      subtotalMinor: inv.subtotal_minor,
+      taxMinor: inv.tax_minor,
+      totalMinor,
+      paidMinor,
+      outstandingMinor: Math.max(0, totalMinor - paidMinor)
     }
   })
 }
@@ -159,8 +158,6 @@ function buildCustomerOutput(
   memberShips: MembershipRow[],
   freezesByMembership: Map<number, FreezeRow[]>
 ) {
-  // Read models ship finished rupees — minor units convert here exactly once
-  // (Module 04 §34) so no component ever multiplies or divides by 100.
   return {
     id: String(customer.id),
     name: person?.full_name ?? customer.billing_name ?? 'Unknown',
@@ -183,10 +180,10 @@ function buildCustomerOutput(
       customerId: String(m.customer_id),
       plan: m.plan_name_snapshot,
       planId: String(m.plan_id),
-      price: toRupees(m.base_price_minor),
-      discount: toRupees(m.discount_minor),
+      priceMinor: m.base_price_minor,
+      discountMinor: m.discount_minor,
       billingFrequency: m.billing_frequency as 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ANNUAL',
-      registrationFee: 0,
+      registrationFeeMinor: 0,
       startDate: m.start_date,
       endDate: m.end_date,
       status: m.status as 'PENDING' | 'ACTIVE' | 'FROZEN' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED',
@@ -196,7 +193,7 @@ function buildCustomerOutput(
         startDate: f.start_date,
         endDate: f.end_date,
         reason: f.reason ?? '',
-        fee: toRupees(f.fee_minor),
+        feeMinor: f.fee_minor,
         billingBehavior: f.billing_behavior as 'SUSPEND_BILLING' | 'CONTINUE_BILLING',
         accessBehavior: f.access_behavior as 'NO_ACCESS' | 'ACCESS',
         extensionDays: f.extension_days,

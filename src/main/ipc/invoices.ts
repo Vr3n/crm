@@ -4,7 +4,6 @@ import { invoices, invoiceLines, paymentAllocations, payments, people, customers
 import { currentOrganizationId } from '../auth/session'
 import { invoiceIdRequestSchema, invoicesByStatusRequestSchema } from '../../shared/contracts/invoices'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
-import { toRupees } from '../../shared/contracts/money'
 import { handle } from './handle'
 
 /**
@@ -73,10 +72,6 @@ function buildInvoiceOutput(
   person: PersonRow | undefined
 ) {
   const paidMinor = allocations.reduce((sum, a) => sum + a.amount_minor, 0)
-  // The renderer read model carries whole rupees / percent (features/invoices
-  // types.ts); convert from the stored minor units (paise) and bps here so no
-  // component ever does money arithmetic (Module 04 §34).
-  const paidAmount = toRupees(paidMinor)
   return {
     id: String(invoice.id),
     invoiceNo: invoice.number,
@@ -97,26 +92,26 @@ function buildInvoiceOutput(
       id: String(l.id),
       description: l.description,
       quantity: l.quantity,
-      unitPrice: toRupees(l.unit_price_minor),
-      discountAmount: toRupees(l.discount_minor),
-      taxRate: l.tax_rate_bps / 100,
-      taxAmount: toRupees(l.tax_amount_minor),
-      lineTotal: toRupees(l.line_total_minor)
+      unitPriceMinor: l.unit_price_minor,
+      discountMinor: l.discount_minor,
+      taxRateBps: l.tax_rate_bps,
+      taxAmountMinor: l.tax_amount_minor,
+      lineTotalMinor: l.line_total_minor
     })),
     allocations: allocations.map((a) => ({
       id: String(a.id),
-      amount: toRupees(a.amount_minor),
+      amountMinor: a.amount_minor,
       method: a.payment?.payment_method ?? 'UNKNOWN',
       reference: a.payment?.reference ?? '',
       receivedAt: a.created_at,
       receivedBy: a.payment ? String(a.payment.created_by) : ''
     })),
     createdBy: String(invoice.created_by),
-    subtotal: toRupees(invoice.subtotal_minor),
-    taxTotal: toRupees(invoice.tax_minor),
-    total: toRupees(invoice.total_minor),
-    paidAmount,
-    outstanding: Math.max(0, toRupees(invoice.total_minor) - paidAmount)
+    subtotalMinor: invoice.subtotal_minor,
+    taxTotalMinor: invoice.tax_minor,
+    totalMinor: invoice.total_minor,
+    paidMinor,
+    outstandingMinor: Math.max(0, invoice.total_minor - paidMinor)
   }
 }
 

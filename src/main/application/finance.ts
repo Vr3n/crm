@@ -16,7 +16,7 @@ import { NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import { asc, eq, and, inArray, sql } from 'drizzle-orm'
 import { invoices, paymentAllocations, creditAllocations, invoiceLines, customers, people, payments } from '../db/schema'
-import { toRupees } from '../../shared/contracts/money'
+import { formatMinor } from '../../shared/contracts/money'
 
 /**
  * Module 05 (Finance) application use cases. Each Command gates on a permission,
@@ -742,7 +742,7 @@ export function getAllPayments() {
         email: person?.email
       },
       paymentDate: p.paymentDate,
-      amount: toRupees(p.amountMinor),
+      amount: formatMinor(p.amountMinor, 'INR'),
       method: p.paymentMethod,
       reference: p.reference ?? undefined,
       notes: p.notes ?? undefined,
@@ -750,7 +750,7 @@ export function getAllPayments() {
       allocations: allocs.map((a) => ({
         invoiceId: String(a.invoiceId),
         invoiceNo: invoiceNumberMap.get(a.invoiceId) ?? '',
-        amount: toRupees(a.amountMinor)
+        amount: formatMinor(a.amountMinor, 'INR')
       })),
       refundIds: refunds.map((r) => String(r.id))
     }
@@ -822,7 +822,7 @@ export function getAllRefunds() {
         email: person?.email
       },
       refundDate: r.createdAt,
-      amount: toRupees(r.amountMinor),
+      amount: formatMinor(r.amountMinor, 'INR'),
       sourcePaymentId: String(r.paymentId),
       sourcePaymentNo: `PAY-${String(r.paymentId).padStart(4, '0')}`,
       method: payment?.payment_method ?? 'UNKNOWN',
@@ -893,12 +893,12 @@ export function getAllCredits() {
         email: person?.email
       },
       issuedAt: c.createdAt,
-      amount: toRupees(c.amountMinor),
+      amount: formatMinor(c.amountMinor, 'INR'),
       reason: c.reason,
       createdBy: creator?.name ?? 'System',
       applications: allocs.map((a) => ({
         invoiceNo: invoiceNumberMap.get(a.invoiceId) ?? '',
-        amount: toRupees(a.amountMinor),
+        amount: formatMinor(a.amountMinor, 'INR'),
         appliedAt: a.createdAt
       }))
     }

@@ -26,6 +26,7 @@ import {
   membershipEvents,
   idempotencyKeys
 } from '../db/schema'
+import { formatMinor } from '../../shared/contracts/money'
 import type { SellMembershipInput, SellMembershipResult } from '../../shared/contracts/membership-sale'
 
 function daysForDuration(duration: string): number {
@@ -96,7 +97,7 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
       const used = offerRepo.countRedemptions(organizationId, offer.id)
       if (used >= offer.maxUsage) throw new ValidationError('Offer has reached max usage')
     }
-    if (offer.minPurchaseMinor !== null && input.basePriceMinor < offer.minPurchaseMinor) throw new ValidationError(`Offer requires minimum purchase ₹${(offer.minPurchaseMinor / 100).toLocaleString('en-IN')}`)
+    if (offer.minPurchaseMinor !== null && input.basePriceMinor < offer.minPurchaseMinor) throw new ValidationError(`Offer requires minimum purchase ${formatMinor(offer.minPurchaseMinor, 'INR')}`)
   } else if (input.discountType !== 'NONE') {
     throw new ValidationError('Offer must be selected when discount is applied')
   }
@@ -164,7 +165,7 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
     const taxAmountMinor = Math.round((pricing.finalPriceMinor * plan.taxRateBps) / 10000)
     const lineTotalMinor = pricing.finalPriceMinor + taxAmountMinor
     if (input.paidAmountMinor > lineTotalMinor) {
-      throw new OverpaymentNotAllowedError(`Amount paid ₹${(input.paidAmountMinor / 100).toLocaleString('en-IN')} exceeds invoice total ₹${(lineTotalMinor / 100).toLocaleString('en-IN')}`)
+      throw new OverpaymentNotAllowedError(`Amount paid ${formatMinor(input.paidAmountMinor, 'INR')} exceeds invoice total ${formatMinor(lineTotalMinor, 'INR')}`)
     }
     db.insert(invoiceLines).values({
       organization_id: organizationId,
