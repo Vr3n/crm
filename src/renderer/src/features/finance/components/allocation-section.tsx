@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMoneyExact } from '@/lib/money'
 import { Label } from '@/components/ui/label'
 import type { FinanceInvoice } from '../types'
 
@@ -44,13 +44,6 @@ export function AllocationSection({
         .sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime()),
     [invoices]
   )
-
-  const totalAllocated = useMemo(
-    () => allocations.filter((a) => a.enabled).reduce((s, a) => s + (a.amount || 0), 0),
-    [allocations]
-  )
-
-  const remaining = paymentAmount - totalAllocated
 
   const getDraft = useMemo(
     () =>
@@ -154,11 +147,11 @@ export function AllocationSection({
                 </div>
                 {enabled ? (
                   <span className="font-mono text-xs font-medium tabular-nums text-foreground">
-                    {formatMoney(allocatedAmount)}
+                    {formatMoneyExact(allocatedAmount)}
                   </span>
                 ) : (
                   <span className="font-mono text-xs font-bold tabular-nums text-amber-700 dark:text-amber-500">
-                    {formatMoney(due)} due
+                    {formatMoneyExact(due)} due
                   </span>
                 )}
               </label>
@@ -168,7 +161,7 @@ export function AllocationSection({
                 <div className="border-t border-border/60 px-3 py-2">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-[10px] font-bold tabular-nums text-amber-700 dark:text-amber-500">
-                      {formatMoney(allocatedAmount)} of {formatMoney(due)}
+                      {formatMoneyExact(allocatedAmount)} of {formatMoneyExact(due)}
                     </span>
                     <span
                       className={cn(
@@ -198,25 +191,6 @@ export function AllocationSection({
           )
         })}
       </div>
-
-      {/* Summary line */}
-      {totalAllocated > 0 && (
-        <p
-          className={cn(
-            'pt-1 text-xs tabular-nums',
-            remaining < 0 ? 'text-destructive' : 'text-muted-foreground'
-          )}
-        >
-          Allocating{' '}
-          <span className="font-medium text-foreground">{formatMoney(totalAllocated)}</span>
-          {paymentAmount > 0 ? ` of ${formatMoney(paymentAmount)}` : ''}
-          {remaining > 0 ? (
-            <span className="text-muted-foreground"> · {formatMoney(remaining)} unallocated</span>
-          ) : remaining === 0 ? (
-            <span className="text-green-600 dark:text-green-400"> · Fully allocated</span>
-          ) : null}
-        </p>
-      )}
     </div>
   )
 }

@@ -28,6 +28,7 @@ import { useCustomers, useOutstandingInvoices, useRecordPayment } from '../queri
 import { pdfApi } from '@/features/pdf/api'
 import { CustomerPicker } from './customer-picker'
 import { AllocationSection, type AllocationDraft } from './allocation-section'
+import { parseToMinor, sanitizeMoneyInput } from '@/lib/money'
 import type { PersonRef } from '@/features/dashboard/types'
 
 /**
@@ -88,13 +89,13 @@ export function RecordPaymentDialog({
         .filter((a) => a.enabled && (a.amount || 0) > 0)
         .map((a) => ({
           invoiceId: a.invoiceId,
-          amount: Math.round(a.amount * 100)
+          amount: parseToMinor(String(a.amount), 'INR') ?? 0
         }))
       try {
         const result = await record.mutateAsync({
           customerId: picked.id,
           paymentDate: value.paymentDate,
-          amountMinor: Math.round(Number(value.amount.replace(/,/g, '')) * 100),
+          amountMinor: parseToMinor(String(value.amount), 'INR') ?? 0,
           paymentMethod: value.method,
           reference: value.reference,
           notes: value.notes,
@@ -266,12 +267,11 @@ export function RecordPaymentDialog({
                     </Label>
                     <Input
                       id={`pay-${field.name}`}
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
+                      type="text"
+                      inputMode="decimal"
                       value={field.state.value}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
                       placeholder="0"
                     />
                     {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (

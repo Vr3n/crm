@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useIssueCredit } from '../queries'
+import { parseToMinor, sanitizeMoneyInput } from '@/lib/money'
 import { CustomerPicker } from './customer-picker'
 import type { PersonRef } from '@/features/dashboard/types'
 
@@ -45,7 +46,7 @@ export function AddCreditDialog({
       try {
         await issue.mutateAsync({
           customerId: picked.id,
-          amountMinor: Math.round(Number(value.amount) * 100),
+          amountMinor: parseToMinor(String(value.amount), 'INR') ?? 0,
           reason: value.reason.trim()
         })
         setPicked(null)
@@ -126,12 +127,11 @@ export function AddCreditDialog({
                     </Label>
                     <Input
                       id={`cr-${field.name}`}
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
+                      type="text"
+                      inputMode="decimal"
                       value={field.state.value}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
                       placeholder="0"
                     />
                     {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (

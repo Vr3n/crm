@@ -1,6 +1,6 @@
 import type { Payment, Refund, Credit, FinanceInvoice, InvoiceStatus } from './types'
 import type { PersonRef } from '@/features/dashboard/types'
-import { toRupees } from '../../../../shared/contracts/money'
+import { minorToMajor } from '../../../../shared/contracts/money'
 
 interface RecordPaymentInput {
   customerId: string
@@ -49,8 +49,8 @@ export const api = {
           customer: { id: customerId, name: row.customerName, phone: row.customerPhone },
           line: row.line,
           issuedAt: row.issuedAt,
-          total: Math.round(row.totalMinor / 100),
-          paid: Math.round(row.paidMinor / 100),
+          total: Number(minorToMajor(row.totalMinor, 'INR')),
+          paid: Number(minorToMajor(row.paidMinor, 'INR')),
           status: row.status as InvoiceStatus
         }))
       ),
@@ -86,7 +86,7 @@ export const api = {
       paymentNo: `PAY-${paymentRow.id}`,
       customer: { id: input.customerId, name: '' },
       paymentDate: input.paymentDate,
-      amount: toRupees(input.amountMinor),
+      amount: Number(minorToMajor(input.amountMinor, 'INR')),
       method: input.paymentMethod as Payment['method'],
       reference: input.reference,
       notes: input.notes,
@@ -94,7 +94,7 @@ export const api = {
       allocations: (input.allocations ?? []).map((a) => ({
         invoiceId: a.invoiceId,
         invoiceNo: '',
-        amount: toRupees(a.amount)
+        amount: Number(minorToMajor(a.amount, 'INR'))
       })),
       refundIds: []
     } as Payment

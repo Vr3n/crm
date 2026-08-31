@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMoneyExact, sanitizeMoneyInput } from '@/lib/money'
+import { parseToMinor } from '@/lib/money'
 import { PAYMENT_METHODS } from '../constants'
 import { useIssueRefund, usePaymentsFor } from '../queries'
 import { CustomerPicker } from './customer-picker'
@@ -74,7 +75,7 @@ export function IssueRefundDialog({
       try {
         await issue.mutateAsync({
           paymentId: source.id,
-          amountMinor: Math.round(Number(value.amount) * 100),
+          amountMinor: parseToMinor(String(value.amount), 'INR') ?? 0,
           reason: value.reason
         })
         setPicked(null)
@@ -149,9 +150,9 @@ export function IssueRefundDialog({
                           return (
                             <SelectItem key={p.id} value={p.id} disabled={avail <= 0}>
                               <span className="font-mono tabular-nums">
-                                {p.paymentNo} · {formatMoney(p.amount)}
+                                {p.paymentNo} · {formatMoneyExact(p.amount)}
                               </span>
-                              {avail <= 0 ? ' · fully refunded' : ` · ${formatMoney(avail)} left`}
+                              {avail <= 0 ? ' · fully refunded' : ` · ${formatMoneyExact(avail)} left`}
                             </SelectItem>
                           )
                         })}
@@ -203,7 +204,7 @@ export function IssueRefundDialog({
                     const sourceId = fieldApi.form.getFieldValue('sourcePaymentId')
                     const avail = sourceId ? (remainingByPayment.get(sourceId) ?? 0) : 0
                     if (avail > 0 && n > avail)
-                      return `At most ${formatMoney(avail)} is available on this payment`
+                      return `At most ${formatMoneyExact(avail)} is available on this payment`
                     return undefined
                   }
                 }}
@@ -215,12 +216,11 @@ export function IssueRefundDialog({
                     </Label>
                     <Input
                       id={`rf-${field.name}`}
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
+                      type="text"
+                      inputMode="decimal"
                       value={field.state.value}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
                       placeholder="0"
                     />
                     {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
@@ -233,7 +233,7 @@ export function IssueRefundDialog({
 
             {remaining > 0 ? (
               <p className="text-xs text-muted-foreground tabular-nums">
-                {formatMoney(remaining)} available on the selected payment
+                {formatMoneyExact(remaining)} available on the selected payment
               </p>
             ) : null}
 
