@@ -1,52 +1,90 @@
 /**
- * Money presentation — the single place rupees are formatted for the UI.
+ * Money presentation — the single place money is formatted for the UI.
  *
- * The domain stores money as integer minor units (paise) and never computes
- * with floats (docs/modules 04 §34). This prototype ships whole-rupee numbers
- * on its read models, formatted here with `en-IN` grouping so columns scan on
- * a single edge. Components must never do money arithmetic — read models ship
- * finished numbers.
+ * Delegates to the shared contracts module for currency-aware logic.
+ * Legacy functions accept major units (whole rupees) for backward compat.
  */
 
-const INDIAN_RUPEE = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 0
-})
+import {
+  formatMinor as sharedFormatMinor,
+  parseToMinor as sharedParseToMinor,
+  exponentFor,
+  type CurrencyCode
+} from '../../../shared/contracts/money'
 
-export function formatMoney(amount: number): string {
-  return INDIAN_RUPEE.format(amount)
-}
+// ── Re-export shared module ────────────────────────────────────────────────
 
-const INDIAN_RUPEE_EXACT = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2
-})
+export {
+  parseToMinor,
+  minorToMajor,
+  formatRate,
+  exponentFor,
+  CURRENCIES,
+  type CurrencyCode,
+  type Money,
+  type MoneyInput,
+  moneySchema,
+  currencyCodeSchema
+} from '../../../shared/contracts/money'
 
-/** Formats an amount given in whole rupees, keeping up to 2 decimals. */
-export function formatMoneyExact(amount: number): string {
-  return INDIAN_RUPEE_EXACT.format(amount)
+// ── Legacy wrappers (major-unit interface) ─────────────────────────────────
+
+/**
+ * Format a whole-major-unit amount (e.g. 19200 → ₹19,200).
+ * No fractional digits — used for whole-rupee display in tables/cards.
+ */
+export function formatMoney(amount: number, currency: CurrencyCode = 'INR'): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0
+  }).format(amount)
 }
 
 /**
- * Formats a stored minor-unit (paise) amount for display — the single place
- * paise convert back to rupees on the way out (Module 04 §34).
+ * Format a whole-major-unit amount, keeping up to 2 fractional digits.
+ * Legacy alias — same as `formatMoney` for most currencies.
  */
-export function formatMinor(amountMinor: number): string {
-  return formatMoneyExact(amountMinor / 100)
+export function formatMoneyExact(amount: number, currency: CurrencyCode = 'INR'): string {
+  return sharedFormatMinor(
+    Math.round(amount * 10 ** exponentFor(currency)),
+    currency
+  )
 }
 
 /**
- * Parses a decimal-rupees string ("19200", "19200.5", "19,200.50") into
- * integer paise. Returns `undefined` when the input is not a valid
- * non-negative amount with at most 2 decimals — the caller shows the error.
+ * Format a stored minor-unit (paise) amount for display.
+ * Wraps the shared `formatMinor` with INR default for backward compat.
  */
-export function rupeesToMinor(value: string): number | undefined {
-  const cleaned = value.replace(/[,\s₹]/g, '')
-  if (cleaned === '' || !/^\d+(\.\d{1,2})?$/.test(cleaned)) return undefined
-  const n = Number(cleaned)
-  if (!Number.isFinite(n)) return undefined
-  return Math.round(n * 100)
+export function formatMinor(amountMinor: number, currency: CurrencyCode = 'INR'): string {
+  return sharedFormatMinor(amountMinor, currency)
+}
+
+/**
+ * Parse a decimal-rupees string ("19200", "19200.5", "19,200.50") into
+ * integer minor units. Returns `undefined` when the input is invalid.
+ * Wraps the shared `parseToMinor` with INR default for backward compat.
+ */
+export function rupeesToMinor(value: string, currency: CurrencyCode = 'INR'): number | undefined {
+  return sharedParseToMinor(value, currency)
+}
+
+/**
+ * Sanitize a free-text money input into a plain decimal string that a
+ * `type="text"` input can hold (digits + at most one `.`). Strips every
+ * non-digit/non-dot character and truncates the fractional part to
+ * `maxFractionDigits` (2 for minor-unit currencies). Returns the empty string
+ * when there is nothing representable, so the field can be cleared.
+ *
+ * Mirrors the sale-page's `restrictToTwoDecimals` so every money input across
+ * the app behaves identically and is never subject to `type="number"`'s
+ * default `step="1"` validation.
+ */
+export function sanitizeMoneyInput(value: string, maxFractionDigits = 2): string {
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  const dot = cleaned.indexOf('.')
+  if (dot === -1) return cleaned
+  const before = cleaned.slice(0, dot + 1)
+  const after = cleaned.slice(dot + 1).replace(/\./g, '').slice(0, maxFractionDigits)
+  return before + after
 }
