@@ -13,6 +13,8 @@ asarUnpack:
   - 'resources/**'
 win:
   verifyUpdateCodeSignature: false
+  electronLanguages: ["en-US"]
+compression: maximum
 nsis:
   artifactName: CrownCRM-setup.${ext}
   shortcutName: ${productName}
