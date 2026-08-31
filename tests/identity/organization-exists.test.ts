@@ -5,10 +5,10 @@ import { setupOrganization, checkOrganizationExists } from '../../src/main/appli
 setupTestDb()
 
 const VALID = {
-  name: 'FitZone Aurangabad',
+  name: 'Example Gym Aurangabad',
   mobileNumber: '+919876543210',
   ownerFullName: 'Neha',
-  ownerEmail: 'Neha@FitZone.com',
+  ownerEmail: 'Neha@Example.com',
   ownerPassword: 'supersecret123'
 }
 
@@ -72,7 +72,7 @@ describe('checkOrganizationExists', () => {
     expect(
       checkOrganizationExists({
         name: VALID.name,
-        ownerEmail: 'neha@fitzone.com',
+        ownerEmail: 'neha@example.com',
         mobileNumber: '9999999999'
       })
     ).toBe(true)
@@ -83,7 +83,7 @@ describe('checkOrganizationExists', () => {
     expect(
       checkOrganizationExists({
         name: VALID.name,
-        ownerEmail: 'manager@fitzone.com',
+        ownerEmail: 'manager@example.com',
         mobileNumber: '9999999999'
       })
     ).toBe(false)

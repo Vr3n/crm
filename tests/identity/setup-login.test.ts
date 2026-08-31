@@ -13,10 +13,10 @@ import { ValidationError, UnauthorizedError, NotFoundError } from '../../src/mai
 setupTestDb()
 
 const VALID = {
-  name: 'FitZone Aurangabad',
+  name: 'Example Gym Aurangabad',
   mobileNumber: '+919876543210',
   ownerFullName: 'Neha',
-  ownerEmail: 'neha@fitzone.com',
+  ownerEmail: 'neha@example.com',
   ownerPassword: 'supersecret123'
 }
 
@@ -116,7 +116,7 @@ describe('setupOrganization', () => {
 
   it('derives a valid slug from the name when not supplied', () => {
     const session = setupOrganization({ ...VALID, slug: undefined })
-    expect(session.organizationSlug).toBe('fitzone-aurangabad')
+    expect(session.organizationSlug).toBe('example-gym-aurangabad')
   })
 })
 
@@ -130,7 +130,7 @@ describe('login', () => {
 
   it('is case-insensitive on email', () => {
     setupOrganization(VALID)
-    expect(() => login({ email: 'NEHA@FITZONE.COM', password: VALID.ownerPassword })).not.toThrow()
+    expect(() => login({ email: 'NEHA@EXAMPLE.COM', password: VALID.ownerPassword })).not.toThrow()
   })
 
   it('rejects a wrong password', () => {
@@ -142,7 +142,7 @@ describe('login', () => {
 
   it('rejects an unknown email', () => {
     setupOrganization(VALID)
-    expect(() => login({ email: 'nobody@fitzone.com', password: VALID.ownerPassword })).toThrow(
+    expect(() => login({ email: 'nobody@example.com', password: VALID.ownerPassword })).toThrow(
       UnauthorizedError
     )
   })
@@ -161,7 +161,7 @@ describe('createStaffMember — validation and atomicity', () => {
     expect(() =>
       createStaffMember({
         fullName: 'Kavita',
-        email: 'kavita@fitzone.com',
+        email: 'kavita@example.com',
         password: 'supersecret123',
         roleName: 'NoSuchRole'
       })

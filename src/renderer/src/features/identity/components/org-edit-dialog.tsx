@@ -102,7 +102,7 @@ export function OrgEditDialog({
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. FitZone Fitness LLP"
+                    placeholder="e.g. Example Fitness LLP"
                   />
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                     <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
@@ -127,7 +127,7 @@ export function OrgEditDialog({
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="billing@fitzone.in"
+                    placeholder="billing@example.in"
                   />
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                     <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>

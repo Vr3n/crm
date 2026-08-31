@@ -10,22 +10,22 @@ import type { SessionContext } from '../../src/main/domain/identity'
 
 setupTestDb()
 
-const OWNER = { fullName: 'Neha', email: 'neha@fitzone.com', password: 'supersecret123' }
+const OWNER = { fullName: 'Neha', email: 'neha@example.com', password: 'supersecret123' }
 const PASSWORD = 'supersecret123'
 
 function setupWithStaff(): SessionContext {
   const ownerSession = setupOrganization({
-    name: 'FitZone',
+    name: 'Example Gym',
     mobileNumber: '+919876543210',
     ownerFullName: OWNER.fullName,
     ownerEmail: OWNER.email,
     ownerPassword: OWNER.password
   })
   for (const [name, email, roleName] of [
-    ['Manoj', 'manoj@fitzone.com', 'Manager'],
-    ['Sana', 'sana@fitzone.com', 'Sales'],
-    ['Arjun', 'arjun@fitzone.com', 'Front Desk'],
-    ['Kavita', 'kavita@fitzone.com', 'Finance']
+    ['Manoj', 'manoj@example.com', 'Manager'],
+    ['Sana', 'sana@example.com', 'Sales'],
+    ['Arjun', 'arjun@example.com', 'Front Desk'],
+    ['Kavita', 'kavita@example.com', 'Finance']
   ] as const) {
     createStaffMember({ fullName: name, email, password: PASSWORD, roleName })
   }
@@ -46,10 +46,10 @@ describe('RBAC authorization matrix', () => {
   it('assigns each role exactly its configured permissions', () => {
     setupWithStaff()
     const roleEmails: Record<string, string> = {
-      Manager: 'manoj@fitzone.com',
-      Sales: 'sana@fitzone.com',
-      'Front Desk': 'arjun@fitzone.com',
-      Finance: 'kavita@fitzone.com'
+      Manager: 'manoj@example.com',
+      Sales: 'sana@example.com',
+      'Front Desk': 'arjun@example.com',
+      Finance: 'kavita@example.com'
     }
     for (const [roleName, expected] of Object.entries(EXPECTED_PERMISSIONS)) {
       const session = loginAs(roleEmails[roleName])
@@ -78,7 +78,7 @@ describe('vertical privilege escalation — lower roles cannot perform admin act
     expect(() =>
       createStaffMember({
         fullName: 'New Hire',
-        email: 'newhire@fitzone.com',
+        email: 'newhire@example.com',
         password: PASSWORD,
         roleName: 'Sales'
       })
@@ -87,11 +87,11 @@ describe('vertical privilege escalation — lower roles cannot perform admin act
 
   it('blocks a Manager from creating staff (missing user.create)', () => {
     setupWithStaff()
-    loginAs('manoj@fitzone.com')
+    loginAs('manoj@example.com')
     expect(() =>
       createStaffMember({
         fullName: 'Intruder',
-        email: 'intruder@fitzone.com',
+        email: 'intruder@example.com',
         password: PASSWORD,
         roleName: 'Sales'
       })
@@ -100,11 +100,11 @@ describe('vertical privilege escalation — lower roles cannot perform admin act
 
   it('blocks a Sales user from creating staff', () => {
     setupWithStaff()
-    loginAs('sana@fitzone.com')
+    loginAs('sana@example.com')
     expect(() =>
       createStaffMember({
         fullName: 'X',
-        email: 'x@fitzone.com',
+        email: 'x@example.com',
         password: PASSWORD,
         roleName: 'Sales'
       })
@@ -113,11 +113,11 @@ describe('vertical privilege escalation — lower roles cannot perform admin act
 
   it('blocks a Front Desk user from creating staff', () => {
     setupWithStaff()
-    loginAs('arjun@fitzone.com')
+    loginAs('arjun@example.com')
     expect(() =>
       createStaffMember({
         fullName: 'X',
-        email: 'x@fitzone.com',
+        email: 'x@example.com',
         password: PASSWORD,
         roleName: 'Sales'
       })
@@ -130,7 +130,7 @@ describe('vertical privilege escalation — lower roles cannot perform admin act
     expect(() =>
       createStaffMember({
         fullName: 'X',
-        email: 'x@fitzone.com',
+        email: 'x@example.com',
         password: PASSWORD,
         roleName: 'Sales'
       })
@@ -141,7 +141,7 @@ describe('vertical privilege escalation — lower roles cannot perform admin act
 describe('permission guard at the command layer (not just UI)', () => {
   it('Manager can read users but cannot create or manage them', () => {
     setupWithStaff()
-    loginAs('manoj@fitzone.com')
+    loginAs('manoj@example.com')
     expect(() => requirePermission(PERMISSIONS.USER_VIEW)).not.toThrow()
     expect(() => requirePermission(PERMISSIONS.USER_CREATE)).toThrow(ForbiddenError)
     expect(() => requirePermission(PERMISSIONS.USER_MANAGE)).toThrow(ForbiddenError)
@@ -166,7 +166,7 @@ describe('email uniqueness within an organization', () => {
     expect(() =>
       createStaffMember({
         fullName: 'Another Arjun',
-        email: 'arjun@fitzone.com',
+        email: 'arjun@example.com',
         password: PASSWORD,
         roleName: 'Sales'
       })
