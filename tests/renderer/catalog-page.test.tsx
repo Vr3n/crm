@@ -141,7 +141,7 @@ describe('PlansPage', () => {
     const dialog = await screen.findByRole('dialog', { name: /Edit plan/ })
     expect(within(dialog).getByLabelText(/Tax code/)).toHaveValue('GST18')
     expect(within(dialog).getByLabelText(/Tax rate/)).toHaveValue(18)
-    expect(within(dialog).getByLabelText(/Registration fee/)).toHaveValue(500)
+    expect(within(dialog).getByLabelText(/Registration fee/)).toHaveValue('500')
 
     await user.clear(within(dialog).getByLabelText(/Tax rate/))
     await user.type(within(dialog).getByLabelText(/Tax rate/), '12')

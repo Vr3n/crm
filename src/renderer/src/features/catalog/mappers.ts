@@ -23,7 +23,7 @@ import type {
   PolicyLookups,
   ProrationPolicy
 } from './types'
-import { toRupees, fromRupees } from '../../../../shared/contracts/money'
+import { minorToMajor, parseToMinor } from '../../../../shared/contracts/money'
 
 /**
  * Catalog wire → display mapping (README "Renderer API layer"). Api methods
@@ -48,13 +48,13 @@ export function mapPlanRow(row: PlanRow): Plan {
     name: row.name,
     duration: row.duration,
     billing: row.billingFrequency,
-    basePrice: toRupees(row.basePriceMinor),
+    basePrice: Number(minorToMajor(row.basePriceMinor, 'INR')),
     accessWindow: row.accessWindow,
     startTime: row.startTime ?? '06:00',
     endTime: row.endTime ?? '23:00',
     taxCode: row.taxCode,
     taxRate: bpsToPercent(row.taxRateBps),
-    registrationFee: toRupees(row.registrationFeeMinor),
+    registrationFee: Number(minorToMajor(row.registrationFeeMinor, 'INR')),
     freezePolicyId: row.freezePolicyId,
     prorationPolicyId: row.prorationPolicyId,
     cancellationPolicyId: row.cancellationPolicyId,
@@ -70,13 +70,13 @@ export function mapPlanInput(input: PlanInput): CreatePlanInput {
     description: input.description,
     duration: input.duration,
     billingFrequency: input.billing,
-    basePriceMinor: fromRupees(input.basePrice),
+    basePriceMinor: parseToMinor(String(input.basePrice), 'INR') ?? 0,
     accessWindow: input.accessWindow,
     startTime: input.startTime,
     endTime: input.endTime,
     taxCode: input.taxCode,
     taxRateBps: percentToBps(input.taxRate),
-    registrationFeeMinor: fromRupees(input.registrationFee),
+    registrationFeeMinor: parseToMinor(String(input.registrationFee), 'INR') ?? 0,
     freezePolicyId: input.freezePolicyId,
     prorationPolicyId: input.prorationPolicyId,
     cancellationPolicyId: input.cancellationPolicyId,
@@ -86,7 +86,7 @@ export function mapPlanInput(input: PlanInput): CreatePlanInput {
 
 function offerValueFromMinor(discountType: Offer['discountType'], valueMinor: number): number {
   if (discountType === 'PERCENTAGE' || discountType === 'FREE_PERIOD') return valueMinor
-  return toRupees(valueMinor)
+  return Number(minorToMajor(valueMinor, 'INR'))
 }
 
 export function mapOfferRow(row: OfferRow): Offer {
@@ -98,7 +98,7 @@ export function mapOfferRow(row: OfferRow): Offer {
     discountType: row.discountType,
     value: offerValueFromMinor(row.discountType, row.valueMinor),
     applicablePlanIds: row.applicablePlanIds,
-    minPurchase: row.minPurchaseMinor == null ? 0 : toRupees(row.minPurchaseMinor),
+    minPurchase: row.minPurchaseMinor == null ? 0 : Number(minorToMajor(row.minPurchaseMinor, 'INR')),
     maxUses: row.maxUsage ?? 0,
     usedCount: row.usedCount,
     startDate: row.validFrom,
@@ -111,7 +111,7 @@ export function mapOfferRow(row: OfferRow): Offer {
 
 function offerValueToMinor(discountType: Offer['discountType'], value: number): number {
   if (discountType === 'PERCENTAGE' || discountType === 'FREE_PERIOD') return Math.round(value)
-  return fromRupees(value)
+  return parseToMinor(String(value), 'INR') ?? 0
 }
 
 export function mapOfferInput(input: OfferInput): CreateOfferInput {
@@ -125,7 +125,7 @@ export function mapOfferInput(input: OfferInput): CreateOfferInput {
     validFrom: input.startDate,
     validTo: input.endDate || null,
     maxUsage: input.maxUses > 0 ? input.maxUses : null,
-    minPurchaseMinor: fromRupees(input.minPurchase),
+    minPurchaseMinor: parseToMinor(String(input.minPurchase), 'INR') ?? 0,
     active: input.isActive
   }
 }
@@ -134,7 +134,7 @@ export function mapPlanVersionRow(row: PlanVersionRow): PlanVersion {
   return {
     id: row.id,
     planId: row.planId,
-    basePrice: toRupees(row.basePriceMinor),
+    basePrice: Number(minorToMajor(row.basePriceMinor, 'INR')),
     taxRate: bpsToPercent(row.taxRateBps),
     effectiveFrom: row.effectiveFrom,
     createdAt: row.createdAt
@@ -159,7 +159,7 @@ function mapFreezePolicyRow(row: FreezePolicyRow): FreezePolicy {
     billingBehavior: row.billingBehavior,
     accessBehavior: row.accessBehavior,
     extendOrCredit: row.extendOrCredit,
-    fee: toRupees(row.feeMinor),
+    fee: Number(minorToMajor(row.feeMinor, 'INR')),
     freeFreezeCountPerYear: row.freeFreezeCountPerYear,
     description: row.description
   }
@@ -199,7 +199,7 @@ export function mapFreezePolicyCreateInput(input: Omit<FreezePolicy, 'id'>): Cre
     billingBehavior: input.billingBehavior,
     accessBehavior: input.accessBehavior,
     extendOrCredit: input.extendOrCredit,
-    feeMinor: fromRupees(input.fee),
+    feeMinor: parseToMinor(String(input.fee), 'INR') ?? 0,
     freeFreezeCountPerYear: input.freeFreezeCountPerYear,
     description: input.description ?? undefined
   }

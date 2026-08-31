@@ -44,6 +44,8 @@ import { usePlans } from '@/features/catalog/queries'
 import { displayPhone } from '@/features/leads/format'
 import { useSellMembership } from './queries'
 import { pdfApi } from '@/features/pdf/api'
+import { parseToMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Plan, Offer } from '@/features/catalog/types'
 
 function daysForDuration(duration: Plan['duration']): number {
@@ -82,6 +84,7 @@ function todayISO(): string {
 export function MembershipSalePage(): React.JSX.Element {
   const session = useSession()
   const navigate = useNavigate()
+  const currency = useCurrency()
   const [showNewLead, setShowNewLead] = useState(false)
   const [showNewPlan, setShowNewPlan] = useState(false)
   const [showNewOffer, setShowNewOffer] = useState(false)
@@ -108,15 +111,15 @@ export function MembershipSalePage(): React.JSX.Element {
     },
     onSubmit: async ({ value }) => {
       setServerError(null)
-      const baseMinor = value.baseInput === '' ? 0 : Math.round(Number(value.baseInput.replace(/,/g, '')) * 100)
+      const baseMinor = value.baseInput === '' ? 0 : (parseToMinor(value.baseInput, currency) ?? 0)
       let discountValueMinor: number | null = null
       if (value.discountType !== 'NONE') {
         const raw = value.discountValue.replace(/,/g, '')
         const n = Number(raw)
         if (value.discountType === 'PERCENTAGE') discountValueMinor = Math.round(n)
-        else discountValueMinor = Math.round(n * 100)
+        else discountValueMinor = parseToMinor(raw, currency) ?? 0
       }
-      const paidMinor = value.paidInput === '' ? 0 : Math.round(Number(value.paidInput.replace(/,/g, '')) * 100)
+      const paidMinor = value.paidInput === '' ? 0 : (parseToMinor(value.paidInput, currency) ?? 0)
       try {
         const res = await sellMutation.mutateAsync({
           leadId: value.leadId!,

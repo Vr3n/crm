@@ -22,7 +22,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { formatMoney } from '@/lib/money'
+import { formatMoney, sanitizeMoneyInput } from '@/lib/money'
 import { DISCOUNT_TYPES, discountTypeLabel, FREE_PERIOD_MONTHS } from '../constants'
 import { computeDiscountLine, validateOfferInput } from '../pricing'
 import { codeFromName } from '../mappers'
@@ -228,10 +228,10 @@ export function OfferFormDialog({
               </Label>
               <Input
                 id="of-value"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => setValue(sanitizeMoneyInput(e.target.value))}
                 placeholder={VALUE_PLACEHOLDER[discountType]}
                 className="font-mono tabular-nums"
               />
@@ -261,10 +261,10 @@ export function OfferFormDialog({
               <Label htmlFor="of-min">Minimum purchase</Label>
               <Input
                 id="of-min"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={minPurchase}
-                onChange={(e) => setMinPurchase(e.target.value)}
+                onChange={(e) => setMinPurchase(sanitizeMoneyInput(e.target.value))}
                 className="font-mono tabular-nums"
               />
               <p className="text-xs text-muted-foreground">

@@ -1,5 +1,6 @@
 import { CircleDashed, UserCheck, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useCurrency } from '@/hooks/use-currency'
 import { formatMonthYear, monthsSince } from '../../format'
 import type { Customer } from '../../types'
 
@@ -20,6 +21,7 @@ export function LifetimeCard({
   now: number
   className?: string
 }): React.JSX.Element {
+  const currency = useCurrency()
   const lifetimeValue = customer.memberships.reduce(
     (sum, m) => sum + (m.price - m.discount + m.registrationFee),
     0
@@ -52,7 +54,7 @@ export function LifetimeCard({
       <p className="mt-2 font-mono text-2xl font-bold tracking-tight tabular-nums">
         {new Intl.NumberFormat('en-IN', {
           style: 'currency',
-          currency: 'INR',
+          currency,
           maximumFractionDigits: 0
         }).format(lifetimeValue)}
       </p>

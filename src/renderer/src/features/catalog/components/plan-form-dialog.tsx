@@ -26,6 +26,7 @@ import {
   DURATIONS
 } from '../constants'
 import { useCreatePlan, useUpdatePlan } from '../queries'
+import { sanitizeMoneyInput } from '@/lib/money'
 import type { AccessWindow, BillingFrequency, Plan, PlanDuration } from '../types'
 
 /**
@@ -160,10 +161,10 @@ export function PlanFormDialog({
               </Label>
               <Input
                 id="pl-price"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={(e) => setPrice(sanitizeMoneyInput(e.target.value))}
                 placeholder="0"
                 className="font-mono tabular-nums"
               />
@@ -214,10 +215,10 @@ export function PlanFormDialog({
               <Label htmlFor="pl-reg-fee">Registration fee</Label>
               <Input
                 id="pl-reg-fee"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={registrationFee}
-                onChange={(e) => setRegistrationFee(e.target.value)}
+                onChange={(e) => setRegistrationFee(sanitizeMoneyInput(e.target.value))}
                 placeholder="0"
                 className="font-mono tabular-nums"
               />
