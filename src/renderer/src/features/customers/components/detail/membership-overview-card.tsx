@@ -42,10 +42,11 @@ export function MembershipOverviewCard({
   return (
     <div
       className={cn(
-        'flex flex-col rounded-xl border bg-card shadow-sm',
+        'crm-gradient-border flex flex-col rounded-xl border bg-card shadow-sm',
         hero ? 'p-6' : 'p-5',
         className
       )}
+      style={{ '--gradient-start': 'var(--success)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

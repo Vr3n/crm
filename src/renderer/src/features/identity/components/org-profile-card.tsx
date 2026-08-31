@@ -23,7 +23,10 @@ export function OrgProfileCard({
   const statusMeta = ORG_STATUS_META[org.status]
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
+    <div
+      className="crm-gradient-border flex flex-col gap-4 rounded-lg border border-border bg-card p-5"
+      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

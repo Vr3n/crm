@@ -22,7 +22,10 @@ export function MethodShareCard({
   const total = methods.reduce((s, m) => s + m.amount, 0)
 
   return (
-    <Card>
+    <Card
+      className="crm-gradient-border"
+      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center rounded-md bg-success/10 text-success">

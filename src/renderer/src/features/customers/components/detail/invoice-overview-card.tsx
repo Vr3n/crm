@@ -47,7 +47,10 @@ export function InvoiceOverviewCard({
 
   return (
     <>
-      <div className={cn('flex flex-col rounded-xl border bg-card p-5 shadow-sm', className)}>
+      <div
+        className={cn('crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm', className)}
+        style={{ '--gradient-start': 'var(--warning)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      >
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-mono text-sm font-semibold">
             <Receipt className="size-3.5 text-muted-foreground" /> {inv.invoiceNo}

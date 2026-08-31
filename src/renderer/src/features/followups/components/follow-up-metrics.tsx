@@ -9,6 +9,7 @@ interface Metric {
   label: string
   icon: LucideIcon
   chip: string
+  gradient: { start: string; end: string } | null
   count: (rows: FollowUpRow[]) => number
 }
 
@@ -20,6 +21,7 @@ const METRICS: Metric[] = [
     label: 'Overdue',
     icon: AlarmClock,
     chip: 'bg-destructive/10 text-destructive',
+    gradient: { start: 'var(--destructive)', end: 'var(--warning)' },
     count: (rows) =>
       rows.filter((r) => !r.completedAt && new Date(r.dueAt).getTime() < Date.now()).length
   },
@@ -28,6 +30,7 @@ const METRICS: Metric[] = [
     label: 'Due today',
     icon: CalendarClock,
     chip: 'bg-primary/10 text-primary',
+    gradient: { start: 'var(--primary)', end: 'var(--primary)' },
     count: (rows) => rows.filter((r) => bucketOf(r) === 'today').length
   },
   {
@@ -35,6 +38,7 @@ const METRICS: Metric[] = [
     label: 'Due this week',
     icon: CalendarDays,
     chip: 'bg-muted text-muted-foreground',
+    gradient: null,
     count: (rows) =>
       rows.filter((r) => !r.completedAt && new Date(r.dueAt).getTime() < Date.now() + WEEK_MS)
         .length
@@ -44,6 +48,7 @@ const METRICS: Metric[] = [
     label: 'Completed',
     icon: CalendarCheck2,
     chip: 'bg-success/15 text-success',
+    gradient: { start: 'var(--success)', end: 'var(--primary)' },
     count: (rows) => rows.filter((r) => !!r.completedAt).length
   }
 ]
@@ -59,7 +64,8 @@ export function FollowUpMetrics({ rows }: { rows: FollowUpRow[] }): React.JSX.El
       {METRICS.map((m) => (
         <div
           key={m.key}
-          className="flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3"
+          className={cn('crm-gradient-border flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3')}
+          style={m.gradient ? { '--gradient-start': m.gradient.start, '--gradient-end': m.gradient.end } as React.CSSProperties : undefined}
         >
           <div
             className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', m.chip)}

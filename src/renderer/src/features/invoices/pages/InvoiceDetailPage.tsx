@@ -73,8 +73,16 @@ function StatTile({
   value: string
   tone?: 'muted' | 'danger' | 'accent'
 }): React.JSX.Element {
+  const gradient = tone === 'danger'
+    ? { start: 'var(--destructive)', end: 'var(--warning)' }
+    : tone === 'accent'
+      ? { start: 'var(--primary)', end: 'var(--primary)' }
+      : null
   return (
-    <div className="flex flex-1 flex-col gap-1 rounded-md border border-border bg-card px-3 py-2.5">
+    <div
+      className={cn('crm-gradient-border flex flex-1 flex-col gap-1 rounded-md border border-border bg-card px-3 py-2.5')}
+      style={gradient ? { '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties : undefined}
+    >
       <span className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</span>
       <span
         className={
@@ -455,7 +463,10 @@ export function InvoiceDetailPage(): React.JSX.Element {
       {/* ── Bento grid ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
         {/* ── Main column: Line items (7) ─────────────────────────────── */}
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-7">
+        <section
+          className="crm-gradient-border flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-7"
+          style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+        >
           <SectionHeading
             icon={ReceiptText}
             title="Line items"
@@ -470,7 +481,10 @@ export function InvoiceDetailPage(): React.JSX.Element {
         </section>
 
         {/* ── Side column: Customer info (5) ──────────────────────────── */}
-        <section className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm md:col-span-5">
+        <section
+          className="crm-gradient-border flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm md:col-span-5"
+          style={{ '--gradient-start': 'var(--violet)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+        >
           {/* Customer header */}
           <div className="flex items-center gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 font-heading text-sm font-semibold text-primary">
@@ -518,7 +532,10 @@ export function InvoiceDetailPage(): React.JSX.Element {
         </section>
 
         {/* ── Main column: Payments allocated (7) ─────────────────────── */}
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-7">
+        <section
+          className="crm-gradient-border flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-7"
+          style={{ '--gradient-start': 'var(--success)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+        >
           <SectionHeading
             icon={Wallet}
             title="Payments allocated"
@@ -533,7 +550,10 @@ export function InvoiceDetailPage(): React.JSX.Element {
         </section>
 
         {/* ── Side column: Invoice details (5) ────────────────────────── */}
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-5">
+        <section
+          className="crm-gradient-border flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-5"
+          style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+        >
           <SectionHeading icon={CalendarClock} title="Details" />
           <div>
             <KeyValue label="Issued" value={formatDate(invoice.issuedAt)} />

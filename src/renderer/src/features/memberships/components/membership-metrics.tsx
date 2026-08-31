@@ -9,6 +9,7 @@ interface Metric {
   label: string
   icon: LucideIcon
   chip: string
+  gradient: { start: string; end: string } | null
   count: (rows: MembershipRow[], now: number) => number
 }
 
@@ -18,6 +19,7 @@ const METRICS: Metric[] = [
     label: 'Active',
     icon: BadgeCheck,
     chip: 'bg-success/15 text-success',
+    gradient: { start: 'var(--success)', end: 'var(--primary)' },
     count: (rows) => rows.filter((r) => r.status === 'ACTIVE').length
   },
   {
@@ -25,6 +27,7 @@ const METRICS: Metric[] = [
     label: 'Expiring soon',
     icon: CalendarClock,
     chip: 'bg-warning/15 text-warning',
+    gradient: { start: 'var(--warning)', end: 'var(--primary)' },
     count: (rows, now) =>
       rows.filter((r) => r.status === 'ACTIVE' && daysUntil(r.endDate, now) <= EXPIRING_SOON_DAYS)
         .length
@@ -34,6 +37,7 @@ const METRICS: Metric[] = [
     label: 'Frozen',
     icon: Snowflake,
     chip: 'bg-primary/10 text-primary',
+    gradient: { start: 'var(--primary)', end: 'var(--primary)' },
     count: (rows) => rows.filter((r) => r.status === 'FROZEN').length
   },
   {
@@ -41,6 +45,7 @@ const METRICS: Metric[] = [
     label: 'Ended',
     icon: CalendarOff,
     chip: 'bg-muted text-muted-foreground',
+    gradient: null,
     count: (rows) =>
       rows.filter(
         (r) => r.status === 'EXPIRED' || r.status === 'CANCELLED' || r.status === 'TERMINATED'
@@ -64,7 +69,8 @@ export function MembershipMetrics({
       {METRICS.map((m) => (
         <div
           key={m.key}
-          className="flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3"
+          className={cn('crm-gradient-border flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3')}
+          style={m.gradient ? { '--gradient-start': m.gradient.start, '--gradient-end': m.gradient.end } as React.CSSProperties : undefined}
         >
           <div
             className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', m.chip)}

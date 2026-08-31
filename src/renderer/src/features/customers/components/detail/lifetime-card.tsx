@@ -41,9 +41,10 @@ export function LifetimeCard({
   return (
     <section
       className={cn(
-        'flex flex-col rounded-xl border border-t-2 border-t-primary bg-card p-4 shadow-sm',
+        'crm-gradient-border flex flex-col rounded-xl border border-t-2 border-t-primary bg-card p-4 shadow-sm',
         className
       )}
+      style={{ '--gradient-start': 'var(--success)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
     >
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Tenure & value

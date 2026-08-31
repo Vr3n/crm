@@ -11,6 +11,14 @@ const TONE_CHIP: Record<Tone, string> = {
   muted: 'bg-muted text-muted-foreground'
 }
 
+const TONE_GRADIENT: Record<Tone, { start: string; end: string } | null> = {
+  default: { start: 'var(--primary)', end: 'var(--primary)' },
+  success: { start: 'var(--success)', end: 'var(--primary)' },
+  destructive: { start: 'var(--destructive)', end: 'var(--warning)' },
+  warning: { start: 'var(--warning)', end: 'var(--primary)' },
+  muted: null
+}
+
 /**
  * Identity headline tile — mono tabular figure with a tone-coded icon chip,
  * matching the metric language used across the pipeline and finance pages.
@@ -28,8 +36,12 @@ export function IdentityMetric({
   hint?: string
   tone?: Tone
 }): React.JSX.Element {
+  const gradient = TONE_GRADIENT[tone]
   return (
-    <div className="flex min-w-40 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3">
+    <div
+      className={cn('crm-gradient-border flex min-w-40 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3')}
+      style={gradient ? { '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties : undefined}
+    >
       <div
         className={cn(
           'flex size-9 shrink-0 items-center justify-center rounded-md',
