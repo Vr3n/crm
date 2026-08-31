@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellPlus } from 'lucide-react'
+import { BellPlus, Check } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDateTime, timeAgo } from '@/lib/format'
 import { useNow } from '@/lib/use-now'
 import { bucketOf } from '@/features/followups/build'
@@ -17,7 +19,7 @@ import { cn } from '@/lib/utils'
 
 const helper = createColumnHelper<DashboardFeatures, FollowUpRow>()
 
-function buildColumns(): ReturnType<typeof helper.columns> {
+function buildColumns(onComplete: (row: FollowUpRow) => void): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.leadName, {
       id: 'leadName',
@@ -38,7 +40,16 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       ),
       cell: ({ row }) => (
         <div className="min-w-0 max-w-48">
-          <span className="truncate text-sm font-medium">{row.original.title}</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="truncate text-sm font-medium">{row.original.title}</span>
+            </TooltipTrigger>
+            {row.original.notes && (
+              <TooltipContent side="top" className="max-w-xs">
+                {row.original.notes}
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
       ),
       sortFn: 'alphanumeric'
@@ -74,6 +85,31 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       },
       meta: { align: 'right' } as DataTableColumnMeta,
       sortFn: 'datetime'
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => null,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="text-success hover:bg-success/10 hover:text-success"
+                aria-label={`Mark ${row.original.title} done`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onComplete(row.original)
+                }}
+              >
+                <Check className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Mark done</TooltipContent>
+          </Tooltip>
+        </div>
+      )
     })
   ])
 }
@@ -83,7 +119,11 @@ function buildColumns(): ReturnType<typeof helper.columns> {
  * time-sensitive work items for the front desk. Sorted by due date ascending,
  * clicking a row navigates to the lead detail.
  */
-export function UpcomingFollowupsTable(): React.JSX.Element {
+export function UpcomingFollowupsTable({
+  onComplete
+}: {
+  onComplete: (row: FollowUpRow) => void
+}): React.JSX.Element {
   const { rows: allRows, isLoading } = useFollowUpRows()
   const navigate = useNavigate()
   const now = useNow()
@@ -100,7 +140,7 @@ export function UpcomingFollowupsTable(): React.JSX.Element {
       .slice(0, MAX_ROWS)
   }, [allRows, now])
 
-  const columns = useMemo(() => buildColumns(), [])
+  const columns = useMemo(() => buildColumns(onComplete), [onComplete])
 
   const handleRowClick = useCallback(
     (row: FollowUpRow) => {
