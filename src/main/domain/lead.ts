@@ -70,6 +70,7 @@ export interface LeadFollowup {
   title: string
   dueAt: string
   extensionReason: string | null
+  notes: string | null
   completedAt: string | null
   completedBy: number | null
   cancelledAt: string | null

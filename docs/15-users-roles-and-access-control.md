@@ -31,7 +31,7 @@ User
 
 Organization
   id
-  slug                    unique (Module 14) — e.g. "fitzone-aurangabad"
+  slug                    unique (Module 14) — e.g. "example-gym-aurangabad"
   ...
 
 OrganizationStaff    (this is the join that replaces users.organization_id)
@@ -73,12 +73,12 @@ This is still a standard RBAC shape underneath — **Users hold Roles (via Organ
 ## Worked example: your exact scenario, modeled
 
 ```text
-Organization: FitZone Aurangabad (id = 1, slug = "fitzone-aurangabad")
+Organization: Example Gym Aurangabad (id = 1, slug = "example-gym-aurangabad")
 
 User: Neha  (id=100, email="neha@example.com")
 User: Arjun (id=101, email="arjun@example.com")
 User: Kavita(id=102, email="kavita@example.com")
-User: Owner (id=103, email="owner@fitzone.com")
+User: Owner (id=103, email="owner@example.com")
 
 OrganizationStaff:
   (org=1, user=Neha,  role="Sales")
@@ -105,7 +105,7 @@ Role "Owner" (org=1) is_super: * (all permissions in this organization)
 
 When Neha logs in (see login flow below), the UI shows the Leads/Sales pipeline and a "Sell Membership" button. When Arjun logs in on the same computer, he sees the Leads pipeline too (he needs to log activities) but there is no "Sell Membership" or billing screen visible to him — not just hidden by convention, but rejected at the command layer if somehow triggered, per the rule below.
 
-**Now the multi-org case, made concrete.** Suppose next year you sell this software to a second gym, and the Owner of FitZone also personally runs that second gym:
+**Now the multi-org case, made concrete.** Suppose next year you sell this software to a second gym, and the Owner of Example Gym also personally runs that second gym:
 
 ```text
 Organization: PowerHouse Nagpur (id = 2, slug = "powerhouse-nagpur")
@@ -153,7 +153,7 @@ Because "who did this" is exactly the kind of accountability question a gym owne
 Because forbidding it at the schema level (a hard `users.organization_id` column) is the exact mistake this module corrected — it would mean the day a real multi-org need appears (an owner running two locations, or a hosted multi-tenant deployment), the fix is a schema migration touching every row, not a data change. Allowing it at the schema level costs one join table (`OrganizationStaff`) and doesn't add any risk today: for a single-organization install, every user simply has exactly one membership row, and the app never shows an org switcher. The flexibility is free to have and expensive to retrofit — same logic as Module 14's `organization_id`-everywhere rule.
 
 **Doesn't allowing multi-org membership risk a staff member accidentally seeing another gym's data?**
-No — the risk that matters is not "can a User row have two memberships," it's "does every query correctly scope by the *active* `organization_id` from the current session." That discipline (Module 14) is unconditional regardless of how many memberships a User has. Neha at FitZone never accidentally sees PowerHouse Nagpur's leads because her session's `organization_id` is FitZone's, full stop, for the entire duration of that login — a second membership row for a different org would require an explicit, separate "switch organization" action that re-establishes a new session context, not something that happens implicitly mid-session.
+No — the risk that matters is not "can a User row have two memberships," it's "does every query correctly scope by the *active* `organization_id` from the current session." That discipline (Module 14) is unconditional regardless of how many memberships a User has. Neha at Example Gym never accidentally sees PowerHouse Nagpur's leads because her session's `organization_id` is Example Gym's, full stop, for the entire duration of that login — a second membership row for a different org would require an explicit, separate "switch organization" action that re-establishes a new session context, not something that happens implicitly mid-session.
 
 ## Recommended starter roles (seed data, not hard-coded logic)
 

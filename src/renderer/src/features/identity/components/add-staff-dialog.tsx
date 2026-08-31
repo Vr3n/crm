@@ -50,7 +50,7 @@ export function AddStaffDialog({
       fullName: '',
       email: '',
       password: '',
-      roleId: assignableRoles[0]?.id ?? ''
+      roleName: assignableRoles[0]?.name ?? ''
     },
     onSubmit: async ({ value }) => {
       try {
@@ -125,7 +125,7 @@ export function AddStaffDialog({
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="neha@fitzone.in"
+                    placeholder="neha@example.in"
                     autoComplete="email"
                   />
                   {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
@@ -174,7 +174,7 @@ export function AddStaffDialog({
               </form.Field>
 
               <form.Field
-                name="roleId"
+                name="roleName"
                 validators={{
                   onChange: ({ value }) => (value ? undefined : 'Pick a role')
                 }}
@@ -190,7 +190,7 @@ export function AddStaffDialog({
                       </SelectTrigger>
                       <SelectContent>
                         {assignableRoles.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
+                          <SelectItem key={r.id} value={r.name}>
                             {r.name}
                           </SelectItem>
                         ))}

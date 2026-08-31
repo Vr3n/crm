@@ -17,9 +17,9 @@ An **Organization** is the top-level business entity the software is being run f
 ```text
 Organization
   id
-  slug                    unique, e.g. "fitzone-aurangabad"  — see below, this is how a
+  slug                    unique, e.g. "example-gym-aurangabad"  — see below, this is how a
                            user or a login screen *identifies* which org to talk to
-  name                    e.g. "FitZone Aurangabad"
+  name                    e.g. "Example Gym Aurangabad"
   legal_name              for invoicing/tax purposes, may differ from display name
   billing_email           the address *you* (the software provider) bill this org at
   timezone
@@ -29,7 +29,7 @@ Organization
   plan_tier               [future] which pricing tier of your CRM this org is on
 ```
 
-**Why a `slug` field now, on top of the numeric `id`?** A slug is a short, unique, human-typeable identifier (`fitzone-aurangabad`) rather than an opaque internal id. It's the thing a login screen, a URL, or a support conversation ("go to fitzone-aurangabad.yourapp.com" or "enter your organization code: FITZONE") would use to say *which organization* someone means — the numeric `id` stays purely internal. This becomes important the moment a User can belong to more than one Organization (see Module 15's revised identity model below): the app needs a stable, user-facing way to say "log into *this* one," and an internal auto-increment id is not that.
+**Why a `slug` field now, on top of the numeric `id`?** A slug is a short, unique, human-typeable identifier (`example-gym-aurangabad`) rather than an opaque internal id. It's the thing a login screen, a URL, or a support conversation ("go to example-gym-aurangabad.yourapp.com" or "enter your organization code: EXAMPLE-GYM") would use to say *which organization* someone means — the numeric `id` stays purely internal. This becomes important the moment a User can belong to more than one Organization (see Module 15's revised identity model below): the app needs a stable, user-facing way to say "log into *this* one," and an internal auto-increment id is not that.
 
 Notice the last two fields are not about the gym's members — they're about **your relationship with the gym as your customer**, once this product is offered to multiple gyms. That's a deliberate, useful distinction:
 
@@ -62,14 +62,14 @@ Nothing else about those modules' business rules changes. A Lead is still a Lead
 
 ```text
 Today (v1, single org):
-  Organization: "FitZone Aurangabad" (id = 1)
+  Organization: "Example Gym Aurangabad" (id = 1)
   All customers, leads, invoices carry organization_id = 1
   The UI never shows an org picker — there's only ever one, selected
   automatically at app startup.
 
 Later (if you sell this to a second gym on the same install, or move
 to a hosted multi-tenant version):
-  Organization: "FitZone Aurangabad" (id = 1)
+  Organization: "Example Gym Aurangabad" (id = 1)
   Organization: "PowerHouse Nagpur" (id = 2)
 
   Rahul Sharma (customer of org 1) and a different Rahul Sharma

@@ -14,7 +14,10 @@ export function TenancyCard({ org }: { org: OrganizationProfile }): React.JSX.El
   const statusMeta = ORG_STATUS_META[org.status]
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
+    <div
+      className="crm-gradient-border flex flex-col gap-4 rounded-lg border border-border bg-card p-5"
+      style={{ '--gradient-start': 'var(--violet)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+    >
       <div className="flex items-center gap-2.5">
         <span className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Database className="size-4" />

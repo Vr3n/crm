@@ -561,7 +561,7 @@ export function completeFollowUp(input: CompleteFollowUpInput): void {
   if (followup.completedAt) return
 
   withTransaction(() => {
-    followupRepo.complete(organizationId, followup.id, requireSession().userId)
+    followupRepo.complete(organizationId, followup.id, requireSession().userId, input.notes)
   })
 }
 

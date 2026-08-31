@@ -50,7 +50,8 @@ export function mapFollowUpsToEntries(followUps: FollowUp[]): TimelineEntry[] {
       icon: CheckCircle2,
       iconTone: 'bg-success/15 text-success',
       badge: { label: 'Done', variant: 'success' },
-      meta: f.extensionReason ? `Extended: ${f.extensionReason}` : undefined
+      meta: f.extensionReason ? `Extended: ${f.extensionReason}` : undefined,
+      description: f.notes || undefined
     })
   }
 

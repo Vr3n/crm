@@ -120,7 +120,14 @@ export function FollowUpDialog({
             <form.Field
               name="due"
               validators={{
-                onChange: ({ value }) => (value ? undefined : 'Pick a due date and time')
+                onChange: ({ value }) => {
+                  if (!value) return 'Pick a due date and time'
+                  const d = new Date(value)
+                  if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) {
+                    return 'Follow-up date must be in the future'
+                  }
+                  return undefined
+                }
               }}
             >
               {(field) => (
@@ -135,7 +142,14 @@ export function FollowUpDialog({
                       Due <span className="text-destructive">*</span>
                     </>
                   }
-                  validate={(v) => (v ? undefined : 'Pick a due date and time')}
+                  validate={(v) => {
+                    if (!v) return 'Pick a due date and time'
+                    const d = new Date(v)
+                    if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) {
+                      return 'Follow-up date must be in the future'
+                    }
+                    return undefined
+                  }}
                   completeWhen={(v) => Boolean(v)}
                 >
                   {({ id, value, invalid, describedBy, onChange }) => (

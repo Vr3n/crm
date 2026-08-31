@@ -89,7 +89,10 @@ export function FollowUpPanel({ lead }: { lead: { followUps: FollowUp[] } }): Re
 
   if (lead.followUps.length === 0) {
     return (
-      <Card>
+    <Card
+      className="crm-gradient-border"
+      style={{ '--gradient-start': 'var(--violet)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+    >
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-base">
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">

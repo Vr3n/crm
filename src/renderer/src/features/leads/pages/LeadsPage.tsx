@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,7 +14,6 @@ import { LeadFilters as Filters } from '../components/lead-filters'
 import { LeadMetrics } from '../components/lead-metrics'
 import { LeadSelectionToolbar } from '../components/lead-selection-toolbar'
 import { LeadTable } from '../components/lead-table'
-import { LeadBoard } from '../components/lead-board'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
 import { SOURCES } from '../constants'
@@ -88,7 +86,7 @@ export function LeadsPage(): React.JSX.Element {
   const deleteLeads = useDeleteLeads()
   const bulkMove = useBulkMoveStage()
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS)
-  const [view, setView] = useState<'table' | 'board'>('table')
+
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [newOpen, setNewOpen] = useState(false)
   const [action, setAction] = useState<Action>(null)
@@ -137,11 +135,6 @@ export function LeadsPage(): React.JSX.Element {
     }
     return STAGES.filter((s) => shared.has(s.key))
   }, [selectedLeads])
-
-  function changeView(v: string): void {
-    setView(v as 'table' | 'board')
-    setSelected(new Set())
-  }
 
   function openLead(lead: Lead): void {
     navigate(`/leads/${lead.id}`, { state: { from: '/leads' } })
@@ -245,7 +238,7 @@ export function LeadsPage(): React.JSX.Element {
             />
           </CardContent>
         </Card>
-      ) : view === 'table' ? (
+      ) : (
         <Card className="gap-0 py-0">
           <CardContent className="flex flex-col gap-3 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
@@ -274,16 +267,6 @@ export function LeadsPage(): React.JSX.Element {
                   )}
                 </div>
               )}
-              <Tabs value={view} onValueChange={changeView}>
-                <TabsList className="h-7">
-                  <TabsTrigger value="table" className="text-xs">
-                    Table
-                  </TabsTrigger>
-                  <TabsTrigger value="board" className="text-xs">
-                    Board
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
             </div>
             <LeadTable
               leads={filtered}
@@ -296,14 +279,6 @@ export function LeadsPage(): React.JSX.Element {
             />
           </CardContent>
         </Card>
-      ) : (
-        <LeadBoard
-          leads={filtered}
-          onOpen={openLead}
-          onStageChange={onStageChange}
-          onEdit={setEditing}
-          canEditLead={canEditLead}
-        />
       )}
 
       {newOpen && (

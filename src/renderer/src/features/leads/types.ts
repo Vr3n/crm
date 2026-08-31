@@ -83,6 +83,7 @@ export interface FollowUp {
   title: string
   dueAt: string
   extensionReason?: string
+  notes?: string
   completedAt?: string
   cancelledAt?: string
 }

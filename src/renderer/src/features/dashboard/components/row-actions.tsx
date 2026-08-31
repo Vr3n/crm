@@ -11,11 +11,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export function RowActions({
   memberName,
   onView,
-  onMakePayment
+  onMakePayment,
+  onFollowUp
 }: {
   memberName: string
   onView?: () => void
   onMakePayment?: () => void
+  onFollowUp?: () => void
 }): React.JSX.Element {
   return (
     <div className="flex items-center justify-end gap-2">
@@ -69,9 +71,11 @@ export function RowActions({
             className="text-secondary hover:bg-secondary/10 hover:text-secondary"
             aria-label={`Follow up on ${memberName}`}
             onClick={() =>
-              toast('Follow-up scheduling', {
-                description: 'Member follow-ups arrive with the Members module (Module 02).'
-              })
+              onFollowUp
+                ? onFollowUp()
+                : toast('Follow-up scheduling', {
+                    description: 'Member follow-ups arrive with the Members module (Module 02).'
+                  })
             }
           >
             <Bell className="size-4" />

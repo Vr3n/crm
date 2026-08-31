@@ -16,10 +16,10 @@ no data, no query wiring). This pass replaces it with a work-first dashboard:
 - **Quick actions** — an outline-button row: **New Lead** (opens the same add-lead dialog as
   the Leads page) plus Schedule Follow-Up / Schedule Activity / New Membership Sale, which
   toast an honest "upcoming module" notice rather than faking a flow.
-- **Five tables in three rows** —
+- **Six cards in three rows** —
   - **Row 1:** Upcoming Followups and Recent Leads (live data from the leads/followups stores).
   - **Row 2:** Membership Expirations and Payments Due (member-facing, mock data).
-  - **Row 3:** Leads Going Cold (full-width, live from the leads store).
+  - **Row 3:** Leads Going Cold + Follow-ups Timeline (50/50 split, live from the leads store).
 - **KPI cards removed** — no fabricated numbers.
 
 All five dashboard tables reuse the shared `DataTable` component with context-based
@@ -58,6 +58,7 @@ Query hooks.
 | `api.ts`       | Async facade with a `delay(120)` latency seam — the future SQLite/IPC drop-in point.                                 |
 | `queries.ts`   | `useUpcomingExpirations()`, `usePaymentsDue()` with a `dashboardKeys` factory.                                       |
 | `format.ts`    | `formatMoney`, `daysUntil`, `daysSince`.                                                                             |
+| `follow-up-timeline.ts` | Pure helpers: `filterOpenFollowUps` (open-only, lead/date-range filter, ascending sort) and `mapOpenFollowUpsToEntries` (TimelineEntry mapping). |
 
 The member-facing rows are **mock** because Members/Memberships/Payments are Modules 02–05,
 not yet built. The **Leads Turning Cold** table reads live data from `features/leads`
@@ -84,6 +85,11 @@ not yet built. The **Leads Turning Cold** table reads live data from `features/l
   leads with no follow-up/activity for `>= COLD_LEAD_DAYS` (last-touch = newest activity or
   follow-up timestamp, `createdAt` if never touched), sorted longest-silence-first; Lead ·
   Contact · Last follow-up/activity.
+- **`follow-ups-timeline-card.tsx`** — half-width card that sits beside Leads Going Cold.
+  Shows open follow-ups as a `Timeline`, filterable by lead (`Select` dropdown, defaults to
+  "All leads") and date range (`DateRangePicker`, defaults to "from today"). Data from
+  `useFollowUpRows()` + `useLeads()`. Includes a "New follow-up" button that opens
+  `FollowUpDialog` (pre-selecting the chosen lead, or global picker when "All leads").
 - **`card-pagination-footer.tsx`** — shared helper that reads pagination state from
   `DataTableContext` and renders it inside a `CardFooter`, used by all four dashboard card
   tables.
@@ -92,7 +98,8 @@ not yet built. The **Leads Turning Cold** table reads live data from `features/l
 ## Page & routing
 
 - **`features/dashboard/pages/DashboardPage.tsx`** — composes header, actions, the two-column
-  member tables, the full-width cold-leads table, and the `NewLeadDialog` mount.
+  member tables, the two-column cold-leads + follow-ups-timeline row, and the
+  `NewLeadDialog` mount.
 - **`AppRoutes.tsx`** — the index route now renders `DashboardPage` (was
   `pages/dashboard.tsx`, which was deleted). No nav change (Dashboard is already the `command`
   group's sole item).

@@ -283,17 +283,7 @@ describe('LeadsPage selection toolbar', () => {
     expect(screen.queryByRole('button', { name: 'Schedule activity' })).not.toBeInTheDocument()
   })
 
-  it('switching to Board clears the selection', async () => {
-    const user = userEvent.setup()
-    renderPage()
 
-    await screen.findByText('Rahul Mehta')
-    await user.click(screen.getByRole('checkbox', { name: 'Select all leads' }))
-    expect(screen.getByText('2 selected')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: 'Board' }))
-    expect(screen.queryByText('2 selected')).not.toBeInTheDocument()
-  })
 })
 
 /**
@@ -335,16 +325,6 @@ describe('LeadsPage edit action', () => {
     await screen.findByText('Rahul Mehta')
     expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument()
-  })
-
-  it('shows the edit action in the board card footer', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await screen.findByText('Rahul Mehta')
-    await user.click(screen.getByRole('tab', { name: 'Board' }))
-    expect(screen.getByRole('button', { name: 'Edit Rahul Mehta' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Edit Bina Sen' })).toBeInTheDocument()
   })
 
   it('opens the edit dialog prefilled and saves changes', async () => {

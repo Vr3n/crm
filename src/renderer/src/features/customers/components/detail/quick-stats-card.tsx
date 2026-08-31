@@ -42,9 +42,10 @@ export function QuickStatsCard({
   return (
     <section
       className={cn(
-        'flex flex-col rounded-xl border bg-card p-5 shadow-sm',
+        'crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm',
         className
       )}
+      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
     >
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Quick stats

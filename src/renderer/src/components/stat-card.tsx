@@ -1,6 +1,14 @@
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+const TONE_GRADIENT: Record<string, { start: string; end: string } | null> = {
+  default: null,
+  primary: { start: 'var(--primary)', end: 'var(--primary)' },
+  success: { start: 'var(--success)', end: 'var(--primary)' },
+  warning: { start: 'var(--warning)', end: 'var(--primary)' },
+  destructive: { start: 'var(--destructive)', end: 'var(--warning)' }
+}
+
 /**
  * KPI / stat tile. Money values render in mono + tabular-nums so columns scan on
  * a single edge (visual-density rule). `tone` maps to the semantic money/status
@@ -26,9 +34,13 @@ export function StatCard({
     warning: 'text-warning',
     destructive: 'text-destructive'
   }[tone]
+  const gradient = TONE_GRADIENT[tone]
 
   return (
-    <div className="flex flex-col justify-between gap-3 rounded-lg border bg-card p-4">
+    <div
+      className={cn('crm-gradient-border flex flex-col justify-between gap-3 rounded-lg border bg-card p-4')}
+      style={gradient ? { '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties : undefined}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
         <Icon className="size-4 shrink-0 text-muted-foreground/60" />

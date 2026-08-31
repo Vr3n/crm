@@ -946,13 +946,14 @@ describe('follow-ups', () => {
     const future = new Date(Date.now() + 86_400_000).toISOString()
 
     const { followupId } = scheduleFollowUp({ leadId, title: 'Call Rahul', dueAt: future })
-    completeFollowUp({ followupId })
+    completeFollowUp({ followupId, notes: 'Spoke — will decide Friday' })
     expect(() => completeFollowUp({ followupId })).not.toThrow() // idempotent
 
     const followup = getDb()
-      .prepare('SELECT completed_at FROM lead_followups WHERE id = ?')
-      .get(followupId) as { completed_at: string | null }
+      .prepare('SELECT completed_at, notes FROM lead_followups WHERE id = ?')
+      .get(followupId) as { completed_at: string | null; notes: string | null }
     expect(followup.completed_at).not.toBeNull()
+    expect(followup.notes).toBe('Spoke — will decide Friday')
   })
 
   it('rejects a due date in the past', () => {

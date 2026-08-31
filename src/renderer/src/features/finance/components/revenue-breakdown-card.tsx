@@ -1,7 +1,14 @@
 import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatMoney } from '@/features/dashboard/format'
 import type { RevenueRow } from '../build'
+
+const TONE_GRADIENT: Record<string, { start: string; end: string }> = {
+  primary: { start: 'var(--primary)', end: 'var(--primary)' },
+  success: { start: 'var(--success)', end: 'var(--primary)' },
+  destructive: { start: 'var(--destructive)', end: 'var(--warning)' }
+}
 
 /**
  * Revenue breakdown (Module 09 §63) — a shared card used for "by plan" and "by
@@ -26,9 +33,13 @@ export function RevenueBreakdownCard({
       : tone === 'destructive'
         ? 'bg-destructive/10 text-destructive'
         : 'bg-primary/10 text-primary'
+  const gradient = TONE_GRADIENT[tone]
 
   return (
-    <Card>
+    <Card
+      className="crm-gradient-border"
+      style={{ '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
           <span className={`flex size-9 items-center justify-center rounded-md ${toneClass}`}>

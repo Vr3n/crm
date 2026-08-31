@@ -229,7 +229,16 @@ function buildColumns(
         ),
         cell: ({ row }) => (
           <div className="min-w-0 max-w-56">
-            <p className="truncate text-sm font-medium">{row.original.title}</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="truncate text-sm font-medium">{row.original.title}</p>
+              </TooltipTrigger>
+              {row.original.notes && (
+                <TooltipContent side="top" className="max-w-xs">
+                  {row.original.notes}
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
         ),
         sortFn: 'alphanumeric'

@@ -11,7 +11,10 @@ import type { Lead } from '../../types'
 export function StageHistory({ lead }: { lead: Lead }): React.JSX.Element {
   const entries = [...lead.stageHistory].sort((a, b) => a.at.localeCompare(b.at))
   return (
-    <Card>
+    <Card
+      className="crm-gradient-border"
+      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Route className="size-4 text-primary" />

@@ -13,10 +13,10 @@ import { getSession, setSession } from '../../src/main/auth/session'
 setupTestDb()
 
 const VALID = {
-  name: 'FitZone Aurangabad',
+  name: 'Example Gym Aurangabad',
   mobileNumber: '+919876543210',
   ownerFullName: 'Neha',
-  ownerEmail: 'neha@fitzone.com',
+  ownerEmail: 'neha@example.com',
   ownerPassword: 'supersecret123'
 }
 

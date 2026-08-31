@@ -49,6 +49,7 @@ export function mapLeadRow(row: LeadListRow): Lead {
       title: f.title,
       dueAt: f.dueAt,
       extensionReason: f.extensionReason ?? undefined,
+      notes: f.notes ?? undefined,
       completedAt: f.completedAt ?? undefined,
       cancelledAt: f.cancelledAt ?? undefined
     })),

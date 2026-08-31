@@ -21,7 +21,10 @@ export function IdentityCard({
   status: Parameters<typeof CustomerStatusBadge>[0]['status']
 }): React.JSX.Element {
   return (
-    <section className="flex flex-col rounded-xl border bg-card p-5 shadow-sm">
+    <section
+      className="crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm"
+      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
