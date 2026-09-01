@@ -190,17 +190,10 @@ export function LeadsPage(): React.JSX.Element {
         title="Leads"
         description={`${session.organizationName} · sales pipeline`}
         actions={
-          <>
-            <ExportExcelButton
-              columns={LEAD_EXPORT_COLUMNS}
-              rows={leadExportData}
-              sheetName="Leads"
-            />
-            <Button onClick={() => setNewOpen(true)}>
-              <Plus />
-              New lead
-            </Button>
-          </>
+          <Button onClick={() => setNewOpen(true)}>
+            <Plus />
+            New lead
+          </Button>
         }
       />
 
@@ -242,6 +235,11 @@ export function LeadsPage(): React.JSX.Element {
         <Card className="gap-0 py-0">
           <CardContent className="flex flex-col gap-3 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
+              <ExportExcelButton
+                columns={LEAD_EXPORT_COLUMNS}
+                rows={leadExportData}
+                sheetName="Leads"
+              />
               {selected.size > 0 ? (
                 <LeadSelectionToolbar
                   count={selected.size}

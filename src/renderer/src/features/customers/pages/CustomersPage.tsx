@@ -11,6 +11,20 @@ import { CustomerTable } from '../components/customer-table'
 import { filterCustomers, sortCustomerRows } from '../filters'
 import { useCustomers } from '../queries'
 import type { CustomerFilters as CustomerFilterState } from '../types'
+import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import type { ExportColumn } from '@/features/export/api'
+
+const CUSTOMER_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Name', key: 'name', format: 'text' },
+  { header: 'ID', key: 'id', format: 'text' },
+  { header: 'Phone', key: 'phone', format: 'text' },
+  { header: 'Email', key: 'email', format: 'text' },
+  { header: 'Status', key: 'status', format: 'text' },
+  { header: 'Plan', key: 'plan', format: 'text' },
+  { header: 'Expires', key: 'expires', format: 'date' },
+  { header: 'Joined', key: 'joined', format: 'date' },
+  { header: 'Owner', key: 'owner', format: 'text' }
+]
 
 const DEFAULT_FILTERS: CustomerFilterState = {
   search: '',
@@ -38,6 +52,22 @@ export function CustomersPage(): React.JSX.Element {
     return sortCustomerRows(filterCustomers(derived, filters))
   }, [data, filters, now])
 
+  const customerExportData = useMemo(
+    () =>
+      rows.map((r) => ({
+        name: r.customer.name,
+        id: r.customer.id,
+        phone: r.customer.phone ?? '',
+        email: r.customer.email ?? '',
+        status: r.status,
+        plan: r.currentMembership?.plan ?? '',
+        expires: r.nextExpiry ?? '',
+        joined: r.customer.joinedAt,
+        owner: r.customer.ownerName ?? 'Unassigned'
+      })),
+    [rows]
+  )
+
   function openCustomer(customerId: string): void {
     navigate(`/customers/${customerId}`, { state: { from: '/customers' } })
   }
@@ -58,7 +88,14 @@ export function CustomersPage(): React.JSX.Element {
       </Card>
 
       <Card className="gap-0 py-0">
-        <CardContent className="px-3 py-3">
+        <CardContent className="flex flex-col gap-3 px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <ExportExcelButton
+              columns={CUSTOMER_EXPORT_COLUMNS}
+              rows={customerExportData}
+              sheetName="Customers"
+            />
+          </div>
           <CustomerTable rows={rows} now={now} isLoading={isLoading} onOpen={openCustomer} />
         </CardContent>
       </Card>

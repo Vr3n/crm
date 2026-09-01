@@ -9,21 +9,6 @@ import { EXPIRING_SOON_DAYS } from '../constants'
 import { daysUntil, formatMonthYear, formatShortDate } from '../format'
 import type { CustomerRow } from '../types'
 import { CustomerStatusBadge } from './status-badge'
-import { ExportExcelButton } from '@/features/export/components/export-excel-button'
-import type { ExportColumn } from '@/features/export/api'
-
-const EXPORT_COLUMNS: ExportColumn[] = [
-  { header: 'Name', key: 'name', format: 'text' },
-  { header: 'ID', key: 'id', format: 'text' },
-  { header: 'Phone', key: 'phone', format: 'text' },
-  { header: 'Email', key: 'email', format: 'text' },
-  { header: 'Status', key: 'status', format: 'text' },
-  { header: 'Plan', key: 'plan', format: 'text' },
-  { header: 'Expires', key: 'expires', format: 'date' },
-  { header: 'Joined', key: 'joined', format: 'date' },
-  { header: 'Owner', key: 'owner', format: 'text' }
-]
-
 const helper = createColumnHelper<DashboardFeatures, CustomerRow>()
 
 function ExpiresCell({ row, now }: { row: CustomerRow; now: number }): React.JSX.Element {
@@ -167,22 +152,6 @@ export function CustomerTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(now), [now])
 
-  const exportData = useMemo(
-    () =>
-      rows.map((r) => ({
-        name: r.customer.name,
-        id: r.customer.id,
-        phone: r.customer.phone ?? '',
-        email: r.customer.email ?? '',
-        status: r.status,
-        plan: r.currentMembership?.plan ?? '',
-        expires: r.nextExpiry ?? '',
-        joined: r.customer.joinedAt,
-        owner: r.customer.ownerName ?? 'Unassigned'
-      })),
-    [rows]
-  )
-
     return (
     <DataTable
       columns={columns}
@@ -198,13 +167,6 @@ export function CustomerTable({
       emptyTitle="No customers match"
       emptyDescription="Try widening the filters, or convert a won lead into a customer."
       headerTone="primary"
-      toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Customers"
-        />
-      }
     />
   )
 }
