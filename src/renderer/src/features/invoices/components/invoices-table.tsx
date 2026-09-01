@@ -34,7 +34,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Plan', key: 'plan', format: 'text' },
   { header: 'Outstanding', key: 'outstanding', format: 'money' },
-  { header: 'Amount', key: 'total', format: 'money' },
+  { header: 'Final Amount', key: 'total', format: 'money' },
   { header: 'Status', key: 'status', format: 'text' }
 ]
 import { SortButton } from '@/features/dashboard/components/sort-button'

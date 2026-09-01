@@ -16,7 +16,6 @@ import type { ExportColumn } from '@/features/export/api'
 
 const CUSTOMER_EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Name', key: 'name', format: 'text' },
-  { header: 'ID', key: 'id', format: 'text' },
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Email', key: 'email', format: 'text' },
   { header: 'Status', key: 'status', format: 'text' },

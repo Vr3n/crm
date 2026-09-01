@@ -256,9 +256,9 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
     const existing = invoiceRepo.getByNumber(organizationId, invoiceNumber)
     if (existing) throw new InvoiceNumberCollisionError()
 
-    const now = new Date().toISOString()
+    const finalizedAt = new Date().toISOString()
     invoiceRepo.updateStatus(organizationId, input.invoiceId, 'OPEN', {
-      finalizedAt: now,
+      finalizedAt,
       finalizedBy: userId
     })
 
@@ -271,7 +271,7 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
 
     // We need to update the number field directly since updateStatus doesn't support it
     // For now, we'll use the number as-is from the sequence
-    return mapInvoiceToRow({ ...invoice, number: invoiceNumber, status: 'OPEN', finalizedAt: now, finalizedBy: userId })
+    return mapInvoiceToRow({ ...invoice, number: invoiceNumber, status: 'OPEN', finalizedAt: now.toISOString(), finalizedBy: userId })
   })
 }
 

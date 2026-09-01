@@ -81,6 +81,10 @@ function buildWorkbook(input: {
         const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
         return isNaN(num) ? null : num
       }
+      if (col.format === 'isodate' || col.format === 'datetime') {
+        const d = new Date(String(raw))
+        return Number.isNaN(d.getTime()) ? null : d
+      }
       return raw
     })
 
@@ -91,7 +95,7 @@ function buildWorkbook(input: {
       cell.alignment = { vertical: 'middle', horizontal: 'left' }
 
       if (col.format === 'money') cell.numFmt = CURRENCY_FORMATS[currency]
-      else if (col.format === 'date') cell.numFmt = DATE
+      else if (col.format === 'date' || col.format === 'isodate') cell.numFmt = DATE
       else if (col.format === 'datetime') cell.numFmt = DATETIME
       else if (col.format === 'number') cell.numFmt = NUMBER
 
@@ -184,7 +188,28 @@ describe('exportTableToExcel workbook generation', () => {
     expect(cell.numFmt).toBe('dd MMM yyyy')
   })
 
-  it('applies datetime format', async () => {
+  it('applies isodate format and converts ISO string to Date', async () => {
+    const buffer = await buildWorkbook({
+      sheetName: 'PlanDuration',
+      columns: [
+        { header: 'Start', key: 'start', format: 'isodate' },
+        { header: 'End', key: 'end', format: 'isodate' }
+      ],
+      rows: [{ start: '2026-01-15', end: '2026-02-15' }]
+    })
+
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buffer)
+    const ws = wb.getWorksheet('PlanDuration')
+    const startCell = ws.getCell('A2')
+    const endCell = ws.getCell('B2')
+    expect(startCell.value).toBeInstanceOf(Date)
+    expect(startCell.numFmt).toBe('dd MMM yyyy')
+    expect(endCell.value).toBeInstanceOf(Date)
+    expect(endCell.numFmt).toBe('dd MMM yyyy')
+  })
+
+  it('applies datetime format and converts ISO string to Date', async () => {
     const buffer = await buildWorkbook({
       sheetName: 'Audit',
       columns: [{ header: 'Timestamp', key: 'ts', format: 'datetime' }],
@@ -194,7 +219,9 @@ describe('exportTableToExcel workbook generation', () => {
     const wb = new ExcelJS.Workbook()
     await wb.xlsx.load(buffer)
     const ws = wb.getWorksheet('Audit')
-    expect(ws.getCell('A2').numFmt).toBe('dd MMM yyyy, hh:mm AM/PM')
+    const cell = ws.getCell('A2')
+    expect(cell.value).toBeInstanceOf(Date)
+    expect(cell.numFmt).toBe('dd MMM yyyy, hh:mm AM/PM')
   })
 
   it('applies number format', async () => {

@@ -94,6 +94,7 @@ interface FollowupRow {
   completed_by: number | null
   cancelled_at: string | null
   cancelled_by: number | null
+  cancelled_reason: string | null
   created_by: number
   created_at: string
 }
@@ -678,9 +679,9 @@ export const leadRepo = {
         phone: string
         email: string | null
         sourceId: number
-        sourceName: string
+        sourceName: string | null
         stageId: number
-        stageName: string
+        stageName: string | null
         isWon: boolean
         isLost: boolean
         ownerUserId: number | null
@@ -720,8 +721,8 @@ export const leadRepo = {
         sourceName: leadSources.name,
         stageId: leads.current_stage_id,
         stageName: leadStages.name,
-        isWon: leadStages.is_won,
-        isLost: leadStages.is_lost,
+        isWon: sql<boolean>`coalesce(${leadStages.is_won}, 0)`,
+        isLost: sql<boolean>`coalesce(${leadStages.is_lost}, 0)`,
         ownerUserId: leads.owner_user_id,
         ownerName: users.full_name,
         customerId: leads.customer_id,
