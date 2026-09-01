@@ -287,8 +287,6 @@ describe('LeadsPage selection toolbar', () => {
     expect(screen.queryByRole('button', { name: 'Schedule follow-up' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Schedule activity' })).not.toBeInTheDocument()
   })
-
-
 })
 
 /**

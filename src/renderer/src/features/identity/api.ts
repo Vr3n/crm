@@ -16,14 +16,10 @@ export const api = {
     window.api.identityRead.organization() as unknown as Promise<OrganizationProfile>,
   staff: (): Promise<StaffMember[]> =>
     window.api.identityRead.staff() as unknown as Promise<StaffMember[]>,
-  roles: (): Promise<Role[]> =>
-    window.api.identityRead.roles() as unknown as Promise<Role[]>,
+  roles: (): Promise<Role[]> => window.api.identityRead.roles() as unknown as Promise<Role[]>,
   createStaff: (input: CreateStaffInput): Promise<StaffMember> =>
     window.api.identity.createStaff(input) as unknown as Promise<StaffMember>,
-  updateStaff: (_input: Record<string, unknown>): Promise<StaffMember> =>
-    Promise.resolve({} as StaffMember),
-  updateRole: (_input: Record<string, unknown>): Promise<Role> =>
-    Promise.resolve({} as Role),
-  updateOrganization: (_input: Record<string, unknown>): Promise<OrganizationProfile> =>
-    Promise.resolve({} as OrganizationProfile)
+  updateStaff: (_input: Record<string, unknown>): Promise<StaffMember> => Promise.resolve({} as StaffMember),
+  updateRole: (_input: Record<string, unknown>): Promise<Role> => Promise.resolve({} as Role),
+  updateOrganization: (_input: Record<string, unknown>): Promise<OrganizationProfile> => Promise.resolve({} as OrganizationProfile)
 }

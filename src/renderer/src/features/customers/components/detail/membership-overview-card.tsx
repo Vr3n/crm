@@ -49,7 +49,12 @@ export function MembershipOverviewCard({
         hero ? 'p-6' : 'p-5',
         className
       )}
-      style={{ '--gradient-start': 'var(--success)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--success)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -73,7 +78,10 @@ export function MembershipOverviewCard({
       <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t pt-3">
         <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           <span>
-            Base <span className="font-mono tabular-nums text-foreground">{formatMinor(m.priceMinor, currency)}</span>
+            Base{' '}
+            <span className="font-mono tabular-nums text-foreground">
+              {formatMinor(m.priceMinor, currency)}
+            </span>
           </span>
           <span>
             Discount{' '}
@@ -91,12 +99,7 @@ export function MembershipOverviewCard({
           ) : null}
         </div>
         <div className="text-right">
-          <p
-            className={cn(
-              'font-mono font-semibold tabular-nums',
-              hero ? 'text-2xl' : 'text-xl'
-            )}
-          >
+          <p className={cn('font-mono font-semibold tabular-nums', hero ? 'text-2xl' : 'text-xl')}>
             {formatMinor(paid, currency)}
           </p>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Final price</p>

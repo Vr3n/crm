@@ -152,7 +152,7 @@ export function CustomerTable({
 }): React.JSX.Element {
   const columns = useMemo(() => buildColumns(now), [now])
 
-    return (
+  return (
     <DataTable
       columns={columns}
       data={rows}

@@ -126,13 +126,7 @@ export function RolesTable({
       emptyTitle="No roles"
       emptyDescription="Roles shipped with the organization will appear here."
       headerTone="primary"
-      toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Roles"
-        />
-      }
+      toolbar={<ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Roles" />}
     />
   )
 }

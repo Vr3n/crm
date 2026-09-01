@@ -136,11 +136,8 @@ export const organizationRepo = {
   },
 
   findById(id: number): Organization | null {
-    const row = getDrizzle()
-      .select()
-      .from(organizations)
-      .where(eq(organizations.id, id))
-      .get() as OrgRow | undefined
+    const row = getDrizzle().select().from(organizations).where(eq(organizations.id, id)).get() as
+      OrgRow | undefined
     return row ? mapOrg(row) : null
   },
 
@@ -154,10 +151,7 @@ export const organizationRepo = {
   },
 
   count(): number {
-    const row = getDrizzle()
-      .select({ n: count() })
-      .from(organizations)
-      .get()
+    const row = getDrizzle().select({ n: count() }).from(organizations).get()
     return row?.n ?? 0
   },
 
@@ -214,11 +208,8 @@ export const userRepo = {
   },
 
   findById(id: number): User | null {
-    const row = getDrizzle()
-      .select()
-      .from(users)
-      .where(eq(users.id, id))
-      .get() as UserRow | undefined
+    const row = getDrizzle().select().from(users).where(eq(users.id, id)).get() as
+      UserRow | undefined
     return row ? mapUser(row) : null
   }
 }

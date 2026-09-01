@@ -28,13 +28,17 @@ describe('PaymentAllocationService', () => {
       const allocations = [{ amountMinor: 50000 }]
       const refunds = [{ amountMinor: 10000 }]
       const creditAllocations = [{ amountMinor: 30000 }]
-      expect(PaymentAllocationService.calculateNetAllocated(allocations, refunds, creditAllocations)).toBe(70000)
+      expect(
+        PaymentAllocationService.calculateNetAllocated(allocations, refunds, creditAllocations)
+      ).toBe(70000)
     })
 
     it('handles credit allocations without refunds', () => {
       const allocations = [{ amountMinor: 50000 }]
       const creditAllocations = [{ amountMinor: 50000 }]
-      expect(PaymentAllocationService.calculateNetAllocated(allocations, [], creditAllocations)).toBe(100000)
+      expect(
+        PaymentAllocationService.calculateNetAllocated(allocations, [], creditAllocations)
+      ).toBe(100000)
     })
 
     it('defaults credit allocations to empty array', () => {
@@ -83,46 +87,26 @@ describe('PaymentAllocationService', () => {
   describe('validateAllocation', () => {
     it('passes when allocation is valid', () => {
       expect(() =>
-        PaymentAllocationService.validateAllocation(
-          100000,
-          [],
-          50000,
-          100000
-        )
+        PaymentAllocationService.validateAllocation(100000, [], 50000, 100000)
       ).not.toThrow()
     })
 
     it('throws PaymentOverAllocatedError when exceeds payment', () => {
-      expect(() =>
-        PaymentAllocationService.validateAllocation(
-          50000,
-          [],
-          60000,
-          100000
-        )
-      ).toThrow(PaymentOverAllocatedError)
+      expect(() => PaymentAllocationService.validateAllocation(50000, [], 60000, 100000)).toThrow(
+        PaymentOverAllocatedError
+      )
     })
 
     it('throws PaymentOverAllocatedError when existing + new exceeds payment', () => {
       expect(() =>
-        PaymentAllocationService.validateAllocation(
-          100000,
-          [{ amountMinor: 80000 }],
-          30000,
-          100000
-        )
+        PaymentAllocationService.validateAllocation(100000, [{ amountMinor: 80000 }], 30000, 100000)
       ).toThrow(PaymentOverAllocatedError)
     })
 
     it('throws PaymentOverAllocatedError when exceeds invoice outstanding', () => {
-      expect(() =>
-        PaymentAllocationService.validateAllocation(
-          100000,
-          [],
-          80000,
-          50000
-        )
-      ).toThrow(PaymentOverAllocatedError)
+      expect(() => PaymentAllocationService.validateAllocation(100000, [], 80000, 50000)).toThrow(
+        PaymentOverAllocatedError
+      )
     })
   })
 
@@ -132,7 +116,9 @@ describe('PaymentAllocationService', () => {
     })
 
     it('throws RefundExceedsPaymentError when exceeds net paid', () => {
-      expect(() => PaymentAllocationService.validateRefund(50000, 100000)).toThrow(RefundExceedsPaymentError)
+      expect(() => PaymentAllocationService.validateRefund(50000, 100000)).toThrow(
+        RefundExceedsPaymentError
+      )
     })
   })
 
@@ -142,7 +128,9 @@ describe('PaymentAllocationService', () => {
     })
 
     it('throws CreditExceedsBalanceError when exceeds remaining', () => {
-      expect(() => PaymentAllocationService.validateCreditApplication(50000, 100000)).toThrow(CreditExceedsBalanceError)
+      expect(() => PaymentAllocationService.validateCreditApplication(50000, 100000)).toThrow(
+        CreditExceedsBalanceError
+      )
     })
   })
 

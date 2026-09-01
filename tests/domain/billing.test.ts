@@ -38,8 +38,20 @@ describe('InvoiceCalculationService', () => {
   describe('calculateDraftTotals', () => {
     it('sums line values correctly (no float drift)', () => {
       const lines = [
-        { unitPriceMinor: 100000, quantity: 1, discountMinor: 0, taxAmountMinor: 18000, lineTotalMinor: 118000 },
-        { unitPriceMinor: 50000, quantity: 2, discountMinor: 5000, taxAmountMinor: 17100, lineTotalMinor: 117100 }
+        {
+          unitPriceMinor: 100000,
+          quantity: 1,
+          discountMinor: 0,
+          taxAmountMinor: 18000,
+          lineTotalMinor: 118000
+        },
+        {
+          unitPriceMinor: 50000,
+          quantity: 2,
+          discountMinor: 5000,
+          taxAmountMinor: 17100,
+          lineTotalMinor: 117100
+        }
       ]
       const totals = InvoiceCalculationService.calculateDraftTotals(lines)
       expect(totals.subtotalMinor).toBe(195000) // (100000*1 - 0) + (50000*2 - 5000)
@@ -54,7 +66,13 @@ describe('InvoiceCalculationService', () => {
 
     it('handles single line', () => {
       const lines = [
-        { unitPriceMinor: 200000, quantity: 1, discountMinor: 10000, taxAmountMinor: 34200, lineTotalMinor: 224200 }
+        {
+          unitPriceMinor: 200000,
+          quantity: 1,
+          discountMinor: 10000,
+          taxAmountMinor: 34200,
+          lineTotalMinor: 224200
+        }
       ]
       const totals = InvoiceCalculationService.calculateDraftTotals(lines)
       expect(totals).toEqual({ subtotalMinor: 190000, taxMinor: 34200, totalMinor: 224200 })
@@ -64,7 +82,7 @@ describe('InvoiceCalculationService', () => {
 
 describe('deriveInvoicePrefix', () => {
   it('derives initials from multi-word org name', () => {
-    expect(deriveInvoicePrefix('Crown Vitality')).toBe('CRO')
+    expect(deriveInvoicePrefix('Crown Vitality')).toBe('CV')
   })
 
   it('derives single letter from single-word org name', () => {
@@ -88,7 +106,7 @@ describe('deriveInvoicePrefix', () => {
   })
 
   it('handles null explicit prefix', () => {
-    expect(deriveInvoicePrefix('Crown Vitality', null)).toBe('CRO')
+    expect(deriveInvoicePrefix('Crown Vitality', null)).toBe('CV')
   })
 })
 
@@ -120,9 +138,13 @@ describe('assertValidInvoiceTransition', () => {
   })
 
   it('rejects invalid transitions', () => {
-    expect(() => assertValidInvoiceTransition('DRAFT', 'PAID')).toThrow('Invalid invoice transition')
+    expect(() => assertValidInvoiceTransition('DRAFT', 'PAID')).toThrow(
+      'Invalid invoice transition'
+    )
     expect(() => assertValidInvoiceTransition('PAID', 'OPEN')).toThrow('Invalid invoice transition')
     expect(() => assertValidInvoiceTransition('VOID', 'OPEN')).toThrow('Invalid invoice transition')
-    expect(() => assertValidInvoiceTransition('UNCOLLECTIBLE', 'PAID')).toThrow('Invalid invoice transition')
+    expect(() => assertValidInvoiceTransition('UNCOLLECTIBLE', 'PAID')).toThrow(
+      'Invalid invoice transition'
+    )
   })
 })

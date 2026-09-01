@@ -60,7 +60,11 @@ export function CommandMenu({
               {group.items.map((item) => {
                 const Icon = item.icon
                 return (
-                  <CommandItem key={item.to} value={`${group.label ?? ''} ${item.label}`} onSelect={() => run(item)}>
+                  <CommandItem
+                    key={item.to}
+                    value={`${group.label ?? ''} ${item.label}`}
+                    onSelect={() => run(item)}
+                  >
                     <Icon className="size-4" />
                     <span>{item.label}</span>
                   </CommandItem>

@@ -66,10 +66,7 @@ import type {
   CreditRow,
   PaymentMethodRow
 } from '../shared/contracts/finance'
-import type {
-  CustomerIdRequest,
-  CustomerRowOutput
-} from '../shared/contracts/customers'
+import type { CustomerIdRequest, CustomerRowOutput } from '../shared/contracts/customers'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type {
   InvoiceIdRequest as InvoiceReadIdRequest,
@@ -259,17 +256,29 @@ const api = {
       call(IPC_CHANNELS.CATALOG_LIST_PLAN_VERSIONS, input),
     listPolicyLookups: (): Promise<PolicyLookupSet> =>
       call(IPC_CHANNELS.CATALOG_LIST_POLICY_LOOKUPS),
-    createFreezePolicy: (input: CreateFreezePolicyInput): Promise<PolicyLookupSet['freezePolicies'][number]> =>
+    createFreezePolicy: (
+      input: CreateFreezePolicyInput
+    ): Promise<PolicyLookupSet['freezePolicies'][number]> =>
       call(IPC_CHANNELS.CATALOG_CREATE_FREEZE_POLICY, input),
-    updateFreezePolicy: (input: UpdateFreezePolicyInput): Promise<PolicyLookupSet['freezePolicies'][number]> =>
+    updateFreezePolicy: (
+      input: UpdateFreezePolicyInput
+    ): Promise<PolicyLookupSet['freezePolicies'][number]> =>
       call(IPC_CHANNELS.CATALOG_UPDATE_FREEZE_POLICY, input),
-    createProrationPolicy: (input: CreateProrationPolicyInput): Promise<PolicyLookupSet['prorationPolicies'][number]> =>
+    createProrationPolicy: (
+      input: CreateProrationPolicyInput
+    ): Promise<PolicyLookupSet['prorationPolicies'][number]> =>
       call(IPC_CHANNELS.CATALOG_CREATE_PRORATION_POLICY, input),
-    updateProrationPolicy: (input: UpdateProrationPolicyInput): Promise<PolicyLookupSet['prorationPolicies'][number]> =>
+    updateProrationPolicy: (
+      input: UpdateProrationPolicyInput
+    ): Promise<PolicyLookupSet['prorationPolicies'][number]> =>
       call(IPC_CHANNELS.CATALOG_UPDATE_PRORATION_POLICY, input),
-    createCancellationPolicy: (input: CreateCancellationPolicyInput): Promise<PolicyLookupSet['cancellationPolicies'][number]> =>
+    createCancellationPolicy: (
+      input: CreateCancellationPolicyInput
+    ): Promise<PolicyLookupSet['cancellationPolicies'][number]> =>
       call(IPC_CHANNELS.CATALOG_CREATE_CANCELLATION_POLICY, input),
-    updateCancellationPolicy: (input: UpdateCancellationPolicyInput): Promise<PolicyLookupSet['cancellationPolicies'][number]> =>
+    updateCancellationPolicy: (
+      input: UpdateCancellationPolicyInput
+    ): Promise<PolicyLookupSet['cancellationPolicies'][number]> =>
       call(IPC_CHANNELS.CATALOG_UPDATE_CANCELLATION_POLICY, input)
   },
   billing: {
@@ -281,27 +290,26 @@ const api = {
       call(IPC_CHANNELS.BILLING_REMOVE_LINE, input),
     finalize: (input: FinalizeInvoiceInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_FINALIZE, input),
-    void: (input: VoidInvoiceInput): Promise<InvoiceRow> =>
-      call(IPC_CHANNELS.BILLING_VOID, input),
+    void: (input: VoidInvoiceInput): Promise<InvoiceRow> => call(IPC_CHANNELS.BILLING_VOID, input),
     markUncollectible: (input: MarkUncollectibleInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_MARK_UNCOLLECTIBLE, input),
     getInvoice: (input: InvoiceIdRequest): Promise<InvoiceDetail> =>
       call(IPC_CHANNELS.BILLING_GET_INVOICE, input),
     updateSnapshot: (input: UpdateBillingSnapshotInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, input),
-    nextNumber: (): Promise<InvoiceNumberPreview> =>
-      call(IPC_CHANNELS.BILLING_NEXT_NUMBER),
+    nextNumber: (): Promise<InvoiceNumberPreview> => call(IPC_CHANNELS.BILLING_NEXT_NUMBER),
     listByCustomer: (input: CustomerInvoicesRequest): Promise<InvoiceRow[]> =>
       call(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, input),
-    listOpen: (): Promise<InvoiceRow[]> =>
-      call(IPC_CHANNELS.BILLING_LIST_OPEN)
+    listOpen: (): Promise<InvoiceRow[]> => call(IPC_CHANNELS.BILLING_LIST_OPEN)
   },
   finance: {
     recordPayment: (input: RecordPaymentInput): Promise<PaymentRow> =>
       call(IPC_CHANNELS.FINANCE_RECORD_PAYMENT, input),
     allocatePayment: (input: AllocatePaymentInput): Promise<{ allocationId: number }> =>
       call(IPC_CHANNELS.FINANCE_ALLOCATE_PAYMENT, input),
-    recordAndAllocate: (input: RecordAndAllocatePaymentInput): Promise<{ paymentId: number; allocationId: number }> =>
+    recordAndAllocate: (
+      input: RecordAndAllocatePaymentInput
+    ): Promise<{ paymentId: number; allocationId: number }> =>
       call(IPC_CHANNELS.FINANCE_RECORD_AND_ALLOCATE, input),
     issueRefund: (input: IssueRefundInput): Promise<RefundRow> =>
       call(IPC_CHANNELS.FINANCE_ISSUE_REFUND, input),
@@ -323,12 +331,9 @@ const api = {
       call(IPC_CHANNELS.FINANCE_LIST_PAYMENT_METHODS),
     outstandingInvoicesFor: (input: OutstandingInvoicesRequest): Promise<OutstandingInvoiceRow[]> =>
       call(IPC_CHANNELS.FINANCE_OUTSTANDING_INVOICES, input),
-    listPayments: (): Promise<unknown[]> =>
-      call(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, {}),
-    listRefunds: (): Promise<unknown[]> =>
-      call(IPC_CHANNELS.FINANCE_LIST_REFUNDS, {}),
-    listAllCredits: (): Promise<unknown[]> =>
-      call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
+    listPayments: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, {}),
+    listRefunds: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_REFUNDS, {}),
+    listAllCredits: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
   },
   pdf: {
     exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }): Promise<string> =>
@@ -337,8 +342,7 @@ const api = {
       call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input)
   },
   customers: {
-    list: (): Promise<CustomerRowOutput[]> =>
-      call(IPC_CHANNELS.CUSTOMERS_LIST),
+    list: (): Promise<CustomerRowOutput[]> => call(IPC_CHANNELS.CUSTOMERS_LIST),
     get: (input: CustomerIdRequest): Promise<CustomerRowOutput | undefined> =>
       call(IPC_CHANNELS.CUSTOMERS_GET, input)
   },
@@ -347,8 +351,7 @@ const api = {
       call(IPC_CHANNELS.MEMBERSHIPS_SELL, input)
   },
   invoices: {
-    list: (): Promise<InvoiceOutput[]> =>
-      call(IPC_CHANNELS.INVOICES_LIST),
+    list: (): Promise<InvoiceOutput[]> => call(IPC_CHANNELS.INVOICES_LIST),
     get: (input: InvoiceReadIdRequest): Promise<InvoiceOutput | undefined> =>
       call(IPC_CHANNELS.INVOICES_GET, input),
     listByStatus: (input: InvoicesByStatusRequest): Promise<InvoiceOutput[]> =>
@@ -357,30 +360,25 @@ const api = {
   dashboard: {
     expirations: (): Promise<MembershipExpirationOutput[]> =>
       call(IPC_CHANNELS.DASHBOARD_EXPIRATIONS),
-    paymentsDue: (): Promise<PaymentDueOutput[]> =>
-      call(IPC_CHANNELS.DASHBOARD_PAYMENTS_DUE),
+    paymentsDue: (): Promise<PaymentDueOutput[]> => call(IPC_CHANNELS.DASHBOARD_PAYMENTS_DUE),
     memberRecord: (input: MemberRecordRequest): Promise<MemberRecordOutput | undefined> =>
       call(IPC_CHANNELS.DASHBOARD_MEMBER_RECORD, input),
     paymentRecord: (input: MemberRecordRequest): Promise<MemberRecordOutput | undefined> =>
       call(IPC_CHANNELS.DASHBOARD_PAYMENT_RECORD, input)
   },
   collections: {
-    payments: (): Promise<PaymentRecordOutput[]> =>
-      call(IPC_CHANNELS.COLLECTIONS_PAYMENTS),
+    payments: (): Promise<PaymentRecordOutput[]> => call(IPC_CHANNELS.COLLECTIONS_PAYMENTS),
     payment: (paymentId: number): Promise<PaymentRecordOutput | undefined> =>
       call(IPC_CHANNELS.COLLECTIONS_PAYMENT, paymentId)
   },
   identityRead: {
     organization: (): Promise<OrganizationOutput | null> =>
       call(IPC_CHANNELS.IDENTITY_ORGANIZATION),
-    staff: (): Promise<StaffMemberOutput[]> =>
-      call(IPC_CHANNELS.IDENTITY_STAFF),
-    roles: (): Promise<RoleOutput[]> =>
-      call(IPC_CHANNELS.IDENTITY_ROLES)
+    staff: (): Promise<StaffMemberOutput[]> => call(IPC_CHANNELS.IDENTITY_STAFF),
+    roles: (): Promise<RoleOutput[]> => call(IPC_CHANNELS.IDENTITY_ROLES)
   },
   export: {
-    excel: (input: ExportTableInput): Promise<string> =>
-      call(IPC_CHANNELS.EXPORT_EXCEL, input)
+    excel: (input: ExportTableInput): Promise<string> => call(IPC_CHANNELS.EXPORT_EXCEL, input)
   }
 }
 

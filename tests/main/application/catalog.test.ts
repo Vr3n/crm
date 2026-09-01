@@ -307,9 +307,9 @@ describe('deactivateOffer', () => {
 
     deactivateOffer({ offerId: created.id })
 
-    const row = getDb()
-      .prepare('SELECT active FROM offers WHERE id = ?')
-      .get(created.id) as { active: number }
+    const row = getDb().prepare('SELECT active FROM offers WHERE id = ?').get(created.id) as {
+      active: number
+    }
     expect(row.active).toBe(0)
     const offers = listOffers()
     expect(offers.find((o) => o.id === created.id)?.active).toBe(false)

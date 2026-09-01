@@ -199,11 +199,7 @@ export function MembershipTable({
       emptyDescription="Try widening the filters to see more entitlement periods."
       headerTone="primary"
       toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Memberships"
-        />
+        <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Memberships" />
       }
     />
   )

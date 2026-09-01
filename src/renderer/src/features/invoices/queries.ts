@@ -22,7 +22,8 @@ const keys = {
   all: ['invoices'] as const,
   list: () => [...keys.all, 'list'] as const,
   one: (id: string) => [...keys.all, 'one', id] as const,
-  byStatus: (status: InvoiceStatus | undefined) => [...keys.all, 'status', status ?? 'all'] as const,
+  byStatus: (status: InvoiceStatus | undefined) =>
+    [...keys.all, 'status', status ?? 'all'] as const,
   /** Transactional draft detail (billing:getInvoice) keyed by the numeric row id. */
   draft: (invoiceId: number) => [...keys.all, 'draft', invoiceId] as const,
   nextNumber: () => [...keys.all, 'next-number'] as const
@@ -64,7 +65,7 @@ export function useDraftInvoice(
 ): UseQueryResult<InvoiceDetail, Error> {
   return useQuery({
     queryKey: keys.draft(invoiceId ?? 0),
-    queryFn: async () => (await invoiceCommands.detail(invoiceId!)),
+    queryFn: async () => await invoiceCommands.detail(invoiceId!),
     enabled: !!invoiceId
   })
 }
@@ -108,8 +109,7 @@ export function useAddInvoiceLine(
   return useMutation({
     mutationFn: (input: AddInvoiceLineInput) => invoiceCommands.addLine(input),
     onSuccess: () => {
-      if (draftId !== undefined)
-        void qc.invalidateQueries({ queryKey: keys.draft(draftId) })
+      if (draftId !== undefined) void qc.invalidateQueries({ queryKey: keys.draft(draftId) })
       void qc.invalidateQueries({ queryKey: keys.list() })
     },
     onError: (e) => toast.error('Could not add line', { description: e.message })
@@ -123,8 +123,7 @@ export function useRemoveInvoiceLine(
   return useMutation({
     mutationFn: (input: RemoveInvoiceLineInput) => invoiceCommands.removeLine(input),
     onSuccess: () => {
-      if (draftId !== undefined)
-        void qc.invalidateQueries({ queryKey: keys.draft(draftId) })
+      if (draftId !== undefined) void qc.invalidateQueries({ queryKey: keys.draft(draftId) })
       void qc.invalidateQueries({ queryKey: keys.list() })
     },
     onError: (e) => toast.error('Could not remove line', { description: e.message })
@@ -159,8 +158,7 @@ export function useUpdateBillingSnapshot(
   return useMutation({
     mutationFn: (input: UpdateBillingSnapshotInput) => invoiceCommands.updateSnapshot(input),
     onSuccess: () => {
-      if (draftId !== undefined)
-        void qc.invalidateQueries({ queryKey: keys.draft(draftId) })
+      if (draftId !== undefined) void qc.invalidateQueries({ queryKey: keys.draft(draftId) })
       void qc.invalidateQueries({ queryKey: keys.all })
       toast.success('Billing details saved')
     },

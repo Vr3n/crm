@@ -68,8 +68,7 @@ export function BulkFollowUpDialog({
             Schedule follow-ups · {count} {count === 1 ? 'lead' : 'leads'}
           </DialogTitle>
           <DialogDescription>
-            One follow-up is created for each selected lead, with the same title
-            and due time.
+            One follow-up is created for each selected lead, with the same title and due time.
           </DialogDescription>
         </DialogHeader>
 
@@ -100,9 +99,7 @@ export function BulkFollowUpDialog({
                       What to do <span className="text-destructive">*</span>
                     </>
                   }
-                  validate={(v) =>
-                    v.trim().length > 0 ? undefined : 'Give this follow-up a name'
-                  }
+                  validate={(v) => (v.trim().length > 0 ? undefined : 'Give this follow-up a name')}
                   completeWhen={(v) => v.trim().length > 0}
                   placeholder="e.g. Call to confirm trial"
                 />
@@ -145,11 +142,7 @@ export function BulkFollowUpDialog({
           </FieldGroup>
 
           <DialogFooter className="mt-6">
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </LoadingButton>
             <LoadingButton

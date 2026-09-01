@@ -79,8 +79,8 @@ export function BulkMoveStageDialog({
             Move {count} {count === 1 ? 'lead' : 'leads'}?
           </DialogTitle>
           <DialogDescription>
-            Every selected lead moves to <StageBadge stage={to} />. A note is
-            recorded for each as the reason for the change.
+            Every selected lead moves to <StageBadge stage={to} />. A note is recorded for each as
+            the reason for the change.
           </DialogDescription>
         </DialogHeader>
 

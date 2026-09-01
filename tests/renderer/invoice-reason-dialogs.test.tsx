@@ -56,7 +56,9 @@ describe('VoidInvoiceDialog', { timeout: 20000 }, () => {
   it('requires a non-empty reason before submitting', async () => {
     mockBilling()
     const onOpenChange = vi.fn()
-    render(<VoidInvoiceDialog open invoiceId={5} invoiceNo="CRO-010926-01" onOpenChange={onOpenChange} />)
+    render(
+      <VoidInvoiceDialog open invoiceId={5} invoiceNo="CRO-010926-01" onOpenChange={onOpenChange} />
+    )
     const user = userEvent.setup()
 
     const submit = screen.getByRole('button', { name: 'Void invoice' })
@@ -91,7 +93,14 @@ describe('VoidInvoiceDialog', { timeout: 20000 }, () => {
 describe('MarkUncollectibleDialog', () => {
   it('submits the write-off with its reason', async () => {
     mockBilling()
-    render(<MarkUncollectibleDialog open invoiceId={9} invoiceNo="CRO-010926-02" onOpenChange={vi.fn()} />)
+    render(
+      <MarkUncollectibleDialog
+        open
+        invoiceId={9}
+        invoiceNo="CRO-010926-02"
+        onOpenChange={vi.fn()}
+      />
+    )
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText(/^Reason/), 'Customer relocated abroad')

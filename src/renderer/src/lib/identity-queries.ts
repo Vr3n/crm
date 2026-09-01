@@ -73,8 +73,11 @@ export function useLogout(): UseMutationResult<boolean, unknown, void, unknown> 
 export function useCommitSession(): (session: SessionContext) => void {
   const qc = useQueryClient()
 
-  return useCallback((session: SessionContext) => {
-    qc.setQueryData<IdentityStatus>(identityKeys.status, 'AUTHENTICATED')
-    qc.setQueryData(identityKeys.session, session)
-  }, [qc])
+  return useCallback(
+    (session: SessionContext) => {
+      qc.setQueryData<IdentityStatus>(identityKeys.status, 'AUTHENTICATED')
+      qc.setQueryData(identityKeys.session, session)
+    },
+    [qc]
+  )
 }

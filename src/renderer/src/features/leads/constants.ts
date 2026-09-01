@@ -119,8 +119,10 @@ export function filterLeads(leads: Lead[], filters: LeadFilters): Lead[] {
   return leads.filter((l) => {
     if (toUTCDate(l.createdAt).getTime() < cutoff) return false
     if (filters.stage && filters.stage !== 'ALL' && l.stage !== filters.stage) return false
-    if (filters.sourceId && filters.sourceId !== 'ALL' && l.sourceId !== filters.sourceId) return false
-    if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId) return false
+    if (filters.sourceId && filters.sourceId !== 'ALL' && l.sourceId !== filters.sourceId)
+      return false
+    if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId)
+      return false
     if (q) {
       const hay = [l.name, l.phone, l.email].join(' ').toLowerCase()
       if (!hay.includes(q)) return false

@@ -49,7 +49,11 @@ const migrations: Migration[] = [
   { version: 12, name: 'seed_catalog_policies', sql: seedCatalogPoliciesSql },
   { version: 13, name: 'offer_versions', sql: offerVersionsSql },
   { version: 14, name: 'followup_edit_cancel', sql: followupEditCancelSql },
-  { version: 15, name: 'customers_memberships_billing_finance', sql: customersMembershipsBillingFinanceSql },
+  {
+    version: 15,
+    name: 'customers_memberships_billing_finance',
+    sql: customersMembershipsBillingFinanceSql
+  },
   { version: 16, name: 'membership_sale_idempotency', sql: membershipSaleIdempotencySql },
   { version: 17, name: 'membership_sell_permission', sql: membershipSellPermissionSql },
   { version: 18, name: 'membership_joining_date', sql: membershipJoiningDateSql },

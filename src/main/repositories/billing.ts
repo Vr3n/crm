@@ -250,7 +250,10 @@ export const invoiceLineRepo = {
       .select()
       .from(invoiceLines)
       .where(
-        and(eq(invoiceLines.organization_id, organizationId), eq(invoiceLines.invoice_id, invoiceId))
+        and(
+          eq(invoiceLines.organization_id, organizationId),
+          eq(invoiceLines.invoice_id, invoiceId)
+        )
       )
       .orderBy(asc(invoiceLines.sort_order))
       .all() as InvoiceLineRow[]
@@ -302,7 +305,10 @@ export const invoiceLineRepo = {
     getDrizzle()
       .delete(invoiceLines)
       .where(
-        and(eq(invoiceLines.organization_id, organizationId), eq(invoiceLines.invoice_id, invoiceId))
+        and(
+          eq(invoiceLines.organization_id, organizationId),
+          eq(invoiceLines.invoice_id, invoiceId)
+        )
       )
       .run()
   }

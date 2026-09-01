@@ -69,10 +69,14 @@ export function registerCatalogIpc(): void {
   handle(IPC_CHANNELS.CATALOG_UPDATE_PRORATION_POLICY, updateProrationPolicyInputSchema, (input) =>
     updateProrationPolicy(input)
   )
-  handle(IPC_CHANNELS.CATALOG_CREATE_CANCELLATION_POLICY, createCancellationPolicyInputSchema, (input) =>
-    createCancellationPolicy(input)
+  handle(
+    IPC_CHANNELS.CATALOG_CREATE_CANCELLATION_POLICY,
+    createCancellationPolicyInputSchema,
+    (input) => createCancellationPolicy(input)
   )
-  handle(IPC_CHANNELS.CATALOG_UPDATE_CANCELLATION_POLICY, updateCancellationPolicyInputSchema, (input) =>
-    updateCancellationPolicy(input)
+  handle(
+    IPC_CHANNELS.CATALOG_UPDATE_CANCELLATION_POLICY,
+    updateCancellationPolicyInputSchema,
+    (input) => updateCancellationPolicy(input)
   )
 }

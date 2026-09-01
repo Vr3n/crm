@@ -23,6 +23,8 @@ export function CurrentMembershipCard({
   currentMembership: Membership | undefined
   now: number
 }): React.JSX.Element {
+  const currency = useCurrency()
+
   if (!currentMembership) {
     return (
       <section className="flex flex-col items-start gap-2 rounded-xl border border-dashed bg-card p-5">
@@ -38,7 +40,6 @@ export function CurrentMembershipCard({
   }
 
   const m = currentMembership
-  const currency = useCurrency()
   const eff = effectiveStatus(m, now)
   const startMs = new Date(m.startDate).getTime()
   const endMs = new Date(m.endDate).getTime()
@@ -64,7 +65,9 @@ export function CurrentMembershipCard({
             </p>
           </div>
           <div className="text-right">
-            <p className="font-mono text-xl font-semibold tabular-nums">{formatMinor(paid, currency)}</p>
+            <p className="font-mono text-xl font-semibold tabular-nums">
+              {formatMinor(paid, currency)}
+            </p>
             <p className="text-xs text-muted-foreground">
               {m.discountMinor > 0 ? `${formatMinor(m.discountMinor, currency)} discount · ` : ''}
               {m.registrationFeeMinor > 0

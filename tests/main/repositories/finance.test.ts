@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { setupTestDb } from '../../helpers/db'
-import { organizationRepo, userRepo, roleRepo, staffRepo } from '../../../src/main/repositories/identity'
+import {
+  organizationRepo,
+  userRepo,
+  roleRepo,
+  staffRepo
+} from '../../../src/main/repositories/identity'
 import { personRepo } from '../../../src/main/repositories/sales'
 import { customerRepo } from '../../../src/main/repositories/membership'
 import { invoiceRepo } from '../../../src/main/repositories/billing'
@@ -12,11 +17,17 @@ import {
   creditRepo,
   creditAllocationRepo
 } from '../../../src/main/repositories/finance'
-import { seedRolesForOrganization, seedPaymentMethodsForOrganization } from '../../../src/main/db/seed'
+import {
+  seedRolesForOrganization,
+  seedPaymentMethodsForOrganization
+} from '../../../src/main/db/seed'
 
 setupTestDb()
 
-function createOrgAndUser() {
+function createOrgAndUser(): {
+  org: ReturnType<typeof organizationRepo.create>
+  user: ReturnType<typeof userRepo.create>
+} {
   const org = organizationRepo.create({
     slug: 'fit-gym',
     name: 'Fit Gym',
@@ -26,12 +37,16 @@ function createOrgAndUser() {
   seedRolesForOrganization(org.id)
   seedPaymentMethodsForOrganization(org.id)
   const role = roleRepo.findByName(org.id, 'Owner')!
-  const user = userRepo.create({ fullName: 'Test User', email: 'test@fitgym.com', passwordHash: 'hash' })
+  const user = userRepo.create({
+    fullName: 'Test User',
+    email: 'test@fitgym.com',
+    passwordHash: 'hash'
+  })
   staffRepo.create({ organizationId: org.id, userId: user.id, roleId: role.id })
   return { org, user }
 }
 
-function createCustomer(organizationId: number) {
+function createCustomer(organizationId: number): ReturnType<typeof customerRepo.create> {
   const person = personRepo.create({
     organizationId,
     fullName: 'Test Customer',
@@ -101,14 +116,24 @@ describe('paymentRepo', () => {
     const customer = createCustomer(org.id)
 
     paymentRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      paymentDate: '2026-08-20', amountMinor: 50000, paymentMethod: 'CASH',
-      reference: null, notes: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-20',
+      amountMinor: 50000,
+      paymentMethod: 'CASH',
+      reference: null,
+      notes: null,
+      createdBy: user.id
     })
     paymentRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      paymentDate: '2026-08-21', amountMinor: 50000, paymentMethod: 'UPI',
-      reference: null, notes: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 50000,
+      paymentMethod: 'UPI',
+      reference: null,
+      notes: null,
+      createdBy: user.id
     })
 
     const payments = paymentRepo.getByCustomer(org.id, customer.id)
@@ -122,16 +147,29 @@ describe('allocationRepo', () => {
     const customer = createCustomer(org.id)
 
     const invoice = invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'OPEN', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 100000, taxMinor: 18000, totalMinor: 118000,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'OPEN',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 100000,
+      taxMinor: 18000,
+      totalMinor: 118000,
       createdBy: user.id
     })
 
     const payment = paymentRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      paymentDate: '2026-08-21', amountMinor: 100000, paymentMethod: 'UPI',
-      reference: null, notes: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 100000,
+      paymentMethod: 'UPI',
+      reference: null,
+      notes: null,
+      createdBy: user.id
     })
 
     const allocation = allocationRepo.create({
@@ -163,9 +201,14 @@ describe('refundRepo', () => {
     const customer = createCustomer(org.id)
 
     const payment = paymentRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      paymentDate: '2026-08-21', amountMinor: 100000, paymentMethod: 'UPI',
-      reference: null, notes: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 100000,
+      paymentMethod: 'UPI',
+      reference: null,
+      notes: null,
+      createdBy: user.id
     })
 
     const refund = refundRepo.create({
@@ -219,12 +262,20 @@ describe('creditRepo', () => {
     const customer = createCustomer(org.id)
 
     creditRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      amountMinor: 50000, reason: 'Goodwill', expiresAt: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      amountMinor: 50000,
+      reason: 'Goodwill',
+      expiresAt: null,
+      createdBy: user.id
     })
     creditRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      amountMinor: 30000, reason: 'Refund credit', expiresAt: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      amountMinor: 30000,
+      reason: 'Refund credit',
+      expiresAt: null,
+      createdBy: user.id
     })
 
     const balance = creditRepo.getBalance(org.id, customer.id)
@@ -236,8 +287,12 @@ describe('creditRepo', () => {
     const customer = createCustomer(org.id)
 
     const credit = creditRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      amountMinor: 50000, reason: 'Goodwill', expiresAt: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      amountMinor: 50000,
+      reason: 'Goodwill',
+      expiresAt: null,
+      createdBy: user.id
     })
 
     creditRepo.decrementRemaining(org.id, credit.id, 20000)
@@ -253,14 +308,26 @@ describe('creditAllocationRepo', () => {
     const customer = createCustomer(org.id)
 
     const credit = creditRepo.create({
-      organizationId: org.id, customerId: customer.id,
-      amountMinor: 50000, reason: 'Goodwill', expiresAt: null, createdBy: user.id
+      organizationId: org.id,
+      customerId: customer.id,
+      amountMinor: 50000,
+      reason: 'Goodwill',
+      expiresAt: null,
+      createdBy: user.id
     })
 
     const invoice = invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'OPEN', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 100000, taxMinor: 18000, totalMinor: 118000,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'OPEN',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 100000,
+      taxMinor: 18000,
+      totalMinor: 118000,
       createdBy: user.id
     })
 

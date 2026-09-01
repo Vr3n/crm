@@ -23,7 +23,7 @@ import {
 
 setupSalesDb()
 
-function createTestCustomer(organizationId: number) {
+function createTestCustomer(organizationId: number): ReturnType<typeof customerRepo.create> {
   const person = personRepo.create({
     organizationId,
     fullName: 'Test Customer',
@@ -124,15 +124,25 @@ describe('addInvoiceLine', () => {
     const customer = createTestCustomer(organizationId)
     const invoice = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
     finalizeInvoice({ invoiceId: invoice.id })
 
-    expect(() => addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line 2', quantity: 1,
-      unitPriceMinor: 50000, discountMinor: 0, taxRateBps: 1800
-    })).toThrow(InvoiceAlreadyFinalizedError)
+    expect(() =>
+      addInvoiceLine({
+        invoiceId: invoice.id,
+        description: 'Line 2',
+        quantity: 1,
+        unitPriceMinor: 50000,
+        discountMinor: 0,
+        taxRateBps: 1800
+      })
+    ).toThrow(InvoiceAlreadyFinalizedError)
   })
 })
 
@@ -143,12 +153,20 @@ describe('removeInvoiceLine', () => {
     const invoice = createInvoice({ customerId: customer.id })
 
     const line1 = addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line 1', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line 1',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line 2', quantity: 1,
-      unitPriceMinor: 50000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line 2',
+      quantity: 1,
+      unitPriceMinor: 50000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
 
     removeInvoiceLine({ invoiceId: invoice.id, lineId: line1.id })
@@ -169,13 +187,17 @@ describe('finalizeInvoice', () => {
     const invoice = createInvoice({ customerId: customer.id })
 
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
 
     const finalized = finalizeInvoice({ invoiceId: invoice.id })
     expect(finalized.status).toBe('OPEN')
-    expect(finalized.number).toMatch(/^[A-Z]{3}-\d{6}-\d{2}$/)
+    expect(finalized.number).toMatch(/^[A-Z0-9]{2,6}-\d{6}-\d{2}$/)
     expect(finalized.finalizedAt).toBeTruthy()
   })
 
@@ -199,8 +221,12 @@ describe('voidInvoice', () => {
     const customer = createTestCustomer(organizationId)
     const invoice = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
     finalizeInvoice({ invoiceId: invoice.id })
 
@@ -224,8 +250,12 @@ describe('markUncollectible', () => {
     const customer = createTestCustomer(organizationId)
     const invoice = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
     finalizeInvoice({ invoiceId: invoice.id })
 
@@ -240,8 +270,12 @@ describe('getInvoice', () => {
     const customer = createTestCustomer(organizationId)
     const invoice = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Line', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: invoice.id,
+      description: 'Line',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
 
     const result = getInvoice({ invoiceId: invoice.id })
@@ -271,8 +305,12 @@ describe('listOpenInvoices', () => {
     createInvoice({ customerId: customer.id })
     const open = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: open.id, description: 'Line', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800
+      invoiceId: open.id,
+      description: 'Line',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 1800
     })
     finalizeInvoice({ invoiceId: open.id })
 

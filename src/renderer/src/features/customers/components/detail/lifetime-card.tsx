@@ -47,7 +47,12 @@ export function LifetimeCard({
         'crm-gradient-border flex flex-col rounded-xl border border-t-2 border-t-primary bg-card p-4 shadow-sm',
         className
       )}
-      style={{ '--gradient-start': 'var(--success)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--success)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Tenure & value
@@ -80,7 +85,9 @@ export function LifetimeCard({
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <UserCog className="size-3 text-violet-500 dark:text-violet-400" /> Owned by
           </span>
-          <span className="truncate text-xs font-semibold">{customer.ownerName ?? 'Unassigned'}</span>
+          <span className="truncate text-xs font-semibold">
+            {customer.ownerName ?? 'Unassigned'}
+          </span>
         </div>
         <div className="flex flex-col gap-0.5">
           <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BadgePercent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -22,7 +22,13 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { formatMinor, minorToMajor, parseToMinor, sanitizeMoneyInput, type CurrencyCode } from '@/lib/money'
+import {
+  formatMinor,
+  minorToMajor,
+  parseToMinor,
+  sanitizeMoneyInput,
+  type CurrencyCode
+} from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { DISCOUNT_TYPES, discountTypeLabel, FREE_PERIOD_MONTHS } from '../constants'
 import { computeDiscountLine, validateOfferInput } from '../pricing'
@@ -84,11 +90,19 @@ export function OfferFormDialog({
 
   const [name, setName] = useState(offer?.name ?? '')
   const [description, setDescription] = useState(offer?.description ?? '')
-  const [discountType, setDiscountType] = useState<DiscountType>(offer?.discountType ?? 'PERCENTAGE')
-  const [value, setValue] = useState(offer ? valueFromMinor(offer.discountType, offer.value, currency) : '')
-  const [minPurchase, setMinPurchase] = useState(offer ? minorToMajor(offer.minPurchaseMinor, currency) : '0')
+  const [discountType, setDiscountType] = useState<DiscountType>(
+    offer?.discountType ?? 'PERCENTAGE'
+  )
+  const [value, setValue] = useState(
+    offer ? valueFromMinor(offer.discountType, offer.value, currency) : ''
+  )
+  const [minPurchase, setMinPurchase] = useState(
+    offer ? minorToMajor(offer.minPurchaseMinor, currency) : '0'
+  )
   const [maxUses, setMaxUses] = useState(offer ? String(offer.maxUses || '') : '100')
-  const [applicablePlanIds, setApplicablePlanIds] = useState<number[]>(offer?.applicablePlanIds ?? [])
+  const [applicablePlanIds, setApplicablePlanIds] = useState<number[]>(
+    offer?.applicablePlanIds ?? []
+  )
   const [startDate, setStartDate] = useState(offer?.startDate ?? '')
   const [endDate, setEndDate] = useState(offer?.endDate ?? '')
   const [eligibility, setEligibility] = useState(offer?.eligibility ?? '')
@@ -118,8 +132,9 @@ export function OfferFormDialog({
   )
 
   // Auto-deselect plans that fall below the minimum purchase threshold.
+  const prevMinPurchaseRef = useRef(minPurchaseMinor)
   useEffect(() => {
-    if (minPurchaseMinor > 0) {
+    if (minPurchaseMinor > prevMinPurchaseRef.current) {
       setApplicablePlanIds((current) =>
         current.filter((id) => {
           const plan = plans.find((p) => p.id === id)
@@ -127,6 +142,7 @@ export function OfferFormDialog({
         })
       )
     }
+    prevMinPurchaseRef.current = minPurchaseMinor
   }, [minPurchaseMinor, plans])
 
   function togglePlan(planId: number): void {
@@ -177,10 +193,7 @@ export function OfferFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-lg"
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
+      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BadgePercent className="size-4 text-primary" />
@@ -197,7 +210,12 @@ export function OfferFormDialog({
               <Label htmlFor="of-name">
                 Offer name <span className="text-destructive">*</span>
               </Label>
-              <Input id="of-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. New Year Offer" />
+              <Input
+                id="of-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. New Year Offer"
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="of-code">Code</Label>
@@ -225,7 +243,10 @@ export function OfferFormDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="of-type">Discount type</Label>
-              <Select value={discountType} onValueChange={(v) => setDiscountType(v as DiscountType)}>
+              <Select
+                value={discountType}
+                onValueChange={(v) => setDiscountType(v as DiscountType)}
+              >
                 <SelectTrigger id="of-type">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
@@ -338,7 +359,11 @@ export function OfferFormDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="of-start">Starts</Label>
-              <CatalogDatePicker value={startDate} onChange={setStartDate} placeholder="Pick start date" />
+              <CatalogDatePicker
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="Pick start date"
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="of-end">Ends</Label>
@@ -365,7 +390,9 @@ export function OfferFormDialog({
           <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
             <div>
               <p className="text-sm font-medium">Active</p>
-              <p className="text-xs text-muted-foreground">Pause to hide it from sale time without deleting.</p>
+              <p className="text-xs text-muted-foreground">
+                Pause to hide it from sale time without deleting.
+              </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
           </div>
@@ -399,10 +426,7 @@ export function OfferFormDialog({
                     currency
                   )
                   return (
-                    <div
-                      key={plan.id}
-                      className="flex items-center justify-between gap-2 text-sm"
-                    >
+                    <div key={plan.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className="truncate text-muted-foreground">{plan.name}</span>
                       <span className="flex shrink-0 items-center gap-1.5 font-mono tabular-nums">
                         {!freePeriod ? (

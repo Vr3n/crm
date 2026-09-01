@@ -144,7 +144,8 @@ export function revenueByPlan(invoices: FinanceInvoice[]): RevenueRow[] {
 /** Recorded revenue grouped by the staff member who took the payment. */
 export function revenueByStaff(payments: Payment[]): RevenueRow[] {
   const byStaff = new Map<string, number>()
-  for (const p of payments) byStaff.set(p.createdBy, (byStaff.get(p.createdBy) ?? 0) + p.amountMinor)
+  for (const p of payments)
+    byStaff.set(p.createdBy, (byStaff.get(p.createdBy) ?? 0) + p.amountMinor)
   return [...byStaff.entries()]
     .map(([label, amountMinor]) => ({ key: label, label, amountMinor }))
     .sort((a, b) => b.amountMinor - a.amountMinor)

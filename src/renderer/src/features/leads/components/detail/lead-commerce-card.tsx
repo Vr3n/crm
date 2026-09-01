@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,14 +14,13 @@ import type { Lead } from '../../types'
 export function LeadCommerceCard({ lead }: { lead: Lead }): React.JSX.Element | null {
   const customerId = lead.customerId
   const { data: customer } = useCustomer(customerId !== undefined ? String(customerId) : undefined)
+  const [now] = useState(() => Date.now())
 
   if (!customer) return null
 
   const hasMemberships = customer.memberships.length > 0
   const hasInvoices = (customer.invoices ?? []).length > 0
   if (!hasMemberships && !hasInvoices) return null
-
-  const now = Date.now()
 
   return (
     <section className="rounded-xl border bg-card p-5 shadow-sm">

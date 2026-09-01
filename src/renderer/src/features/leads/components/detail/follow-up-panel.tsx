@@ -7,11 +7,11 @@ import { Timeline } from '@/components/timeline'
 import { useCompleteFollowUp } from '../../queries'
 import { EditFollowUpDialog } from '../edit-follow-up-dialog'
 import { CancelFollowUpDialog } from '@/features/followups/components/cancel-follow-up-dialog'
-import { mapFollowUpsToEntries } from './follow-up-timeline'
+import { mapFollowUpsToEntries } from './follow-up-timeline-utils'
 import { dueLabel, formatDateTime } from '../../format'
 import type { FollowUp } from '../../types'
 
-function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }) {
+function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }): React.JSX.Element {
   const complete = useCompleteFollowUp()
   const [editing, setEditing] = useState(false)
   const [cancelling, setCancelling] = useState(false)

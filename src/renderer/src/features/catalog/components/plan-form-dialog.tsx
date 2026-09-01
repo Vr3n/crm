@@ -20,11 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  ACCESS_OPTIONS,
-  BILLING_FREQUENCIES,
-  DURATIONS
-} from '../constants'
+import { ACCESS_OPTIONS, BILLING_FREQUENCIES, DURATIONS } from '../constants'
 import { useCreatePlan, useUpdatePlan } from '../queries'
 import { minorToMajor, parseToMinor, percentToBps, sanitizeMoneyInput } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
@@ -57,7 +53,9 @@ export function PlanFormDialog({
   const [price, setPrice] = useState(plan ? minorToMajor(plan.basePriceMinor, currency) : '')
   const [taxCode, setTaxCode] = useState(plan?.taxCode ?? '')
   const [taxRate, setTaxRate] = useState(plan ? String(plan.taxRateBps / 100) : '')
-  const [registrationFee, setRegistrationFee] = useState(plan ? minorToMajor(plan.registrationFeeMinor, currency) : '0')
+  const [registrationFee, setRegistrationFee] = useState(
+    plan ? minorToMajor(plan.registrationFeeMinor, currency) : '0'
+  )
   const [accessWindow, setAccessWindow] = useState<AccessWindow>(plan?.accessWindow ?? 'ALL_HOURS')
   const [startTime, setStartTime] = useState(plan?.startTime ?? '06:00')
   const [endTime, setEndTime] = useState(plan?.endTime ?? '23:00')
@@ -65,8 +63,7 @@ export function PlanFormDialog({
   const [description, setDescription] = useState(plan?.description ?? '')
 
   const priceValue = Number(price)
-  const canSubmit =
-    name.trim().length > 0 && Number.isFinite(priceValue) && priceValue > 0
+  const canSubmit = name.trim().length > 0 && Number.isFinite(priceValue) && priceValue > 0
 
   function submit(): void {
     const input = {
@@ -99,10 +96,7 @@ export function PlanFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-lg"
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
+      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-4 text-primary" />
@@ -120,7 +114,12 @@ export function PlanFormDialog({
             <Label htmlFor="pl-name">
               Plan name <span className="text-destructive">*</span>
             </Label>
-            <Input id="pl-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Annual Premium" />
+            <Input
+              id="pl-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Annual Premium"
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -173,7 +172,10 @@ export function PlanFormDialog({
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="pl-access">Access window</Label>
-              <Select value={accessWindow} onValueChange={(v) => setAccessWindow(v as AccessWindow)}>
+              <Select
+                value={accessWindow}
+                onValueChange={(v) => setAccessWindow(v as AccessWindow)}
+              >
                 <SelectTrigger id="pl-access">
                   <SelectValue placeholder="Access" />
                 </SelectTrigger>
@@ -231,11 +233,21 @@ export function PlanFormDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">
                 <Label htmlFor="pl-start">Opens at</Label>
-                <Input id="pl-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                <Input
+                  id="pl-start"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="pl-end">Closes at</Label>
-                <Input id="pl-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                <Input
+                  id="pl-end"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
               </div>
             </div>
           ) : null}
@@ -254,7 +266,9 @@ export function PlanFormDialog({
           <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
             <div>
               <p className="text-sm font-medium">Sellable</p>
-              <p className="text-xs text-muted-foreground">Only active plans appear at sale time.</p>
+              <p className="text-xs text-muted-foreground">
+                Only active plans appear at sale time.
+              </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
           </div>

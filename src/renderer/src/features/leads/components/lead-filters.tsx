@@ -1,11 +1,7 @@
 import { Search, SlidersHorizontal, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -94,9 +90,7 @@ export function LeadFilters({
 
       <Select
         value={filters.sourceId === 'ALL' ? 'ALL' : String(filters.sourceId)}
-        onValueChange={(v) =>
-          onChange({ ...filters, sourceId: v === 'ALL' ? 'ALL' : Number(v) })
-        }
+        onValueChange={(v) => onChange({ ...filters, sourceId: v === 'ALL' ? 'ALL' : Number(v) })}
       >
         <SelectTrigger className="w-44" aria-label="Source">
           <SelectValue placeholder="Source" />
@@ -148,7 +142,9 @@ export function LeadFilters({
               }`}
             >
               {r.label}
-              {filters.range === r.key ? <span className="size-1.5 rounded-full bg-primary" /> : null}
+              {filters.range === r.key ? (
+                <span className="size-1.5 rounded-full bg-primary" />
+              ) : null}
             </button>
           ))}
         </PopoverContent>

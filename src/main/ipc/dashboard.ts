@@ -90,7 +90,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(customers.organization_id, organizationId),
-          sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${customers.id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as Array<{ id: number; person_id: number }>
@@ -101,7 +104,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(people.organization_id, organizationId),
-          sql`${people.id} IN (${sql.join(personIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${people.id} IN (${sql.join(
+            personIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as PersonRow[]
@@ -151,7 +157,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(paymentAllocations.organization_id, organizationId),
-          sql`${paymentAllocations.invoice_id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${paymentAllocations.invoice_id} IN (${sql.join(
+            invoiceIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as AllocationRow[]
@@ -168,7 +177,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(customers.organization_id, organizationId),
-          sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${customers.id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as Array<{ id: number; person_id: number }>
@@ -179,7 +191,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(people.organization_id, organizationId),
-          sql`${people.id} IN (${sql.join(personIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${people.id} IN (${sql.join(
+            personIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as PersonRow[]
@@ -193,7 +208,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(invoiceLines.organization_id, organizationId),
-          sql`${invoiceLines.invoice_id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${invoiceLines.invoice_id} IN (${sql.join(
+            invoiceIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as InvoiceLineRow[]
@@ -213,7 +231,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(memberships.organization_id, organizationId),
-          sql`${memberships.customer_id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${memberships.customer_id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .orderBy(sql`${memberships.created_at} DESC`)
@@ -272,7 +293,10 @@ export function registerDashboardIpc(): void {
       .select()
       .from(memberships)
       .where(
-        and(eq(memberships.organization_id, organizationId), eq(memberships.customer_id, customerId))
+        and(
+          eq(memberships.organization_id, organizationId),
+          eq(memberships.customer_id, customerId)
+        )
       )
       .orderBy(asc(memberships.created_at))
       .all() as MembershipRow[]
@@ -345,7 +369,10 @@ export function registerDashboardIpc(): void {
       .select()
       .from(memberships)
       .where(
-        and(eq(memberships.organization_id, organizationId), eq(memberships.customer_id, customerId))
+        and(
+          eq(memberships.organization_id, organizationId),
+          eq(memberships.customer_id, customerId)
+        )
       )
       .orderBy(asc(memberships.created_at))
       .all() as MembershipRow[]

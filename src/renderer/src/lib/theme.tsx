@@ -16,7 +16,11 @@ function applyTheme(theme: Theme): void {
   root.style.colorScheme = resolved
 }
 
-export function useTheme(): { theme: Theme; resolved: 'light' | 'dark'; setTheme: (t: Theme) => void } {
+export function useTheme(): {
+  theme: Theme
+  resolved: 'light' | 'dark'
+  setTheme: (t: Theme) => void
+} {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
       const stored = localStorage.getItem(THEME_KEY) as Theme | null

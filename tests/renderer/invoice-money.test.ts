@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  formatMinor,
-  parseToMinor,
-  sanitizeMoneyInput
-} from '../../src/renderer/src/lib/money'
+import { formatMinor, parseToMinor, sanitizeMoneyInput } from '../../src/renderer/src/lib/money'
 
 /**
  * Money presentation/parse rules shared by every capture form (Module 04 §34):

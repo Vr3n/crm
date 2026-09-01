@@ -36,14 +36,23 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 const helper = createColumnHelper<DashboardFeatures, Payment>()
 
 /** Allocated column: mono "of" figures with a thin progress bar. */
-function AllocatedCell({ payment, currency }: { payment: Payment; currency: CurrencyCode }): React.JSX.Element {
+function AllocatedCell({
+  payment,
+  currency
+}: {
+  payment: Payment
+  currency: CurrencyCode
+}): React.JSX.Element {
   const allocated = allocatedAmount(payment)
   const pct = payment.amountMinor > 0 ? Math.round((allocated / payment.amountMinor) * 100) : 0
   return (
     <div className="flex min-w-28 flex-col gap-1.5">
       <span className="font-mono text-xs tabular-nums">
         <span className="font-medium">{formatMinor(allocated, currency)}</span>
-        <span className="text-muted-foreground"> of {formatMinor(payment.amountMinor, currency)}</span>
+        <span className="text-muted-foreground">
+          {' '}
+          of {formatMinor(payment.amountMinor, currency)}
+        </span>
       </span>
       <span className="flex h-1 w-full max-w-32 overflow-hidden rounded-full bg-muted">
         <span

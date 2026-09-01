@@ -108,10 +108,7 @@ export interface FreezePolicy {
 }
 
 export type ProrationRule =
-  | 'UPGRADE_CREDIT_UNUSED'
-  | 'DOWNGRADE_CHARGE_REMAINDER'
-  | 'NO_PARTIAL_CREDIT'
-  | 'CUSTOM'
+  'UPGRADE_CREDIT_UNUSED' | 'DOWNGRADE_CHARGE_REMAINDER' | 'NO_PARTIAL_CREDIT' | 'CUSTOM'
 
 export interface ProrationPolicy {
   id: number

@@ -1,14 +1,27 @@
 import { describe, it, expect } from 'vitest'
 import { setupTestDb } from '../../helpers/db'
-import { organizationRepo, userRepo, roleRepo, staffRepo } from '../../../src/main/repositories/identity'
+import {
+  organizationRepo,
+  userRepo,
+  roleRepo,
+  staffRepo
+} from '../../../src/main/repositories/identity'
 import { personRepo } from '../../../src/main/repositories/sales'
 import { planRepo } from '../../../src/main/repositories/catalog'
-import { customerRepo, membershipRepo, freezeRepo, membershipEventRepo } from '../../../src/main/repositories/membership'
+import {
+  customerRepo,
+  membershipRepo,
+  freezeRepo,
+  membershipEventRepo
+} from '../../../src/main/repositories/membership'
 import { seedRolesForOrganization } from '../../../src/main/db/seed'
 
 setupTestDb()
 
-function createOrgAndUser() {
+function createOrgAndUser(): {
+  org: ReturnType<typeof organizationRepo.create>
+  user: ReturnType<typeof userRepo.create>
+} {
   const org = organizationRepo.create({
     slug: 'fit-gym',
     name: 'Fit Gym',
@@ -17,12 +30,16 @@ function createOrgAndUser() {
   })
   seedRolesForOrganization(org.id)
   const role = roleRepo.findByName(org.id, 'Owner')!
-  const user = userRepo.create({ fullName: 'Test User', email: 'test@fitgym.com', passwordHash: 'hash' })
+  const user = userRepo.create({
+    fullName: 'Test User',
+    email: 'test@fitgym.com',
+    passwordHash: 'hash'
+  })
   staffRepo.create({ organizationId: org.id, userId: user.id, roleId: role.id })
   return { org, user }
 }
 
-function createTestPerson(organizationId: number) {
+function createTestPerson(organizationId: number): ReturnType<typeof personRepo.create> {
   return personRepo.create({
     organizationId,
     fullName: 'Test Customer',
@@ -31,7 +48,7 @@ function createTestPerson(organizationId: number) {
   })
 }
 
-function createTestPlan(organizationId: number) {
+function createTestPlan(organizationId: number): ReturnType<typeof planRepo.create> {
   return planRepo.create({
     organizationId,
     name: 'Monthly Plan',
@@ -86,8 +103,12 @@ describe('customerRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
 
     const found = customerRepo.getByPersonId(org.id, person.id)
@@ -101,8 +122,12 @@ describe('customerRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: 'Old Name', billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: 'Old Name',
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
 
     customerRepo.update(org.id, customer.id, {
@@ -127,8 +152,12 @@ describe('membershipRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
     const plan = createTestPlan(org.id)
 
@@ -168,19 +197,31 @@ describe('membershipRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
     const plan = createTestPlan(org.id)
 
     membershipRepo.create({
       organizationId: org.id,
       customerId: customer.id,
-      planId: plan.id, offerId: null,
-      planNameSnapshot: 'Monthly Plan', durationDaysSnapshot: 30,
-      basePriceMinor: 100000, discountMinor: 0, finalPriceMinor: 100000,
-      taxRateBps: 1800, startDate: '2026-08-01', endDate: '2026-08-31',
-      billingFrequency: 'ONE_TIME', status: 'ACTIVE', createdBy: user.id
+      planId: plan.id,
+      offerId: null,
+      planNameSnapshot: 'Monthly Plan',
+      durationDaysSnapshot: 30,
+      basePriceMinor: 100000,
+      discountMinor: 0,
+      finalPriceMinor: 100000,
+      taxRateBps: 1800,
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+      billingFrequency: 'ONE_TIME',
+      status: 'ACTIVE',
+      createdBy: user.id
     })
 
     const found = membershipRepo.getActiveByDate(org.id, customer.id, '2026-08-15')
@@ -196,19 +237,31 @@ describe('membershipRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
     const plan = createTestPlan(org.id)
 
     const membership = membershipRepo.create({
       organizationId: org.id,
       customerId: customer.id,
-      planId: plan.id, offerId: null,
-      planNameSnapshot: 'Monthly Plan', durationDaysSnapshot: 30,
-      basePriceMinor: 100000, discountMinor: 0, finalPriceMinor: 100000,
-      taxRateBps: 1800, startDate: '2026-08-01', endDate: '2026-08-31',
-      billingFrequency: 'ONE_TIME', status: 'PENDING', createdBy: user.id
+      planId: plan.id,
+      offerId: null,
+      planNameSnapshot: 'Monthly Plan',
+      durationDaysSnapshot: 30,
+      basePriceMinor: 100000,
+      discountMinor: 0,
+      finalPriceMinor: 100000,
+      taxRateBps: 1800,
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+      billingFrequency: 'ONE_TIME',
+      status: 'PENDING',
+      createdBy: user.id
     })
 
     membershipRepo.updateStatus(org.id, membership.id, 'ACTIVE')
@@ -224,18 +277,30 @@ describe('freezeRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
     const plan = createTestPlan(org.id)
     const membership = membershipRepo.create({
       organizationId: org.id,
       customerId: customer.id,
-      planId: plan.id, offerId: null,
-      planNameSnapshot: 'Monthly Plan', durationDaysSnapshot: 30,
-      basePriceMinor: 100000, discountMinor: 0, finalPriceMinor: 100000,
-      taxRateBps: 1800, startDate: '2026-08-01', endDate: '2026-08-31',
-      billingFrequency: 'ONE_TIME', status: 'ACTIVE', createdBy: user.id
+      planId: plan.id,
+      offerId: null,
+      planNameSnapshot: 'Monthly Plan',
+      durationDaysSnapshot: 30,
+      basePriceMinor: 100000,
+      discountMinor: 0,
+      finalPriceMinor: 100000,
+      taxRateBps: 1800,
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+      billingFrequency: 'ONE_TIME',
+      status: 'ACTIVE',
+      createdBy: user.id
     })
 
     const freeze = freezeRepo.create({
@@ -271,27 +336,44 @@ describe('freezeRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
     const plan = createTestPlan(org.id)
     const membership = membershipRepo.create({
       organizationId: org.id,
       customerId: customer.id,
-      planId: plan.id, offerId: null,
-      planNameSnapshot: 'Monthly Plan', durationDaysSnapshot: 30,
-      basePriceMinor: 100000, discountMinor: 0, finalPriceMinor: 100000,
-      taxRateBps: 1800, startDate: '2026-08-01', endDate: '2026-08-31',
-      billingFrequency: 'ONE_TIME', status: 'ACTIVE', createdBy: user.id
+      planId: plan.id,
+      offerId: null,
+      planNameSnapshot: 'Monthly Plan',
+      durationDaysSnapshot: 30,
+      basePriceMinor: 100000,
+      discountMinor: 0,
+      finalPriceMinor: 100000,
+      taxRateBps: 1800,
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+      billingFrequency: 'ONE_TIME',
+      status: 'ACTIVE',
+      createdBy: user.id
     })
 
     freezeRepo.create({
       organizationId: org.id,
       membershipId: membership.id,
-      startDate: '2026-08-10', endDate: '2026-08-20',
-      reason: null, feeMinor: 0,
-      billingBehavior: 'CHARGE_FEE', accessBehavior: 'BLOCK',
-      extensionDays: 0, creditDays: 0, createdBy: user.id
+      startDate: '2026-08-10',
+      endDate: '2026-08-20',
+      reason: null,
+      feeMinor: 0,
+      billingBehavior: 'CHARGE_FEE',
+      accessBehavior: 'BLOCK',
+      extensionDays: 0,
+      creditDays: 0,
+      createdBy: user.id
     })
 
     expect(freezeRepo.getActiveFreeze(org.id, membership.id, '2026-08-15')).not.toBeNull()
@@ -307,18 +389,30 @@ describe('membershipEventRepo', () => {
     const customer = customerRepo.create({
       organizationId: org.id,
       personId: person.id,
-      billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, emergencyContact: null, notes: null
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      emergencyContact: null,
+      notes: null
     })
     const plan = createTestPlan(org.id)
     const membership = membershipRepo.create({
       organizationId: org.id,
       customerId: customer.id,
-      planId: plan.id, offerId: null,
-      planNameSnapshot: 'Monthly Plan', durationDaysSnapshot: 30,
-      basePriceMinor: 100000, discountMinor: 0, finalPriceMinor: 100000,
-      taxRateBps: 1800, startDate: '2026-08-01', endDate: '2026-08-31',
-      billingFrequency: 'ONE_TIME', status: 'ACTIVE', createdBy: user.id
+      planId: plan.id,
+      offerId: null,
+      planNameSnapshot: 'Monthly Plan',
+      durationDaysSnapshot: 30,
+      basePriceMinor: 100000,
+      discountMinor: 0,
+      finalPriceMinor: 100000,
+      taxRateBps: 1800,
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+      billingFrequency: 'ONE_TIME',
+      status: 'ACTIVE',
+      createdBy: user.id
     })
 
     membershipEventRepo.create({

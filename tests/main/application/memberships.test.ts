@@ -6,10 +6,11 @@ import { sellMembership } from '../../../src/main/application/memberships'
 import { getDrizzle } from '../../../src/main/db/connection'
 import { invoices, memberships, payments, idempotencyKeys } from '../../../src/main/db/schema'
 import { OverpaymentNotAllowedError, ValidationError } from '../../../src/main/domain/errors'
+import type { SellMembershipInput } from '../../../src/shared/contracts/membership-sale'
 
 setupSalesDb()
 
-function createLeadForSale() {
+function createLeadForSale(): { organizationId: number; leadId: number } {
   const { organizationId } = seedOrgWithSession()
   const lead = createLead({
     fullName: 'Sale Customer',
@@ -21,7 +22,7 @@ function createLeadForSale() {
 
 const saleDates = { startDate: '2026-08-25', endDate: '2026-11-22' }
 
-function saleInput(leadId: number, transactionId: string) {
+function saleInput(leadId: number, transactionId: string): SellMembershipInput {
   return {
     leadId,
     planId: 1,
@@ -46,10 +47,22 @@ describe('sellMembership', () => {
     expect(result.membershipId).toBeGreaterThan(0)
     expect(result.customerId).toBeGreaterThan(0)
     expect(result.invoiceNumber).toMatch(/^[A-Z0-9]+-\d{6}-01$/)
-    expect(db.select().from(memberships).where(eq(memberships.id, result.membershipId)).get()).toBeTruthy()
-    expect(db.select().from(invoices).where(eq(invoices.id, result.invoiceId)).get()?.status).toBe('PARTIALLY_PAID')
-    expect(db.select().from(payments).where(eq(payments.id, result.paymentId)).get()?.payment_method).toBe('UPI')
-    expect(db.select().from(idempotencyKeys).where(eq(idempotencyKeys.organization_id, organizationId)).all()).toHaveLength(1)
+    expect(
+      db.select().from(memberships).where(eq(memberships.id, result.membershipId)).get()
+    ).toBeTruthy()
+    expect(db.select().from(invoices).where(eq(invoices.id, result.invoiceId)).get()?.status).toBe(
+      'PARTIALLY_PAID'
+    )
+    expect(
+      db.select().from(payments).where(eq(payments.id, result.paymentId)).get()?.payment_method
+    ).toBe('UPI')
+    expect(
+      db
+        .select()
+        .from(idempotencyKeys)
+        .where(eq(idempotencyKeys.organization_id, organizationId))
+        .all()
+    ).toHaveLength(1)
   })
 
   it('returns the original result for a repeated transaction id', () => {
@@ -66,10 +79,12 @@ describe('sellMembership', () => {
 
   it('rejects overpayment before committing any sale rows', () => {
     const { leadId } = createLeadForSale()
-    expect(() => sellMembership({
-      ...saleInput(leadId, '00000000-0000-4000-8000-000000000003'),
-      paidAmountMinor: 150_001
-    })).toThrow(OverpaymentNotAllowedError)
+    expect(() =>
+      sellMembership({
+        ...saleInput(leadId, '00000000-0000-4000-8000-000000000003'),
+        paidAmountMinor: 150_001
+      })
+    ).toThrow(OverpaymentNotAllowedError)
 
     const db = getDrizzle()
     expect(db.select().from(memberships).all()).toHaveLength(0)
@@ -78,9 +93,11 @@ describe('sellMembership', () => {
 
   it('rejects dates shorter than the selected plan duration', () => {
     const { leadId } = createLeadForSale()
-    expect(() => sellMembership({
-      ...saleInput(leadId, '00000000-0000-4000-8000-000000000004'),
-      endDate: '2026-09-01'
-    })).toThrow(ValidationError)
+    expect(() =>
+      sellMembership({
+        ...saleInput(leadId, '00000000-0000-4000-8000-000000000004'),
+        endDate: '2026-09-01'
+      })
+    ).toThrow(ValidationError)
   })
 })

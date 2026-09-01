@@ -60,7 +60,9 @@ export function OfferFilters({
 
       <Select
         value={filters.lifecycle}
-        onValueChange={(v) => onChange({ ...filters, lifecycle: v as OfferFiltersState['lifecycle'] })}
+        onValueChange={(v) =>
+          onChange({ ...filters, lifecycle: v as OfferFiltersState['lifecycle'] })
+        }
       >
         <SelectTrigger className="w-36">
           <SelectValue placeholder="Lifecycle" />

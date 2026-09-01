@@ -133,8 +133,8 @@ export function MoveStageDialog({
         <DialogHeader>
           <DialogTitle>Move {lead.name}</DialogTitle>
           <DialogDescription>
-            Log what moved this lead forward. Every stage change keeps a reason
-            so the history stays true.
+            Log what moved this lead forward. Every stage change keeps a reason so the history stays
+            true.
           </DialogDescription>
         </DialogHeader>
 
@@ -223,9 +223,7 @@ export function MoveStageDialog({
                     </>
                   }
                   hint="Recorded as the reason for this stage change"
-                  validate={(v) =>
-                    v.trim() ? undefined : 'Write what happened before the move'
-                  }
+                  validate={(v) => (v.trim() ? undefined : 'Write what happened before the move')}
                   completeWhen={(v) => v.trim().length > 0}
                 >
                   {({ id, value, invalid, valid, describedBy, onBlur, onChange }) => (
@@ -263,8 +261,7 @@ export function MoveStageDialog({
                       <form.Field
                         name="fuTitle"
                         validators={{
-                          onChange: ({ value }) =>
-                            value.trim() ? undefined : 'Name the follow-up'
+                          onChange: ({ value }) => (value.trim() ? undefined : 'Name the follow-up')
                         }}
                       >
                         {(sub) => (
@@ -284,8 +281,7 @@ export function MoveStageDialog({
                       <form.Field
                         name="due"
                         validators={{
-                          onChange: ({ value }) =>
-                            value ? undefined : 'Pick a due date and time'
+                          onChange: ({ value }) => (value ? undefined : 'Pick a due date and time')
                         }}
                       >
                         {(sub) => (

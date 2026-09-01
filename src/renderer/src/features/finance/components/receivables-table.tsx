@@ -90,7 +90,9 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
         </SortButton>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm tabular-nums">{formatMinor(row.original.totalMinor, currency)}</span>
+        <span className="font-mono text-sm tabular-nums">
+          {formatMinor(row.original.totalMinor, currency)}
+        </span>
       ),
       sortFn: 'basic'
     }),
@@ -106,7 +108,9 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
         </SortButton>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm tabular-nums">{formatMinor(row.original.paidMinor, currency)}</span>
+        <span className="font-mono text-sm tabular-nums">
+          {formatMinor(row.original.paidMinor, currency)}
+        </span>
       ),
       sortFn: 'basic'
     }),

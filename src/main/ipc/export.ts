@@ -20,7 +20,5 @@ const exportExcelInputSchema = z.object({
 })
 
 export function registerExportIpc(): void {
-  handle(IPC_CHANNELS.EXPORT_EXCEL, exportExcelInputSchema, (input) =>
-    exportTableToExcel(input)
-  )
+  handle(IPC_CHANNELS.EXPORT_EXCEL, exportExcelInputSchema, (input) => exportTableToExcel(input))
 }

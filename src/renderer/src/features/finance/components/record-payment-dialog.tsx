@@ -150,7 +150,8 @@ export function RecordPaymentDialog({
 
       return outstanding.map((inv) => ({
         invoiceId: inv.id,
-        amountMinor: inv.id === preSelectedInvoiceId ? Math.max(0, inv.totalMinor - inv.paidMinor) : 0,
+        amountMinor:
+          inv.id === preSelectedInvoiceId ? Math.max(0, inv.totalMinor - inv.paidMinor) : 0,
         enabled: inv.id === preSelectedInvoiceId
       }))
     })
@@ -191,7 +192,9 @@ export function RecordPaymentDialog({
   }, [])
 
   const overAllocated =
-    !!amount && (parseToMinor(amount, currency) ?? 0) > 0 && totalAllocated > (parseToMinor(amount, currency) ?? 0)
+    !!amount &&
+    (parseToMinor(amount, currency) ?? 0) > 0 &&
+    totalAllocated > (parseToMinor(amount, currency) ?? 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

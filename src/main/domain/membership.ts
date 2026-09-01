@@ -7,12 +7,7 @@
  */
 
 export type MembershipStatus =
-  | 'PENDING'
-  | 'ACTIVE'
-  | 'FROZEN'
-  | 'EXPIRED'
-  | 'CANCELLED'
-  | 'TERMINATED'
+  'PENDING' | 'ACTIVE' | 'FROZEN' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED'
 
 export type FreezeBillingBehavior = 'SUSPEND_BILLING' | 'CONTINUE_BILLING'
 export type FreezeAccessBehavior = 'NO_ACCESS' | 'LIMITED_ACCESS'

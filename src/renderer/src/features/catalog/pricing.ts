@@ -64,10 +64,7 @@ export function computeDiscountLine(
   }
 }
 
-export function offerLifecycle(
-  offer: Offer,
-  now: Date = new Date()
-): OfferLifecycle {
+export function offerLifecycle(offer: Offer, now: Date = new Date()): OfferLifecycle {
   if (!offer.isActive) return 'PAUSED'
   if (offer.endDate && now > new Date(offer.endDate)) return 'ENDED'
   if (now < new Date(offer.startDate)) return 'UPCOMING'

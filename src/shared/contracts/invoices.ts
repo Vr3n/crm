@@ -6,7 +6,12 @@ import { z } from 'zod'
  */
 
 export const INVOICE_STATUSES = [
-  'DRAFT', 'OPEN', 'PARTIALLY_PAID', 'PAID', 'VOID', 'UNCOLLECTIBLE'
+  'DRAFT',
+  'OPEN',
+  'PARTIALLY_PAID',
+  'PAID',
+  'VOID',
+  'UNCOLLECTIBLE'
 ] as const
 
 /* -------------------------------------------------------------------------- */

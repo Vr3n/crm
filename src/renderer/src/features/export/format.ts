@@ -19,7 +19,11 @@ export function dateColumn(header: string, key: string, opts?: { width?: number 
 }
 
 /** Creates an export column for ISO datetime strings. */
-export function datetimeColumn(header: string, key: string, opts?: { width?: number }): ExportColumn {
+export function datetimeColumn(
+  header: string,
+  key: string,
+  opts?: { width?: number }
+): ExportColumn {
   return { header, key, format: 'datetime', width: opts?.width ?? 20 }
 }
 

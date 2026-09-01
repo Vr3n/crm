@@ -40,9 +40,7 @@ export const policiesApi = {
     return window.api.catalog.createCancellationPolicy(input)
   },
 
-  updateCancellationPolicy(
-    input: UpdateCancellationPolicyInput
-  ): Promise<CancellationPolicyRow> {
+  updateCancellationPolicy(input: UpdateCancellationPolicyInput): Promise<CancellationPolicyRow> {
     return window.api.catalog.updateCancellationPolicy(input)
   }
 }

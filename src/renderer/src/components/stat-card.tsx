@@ -38,8 +38,17 @@ export function StatCard({
 
   return (
     <div
-      className={cn('crm-gradient-border flex flex-col justify-between gap-3 rounded-lg border bg-card p-4')}
-      style={gradient ? { '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties : undefined}
+      className={cn(
+        'crm-gradient-border flex flex-col justify-between gap-3 rounded-lg border bg-card p-4'
+      )}
+      style={
+        gradient
+          ? ({
+              '--gradient-start': gradient.start,
+              '--gradient-end': gradient.end
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
@@ -47,7 +56,12 @@ export function StatCard({
       </div>
       <div className="min-w-0">
         {value ? (
-          <p className={cn('truncate font-mono text-2xl font-semibold tabular-nums tracking-tight', toneClass)}>
+          <p
+            className={cn(
+              'truncate font-mono text-2xl font-semibold tabular-nums tracking-tight',
+              toneClass
+            )}
+          >
             {value}
           </p>
         ) : (

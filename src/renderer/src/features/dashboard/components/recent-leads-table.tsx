@@ -78,9 +78,7 @@ export function RecentLeadsTable(): React.JSX.Element {
 
   const rows = useMemo(() => {
     if (!data) return []
-    return data
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, MAX_ROWS)
+    return data.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, MAX_ROWS)
   }, [data])
 
   const columns = useMemo(() => buildColumns(), [])

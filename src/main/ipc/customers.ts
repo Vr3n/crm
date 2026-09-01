@@ -125,7 +125,10 @@ function buildInvoiceOutputs(
     .where(
       and(
         eq(paymentAllocations.organization_id, organizationId),
-        sql`${paymentAllocations.invoice_id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${paymentAllocations.invoice_id} IN (${sql.join(
+          invoiceIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as AllocationRow[]
@@ -157,7 +160,7 @@ function buildCustomerOutput(
   person: PersonRow | undefined,
   memberShips: MembershipRow[],
   freezesByMembership: Map<number, FreezeRow[]>
-) {
+): Record<string, unknown> & { memberships: Array<Record<string, unknown>> } {
   return {
     id: String(customer.id),
     name: person?.full_name ?? customer.billing_name ?? 'Unknown',
@@ -247,7 +250,10 @@ export function registerCustomersIpc(): void {
       .where(
         and(
           eq(people.organization_id, organizationId),
-          sql`${people.id} IN (${sql.join(personIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${people.id} IN (${sql.join(
+            personIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as PersonRow[]
@@ -284,9 +290,7 @@ export function registerCustomersIpc(): void {
     return customerRows.map((c) => {
       const person = personMap.get(c.person_id)
       const memberShips = membershipsByCustomer.get(c.id) ?? []
-      const allFreezes = memberShips.flatMap(
-        (m) => freezesByMembership.get(m.id) ?? []
-      )
+      const allFreezes = memberShips.flatMap((m) => freezesByMembership.get(m.id) ?? [])
       const output = buildCustomerOutput(c, person, memberShips, freezesByMembership)
       const status = deriveCustomerStatus(memberShips, allFreezes)
       const currentMembership = memberShips.find(
@@ -304,8 +308,7 @@ export function registerCustomersIpc(): void {
         membershipCount: memberShips.length,
         nextExpiry: memberShips
           .filter((m) => m.status === 'ACTIVE')
-          .sort((a, b) => a.end_date.localeCompare(b.end_date))[0]
-          ?.end_date
+          .sort((a, b) => a.end_date.localeCompare(b.end_date))[0]?.end_date
       }
     })
   })
@@ -332,7 +335,10 @@ export function registerCustomersIpc(): void {
       .select()
       .from(memberships)
       .where(
-        and(eq(memberships.organization_id, organizationId), eq(memberships.customer_id, customerId))
+        and(
+          eq(memberships.organization_id, organizationId),
+          eq(memberships.customer_id, customerId)
+        )
       )
       .orderBy(asc(memberships.created_at))
       .all() as MembershipRow[]
@@ -353,9 +359,7 @@ export function registerCustomersIpc(): void {
     }
 
     const output = buildCustomerOutput(customerRow, person, memberShips, freezesByMembership)
-    const allFreezes = memberShips.flatMap(
-      (m) => freezesByMembership.get(m.id) ?? []
-    )
+    const allFreezes = memberShips.flatMap((m) => freezesByMembership.get(m.id) ?? [])
     const status = deriveCustomerStatus(memberShips, allFreezes)
     const today = new Date().toISOString().slice(0, 10)
     const currentMembership = memberShips.find(
@@ -374,8 +378,7 @@ export function registerCustomersIpc(): void {
       membershipCount: memberShips.length,
       nextExpiry: memberShips
         .filter((m) => m.status === 'ACTIVE')
-        .sort((a, b) => a.end_date.localeCompare(b.end_date))[0]
-        ?.end_date,
+        .sort((a, b) => a.end_date.localeCompare(b.end_date))[0]?.end_date,
       invoices: buildInvoiceOutputs(organizationId, customerId)
     }
   })

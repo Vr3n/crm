@@ -63,9 +63,9 @@ export const SEED_ROLES: SeedRole[] = [
       'offer.create',
       'offer.update',
       'offer.deactivate',
-       'membership.view',
-       'membership.create',
-       'membership.sell',
+      'membership.view',
+      'membership.create',
+      'membership.sell',
       'membership.activate',
       'membership.freeze',
       'membership.unfreeze',
@@ -107,9 +107,9 @@ export const SEED_ROLES: SeedRole[] = [
       'followup.complete',
       'plan.view',
       'offer.view',
-       'membership.view',
-       'membership.create',
-       'membership.sell',
+      'membership.view',
+      'membership.create',
+      'membership.sell',
       'membership.activate'
     ]
   },
@@ -117,7 +117,16 @@ export const SEED_ROLES: SeedRole[] = [
     name: 'Front Desk',
     is_system: false,
     is_super: false,
-    permissions: ['lead.view', 'lead.record_activity', 'followup.view', 'followup.create', 'followup.update', 'followup.cancel', 'followup.complete', 'membership.view']
+    permissions: [
+      'lead.view',
+      'lead.record_activity',
+      'followup.view',
+      'followup.create',
+      'followup.update',
+      'followup.cancel',
+      'followup.complete',
+      'membership.view'
+    ]
   },
   {
     name: 'Finance',
@@ -164,9 +173,11 @@ export function seedRolesForOrganization(organizationId: number): void {
     const db = getDrizzle()
 
     const permissionIds = new Map(
-      db.select({ id: permissions.id, code: permissions.code }).from(permissions).all().map(
-        (row) => [row.code, row.id]
-      )
+      db
+        .select({ id: permissions.id, code: permissions.code })
+        .from(permissions)
+        .all()
+        .map((row) => [row.code, row.id])
     )
 
     for (const role of SEED_ROLES) {
@@ -251,12 +262,7 @@ export const SEED_LOST_REASONS = [
 ]
 
 /** Default payment methods (Module 05). */
-export const SEED_PAYMENT_METHODS = [
-  'UPI',
-  'CASH',
-  'CREDIT CARD',
-  'DEBIT CARD'
-]
+export const SEED_PAYMENT_METHODS = ['UPI', 'CASH', 'CREDIT CARD', 'DEBIT CARD']
 
 export interface SeedPlan {
   name: string
@@ -380,15 +386,11 @@ export function seedSalesReferenceData(organizationId: number): void {
     })
 
     SEED_SOURCES.forEach((name, i) => {
-      db.insert(leadSources)
-        .values({ organization_id: organizationId, name, sort_order: i })
-        .run()
+      db.insert(leadSources).values({ organization_id: organizationId, name, sort_order: i }).run()
     })
 
     SEED_ACTIVITY_TYPES.forEach((name) => {
-      db.insert(leadActivityTypes)
-        .values({ organization_id: organizationId, name })
-        .run()
+      db.insert(leadActivityTypes).values({ organization_id: organizationId, name }).run()
     })
 
     SEED_LOST_REASONS.forEach((name, i) => {

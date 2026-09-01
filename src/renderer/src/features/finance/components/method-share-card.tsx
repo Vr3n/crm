@@ -26,7 +26,12 @@ export function MethodShareCard({
   return (
     <Card
       className="crm-gradient-border"
-      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--primary)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
@@ -65,7 +70,9 @@ export function MethodShareCard({
                       </span>
                     ) : null}
                     <span className="min-w-0 flex-1 truncate text-xs font-medium">{m.label}</span>
-                    <span className="font-mono text-xs tabular-nums">{formatMinor(m.amountMinor, currency)}</span>
+                    <span className="font-mono text-xs tabular-nums">
+                      {formatMinor(m.amountMinor, currency)}
+                    </span>
                     <span className="w-12 text-right font-mono text-xs font-semibold tabular-nums">
                       {Math.round((m.amountMinor / total) * 100)}%
                     </span>

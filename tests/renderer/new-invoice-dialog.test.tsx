@@ -81,8 +81,9 @@ function mockApi(): void {
     get: vi.fn(),
     listByStatus: vi.fn().mockResolvedValue([])
   } as never
-  ;(window.api.catalog as { listPlans: ReturnType<typeof vi.fn> }).listPlans =
-    vi.fn().mockResolvedValue([])
+  ;(window.api.catalog as { listPlans: ReturnType<typeof vi.fn> }).listPlans = vi
+    .fn()
+    .mockResolvedValue([])
 }
 
 function renderDialog(seedPlanId?: number): ReturnType<typeof renderWithClient> {

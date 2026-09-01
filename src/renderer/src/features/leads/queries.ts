@@ -181,7 +181,11 @@ export function useLogActivity(): UseMutationResult<
   Error,
   RecordLeadActivityInput
 > {
-  return useLeadMutation((input) => api.logActivity(input), 'Activity logged', 'Could not log activity')
+  return useLeadMutation(
+    (input) => api.logActivity(input),
+    'Activity logged',
+    'Could not log activity'
+  )
 }
 
 export function useMarkLost(): UseMutationResult<void, Error, MarkLeadLostInput> {

@@ -68,5 +68,8 @@ export function useUpdateOrganization(): UseMutationResult<
   Error,
   Record<string, unknown>
 > {
-  return useIdentityMutation((input) => api.updateOrganization(input as never), 'Organization updated')
+  return useIdentityMutation(
+    (input) => api.updateOrganization(input as never),
+    'Organization updated'
+  )
 }

@@ -842,9 +842,9 @@ describe('bulkScheduleFollowUp', () => {
     const { leadId } = createLeadFor(organizationId)
     // createLead already auto-created the default follow-up for this lead.
     const before = (
-      getDb()
-        .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?')
-        .get(leadId) as { n: number }
+      getDb().prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?').get(leadId) as {
+        n: number
+      }
     ).n
     expect(() =>
       bulkScheduleFollowUp({

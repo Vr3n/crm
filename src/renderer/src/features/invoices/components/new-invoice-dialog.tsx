@@ -36,7 +36,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { can, useSession } from '@/context/session-context'
-import { formatMinor, parseToMinor, formatRate, percentToBps, minorToMajor, type CurrencyCode } from '@/lib/money'
+import {
+  formatMinor,
+  parseToMinor,
+  formatRate,
+  percentToBps,
+  minorToMajor,
+  type CurrencyCode
+} from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { usePlans } from '@/features/catalog/queries'
@@ -133,18 +140,30 @@ function SnapshotSection({
       <FieldGroup className="gap-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Billed to</h3>
-          <span className="text-xs text-muted-foreground">Snapshot — edits never touch the customer record</span>
+          <span className="text-xs text-muted-foreground">
+            Snapshot — edits never touch the customer record
+          </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <form.Field
             name="name"
             validators={{
               onChange: ({ value }) =>
-                value.trim().length === 0 ? 'Name is required' : value.length > 200 ? 'Max 200 characters' : undefined
+                value.trim().length === 0
+                  ? 'Name is required'
+                  : value.length > 200
+                    ? 'Max 200 characters'
+                    : undefined
             }}
           >
             {(field) => (
-              <Field id="bill-name" label="Name" error={field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined}>
+              <Field
+                id="bill-name"
+                label="Name"
+                error={
+                  field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined
+                }
+              >
                 <Input
                   id="bill-name"
                   value={field.state.value}
@@ -158,9 +177,18 @@ function SnapshotSection({
               </Field>
             )}
           </form.Field>
-          <form.Field name="phone" validators={{ onChange: ({ value }) => (value.length > 20 ? 'Max 20 characters' : undefined) }}>
+          <form.Field
+            name="phone"
+            validators={{
+              onChange: ({ value }) => (value.length > 20 ? 'Max 20 characters' : undefined)
+            }}
+          >
             {(field) => (
-              <Field id="bill-phone" label="Phone" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+              <Field
+                id="bill-phone"
+                label="Phone"
+                error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}
+              >
                 <Input
                   id="bill-phone"
                   inputMode="tel"
@@ -176,11 +204,17 @@ function SnapshotSection({
             name="email"
             validators={{
               onChange: ({ value }) =>
-                value.trim() !== '' && !/^\S+@\S+\.\S+$/.test(value.trim()) ? 'Enter a valid email' : undefined
+                value.trim() !== '' && !/^\S+@\S+\.\S+$/.test(value.trim())
+                  ? 'Enter a valid email'
+                  : undefined
             }}
           >
             {(field) => (
-              <Field id="bill-email" label="Email" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+              <Field
+                id="bill-email"
+                label="Email"
+                error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}
+              >
                 <Input
                   id="bill-email"
                   type="email"
@@ -194,7 +228,12 @@ function SnapshotSection({
           </form.Field>
           <form.Field name="address" validators={{ onChange: ({ value }) => MAX_500(value) }}>
             {(field) => (
-              <Field id="bill-address" label="Address" hint="" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+              <Field
+                id="bill-address"
+                label="Address"
+                hint=""
+                error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}
+              >
                 <Textarea
                   id="bill-address"
                   rows={1}
@@ -209,7 +248,11 @@ function SnapshotSection({
         </div>
         {canEdit ? (
           <form.Subscribe
-            selector={(s) => ({ canSubmit: s.canSubmit, isDirty: s.isDirty, isSubmitting: s.isSubmitting })}
+            selector={(s) => ({
+              canSubmit: s.canSubmit,
+              isDirty: s.isDirty,
+              isSubmitting: s.isSubmitting
+            })}
           >
             {({ canSubmit, isDirty, isSubmitting }) => (
               <LoadingButton
@@ -287,7 +330,9 @@ function LinesSection({
           <span className="w-28 text-right">Total</span>
         </div>
         {lines.length === 0 ? (
-          <p className="px-3 py-4 text-sm text-muted-foreground">No lines yet — add at least one before finalizing.</p>
+          <p className="px-3 py-4 text-sm text-muted-foreground">
+            No lines yet — add at least one before finalizing.
+          </p>
         ) : (
           lines.map((l) => (
             <div
@@ -297,14 +342,24 @@ function LinesSection({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{l.description}</p>
                 {l.discountMinor > 0 ? (
-                  <p className="text-xs text-muted-foreground">Discount −{formatMinor(l.discountMinor, currency)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Discount −{formatMinor(l.discountMinor, currency)}
+                  </p>
                 ) : null}
               </div>
-              <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{l.quantity}</span>
-              <span className="w-24 text-right font-mono text-xs tabular-nums">{formatMinor(l.unitPriceMinor, currency)}</span>
-              <span className="w-20 text-right text-xs tabular-nums text-muted-foreground">{formatRate(l.taxRateBps)}</span>
+              <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+                {l.quantity}
+              </span>
+              <span className="w-24 text-right font-mono text-xs tabular-nums">
+                {formatMinor(l.unitPriceMinor, currency)}
+              </span>
+              <span className="w-20 text-right text-xs tabular-nums text-muted-foreground">
+                {formatRate(l.taxRateBps)}
+              </span>
               <div className="flex w-28 items-center justify-end gap-1">
-                <span className="font-mono text-sm tabular-nums">{formatMinor(l.lineTotalMinor, currency)}</span>
+                <span className="font-mono text-sm tabular-nums">
+                  {formatMinor(l.lineTotalMinor, currency)}
+                </span>
                 {canEdit ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -342,7 +397,13 @@ function LinesSection({
   )
 }
 
-const EMPTY_LINE_VALUES: LineValues = { description: '', quantity: '1', unitPrice: '', discount: '', taxRate: '0' }
+const EMPTY_LINE_VALUES: LineValues = {
+  description: '',
+  quantity: '1',
+  unitPrice: '',
+  discount: '',
+  taxRate: '0'
+}
 
 function lineValuesFromPlan(plan: Plan | null, currency: CurrencyCode): LineValues {
   if (!plan) return EMPTY_LINE_VALUES
@@ -419,12 +480,21 @@ function LineEntryForm({
             <Label htmlFor="line-plan">From plan (optional)</Label>
             <Popover open={planOpen} onOpenChange={setPlanOpen}>
               <PopoverTrigger asChild>
-                <Button type="button" variant="outline" role="combobox" aria-expanded={planOpen} className="h-9 w-full justify-between px-3 text-sm font-normal">
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={planOpen}
+                  className="h-9 w-full justify-between px-3 text-sm font-normal"
+                >
                   {plan ? plan.name : <span className="text-muted-foreground">Search plans…</span>}
                   <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0" align="start">
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] rounded-lg p-0"
+                align="start"
+              >
                 <Command
                   filter={(val, search) => {
                     if (val === '__clear__') return search.toLowerCase().includes('clear') ? 1 : 0
@@ -438,12 +508,25 @@ function LineEntryForm({
                     <CommandEmpty>No matching plan.</CommandEmpty>
                     <CommandGroup>
                       {plan ? (
-                        <CommandItem value="__clear__" onSelect={() => { onPlanPicked(null); setPlanOpen(false) }}>
+                        <CommandItem
+                          value="__clear__"
+                          onSelect={() => {
+                            onPlanPicked(null)
+                            setPlanOpen(false)
+                          }}
+                        >
                           <Trash2 className="mr-2 size-3.5" /> Clear selected plan (manual line)
                         </CommandItem>
                       ) : null}
                       {activePlans.map((p) => (
-                        <CommandItem key={p.id} value={p.name} onSelect={() => { onPlanPicked(p); setPlanOpen(false) }}>
+                        <CommandItem
+                          key={p.id}
+                          value={p.name}
+                          onSelect={() => {
+                            onPlanPicked(p)
+                            setPlanOpen(false)
+                          }}
+                        >
                           <span className="min-w-0 flex-1 truncate">{p.name}</span>
                           <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                             {formatMinor(p.basePriceMinor, currency)}
@@ -474,7 +557,13 @@ function LineEntryForm({
             }}
           >
             {(field) => (
-              <Field id="line-desc" label="Description" error={field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined}>
+              <Field
+                id="line-desc"
+                label="Description"
+                error={
+                  field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined
+                }
+              >
                 <Input
                   id="line-desc"
                   value={field.state.value}
@@ -491,17 +580,27 @@ function LineEntryForm({
               onChange: ({ value }) => {
                 if (!value) return 'Quantity is required'
                 if (!/^[1-9]/.test(value)) return 'Whole numbers, at least 1'
-                return /^\d+$/.test(value) && Number(value) >= 1 ? undefined : 'Whole numbers, at least 1'
+                return /^\d+$/.test(value) && Number(value) >= 1
+                  ? undefined
+                  : 'Whole numbers, at least 1'
               }
             }}
           >
             {(field) => (
-              <Field id="line-qty" label="Quantity" error={field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined}>
+              <Field
+                id="line-qty"
+                label="Quantity"
+                error={
+                  field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined
+                }
+              >
                 <Input
                   id="line-qty"
                   inputMode="numeric"
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value.replace(/[^\d]/g, '').slice(0, 4))
+                  }
                   onBlur={field.handleBlur}
                 />
               </Field>
@@ -514,17 +613,23 @@ function LineEntryForm({
                 label="Unit price"
                 labelEnd={
                   parseToMinor(field.state.value, currency) !== undefined ? (
-                    <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatMinor(parseToMinor(field.state.value, currency)!, currency)}</span>
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {formatMinor(parseToMinor(field.state.value, currency)!, currency)}
+                    </span>
                   ) : undefined
                 }
-                error={field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined}
+                error={
+                  field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined
+                }
               >
                 <Input
                   id="line-price"
                   inputMode="decimal"
                   placeholder="0.00"
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value.replace(/[^\d.]/g, '').slice(0, 12))}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value.replace(/[^\d.]/g, '').slice(0, 12))
+                  }
                   onBlur={field.handleBlur}
                 />
               </Field>
@@ -533,13 +638,19 @@ function LineEntryForm({
           <div className="grid grid-cols-2 gap-3">
             <form.Field name="discount" validators={{ onChange: moneyValidator(false, currency) }}>
               {(field) => (
-                <Field id="line-discount" label="Discount" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+                <Field
+                  id="line-discount"
+                  label="Discount"
+                  error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}
+                >
                   <Input
                     id="line-discount"
                     inputMode="decimal"
                     placeholder="0"
                     value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value.replace(/[^\d.]/g, '').slice(0, 12))}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value.replace(/[^\d.]/g, '').slice(0, 12))
+                    }
                     onBlur={field.handleBlur}
                   />
                 </Field>
@@ -547,12 +658,18 @@ function LineEntryForm({
             </form.Field>
             <form.Field name="taxRate" validators={{ onChange: percentValidator }}>
               {(field) => (
-                <Field id="line-tax" label="Tax %" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+                <Field
+                  id="line-tax"
+                  label="Tax %"
+                  error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}
+                >
                   <Input
                     id="line-tax"
                     inputMode="decimal"
                     value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))
+                    }
                     onBlur={field.handleBlur}
                   />
                 </Field>
@@ -561,7 +678,9 @@ function LineEntryForm({
           </div>
         </div>
 
-        <form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
+        <form.Subscribe
+          selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}
+        >
           {({ canSubmit, isSubmitting }) => (
             <LoadingButton
               type="submit"
@@ -623,7 +742,9 @@ export function NewInvoiceDialog({
   async function doFinalize(): Promise<void> {
     if (draftId === undefined) return
     try {
-      const row = (await finalize.mutateAsync({ invoiceId: draftId })) as unknown as { number?: string }
+      const row = (await finalize.mutateAsync({ invoiceId: draftId })) as unknown as {
+        number?: string
+      }
       setConfirming(false)
       setFinalizedNo(row.number ?? 'the next sequential number')
     } catch {
@@ -745,7 +866,13 @@ export function NewInvoiceDialog({
                       address: detail.invoice.billingAddress ?? ''
                     }}
                   />
-                  <LinesSection draftId={draftId} lines={lines} seedPlanId={seedPlanId} canEdit={canCreate} currency={currency} />
+                  <LinesSection
+                    draftId={draftId}
+                    lines={lines}
+                    seedPlanId={seedPlanId}
+                    canEdit={canCreate}
+                    currency={currency}
+                  />
                 </div>
               )}
 
@@ -756,7 +883,10 @@ export function NewInvoiceDialog({
                     {formatMinor(detail?.invoice.taxMinor ?? 0, currency)}
                   </span>
                   <span className="font-semibold">
-                    Total <span className="font-mono tabular-nums">{formatMinor(detail?.invoice.totalMinor ?? 0, currency)}</span>
+                    Total{' '}
+                    <span className="font-mono tabular-nums">
+                      {formatMinor(detail?.invoice.totalMinor ?? 0, currency)}
+                    </span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

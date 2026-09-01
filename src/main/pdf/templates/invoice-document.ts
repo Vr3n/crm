@@ -106,12 +106,16 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
           <span class="label">Subtotal</span>
           <span class="value">${formatRupees(ctx.subtotal)}</span>
         </div>
-        ${totalDiscount > 0 ? `
+        ${
+          totalDiscount > 0
+            ? `
         <div class="totals-row">
           <span class="label">Discount</span>
           <span class="value" style="color: #991B1B;">− ${formatRupees(totalDiscount)}</span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
         <div class="totals-row">
           <span class="label">Tax (GST @ ${taxRate})</span>
           <span class="value">${formatRupees(ctx.taxTotal)}</span>
@@ -123,7 +127,9 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
       </div>
     </div>
 
-    ${ctx.membership ? `
+    ${
+      ctx.membership
+        ? `
     <hr class="divider" />
 
     <!-- Membership Duration -->
@@ -144,7 +150,9 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
         </div>
       </div>
     </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <hr class="divider" />
 

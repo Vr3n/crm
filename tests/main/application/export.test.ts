@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { mkdtemp, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import ExcelJS from 'exceljs'
@@ -16,11 +16,22 @@ afterAll(async () => {
 })
 
 const CURRENCY_FORMATS: Record<CurrencyCode, string> = {
-  INR: '₹#,##0.00', USD: '$#,##0.00', EUR: '€#,##0.00', GBP: '£#,##0.00',
-  JPY: '¥#,##0', KRW: '₩#,##0', VND: '₫#,##0', CLP: '$#,##0',
-  ISK: 'kr#,##0', KWD: 'د.ك#,##0.000', BHD: 'د.ب#,##0.000',
-  OMR: 'ر.ع#,##0.000', JOD: 'د.ا#,##0.000', TND: 'د.ت#,##0.000',
-  AED: 'د.إ#,##0.00', SGD: 'S$#,##0.00'
+  INR: '₹#,##0.00',
+  USD: '$#,##0.00',
+  EUR: '€#,##0.00',
+  GBP: '£#,##0.00',
+  JPY: '¥#,##0',
+  KRW: '₩#,##0',
+  VND: '₫#,##0',
+  CLP: '$#,##0',
+  ISK: 'kr#,##0',
+  KWD: 'د.ك#,##0.000',
+  BHD: 'د.ب#,##0.000',
+  OMR: 'ر.ع#,##0.000',
+  JOD: 'د.ا#,##0.000',
+  TND: 'د.ت#,##0.000',
+  AED: 'د.إ#,##0.00',
+  SGD: 'S$#,##0.00'
 }
 
 /**
@@ -244,7 +255,10 @@ describe('exportTableToExcel workbook generation', () => {
         { header: 'A', key: 'a' },
         { header: 'B', key: 'b' }
       ],
-      rows: [{ a: '', b: null }, { a: 'hello', b: undefined }]
+      rows: [
+        { a: '', b: null },
+        { a: 'hello', b: undefined }
+      ]
     })
 
     const wb = new ExcelJS.Workbook()
@@ -288,7 +302,10 @@ describe('exportTableToExcel workbook generation', () => {
 describe('filename sanitization', () => {
   it('sanitizes special characters via inline logic', () => {
     function sanitize(name: string): string {
-      return name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').toLowerCase()
+      return name
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .toLowerCase()
     }
 
     expect(sanitize('Memberships Report')).toBe('memberships_report')

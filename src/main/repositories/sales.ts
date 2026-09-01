@@ -627,10 +627,7 @@ export const leadRepo = {
     getDrizzle()
       .delete(leadFollowups)
       .where(
-        and(
-          eq(leadFollowups.organization_id, organizationId),
-          inArray(leadFollowups.lead_id, ids)
-        )
+        and(eq(leadFollowups.organization_id, organizationId), inArray(leadFollowups.lead_id, ids))
       )
       .run()
     getDrizzle()
@@ -671,33 +668,33 @@ export const leadRepo = {
     createdAfter?: string
     page: number
     limit: number
-    }): {
-      items: Array<{
-        id: number
-        personId: number
-        personName: string
-        phone: string
-        email: string | null
-        sourceId: number
-        sourceName: string | null
-        stageId: number
-        stageName: string | null
-        isWon: boolean
-        isLost: boolean
-        ownerUserId: number | null
-        ownerName: string | null
-        customerId: number | null
-        planId: number | null
-        planName: string | null
-        goal: string | null
-        notes: string | null
-        createdAt: string
-        lostReasonId: number | null
-        lostReasonName: string | null
-        lostAt: string | null
-      }>
-      total: number
-    } {
+  }): {
+    items: Array<{
+      id: number
+      personId: number
+      personName: string
+      phone: string
+      email: string | null
+      sourceId: number
+      sourceName: string | null
+      stageId: number
+      stageName: string | null
+      isWon: boolean
+      isLost: boolean
+      ownerUserId: number | null
+      ownerName: string | null
+      customerId: number | null
+      planId: number | null
+      planName: string | null
+      goal: string | null
+      notes: string | null
+      createdAt: string
+      lostReasonId: number | null
+      lostReasonName: string | null
+      lostAt: string | null
+    }>
+    total: number
+  } {
     const { organizationId, search, stageId, sourceId, ownerUserId, createdAfter } = input
     const where = and(
       eq(leads.organization_id, organizationId),
@@ -747,6 +744,11 @@ export const leadRepo = {
       .limit(input.limit)
       .offset((input.page - 1) * input.limit)
       .all()
+      .map((row) => ({
+        ...row,
+        isWon: !!row.isWon,
+        isLost: !!row.isLost
+      }))
 
     const totalRow = getDrizzle()
       .select({ value: count() })
@@ -773,9 +775,7 @@ export const leadRepo = {
     const row = getDrizzle()
       .select({ value: count() })
       .from(leads)
-      .where(
-        and(eq(leads.organization_id, organizationId), eq(leads.plan_id, planId))
-      )
+      .where(and(eq(leads.organization_id, organizationId), eq(leads.plan_id, planId)))
       .get()
     return row?.value ?? 0
   },
@@ -1035,7 +1035,11 @@ export const followupRepo = {
   cancel(organizationId: number, id: number, by: number, reason?: string): void {
     getDrizzle()
       .update(leadFollowups)
-      .set({ cancelled_at: sql`(datetime('now'))`, cancelled_by: by, cancelled_reason: reason ?? null })
+      .set({
+        cancelled_at: sql`(datetime('now'))`,
+        cancelled_by: by,
+        cancelled_reason: reason ?? null
+      })
       .where(and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.id, id)))
       .run()
   },

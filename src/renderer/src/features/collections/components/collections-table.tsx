@@ -28,7 +28,10 @@ import type { PaymentRecord } from '../types'
 
 const helper = createColumnHelper<DashboardFeatures, PaymentRecord>()
 
-function buildColumns(onView: (row: PaymentRecord) => void, currency: CurrencyCode): ReturnType<typeof helper.columns> {
+function buildColumns(
+  onView: (row: PaymentRecord) => void,
+  currency: CurrencyCode
+): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor('reference', {
       id: 'reference',
@@ -181,9 +184,10 @@ export function CollectionsTable({
         customer: r.customer.name,
         phone: r.customer.phone ?? '',
         method: r.method,
-        allocatedTo: r.allocations.length > 0
-          ? r.allocations.map((a) => a.invoiceNo).join(', ')
-          : 'On account',
+        allocatedTo:
+          r.allocations.length > 0
+            ? r.allocations.map((a) => a.invoiceNo).join(', ')
+            : 'On account',
         amountMinor: r.amountMinor,
         receivedBy: r.receivedBy
       })),

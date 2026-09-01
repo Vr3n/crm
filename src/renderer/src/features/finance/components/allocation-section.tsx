@@ -66,7 +66,9 @@ export function AllocationSection({
       const amountMinor = Math.min(due, available)
       if (existing) {
         onAllocationsChange(
-          allocations.map((a) => (a.invoiceId === invoice.id ? { ...a, enabled: true, amountMinor } : a))
+          allocations.map((a) =>
+            a.invoiceId === invoice.id ? { ...a, enabled: true, amountMinor } : a
+          )
         )
         return
       }

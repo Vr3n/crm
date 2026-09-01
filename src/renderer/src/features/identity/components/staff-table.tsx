@@ -148,13 +148,7 @@ export function StaffTable({
       emptyTitle="No staff found"
       emptyDescription="Add a staff member from the button above."
       headerTone="primary"
-      toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Staff"
-        />
-      }
+      toolbar={<ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Staff" />}
     />
   )
 }

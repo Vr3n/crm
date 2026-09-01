@@ -71,7 +71,9 @@ export function CreditDetailSheet({
                   <span className="text-[11px] tracking-wide text-muted-foreground uppercase">
                     Applied
                   </span>
-                  <span className="text-sm font-semibold tabular-nums">{formatMinor(applied, currency)}</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatMinor(applied, currency)}
+                  </span>
                 </div>
                 <div className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
                   <span className="text-[11px] tracking-wide text-muted-foreground uppercase">

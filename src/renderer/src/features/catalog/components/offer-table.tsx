@@ -30,9 +30,7 @@ const helper = createColumnHelper<DashboardFeatures, Offer>()
 
 const appliesToLabel = (offer: Offer, plans: Plan[]): string => {
   if (offer.applicablePlanIds.length === 0) return 'All plans'
-  const names = plans
-    .filter((p) => offer.applicablePlanIds.includes(p.id))
-    .map((p) => p.name)
+  const names = plans.filter((p) => offer.applicablePlanIds.includes(p.id)).map((p) => p.name)
   return names.length === 0 ? 'No plans' : names.join(', ')
 }
 
@@ -228,13 +226,7 @@ export function OfferTable({
       emptyTitle="No offers match"
       emptyDescription="Try clearing the filters, or create a new offer to layer on the catalog."
       headerTone="primary"
-      toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Offers"
-        />
-      }
+      toolbar={<ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Offers" />}
     />
   )
 }

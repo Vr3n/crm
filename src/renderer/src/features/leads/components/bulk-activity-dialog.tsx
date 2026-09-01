@@ -83,8 +83,8 @@ export function BulkActivityDialog({
             Log activities · {count} {count === 1 ? 'lead' : 'leads'}
           </DialogTitle>
           <DialogDescription>
-            One activity is recorded for each selected lead, with the same type
-            and note. History is never edited.
+            One activity is recorded for each selected lead, with the same type and note. History is
+            never edited.
           </DialogDescription>
         </DialogHeader>
 
@@ -185,11 +185,7 @@ export function BulkActivityDialog({
           </FieldGroup>
 
           <DialogFooter className="mt-6">
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </LoadingButton>
             <LoadingButton

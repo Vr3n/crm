@@ -9,18 +9,20 @@ import {
   applyCredit,
   getInvoicePaymentState,
   getPaymentHistory,
-  getRefundHistory,
   getCreditBalance,
   listCredits,
   listPaymentMethods,
   getOutstandingInvoices
 } from '../../../src/main/application/finance'
-import { createInvoice, addInvoiceLine, finalizeInvoice } from '../../../src/main/application/billing'
+import {
+  createInvoice,
+  addInvoiceLine,
+  finalizeInvoice
+} from '../../../src/main/application/billing'
 import { customerRepo } from '../../../src/main/repositories/membership'
 import { personRepo } from '../../../src/main/repositories/sales'
 import {
   ForbiddenError,
-  NotFoundError,
   ValidationError,
   RefundExceedsPaymentError,
   CreditExceedsBalanceError,
@@ -29,7 +31,10 @@ import {
 
 setupSalesDb()
 
-function createTestCustomer(organizationId: number, phone?: string) {
+function createTestCustomer(
+  organizationId: number,
+  phone?: string
+): ReturnType<typeof customerRepo.create> {
   const person = personRepo.create({
     organizationId,
     fullName: 'Test Customer',
@@ -48,12 +53,22 @@ function createTestCustomer(organizationId: number, phone?: string) {
   })
 }
 
-function createOpenInvoice(organizationId: number, totalMinor = 118000) {
+function createOpenInvoice(
+  organizationId: number,
+  totalMinor = 118000
+): {
+  customer: ReturnType<typeof customerRepo.create>
+  invoice: ReturnType<typeof finalizeInvoice>
+} {
   const customer = createTestCustomer(organizationId)
   const invoice = createInvoice({ customerId: customer.id })
   addInvoiceLine({
-    invoiceId: invoice.id, description: 'Monthly Plan', quantity: 1,
-    unitPriceMinor: totalMinor - 18000, discountMinor: 0, taxRateBps: 1800
+    invoiceId: invoice.id,
+    description: 'Monthly Plan',
+    quantity: 1,
+    unitPriceMinor: totalMinor - 18000,
+    discountMinor: 0,
+    taxRateBps: 1800
   })
   const finalized = finalizeInvoice({ invoiceId: invoice.id })
   return { customer, invoice: finalized }
@@ -82,22 +97,26 @@ describe('recordPayment', () => {
     const { organizationId } = seedOrgWithSession()
     const customer = createTestCustomer(organizationId)
 
-    expect(() => recordPayment({
-      customerId: customer.id,
-      paymentDate: '2026-08-21',
-      amountMinor: 0,
-      paymentMethod: 'UPI'
-    })).toThrow(ValidationError)
+    expect(() =>
+      recordPayment({
+        customerId: customer.id,
+        paymentDate: '2026-08-21',
+        amountMinor: 0,
+        paymentMethod: 'UPI'
+      })
+    ).toThrow(ValidationError)
   })
 
   it('denies without payment.record permission', () => {
     seedOrgWithSession('Front Desk')
-    expect(() => recordPayment({
-      customerId: 1,
-      paymentDate: '2026-08-21',
-      amountMinor: 100000,
-      paymentMethod: 'UPI'
-    })).toThrow(ForbiddenError)
+    expect(() =>
+      recordPayment({
+        customerId: 1,
+        paymentDate: '2026-08-21',
+        amountMinor: 100000,
+        paymentMethod: 'UPI'
+      })
+    ).toThrow(ForbiddenError)
   })
 })
 
@@ -135,11 +154,13 @@ describe('allocatePayment', () => {
       paymentMethod: 'CASH'
     })
 
-    expect(() => allocatePayment({
-      paymentId: payment.id,
-      invoiceId: invoice.id,
-      amountMinor: 200000
-    })).toThrow(PaymentOverAllocatedError)
+    expect(() =>
+      allocatePayment({
+        paymentId: payment.id,
+        invoiceId: invoice.id,
+        amountMinor: 200000
+      })
+    ).toThrow(PaymentOverAllocatedError)
   })
 
   it('rejects allocation to DRAFT invoice', () => {
@@ -154,11 +175,13 @@ describe('allocatePayment', () => {
       paymentMethod: 'CASH'
     })
 
-    expect(() => allocatePayment({
-      paymentId: payment.id,
-      invoiceId: invoice.id,
-      amountMinor: 100000
-    })).toThrow(ValidationError)
+    expect(() =>
+      allocatePayment({
+        paymentId: payment.id,
+        invoiceId: invoice.id,
+        amountMinor: 100000
+      })
+    ).toThrow(ValidationError)
   })
 })
 
@@ -186,13 +209,15 @@ describe('recordAndAllocatePayment', () => {
     const { invoice } = createOpenInvoice(organizationId)
     const otherCustomer = createTestCustomer(organizationId, '9876543299')
 
-    expect(() => recordAndAllocatePayment({
-      customerId: otherCustomer.id,
-      paymentDate: '2026-08-21',
-      amountMinor: 118000,
-      paymentMethod: 'UPI',
-      invoiceId: invoice.id
-    })).toThrow(ValidationError)
+    expect(() =>
+      recordAndAllocatePayment({
+        customerId: otherCustomer.id,
+        paymentDate: '2026-08-21',
+        amountMinor: 118000,
+        paymentMethod: 'UPI',
+        invoiceId: invoice.id
+      })
+    ).toThrow(ValidationError)
   })
 })
 
@@ -234,11 +259,13 @@ describe('issueRefund', () => {
       paymentMethod: 'CASH'
     })
 
-    expect(() => issueRefund({
-      paymentId: payment.id,
-      amountMinor: 100000,
-      reason: 'Too much'
-    })).toThrow(RefundExceedsPaymentError)
+    expect(() =>
+      issueRefund({
+        paymentId: payment.id,
+        amountMinor: 100000,
+        reason: 'Too much'
+      })
+    ).toThrow(RefundExceedsPaymentError)
   })
 })
 
@@ -263,11 +290,13 @@ describe('issueCredit', () => {
     const { organizationId } = seedOrgWithSession()
     const customer = createTestCustomer(organizationId)
 
-    expect(() => issueCredit({
-      customerId: customer.id,
-      amountMinor: 0,
-      reason: 'Test'
-    })).toThrow(ValidationError)
+    expect(() =>
+      issueCredit({
+        customerId: customer.id,
+        amountMinor: 0,
+        reason: 'Test'
+      })
+    ).toThrow(ValidationError)
   })
 })
 
@@ -362,18 +391,20 @@ describe('applyCredit', () => {
       reason: 'Goodwill'
     })
 
-    expect(() => applyCredit({
-      creditId: credit.id,
-      invoiceId: invoice.id,
-      amountMinor: 50000
-    })).toThrow(CreditExceedsBalanceError)
+    expect(() =>
+      applyCredit({
+        creditId: credit.id,
+        invoiceId: invoice.id,
+        amountMinor: 50000
+      })
+    ).toThrow(CreditExceedsBalanceError)
   })
 })
 
 describe('getInvoicePaymentState', () => {
   it('returns payment state for an invoice', () => {
     const { organizationId } = seedOrgWithSession()
-    const { customer, invoice } = createOpenInvoice(organizationId)
+    const { invoice } = createOpenInvoice(organizationId)
 
     const state = getInvoicePaymentState({ invoiceId: invoice.id })
     expect(state.totalMinor).toBe(118000)
@@ -483,8 +514,12 @@ describe('getOutstandingInvoices', () => {
     const customer = createTestCustomer(organizationId)
     const invoice = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Monthly Plan', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 0
+      invoiceId: invoice.id,
+      description: 'Monthly Plan',
+      quantity: 1,
+      unitPriceMinor: 100000,
+      discountMinor: 0,
+      taxRateBps: 0
     })
     const finalized = finalizeInvoice({ invoiceId: invoice.id })
 
@@ -511,8 +546,12 @@ describe('getOutstandingInvoices', () => {
     const customer = createTestCustomer(organizationId)
     const invoice = createInvoice({ customerId: customer.id })
     addInvoiceLine({
-      invoiceId: invoice.id, description: 'Plan', quantity: 1,
-      unitPriceMinor: 50000, discountMinor: 0, taxRateBps: 0
+      invoiceId: invoice.id,
+      description: 'Plan',
+      quantity: 1,
+      unitPriceMinor: 50000,
+      discountMinor: 0,
+      taxRateBps: 0
     })
     const finalized = finalizeInvoice({ invoiceId: invoice.id })
 
@@ -552,11 +591,25 @@ describe('getOutstandingInvoices', () => {
     const customer = createTestCustomer(organizationId)
 
     const inv1 = createInvoice({ customerId: customer.id })
-    addInvoiceLine({ invoiceId: inv1.id, description: 'Plan A', quantity: 1, unitPriceMinor: 50000, discountMinor: 0, taxRateBps: 0 })
+    addInvoiceLine({
+      invoiceId: inv1.id,
+      description: 'Plan A',
+      quantity: 1,
+      unitPriceMinor: 50000,
+      discountMinor: 0,
+      taxRateBps: 0
+    })
     finalizeInvoice({ invoiceId: inv1.id })
 
     const inv2 = createInvoice({ customerId: customer.id })
-    addInvoiceLine({ invoiceId: inv2.id, description: 'Plan B', quantity: 1, unitPriceMinor: 80000, discountMinor: 0, taxRateBps: 0 })
+    addInvoiceLine({
+      invoiceId: inv2.id,
+      description: 'Plan B',
+      quantity: 1,
+      unitPriceMinor: 80000,
+      discountMinor: 0,
+      taxRateBps: 0
+    })
     finalizeInvoice({ invoiceId: inv2.id })
 
     const result = getOutstandingInvoices({ customerId: customer.id })

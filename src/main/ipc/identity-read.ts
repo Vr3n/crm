@@ -1,6 +1,13 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { getDrizzle } from '../db/connection'
-import { organizations, organizationStaff, users, roles, rolePermissions, permissions } from '../db/schema'
+import {
+  organizations,
+  organizationStaff,
+  users,
+  roles,
+  rolePermissions,
+  permissions
+} from '../db/schema'
 import { currentOrganizationId } from '../auth/session'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
@@ -86,7 +93,12 @@ export function registerIdentityReadIpc(): void {
     const userRows = getDrizzle()
       .select()
       .from(users)
-      .where(sql`${users.id} IN (${sql.join(userIds.map((id) => sql`${id}`), sql`, `)})`)
+      .where(
+        sql`${users.id} IN (${sql.join(
+          userIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      )
       .all() as UserRow[]
     const userMap = new Map(userRows.map((u) => [u.id, u]))
 
@@ -94,7 +106,12 @@ export function registerIdentityReadIpc(): void {
     const roleRows = getDrizzle()
       .select()
       .from(roles)
-      .where(sql`${roles.id} IN (${sql.join(roleIds.map((id) => sql`${id}`), sql`, `)})`)
+      .where(
+        sql`${roles.id} IN (${sql.join(
+          roleIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      )
       .all() as RoleRow[]
     const roleMap = new Map(roleRows.map((r) => [r.id, r]))
 
@@ -129,10 +146,7 @@ export function registerIdentityReadIpc(): void {
       // Get permission codes for this role
       let permissionCodes: string[] = []
       if (r.is_super) {
-        const allPerms = getDrizzle()
-          .select({ code: permissions.code })
-          .from(permissions)
-          .all()
+        const allPerms = getDrizzle().select({ code: permissions.code }).from(permissions).all()
         permissionCodes = allPerms.map((p) => p.code)
       } else {
         const perms = getDrizzle()

@@ -48,9 +48,7 @@ export function InvoicesPage(): React.JSX.Element {
 
       <InvoiceMetrics invoices={data ?? []} />
 
-      <InvoicesTable
-        onMakePayment={(inv) => setPaymentTarget(inv)}
-      />
+      <InvoicesTable onMakePayment={(inv) => setPaymentTarget(inv)} />
 
       {newOpen ? (
         <Suspense fallback={null}>

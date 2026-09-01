@@ -15,8 +15,7 @@ import type { Invoice, InvoiceStatus } from './types'
  * for the Module 04 commands).
  */
 export const api = {
-  invoices: (): Promise<Invoice[]> =>
-    window.api.invoices.list() as unknown as Promise<Invoice[]>,
+  invoices: (): Promise<Invoice[]> => window.api.invoices.list() as unknown as Promise<Invoice[]>,
   invoice: (id: string): Promise<Invoice | undefined> =>
     window.api.invoices.get({ invoiceId: id }) as unknown as Promise<Invoice | undefined>,
   invoicesByStatus: (status: InvoiceStatus | undefined): Promise<Invoice[]> =>
@@ -25,14 +24,11 @@ export const api = {
 
 /** Module 04 commands (DRAFT lifecycle). Wire types are the shared contracts. */
 export const invoiceCommands = {
-  create: (input: CreateInvoiceInput): Promise<unknown> =>
-    window.api.billing.createInvoice(input),
-  addLine: (input: AddInvoiceLineInput): Promise<unknown> =>
-    window.api.billing.addLine(input),
+  create: (input: CreateInvoiceInput): Promise<unknown> => window.api.billing.createInvoice(input),
+  addLine: (input: AddInvoiceLineInput): Promise<unknown> => window.api.billing.addLine(input),
   removeLine: (input: RemoveInvoiceLineInput): Promise<void> =>
     window.api.billing.removeLine(input),
-  finalize: (input: FinalizeInvoiceInput): Promise<unknown> =>
-    window.api.billing.finalize(input),
+  finalize: (input: FinalizeInvoiceInput): Promise<unknown> => window.api.billing.finalize(input),
   void: (input: VoidInvoiceInput): Promise<unknown> => window.api.billing.void(input),
   markUncollectible: (input: MarkUncollectibleInput): Promise<unknown> =>
     window.api.billing.markUncollectible(input),

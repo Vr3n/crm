@@ -23,7 +23,12 @@ export function IdentityCard({
   return (
     <section
       className="crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm"
-      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--primary)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -80,9 +85,7 @@ export function IdentityCard({
             <UserRound className="size-3.5 shrink-0 text-orange-500 dark:text-orange-400" />
             Emergency
           </span>
-          <span className="min-w-0 text-right font-medium">
-            {customer.emergencyContact ?? '—'}
-          </span>
+          <span className="min-w-0 text-right font-medium">{customer.emergencyContact ?? '—'}</span>
         </div>
       </div>
 

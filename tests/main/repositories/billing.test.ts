@@ -1,14 +1,26 @@
 import { describe, it, expect } from 'vitest'
 import { setupTestDb } from '../../helpers/db'
-import { organizationRepo, userRepo, roleRepo, staffRepo } from '../../../src/main/repositories/identity'
+import {
+  organizationRepo,
+  userRepo,
+  roleRepo,
+  staffRepo
+} from '../../../src/main/repositories/identity'
 import { personRepo } from '../../../src/main/repositories/sales'
 import { customerRepo } from '../../../src/main/repositories/membership'
-import { invoiceRepo, invoiceLineRepo, invoiceSequenceRepo } from '../../../src/main/repositories/billing'
+import {
+  invoiceRepo,
+  invoiceLineRepo,
+  invoiceSequenceRepo
+} from '../../../src/main/repositories/billing'
 import { seedRolesForOrganization } from '../../../src/main/db/seed'
 
 setupTestDb()
 
-function createOrgAndUser() {
+function createOrgAndUser(): {
+  org: ReturnType<typeof organizationRepo.create>
+  user: ReturnType<typeof userRepo.create>
+} {
   const org = organizationRepo.create({
     slug: 'fit-gym',
     name: 'Fit Gym',
@@ -17,12 +29,16 @@ function createOrgAndUser() {
   })
   seedRolesForOrganization(org.id)
   const role = roleRepo.findByName(org.id, 'Owner')!
-  const user = userRepo.create({ fullName: 'Test User', email: 'test@fitgym.com', passwordHash: 'hash' })
+  const user = userRepo.create({
+    fullName: 'Test User',
+    email: 'test@fitgym.com',
+    passwordHash: 'hash'
+  })
   staffRepo.create({ organizationId: org.id, userId: user.id, roleId: role.id })
   return { org, user }
 }
 
-function createCustomer(organizationId: number) {
+function createCustomer(organizationId: number): ReturnType<typeof customerRepo.create> {
   const person = personRepo.create({
     organizationId,
     fullName: 'Test Customer',
@@ -82,8 +98,13 @@ describe('invoiceRepo', () => {
       number: 'INV-260821-0001',
       customerId: customer.id,
       status: 'DRAFT',
-      billingName: null, billingPhone: null, billingEmail: null, billingAddress: null,
-      subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
 
@@ -97,15 +118,31 @@ describe('invoiceRepo', () => {
     const customer = createCustomer(org.id)
 
     invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'DRAFT', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'DRAFT',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
     invoiceRepo.create({
-      organizationId: org.id, number: 'INV-002', customerId: customer.id,
-      status: 'OPEN', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 100000, taxMinor: 18000, totalMinor: 118000,
+      organizationId: org.id,
+      number: 'INV-002',
+      customerId: customer.id,
+      status: 'OPEN',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 100000,
+      taxMinor: 18000,
+      totalMinor: 118000,
       createdBy: user.id
     })
 
@@ -118,21 +155,45 @@ describe('invoiceRepo', () => {
     const customer = createCustomer(org.id)
 
     invoiceRepo.create({
-      organizationId: org.id, number: 'INV-DRAFT', customerId: customer.id,
-      status: 'DRAFT', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      organizationId: org.id,
+      number: 'INV-DRAFT',
+      customerId: customer.id,
+      status: 'DRAFT',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
     invoiceRepo.create({
-      organizationId: org.id, number: 'INV-OPEN', customerId: customer.id,
-      status: 'OPEN', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 100000, taxMinor: 18000, totalMinor: 118000,
+      organizationId: org.id,
+      number: 'INV-OPEN',
+      customerId: customer.id,
+      status: 'OPEN',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 100000,
+      taxMinor: 18000,
+      totalMinor: 118000,
       createdBy: user.id
     })
     invoiceRepo.create({
-      organizationId: org.id, number: 'INV-PAID', customerId: customer.id,
-      status: 'PAID', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 100000, taxMinor: 18000, totalMinor: 118000,
+      organizationId: org.id,
+      number: 'INV-PAID',
+      customerId: customer.id,
+      status: 'PAID',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 100000,
+      taxMinor: 18000,
+      totalMinor: 118000,
       createdBy: user.id
     })
 
@@ -146,9 +207,17 @@ describe('invoiceRepo', () => {
     const customer = createCustomer(org.id)
 
     const invoice = invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'DRAFT', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'DRAFT',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
 
@@ -167,9 +236,17 @@ describe('invoiceRepo', () => {
     const customer = createCustomer(org.id)
 
     const invoice = invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'DRAFT', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'DRAFT',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
 
@@ -192,9 +269,17 @@ describe('invoiceLineRepo', () => {
     const customer = createCustomer(org.id)
 
     const invoice = invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'DRAFT', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'DRAFT',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
 
@@ -240,18 +325,35 @@ describe('invoiceLineRepo', () => {
     const customer = createCustomer(org.id)
 
     const invoice = invoiceRepo.create({
-      organizationId: org.id, number: 'INV-001', customerId: customer.id,
-      status: 'DRAFT', billingName: null, billingPhone: null, billingEmail: null,
-      billingAddress: null, subtotalMinor: 0, taxMinor: 0, totalMinor: 0,
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'DRAFT',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 0,
+      taxMinor: 0,
+      totalMinor: 0,
       createdBy: user.id
     })
 
-    invoiceLineRepo.createMany(org.id, [{
-      invoiceId: invoice.id, description: 'Line 1', quantity: 1,
-      unitPriceMinor: 100000, discountMinor: 0, taxRateBps: 1800,
-      taxAmountMinor: 18000, lineTotalMinor: 118000,
-      planId: null, offerId: null, sortOrder: 0
-    }])
+    invoiceLineRepo.createMany(org.id, [
+      {
+        invoiceId: invoice.id,
+        description: 'Line 1',
+        quantity: 1,
+        unitPriceMinor: 100000,
+        discountMinor: 0,
+        taxRateBps: 1800,
+        taxAmountMinor: 18000,
+        lineTotalMinor: 118000,
+        planId: null,
+        offerId: null,
+        sortOrder: 0
+      }
+    ])
 
     invoiceLineRepo.deleteByInvoice(org.id, invoice.id)
     expect(invoiceLineRepo.listByInvoice(org.id, invoice.id)).toHaveLength(0)

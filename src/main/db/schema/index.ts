@@ -29,17 +29,8 @@ import {
   offers,
   prorationPolicies
 } from './catalog'
-import {
-  customers,
-  memberships,
-  membershipFreezes,
-  membershipEvents
-} from './membership'
-import {
-  invoices,
-  invoiceLines,
-  invoiceSequence
-} from './billing'
+import { customers, memberships, membershipFreezes, membershipEvents } from './membership'
+import { invoices, invoiceLines, invoiceSequence } from './billing'
 import {
   paymentMethods,
   payments,

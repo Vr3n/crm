@@ -39,9 +39,7 @@ export interface IpcError {
 }
 
 /** The discriminated envelope every IPC handler resolves to (ADR-0006). */
-export type IpcResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: IpcError }
+export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: IpcError }
 
 /**
  * The Error the preload re-throws after unwrapping an `{ ok: false }` result,

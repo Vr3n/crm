@@ -43,8 +43,15 @@ import { useLead } from '@/features/leads/queries'
 import { usePlans } from '@/features/catalog/queries'
 import { displayPhone } from '@/features/leads/format'
 import { useSellMembership } from './queries'
+import type { SellMembershipInput } from '../../../../../shared/contracts/membership-sale'
 import { pdfApi } from '@/features/pdf/api'
-import { parseToMinor, formatMinor, formatRate, minorToMajor, sanitizeMoneyInput } from '@/lib/money'
+import {
+  parseToMinor,
+  formatMinor,
+  formatRate,
+  minorToMajor,
+  sanitizeMoneyInput
+} from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import type { Plan, Offer } from '@/features/catalog/types'
 
@@ -129,10 +136,10 @@ export function MembershipSalePage(): React.JSX.Element {
           startDate: value.startDate,
           endDate: value.endDate,
           basePriceMinor: baseMinor,
-          discountType: value.discountType as any,
+          discountType: value.discountType as SellMembershipInput['discountType'],
           discountValueMinor,
           paidAmountMinor: paidMinor,
-          paymentMethod: value.paymentMethod as any,
+          paymentMethod: value.paymentMethod as SellMembershipInput['paymentMethod'],
           transactionId: crypto.randomUUID()
         })
         // Navigate to invoice detail page
@@ -142,8 +149,8 @@ export function MembershipSalePage(): React.JSX.Element {
         if (res.paymentId > 0) {
           pdfApi.exportReceipt(res.paymentId, 'preview').catch(() => {})
         }
-      } catch (e: any) {
-        const msg = e?.message ?? 'Sale failed'
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Sale failed'
         setServerError(msg)
       }
     }
@@ -170,10 +177,17 @@ export function MembershipSalePage(): React.JSX.Element {
   // For prototype keep a local offer object synced via onChange
   const [offerObj, setOfferObj] = useState<Offer | null>(null)
   const displayBase = baseInput === '' ? null : (parseToMinor(baseInput, currency) ?? 0)
-  const isDirty = selectedPlan !== null && displayBase !== null && displayBase !== selectedPlan.basePriceMinor
+  const isDirty =
+    selectedPlan !== null && displayBase !== null && displayBase !== selectedPlan.basePriceMinor
 
   const manualDiscount = (() => {
-    if (displayBase === null || !discountType || (discountType as string) === 'NONE' || discountValue === '') return 0
+    if (
+      displayBase === null ||
+      !discountType ||
+      (discountType as string) === 'NONE' ||
+      discountValue === ''
+    )
+      return 0
     switch (discountType as string) {
       case 'PERCENTAGE': {
         const v = Number(discountValue.replace(/,/g, ''))
@@ -198,7 +212,10 @@ export function MembershipSalePage(): React.JSX.Element {
   })()
   const discountAmount = manualDiscount
   const finalPrice = displayBase !== null ? Math.max(0, displayBase - discountAmount) : null
-  const maxPayment = finalPrice !== null ? finalPrice + Math.round((finalPrice * (selectedPlan?.taxRateBps ?? 0)) / 10000) : null
+  const maxPayment =
+    finalPrice !== null
+      ? finalPrice + Math.round((finalPrice * (selectedPlan?.taxRateBps ?? 0)) / 10000)
+      : null
   const paidAmount = paidInput === '' ? null : (parseToMinor(paidInput, currency) ?? 0)
   const paidValid = paidAmount === null || paidAmount >= 0
   const paidOverMax = paidAmount !== null && maxPayment !== null && paidAmount > maxPayment
@@ -223,7 +240,10 @@ export function MembershipSalePage(): React.JSX.Element {
       </div>
 
       {serverError ? (
-        <div role="alert" className="mx-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="mx-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
           {serverError}
         </div>
       ) : null}
@@ -250,7 +270,13 @@ export function MembershipSalePage(): React.JSX.Element {
               </form.Field>
               {!leadId ? (
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowNewLead(true)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
+                    onClick={() => setShowNewLead(true)}
+                  >
                     <Plus className="size-3.5" />
                     Create new lead
                   </Button>
@@ -265,7 +291,8 @@ export function MembershipSalePage(): React.JSX.Element {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{effectiveLead.name}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {displayPhone(effectiveLead.phone)} {effectiveLead.email ? `· ${effectiveLead.email}` : ''}
+                        {displayPhone(effectiveLead.phone)}{' '}
+                        {effectiveLead.email ? `· ${effectiveLead.email}` : ''}
                       </p>
                     </div>
                     <Button
@@ -281,18 +308,30 @@ export function MembershipSalePage(): React.JSX.Element {
                   </div>
                 </div>
               ) : (
-                <p className="text-center text-xs text-muted-foreground">No member selected — search or create one above</p>
+                <p className="text-center text-xs text-muted-foreground">
+                  No member selected — search or create one above
+                </p>
               )}
               {effectiveLead ? (
                 <span className="text-xs text-muted-foreground">
-                  Stage: <Badge variant="outline" className="ml-1 text-[11px]">{effectiveLead.stage}</Badge>
+                  Stage:{' '}
+                  <Badge variant="outline" className="ml-1 text-[11px]">
+                    {effectiveLead.stage}
+                  </Badge>
                 </span>
               ) : null}
             </div>
           </SaleSectionCard>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard id="plan" step={2} title="Select Plan" description="Sets price & duration" required icon={<Package className="size-3.5" />}>
+            <SaleSectionCard
+              id="plan"
+              step={2}
+              title="Select Plan"
+              description="Sets price & duration"
+              required
+              icon={<Package className="size-3.5" />}
+            >
               <div className="flex flex-col gap-3">
                 <form.Field name="planId">
                   {(field) => (
@@ -301,10 +340,16 @@ export function MembershipSalePage(): React.JSX.Element {
                       onChange={(p) => {
                         field.handleChange(p ? p.id : null)
                         // sync base price without useEffect
-                        form.setFieldValue('baseInput', p ? minorToMajor(p.basePriceMinor, currency) : '')
+                        form.setFieldValue(
+                          'baseInput',
+                          p ? minorToMajor(p.basePriceMinor, currency) : ''
+                        )
                         // auto-update end date if linked
                         if (p) {
-                          const newEnd = addDays(form.getFieldValue('startDate'), daysForDuration(p.duration) - 1)
+                          const newEnd = addDays(
+                            form.getFieldValue('startDate'),
+                            daysForDuration(p.duration) - 1
+                          )
                           form.setFieldValue('endDate', newEnd)
                           setDateLinked(true)
                         }
@@ -312,7 +357,11 @@ export function MembershipSalePage(): React.JSX.Element {
                         const currentOfferId = form.getFieldValue('offerId')
                         if (currentOfferId !== null && p) {
                           const currentOffer = offerObj
-                          if (currentOffer && currentOffer.applicablePlanIds.length > 0 && !currentOffer.applicablePlanIds.includes(p.id)) {
+                          if (
+                            currentOffer &&
+                            currentOffer.applicablePlanIds.length > 0 &&
+                            !currentOffer.applicablePlanIds.includes(p.id)
+                          ) {
                             form.setFieldValue('offerId', null)
                             setOfferObj(null)
                             form.setFieldValue('discountType', 'NONE')
@@ -325,7 +374,13 @@ export function MembershipSalePage(): React.JSX.Element {
                 </form.Field>
                 {!planId ? (
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowNewPlan(true)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs"
+                      onClick={() => setShowNewPlan(true)}
+                    >
                       <Plus className="size-3.5" />
                       Create plan
                     </Button>
@@ -336,7 +391,9 @@ export function MembershipSalePage(): React.JSX.Element {
                     <div className="flex items-center gap-2 rounded-none bg-white px-3 py-2.5 text-xs">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-medium">{formatMinor(selectedPlan.basePriceMinor, currency)}</span>
+                          <span className="font-medium">
+                            {formatMinor(selectedPlan.basePriceMinor, currency)}
+                          </span>
                           <span className="text-muted-foreground">·</span>
                           <span>{selectedPlan.duration}</span>
                           <span className="text-muted-foreground">·</span>
@@ -344,12 +401,18 @@ export function MembershipSalePage(): React.JSX.Element {
                           {selectedPlan.registrationFeeMinor > 0 ? (
                             <>
                               <span className="text-muted-foreground">·</span>
-                              <span>Reg {formatMinor(selectedPlan.registrationFeeMinor, currency)}</span>
+                              <span>
+                                Reg {formatMinor(selectedPlan.registrationFeeMinor, currency)}
+                              </span>
                             </>
                           ) : null}
                         </div>
                         {isDirty && displayBase !== null ? (
-                          <p className="mt-1 text-[11px] text-amber-600">Edited — differs from plan · {formatMinor(selectedPlan.basePriceMinor, currency)} → {formatMinor(displayBase, currency)}</p>
+                          <p className="mt-1 text-[11px] text-amber-600">
+                            Edited — differs from plan ·{' '}
+                            {formatMinor(selectedPlan.basePriceMinor, currency)} →{' '}
+                            {formatMinor(displayBase, currency)}
+                          </p>
                         ) : null}
                       </div>
                       <Button
@@ -378,7 +441,10 @@ export function MembershipSalePage(): React.JSX.Element {
                     className="h-7 gap-1 px-2 text-xs self-start"
                     onClick={() => {
                       if (selectedPlan) {
-                        form.setFieldValue('baseInput', minorToMajor(selectedPlan.basePriceMinor, currency))
+                        form.setFieldValue(
+                          'baseInput',
+                          minorToMajor(selectedPlan.basePriceMinor, currency)
+                        )
                       }
                     }}
                   >
@@ -389,7 +455,13 @@ export function MembershipSalePage(): React.JSX.Element {
               </div>
             </SaleSectionCard>
 
-            <SaleSectionCard id="offer" step={3} title="Select Offer" description="Optional discount" icon={<BadgePercent className="size-3.5" />}>
+            <SaleSectionCard
+              id="offer"
+              step={3}
+              title="Select Offer"
+              description="Optional discount"
+              icon={<BadgePercent className="size-3.5" />}
+            >
               <div className="flex flex-col gap-3">
                 <form.Field name="offerId">
                   {(field) => (
@@ -412,7 +484,13 @@ export function MembershipSalePage(): React.JSX.Element {
                 </form.Field>
                 {!offerId ? (
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setShowNewOffer(true)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs"
+                      onClick={() => setShowNewOffer(true)}
+                    >
                       <Plus className="size-3.5" />
                       Create offer
                     </Button>
@@ -427,7 +505,11 @@ export function MembershipSalePage(): React.JSX.Element {
                           <span className="text-muted-foreground">·</span>
                           <span>
                             {offerObj.discountType} · {offerObj.value}
-                            {offerObj.discountType === 'PERCENTAGE' ? '%' : offerObj.discountType === 'FREE_PERIOD' ? ' months' : ''}
+                            {offerObj.discountType === 'PERCENTAGE'
+                              ? '%'
+                              : offerObj.discountType === 'FREE_PERIOD'
+                                ? ' months'
+                                : ''}
                           </span>
                         </div>
                         <p className="mt-1 text-[11px] text-muted-foreground">
@@ -456,17 +538,30 @@ export function MembershipSalePage(): React.JSX.Element {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-center text-xs text-muted-foreground">No offer selected — optional</p>
+                  <p className="text-center text-xs text-muted-foreground">
+                    No offer selected — optional
+                  </p>
                 )}
               </div>
             </SaleSectionCard>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <SaleSectionCard id="dates" step={4} title="Membership Duration" description="Joining, start & end dates" icon={<CalendarDays className="size-3.5" />}>
+            <SaleSectionCard
+              id="dates"
+              step={4}
+              title="Membership Duration"
+              description="Joining, start & end dates"
+              icon={<CalendarDays className="size-3.5" />}
+            >
               <div className="grid gap-3">
                 <div className="grid gap-1.5">
-                  <Label className="text-xs">Joining date {joiningDate === startDate ? <span className="font-normal text-muted-foreground">· same as start</span> : null}</Label>
+                  <Label className="text-xs">
+                    Joining date{' '}
+                    {joiningDate === startDate ? (
+                      <span className="font-normal text-muted-foreground">· same as start</span>
+                    ) : null}
+                  </Label>
                   <form.Field name="joiningDate">
                     {(field) => (
                       <CatalogDatePicker
@@ -479,67 +574,91 @@ export function MembershipSalePage(): React.JSX.Element {
                   </form.Field>
                 </div>
                 <div className="flex items-end gap-2">
-                <div className="grid flex-1 gap-1.5">
-                  <Label className="text-xs">Start date</Label>
-                  <form.Field name="startDate">
-                    {(field) => (
-                      <CatalogDatePicker
-                        value={field.state.value}
-                        onChange={(v) => {
-                          field.handleChange(v)
-                          // auto-update end if linked and plan exists
-                          const pid = form.getFieldValue('planId')
-                          const p = plansList.find((x) => x.id === pid)
-                          if (p && dateLinked) {
-                            form.setFieldValue('endDate', addDays(v, daysForDuration(p.duration) - 1))
-                          }
-                        }}
-                        placeholder="Pick start date"
-                        triggerClassName="border-blue-300 bg-blue-50/60 hover:bg-blue-50 text-blue-700 hover:text-blue-800 [&_svg]:text-blue-500 data-[state=open]:bg-blue-50"
-                      />
-                    )}
-                  </form.Field>
-                </div>
-                <div className="flex h-9 shrink-0 items-center justify-center pb-1">
-                  <ArrowRight className="size-4 text-muted-foreground" />
-                </div>
-                <div className="grid flex-1 gap-1.5">
-                  <Label className="text-xs">End date {dateLinked && planId ? <span className="font-normal text-muted-foreground">· auto</span> : null}</Label>
-                  <form.Field name="endDate">
-                    {(field) => (
-                      <CatalogDatePicker
-                        value={field.state.value}
-                        onChange={(v) => {
-                          field.handleChange(v)
-                          setDateLinked(false)
-                        }}
-                        placeholder="Pick end date"
-                        triggerClassName="border-purple-300 bg-purple-50/60 hover:bg-purple-50 text-purple-700 hover:text-purple-800 [&_svg]:text-purple-500 data-[state=open]:bg-purple-50"
-                      />
-                    )}
-                  </form.Field>
-                </div>
+                  <div className="grid flex-1 gap-1.5">
+                    <Label className="text-xs">Start date</Label>
+                    <form.Field name="startDate">
+                      {(field) => (
+                        <CatalogDatePicker
+                          value={field.state.value}
+                          onChange={(v) => {
+                            field.handleChange(v)
+                            // auto-update end if linked and plan exists
+                            const pid = form.getFieldValue('planId')
+                            const p = plansList.find((x) => x.id === pid)
+                            if (p && dateLinked) {
+                              form.setFieldValue(
+                                'endDate',
+                                addDays(v, daysForDuration(p.duration) - 1)
+                              )
+                            }
+                          }}
+                          placeholder="Pick start date"
+                          triggerClassName="border-blue-300 bg-blue-50/60 hover:bg-blue-50 text-blue-700 hover:text-blue-800 [&_svg]:text-blue-500 data-[state=open]:bg-blue-50"
+                        />
+                      )}
+                    </form.Field>
+                  </div>
+                  <div className="flex h-9 shrink-0 items-center justify-center pb-1">
+                    <ArrowRight className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="grid flex-1 gap-1.5">
+                    <Label className="text-xs">
+                      End date{' '}
+                      {dateLinked && planId ? (
+                        <span className="font-normal text-muted-foreground">· auto</span>
+                      ) : null}
+                    </Label>
+                    <form.Field name="endDate">
+                      {(field) => (
+                        <CatalogDatePicker
+                          value={field.state.value}
+                          onChange={(v) => {
+                            field.handleChange(v)
+                            setDateLinked(false)
+                          }}
+                          placeholder="Pick end date"
+                          triggerClassName="border-purple-300 bg-purple-50/60 hover:bg-purple-50 text-purple-700 hover:text-purple-800 [&_svg]:text-purple-500 data-[state=open]:bg-purple-50"
+                        />
+                      )}
+                    </form.Field>
+                  </div>
                 </div>
               </div>
               {startDate && endDate && endDate < startDate ? (
-                <p className="mt-2 text-[11px] text-destructive">End date cannot be before start date</p>
+                <p className="mt-2 text-[11px] text-destructive">
+                  End date cannot be before start date
+                </p>
               ) : null}
-              {planId && startDate && endDate ? (() => {
-                const p = plansList.find((x) => x.id === planId)
-                if (!p) return null
-                const days = daysForDuration(p.duration)
-                const minEnd = addDays(startDate, days - 1)
-                if (endDate < minEnd) {
-                  return <p className="mt-1 text-[11px] text-amber-600">End violates {p.duration} — should be at least {minEnd} ({days} days)</p>
-                }
-                return null
-              })() : null}
+              {planId && startDate && endDate
+                ? (() => {
+                    const p = plansList.find((x) => x.id === planId)
+                    if (!p) return null
+                    const days = daysForDuration(p.duration)
+                    const minEnd = addDays(startDate, days - 1)
+                    if (endDate < minEnd) {
+                      return (
+                        <p className="mt-1 text-[11px] text-amber-600">
+                          End violates {p.duration} — should be at least {minEnd} ({days} days)
+                        </p>
+                      )
+                    }
+                    return null
+                  })()
+                : null}
             </SaleSectionCard>
 
-            <SaleSectionCard id="pricing" step={5} title="Pricing" description="Rupees, 2 decimals" icon={<IndianRupee className="size-3.5" />}>
+            <SaleSectionCard
+              id="pricing"
+              step={5}
+              title="Pricing"
+              description="Rupees, 2 decimals"
+              icon={<IndianRupee className="size-3.5" />}
+            >
               <div className="flex flex-col gap-3">
                 <div className="grid gap-1.5">
-                  <Label htmlFor="sale-base" className="text-xs">Base Price <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="sale-base" className="text-xs">
+                    Base Price <span className="text-destructive">*</span>
+                  </Label>
                   <form.Field name="baseInput">
                     {(field) => {
                       return (
@@ -566,7 +685,10 @@ export function MembershipSalePage(): React.JSX.Element {
                     <Label className="text-xs">Discount type</Label>
                     <form.Field name="discountType">
                       {(field) => (
-                        <Select value={field.state.value} onValueChange={(v) => field.handleChange(v as typeof field.state.value)}>
+                        <Select
+                          value={field.state.value}
+                          onValueChange={(v) => field.handleChange(v as typeof field.state.value)}
+                        >
                           <SelectTrigger>
                             <div className="flex items-center gap-2">
                               <BadgePercent className="size-3.5 text-muted-foreground" />
@@ -602,9 +724,17 @@ export function MembershipSalePage(): React.JSX.Element {
                             <Input
                               type="text"
                               inputMode="decimal"
-                              placeholder={discountType === 'PERCENTAGE' ? 'e.g. 20' : discountType === 'FREE_PERIOD' ? 'e.g. 1' : 'e.g. 500'}
+                              placeholder={
+                                discountType === 'PERCENTAGE'
+                                  ? 'e.g. 20'
+                                  : discountType === 'FREE_PERIOD'
+                                    ? 'e.g. 1'
+                                    : 'e.g. 500'
+                              }
                               value={field.state.value}
-                              onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
+                              onChange={(e) =>
+                                field.handleChange(sanitizeMoneyInput(e.target.value))
+                              }
                               className="pl-9 font-mono tabular-nums"
                             />
                           </InputGroup>
@@ -619,21 +749,30 @@ export function MembershipSalePage(): React.JSX.Element {
                     {finalPrice !== null ? formatMinor(finalPrice, currency) : '—'}
                   </div>
                   {discountAmount > 0 ? (
-                    <p className="text-[11px] text-muted-foreground">Discount amount: -{formatMinor(discountAmount, currency)}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Discount amount: -{formatMinor(discountAmount, currency)}
+                    </p>
                   ) : (
                     <p className="text-[11px] text-muted-foreground">No discount applied</p>
                   )}
                 </div>
                 {selectedPlan && selectedPlan.registrationFeeMinor > 0 ? (
-                  <p className="text-[11px] text-muted-foreground">+ Registration {formatMinor(selectedPlan.registrationFeeMinor, currency)} {selectedPlan.taxRateBps ? `· Tax ${formatRate(selectedPlan.taxRateBps)}` : ''}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    + Registration {formatMinor(selectedPlan.registrationFeeMinor, currency)}{' '}
+                    {selectedPlan.taxRateBps ? `· Tax ${formatRate(selectedPlan.taxRateBps)}` : ''}
+                  </p>
                 ) : selectedPlan && selectedPlan.taxRateBps ? (
-                  <p className="text-[11px] text-muted-foreground">Tax {formatRate(selectedPlan.taxRateBps)} on base</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Tax {formatRate(selectedPlan.taxRateBps)} on base
+                  </p>
                 ) : null}
                 {discountAmount > 0 && displayBase !== null && discountAmount > displayBase ? (
                   <p className="text-[11px] text-destructive">Discount exceeds base price</p>
                 ) : null}
                 {finalPrice === 0 && displayBase !== null ? (
-                  <p className="text-[11px] text-amber-600">Free trial — final price is 0. You’ll be asked to confirm trial days on sell.</p>
+                  <p className="text-[11px] text-amber-600">
+                    Free trial — final price is 0. You’ll be asked to confirm trial days on sell.
+                  </p>
                 ) : null}
               </div>
             </SaleSectionCard>
@@ -658,11 +797,22 @@ export function MembershipSalePage(): React.JSX.Element {
               isDirty={isDirty}
               leadName={effectiveLead?.name ?? null}
             />
-            <form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}>
+            <form.Subscribe
+              selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}
+            >
               {({ canSubmit, isSubmitting }) => (
                 <Button
                   type="button"
-                  disabled={!canSubmit || !leadId || !planId || !paymentMethod || !paidValid || paidOverMax || paidInput === '' || isSubmitting}
+                  disabled={
+                    !canSubmit ||
+                    !leadId ||
+                    !planId ||
+                    !paymentMethod ||
+                    !paidValid ||
+                    paidOverMax ||
+                    paidInput === '' ||
+                    isSubmitting
+                  }
                   onClick={() => form.handleSubmit()}
                   size="sm"
                   className="w-full gap-1.5"
@@ -673,7 +823,9 @@ export function MembershipSalePage(): React.JSX.Element {
               )}
             </form.Subscribe>
             <p className="px-1 text-center text-[11px] leading-relaxed text-muted-foreground">
-              {leadId && planId ? 'Ready to sell — validation arrives in phase 07' : 'Pick a member and plan to enable the sale'}
+              {leadId && planId
+                ? 'Ready to sell — validation arrives in phase 07'
+                : 'Pick a member and plan to enable the sale'}
             </p>
           </div>
         </div>
@@ -697,7 +849,10 @@ export function MembershipSalePage(): React.JSX.Element {
           onCreated={(created) => {
             form.setFieldValue('planId', created.id)
             form.setFieldValue('baseInput', minorToMajor(created.basePriceMinor, currency))
-            form.setFieldValue('endDate', addDays(form.getFieldValue('startDate'), daysForDuration(created.duration) - 1))
+            form.setFieldValue(
+              'endDate',
+              addDays(form.getFieldValue('startDate'), daysForDuration(created.duration) - 1)
+            )
             setDateLinked(true)
           }}
         />
