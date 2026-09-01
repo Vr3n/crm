@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlus } from 'lucide-react'
+import { AlertTriangle, UserPlus } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { timeAgo } from '@/lib/format'
-import { SOURCES, isTerminal } from '@/features/leads/constants'
+import { SOURCES } from '@/features/leads/constants'
 import { useLeads } from '@/features/leads/queries'
 import type { Lead } from '@/features/leads/types'
 import { MAX_ROWS, PAGE_SIZE_OPTIONS } from '../constants'
@@ -73,13 +73,12 @@ function buildColumns(): ReturnType<typeof helper.columns> {
  * navigates to the lead detail.
  */
 export function RecentLeadsTable(): React.JSX.Element {
-  const { data, isLoading } = useLeads()
+  const { data, isLoading, isError } = useLeads()
   const navigate = useNavigate()
 
   const rows = useMemo(() => {
     if (!data) return []
     return data
-      .filter((l) => !isTerminal(l.stage))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, MAX_ROWS)
   }, [data])
@@ -126,9 +125,13 @@ export function RecentLeadsTable(): React.JSX.Element {
           footer={<CardPaginationFooter />}
           onRowClick={handleRowClick}
           showSearch={false}
-          emptyIcon={UserPlus}
-          emptyTitle="No recent leads"
-          emptyDescription="New leads in the pipeline will appear here."
+          emptyIcon={isError ? AlertTriangle : UserPlus}
+          emptyTitle={isError ? 'Failed to load leads' : 'No recent leads'}
+          emptyDescription={
+            isError
+              ? 'Something went wrong. Please try again.'
+              : 'New leads in the pipeline will appear here.'
+          }
         />
       </CardContent>
     </Card>

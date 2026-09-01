@@ -49,7 +49,10 @@ export const leadsListOptions = queryOptions({
     const res = await api.list({ page: 1, limit: 200 })
     return res.items.map(mapLeadRow)
   },
-  staleTime: 30_000
+  staleTime: 30_000,
+  retry: 2,
+  refetchOnWindowFocus: true,
+  refetchOnMount: true
 })
 
 export function useLeads(): UseQueryResult<Lead[], Error> {

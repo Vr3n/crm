@@ -20,12 +20,12 @@ export function mapLeadRow(row: LeadListRow): Lead {
     name: row.personName,
     phone: row.phone,
     email: row.email ?? undefined,
-    source: sourceKeyFromName(row.sourceName),
+    source: row.sourceName ? sourceKeyFromName(row.sourceName) : 'OTHER',
     sourceId: row.sourceId,
     owner: row.ownerUserId
       ? { id: row.ownerUserId, name: row.ownerName ?? 'Unassigned' }
       : undefined,
-    stage: stageKeyFromName(row.stageName),
+    stage: row.stageName ? stageKeyFromName(row.stageName) : 'NEW',
     stageId: row.stageId,
     createdAt: row.createdAt,
     customerId: row.customerId ?? undefined,
