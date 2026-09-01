@@ -4,8 +4,9 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCancelFollowUp, useCompleteFollowUp } from '@/features/leads/queries'
+import { useCompleteFollowUp } from '@/features/leads/queries'
 import { EditFollowUpDialog } from '@/features/leads/components/edit-follow-up-dialog'
+import { CancelFollowUpDialog } from './cancel-follow-up-dialog'
 import { StageBadge } from '@/features/leads/components/stage-badge'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
@@ -58,32 +59,43 @@ function CompleteFollowUpButton({
 }
 
 function CancelFollowUpButton({
-  followUpId,
+  followUp,
   onDone
 }: {
-  followUpId: number
+  followUp: FollowUpRow
   onDone: () => void
 }): React.JSX.Element {
-  const cancel = useCancelFollowUp()
+  const [open, setOpen] = useState(false)
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          aria-label="Cancel follow-up"
-          disabled={cancel.isPending}
-          onClick={(e) => {
-            e.stopPropagation()
-            cancel.mutate({ followupId: followUpId }, { onSuccess: onDone })
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label="Cancel follow-up"
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpen(true)
+            }}
+          >
+            <XCircle className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Cancel</TooltipContent>
+      </Tooltip>
+      {open && (
+        <CancelFollowUpDialog
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o)
+            if (!o) onDone()
           }}
-        >
-          <XCircle className="size-4" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="left">Cancel</TooltipContent>
-    </Tooltip>
+          followUp={followUp}
+        />
+      )}
+    </>
   )
 }
 
@@ -165,8 +177,9 @@ function DueCell({ row }: { row: FollowUpRow }): React.JSX.Element {
 function StatusBadge({ row }: { row: FollowUpRow }): React.JSX.Element {
   const bucket = bucketOf(row)
   const isCancelled = !row.completedAt && row.cancelledAt
-  const variant =
-    bucket === 'overdue'
+  const variant = isCancelled
+    ? 'destructive'
+    : bucket === 'overdue'
       ? 'destructive'
       : bucket === 'today'
         ? 'default'
@@ -282,7 +295,7 @@ function buildColumns(
             <div className="flex items-center justify-end gap-1">
               <EditFollowUpButton followUp={row.original} onDone={onDone} />
               <CompleteFollowUpButton followUpId={row.original.id} onDone={onDone} />
-              <CancelFollowUpButton followUpId={row.original.id} onDone={onDone} />
+              <CancelFollowUpButton followUp={row.original} onDone={onDone} />
             </div>
           )
         }
@@ -376,11 +389,7 @@ export function FollowUpTable({
       onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
       isMarkingSelected={bulkPending}
       toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Follow-ups"
-        />
+        <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Follow-ups" />
       }
     />
   )

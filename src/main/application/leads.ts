@@ -615,7 +615,7 @@ export function cancelFollowUp(input: CancelFollowUpInput): void {
   if (followup.cancelledAt) return
 
   withTransaction(() => {
-    followupRepo.cancel(organizationId, followup.id, requireSession().userId)
+    followupRepo.cancel(organizationId, followup.id, requireSession().userId, input.reason)
   })
 }
 

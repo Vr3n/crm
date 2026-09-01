@@ -86,6 +86,7 @@ export interface FollowUp {
   notes?: string
   completedAt?: string
   cancelledAt?: string
+  cancelledReason?: string
 }
 
 export interface LeadActivity {

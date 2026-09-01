@@ -181,6 +181,7 @@ function mapFollowup(row: FollowupRow): LeadFollowup {
     completedBy: row.completed_by,
     cancelledAt: row.cancelled_at,
     cancelledBy: row.cancelled_by,
+    cancelledReason: row.cancelled_reason,
     createdBy: row.created_by,
     createdAt: row.created_at
   }
@@ -1030,10 +1031,10 @@ export const followupRepo = {
       .run()
   },
 
-  cancel(organizationId: number, id: number, by: number): void {
+  cancel(organizationId: number, id: number, by: number, reason?: string): void {
     getDrizzle()
       .update(leadFollowups)
-      .set({ cancelled_at: sql`(datetime('now'))`, cancelled_by: by })
+      .set({ cancelled_at: sql`(datetime('now'))`, cancelled_by: by, cancelled_reason: reason ?? null })
       .where(and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.id, id)))
       .run()
   },

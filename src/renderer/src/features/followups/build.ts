@@ -19,6 +19,7 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       notes: f.notes,
       completedAt: f.completedAt,
       cancelledAt: f.cancelledAt,
+      cancelledReason: f.cancelledReason,
       ownerId: lead.owner?.id,
       ownerName: lead.owner?.name
     }))

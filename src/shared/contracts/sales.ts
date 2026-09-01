@@ -94,7 +94,8 @@ export const updateFollowUpInputSchema = z.object({
 export type UpdateFollowUpInput = z.infer<typeof updateFollowUpInputSchema>
 
 export const cancelFollowUpInputSchema = z.object({
-  followupId: z.number().int().positive()
+  followupId: z.number().int().positive(),
+  reason: z.string().max(500).optional()
 })
 export type CancelFollowUpInput = z.infer<typeof cancelFollowUpInputSchema>
 

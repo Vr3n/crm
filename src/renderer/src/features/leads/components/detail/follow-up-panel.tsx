@@ -4,16 +4,17 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Timeline } from '@/components/timeline'
-import { useCancelFollowUp, useCompleteFollowUp } from '../../queries'
+import { useCompleteFollowUp } from '../../queries'
 import { EditFollowUpDialog } from '../edit-follow-up-dialog'
+import { CancelFollowUpDialog } from '@/features/followups/components/cancel-follow-up-dialog'
 import { mapFollowUpsToEntries } from './follow-up-timeline'
 import { dueLabel, formatDateTime } from '../../format'
 import type { FollowUp } from '../../types'
 
 function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }) {
   const complete = useCompleteFollowUp()
-  const cancel = useCancelFollowUp()
   const [editing, setEditing] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const d = dueLabel(followUp.dueAt)
 
   return (
@@ -32,7 +33,12 @@ function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }) {
           </p>
         </div>
         <div className="flex items-center gap-1">
-          <Button size="icon-sm" variant="ghost" onClick={() => setEditing(true)} title="Extend due date">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => setEditing(true)}
+            title="Extend due date"
+          >
             <CalendarClock className="size-3.5" />
           </Button>
           <Button
@@ -48,8 +54,7 @@ function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }) {
             size="icon-sm"
             variant="ghost"
             className="text-destructive hover:bg-destructive/10"
-            onClick={() => cancel.mutate({ followupId: followUp.id })}
-            disabled={cancel.isPending}
+            onClick={() => setCancelling(true)}
             title="Cancel follow-up"
           >
             <XCircle className="size-3.5" />
@@ -71,6 +76,18 @@ function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }) {
           cancelledAt: followUp.cancelledAt
         }}
       />
+      <CancelFollowUpDialog
+        open={cancelling}
+        onOpenChange={setCancelling}
+        followUp={{
+          id: followUp.id,
+          leadId: followUp.leadId,
+          leadName: '',
+          stage: 'NEW' as const,
+          title: followUp.title,
+          dueAt: followUp.dueAt
+        }}
+      />
     </>
   )
 }
@@ -89,10 +106,15 @@ export function FollowUpPanel({ lead }: { lead: { followUps: FollowUp[] } }): Re
 
   if (lead.followUps.length === 0) {
     return (
-    <Card
-      className="crm-gradient-border"
-      style={{ '--gradient-start': 'var(--violet)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
-    >
+      <Card
+        className="crm-gradient-border"
+        style={
+          {
+            '--gradient-start': 'var(--violet)',
+            '--gradient-end': 'var(--primary)'
+          } as React.CSSProperties
+        }
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-base">
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
