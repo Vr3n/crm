@@ -1,6 +1,6 @@
 import type { CurrencyCode } from '@/lib/money'
 
-type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number'
+type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number' | 'isodate'
 
 export interface ExportColumn {
   header: string

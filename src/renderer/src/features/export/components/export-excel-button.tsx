@@ -55,7 +55,7 @@ export function ExportExcelButton({
         rows,
         currency
       })
-      toast.success('Excel exported', {
+      toast.success('Exported & opened', {
         description: filePath
       })
     } catch (err) {
