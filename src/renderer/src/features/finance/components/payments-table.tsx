@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,7 @@ import { pdfApi } from '@/features/pdf/api'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
 import type { Payment } from '../types'
+import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Payment No', key: 'paymentNo', format: 'text' },
@@ -25,7 +27,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Customer', key: 'customer', format: 'text' },
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Method', key: 'method', format: 'text' },
-  { header: 'Amount', key: 'amount', format: 'money' },
+  { header: 'Amount', key: 'amountMinor', format: 'money' },
   { header: 'Allocated', key: 'allocated', format: 'money' },
   { header: 'Unallocated', key: 'unallocated', format: 'money' },
   { header: 'Reference', key: 'reference', format: 'text' }
@@ -34,14 +36,14 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 const helper = createColumnHelper<DashboardFeatures, Payment>()
 
 /** Allocated column: mono "of" figures with a thin progress bar. */
-function AllocatedCell({ payment }: { payment: Payment }): React.JSX.Element {
+function AllocatedCell({ payment, currency }: { payment: Payment; currency: CurrencyCode }): React.JSX.Element {
   const allocated = allocatedAmount(payment)
-  const pct = payment.amount > 0 ? Math.round((allocated / payment.amount) * 100) : 0
+  const pct = payment.amountMinor > 0 ? Math.round((allocated / payment.amountMinor) * 100) : 0
   return (
     <div className="flex min-w-28 flex-col gap-1.5">
       <span className="font-mono text-xs tabular-nums">
-        <span className="font-medium">{formatMoney(allocated)}</span>
-        <span className="text-muted-foreground"> of {formatMoney(payment.amount)}</span>
+        <span className="font-medium">{formatMinor(allocated, currency)}</span>
+        <span className="text-muted-foreground"> of {formatMinor(payment.amountMinor, currency)}</span>
       </span>
       <span className="flex h-1 w-full max-w-32 overflow-hidden rounded-full bg-muted">
         <span
@@ -56,7 +58,7 @@ function AllocatedCell({ payment }: { payment: Payment }): React.JSX.Element {
   )
 }
 
-function buildColumns(): ReturnType<typeof helper.columns> {
+function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.paymentNo, {
       id: 'paymentNo',
@@ -115,7 +117,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       enableSorting: false,
       cell: ({ row }) => <PaymentMethodBadge method={row.original.method} />
     }),
-    helper.accessor('amount', {
+    helper.accessor('amountMinor', {
       header: ({ column }) => (
         <SortButton
           className="text-primary"
@@ -127,7 +129,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm font-semibold tabular-nums">
-          {formatMoney(row.original.amount)}
+          {formatMinor(row.original.amountMinor, currency)}
         </span>
       ),
       sortFn: 'basic'
@@ -135,7 +137,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
     helper.display({
       id: 'allocated',
       header: () => 'Allocated',
-      cell: ({ row }) => <AllocatedCell payment={row.original} />
+      cell: ({ row }) => <AllocatedCell payment={row.original} currency={currency} />
     }),
     helper.accessor((row) => allocationStatusOf(row), {
       id: 'status',
@@ -208,7 +210,8 @@ export function PaymentsTable({
   isLoading: boolean
   onOpen: (payment: Payment) => void
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(), [])
+  const currency = useCurrency()
+  const columns = useMemo(() => buildColumns(currency), [currency])
   const unallocatedTotal = payments.reduce((s, p) => s + unallocatedAmount(p), 0)
 
   const exportData = useMemo(
@@ -220,7 +223,7 @@ export function PaymentsTable({
         customer: r.customer.name,
         phone: r.customer.phone,
         method: r.method,
-        amount: r.amount,
+        amountMinor: r.amountMinor,
         allocated: allocatedAmount(r),
         unallocated: unallocatedAmount(r),
         reference: r.reference ?? ''
@@ -247,7 +250,7 @@ export function PaymentsTable({
         <>
           {unallocatedTotal > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/25 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning tabular-nums">
-              {formatMoney(unallocatedTotal)} unallocated
+              {formatMinor(unallocatedTotal, currency)} unallocated
             </span>
           ) : null}
           <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Payments" />

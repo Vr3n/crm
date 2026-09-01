@@ -23,7 +23,7 @@ export const membershipFreezeSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   reason: z.string(),
-  fee: z.number(),
+  feeMinor: z.number().int(),
   billingBehavior: z.enum(['SUSPEND_BILLING', 'CONTINUE_BILLING']),
   accessBehavior: z.enum(['NO_ACCESS', 'ACCESS']),
   extensionDays: z.number(),
@@ -37,10 +37,10 @@ export const membershipOutputSchema = z.object({
   customerId: z.string(),
   plan: z.string(),
   planId: z.string().optional(),
-  price: z.number(),
-  discount: z.number(),
+  priceMinor: z.number().int(),
+  discountMinor: z.number().int(),
   billingFrequency: z.enum(['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ANNUAL']),
-  registrationFee: z.number(),
+  registrationFeeMinor: z.number().int(),
   startDate: z.string(),
   endDate: z.string(),
   status: z.enum(['PENDING', 'ACTIVE', 'FROZEN', 'EXPIRED', 'CANCELLED', 'TERMINATED']),
@@ -55,11 +55,11 @@ export const customerInvoiceSchema = z.object({
   invoiceNo: z.string(),
   status: z.enum(['DRAFT', 'OPEN', 'PARTIALLY_PAID', 'PAID', 'VOID', 'UNCOLLECTIBLE']),
   issuedAt: z.string(),
-  subtotal: z.number(),
-  tax: z.number(),
-  total: z.number(),
-  paidAmount: z.number(),
-  outstanding: z.number()
+  subtotalMinor: z.number().int(),
+  taxMinor: z.number().int(),
+  totalMinor: z.number().int(),
+  paidMinor: z.number().int(),
+  outstandingMinor: z.number().int()
 })
 export type CustomerInvoiceOutput = z.infer<typeof customerInvoiceSchema>
 

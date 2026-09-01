@@ -5,7 +5,7 @@ import type { OfferInput } from '../types'
 /**
  * Offers IPC facade (wire shape). Returns the shared-contract `OfferRow`
  * exactly (`value_minor`, `min_purchase_minor`, ISO dates, `active`) — the
- * display mapping (₹, `isActive`, `code`) happens in `mappers.ts`.
+ * display mapping (money, `isActive`, `code`) happens in `mappers.ts`.
  */
 export const offersApi = {
   listOffers(): Promise<OfferRow[]> {

@@ -23,16 +23,13 @@ import type {
   PolicyLookups,
   ProrationPolicy
 } from './types'
-import { toRupees, fromRupees } from '../../../../shared/contracts/money'
 
 /**
  * Catalog wire → display mapping (README "Renderer API layer"). Api methods
- * return the shared-contract wire shape exactly (paise, ISO dates, `active`);
- * every rupee/date/enum reconciliation happens here so components stay clean.
+ * return the shared-contract wire shape exactly (minor units, ISO dates,
+ * `active`); money values pass through unchanged — formatting happens in
+ * components via `formatMinor`, parsing in forms via `parseToMinor`.
  */
-
-const bpsToPercent = (bps: number): number => bps / 100
-const percentToBps = (percent: number): number => Math.round(percent * 100)
 
 /** A stable display code derived from the offer name — never stored on the wire. */
 export const codeFromName = (name: string): string =>
@@ -48,13 +45,13 @@ export function mapPlanRow(row: PlanRow): Plan {
     name: row.name,
     duration: row.duration,
     billing: row.billingFrequency,
-    basePrice: toRupees(row.basePriceMinor),
+    basePriceMinor: row.basePriceMinor,
     accessWindow: row.accessWindow,
     startTime: row.startTime ?? '06:00',
     endTime: row.endTime ?? '23:00',
     taxCode: row.taxCode,
-    taxRate: bpsToPercent(row.taxRateBps),
-    registrationFee: toRupees(row.registrationFeeMinor),
+    taxRateBps: row.taxRateBps,
+    registrationFeeMinor: row.registrationFeeMinor,
     freezePolicyId: row.freezePolicyId,
     prorationPolicyId: row.prorationPolicyId,
     cancellationPolicyId: row.cancellationPolicyId,
@@ -70,23 +67,18 @@ export function mapPlanInput(input: PlanInput): CreatePlanInput {
     description: input.description,
     duration: input.duration,
     billingFrequency: input.billing,
-    basePriceMinor: fromRupees(input.basePrice),
+    basePriceMinor: input.basePriceMinor,
     accessWindow: input.accessWindow,
     startTime: input.startTime,
     endTime: input.endTime,
     taxCode: input.taxCode,
-    taxRateBps: percentToBps(input.taxRate),
-    registrationFeeMinor: fromRupees(input.registrationFee),
+    taxRateBps: input.taxRateBps,
+    registrationFeeMinor: input.registrationFeeMinor,
     freezePolicyId: input.freezePolicyId,
     prorationPolicyId: input.prorationPolicyId,
     cancellationPolicyId: input.cancellationPolicyId,
     isActive: input.isActive
   }
-}
-
-function offerValueFromMinor(discountType: Offer['discountType'], valueMinor: number): number {
-  if (discountType === 'PERCENTAGE' || discountType === 'FREE_PERIOD') return valueMinor
-  return toRupees(valueMinor)
 }
 
 export function mapOfferRow(row: OfferRow): Offer {
@@ -96,9 +88,9 @@ export function mapOfferRow(row: OfferRow): Offer {
     code: codeFromName(row.name),
     description: row.description ?? '',
     discountType: row.discountType,
-    value: offerValueFromMinor(row.discountType, row.valueMinor),
+    value: row.valueMinor,
     applicablePlanIds: row.applicablePlanIds,
-    minPurchase: row.minPurchaseMinor == null ? 0 : toRupees(row.minPurchaseMinor),
+    minPurchaseMinor: row.minPurchaseMinor ?? 0,
     maxUses: row.maxUsage ?? 0,
     usedCount: row.usedCount,
     startDate: row.validFrom,
@@ -109,23 +101,18 @@ export function mapOfferRow(row: OfferRow): Offer {
   }
 }
 
-function offerValueToMinor(discountType: Offer['discountType'], value: number): number {
-  if (discountType === 'PERCENTAGE' || discountType === 'FREE_PERIOD') return Math.round(value)
-  return fromRupees(value)
-}
-
 export function mapOfferInput(input: OfferInput): CreateOfferInput {
   return {
     name: input.name,
     description: input.description,
     discountType: input.discountType,
-    valueMinor: offerValueToMinor(input.discountType, input.value),
+    valueMinor: input.value,
     applicablePlanIds: input.applicablePlanIds,
     eligibility: input.eligibility,
     validFrom: input.startDate,
     validTo: input.endDate || null,
     maxUsage: input.maxUses > 0 ? input.maxUses : null,
-    minPurchaseMinor: fromRupees(input.minPurchase),
+    minPurchaseMinor: input.minPurchaseMinor > 0 ? input.minPurchaseMinor : null,
     active: input.isActive
   }
 }
@@ -134,8 +121,8 @@ export function mapPlanVersionRow(row: PlanVersionRow): PlanVersion {
   return {
     id: row.id,
     planId: row.planId,
-    basePrice: toRupees(row.basePriceMinor),
-    taxRate: bpsToPercent(row.taxRateBps),
+    basePriceMinor: row.basePriceMinor,
+    taxRateBps: row.taxRateBps,
     effectiveFrom: row.effectiveFrom,
     createdAt: row.createdAt
   }
@@ -146,7 +133,7 @@ export function mapOfferVersionRow(row: OfferVersionRow): OfferVersion {
     id: row.id,
     offerId: row.offerId,
     discountType: row.discountType,
-    value: offerValueFromMinor(row.discountType, row.valueMinor),
+    value: row.valueMinor,
     effectiveFrom: row.effectiveFrom,
     createdAt: row.createdAt
   }
@@ -159,7 +146,7 @@ function mapFreezePolicyRow(row: FreezePolicyRow): FreezePolicy {
     billingBehavior: row.billingBehavior,
     accessBehavior: row.accessBehavior,
     extendOrCredit: row.extendOrCredit,
-    fee: toRupees(row.feeMinor),
+    feeMinor: row.feeMinor,
     freeFreezeCountPerYear: row.freeFreezeCountPerYear,
     description: row.description
   }
@@ -199,7 +186,7 @@ export function mapFreezePolicyCreateInput(input: Omit<FreezePolicy, 'id'>): Cre
     billingBehavior: input.billingBehavior,
     accessBehavior: input.accessBehavior,
     extendOrCredit: input.extendOrCredit,
-    feeMinor: fromRupees(input.fee),
+    feeMinor: input.feeMinor,
     freeFreezeCountPerYear: input.freeFreezeCountPerYear,
     description: input.description ?? undefined
   }

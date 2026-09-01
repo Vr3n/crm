@@ -1,5 +1,3 @@
-export { formatMoney } from '@/lib/money'
-
 /** Abbreviated day-month year — 16 Aug 2026 */
 export const formatDate = (iso: string): string => {
   const date = new Date(iso)

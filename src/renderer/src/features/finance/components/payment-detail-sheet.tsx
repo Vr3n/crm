@@ -2,7 +2,8 @@ import { ArrowRightLeft, BadgeCheck, CircleCheck, ReceiptText, Undo2 } from 'luc
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { formatDate, initials } from '@/features/leads/format'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { ALLOCATION_STATUS_META } from '../constants'
 import { allocatedAmount, allocationStatusOf, unallocatedAmount } from '../build'
@@ -63,10 +64,11 @@ export function PaymentDetailSheet({
   // through the close (exit) animation instead of flashing empty.
   const status = payment ? allocationStatusOf(payment) : null
   const statusMeta = status ? ALLOCATION_STATUS_META[status] : null
+  const currency = useCurrency()
   const allocated = payment ? allocatedAmount(payment) : 0
   const unallocated = payment ? unallocatedAmount(payment) : 0
   const paymentRefunds = payment ? refunds.filter((r) => payment.refundIds.includes(r.id)) : []
-  const refunded = paymentRefunds.reduce((s, r) => s + r.amount, 0)
+  const refunded = paymentRefunds.reduce((s, r) => s + r.amountMinor, 0)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -93,7 +95,7 @@ export function PaymentDetailSheet({
               <div className="flex items-baseline justify-between rounded-md border border-border bg-card px-3 py-2.5">
                 <span className="text-xs text-muted-foreground">Amount received</span>
                 <span className="font-mono text-2xl font-semibold tabular-nums">
-                  {formatMoney(payment.amount)}
+                  {formatMinor(payment.amountMinor, currency)}
                 </span>
               </div>
             </SheetHeader>
@@ -123,11 +125,11 @@ export function PaymentDetailSheet({
                       label="Allocated"
                       value={
                         <span className="font-mono text-xs tabular-nums">
-                          {formatMoney(allocated)}
+                          {formatMinor(allocated, currency)}
                           {unallocated > 0 ? (
                             <span className="text-muted-foreground">
                               {' '}
-                              · {formatMoney(unallocated)} unallocated
+                              · {formatMinor(unallocated, currency)} unallocated
                             </span>
                           ) : null}
                         </span>
@@ -157,7 +159,7 @@ export function PaymentDetailSheet({
                             </p>
                           </div>
                           <span className="font-mono text-sm font-semibold tabular-nums">
-                            {formatMoney(a.amount)}
+                            {formatMinor(a.amountMinor, currency)}
                           </span>
                         </div>
                       ))}
@@ -188,7 +190,7 @@ export function PaymentDetailSheet({
                             <p className="truncate text-xs text-muted-foreground">{r.reason}</p>
                           </div>
                           <span className="font-mono text-sm font-semibold text-destructive tabular-nums">
-                            −{formatMoney(r.amount)}
+                            −{formatMinor(r.amountMinor, currency)}
                           </span>
                         </div>
                       ))}
@@ -217,7 +219,7 @@ export function PaymentDetailSheet({
                       refunded > 0 ? 'text-destructive' : 'text-foreground'
                     )}
                   >
-                    {formatMoney(payment.amount - refunded)}
+                    {formatMinor(payment.amountMinor - refunded, currency)}
                   </span>
                 </section>
               </div>

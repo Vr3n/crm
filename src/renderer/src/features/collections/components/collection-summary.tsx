@@ -1,7 +1,8 @@
 import { Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PAYMENT_METHODS, PAYMENT_METHOD_META } from '@/lib/payment-methods'
-import { formatMoney } from '@/lib/money'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { DayCollection } from '../types'
 
 /**
@@ -16,7 +17,8 @@ export function CollectionSummary({
   collection: DayCollection
   isToday: boolean
 }): React.JSX.Element {
-  const { total, paymentCount, recordedBy, byMethod } = collection
+  const { totalMinor, paymentCount, recordedBy, byMethod } = collection
+  const currency = useCurrency()
   const methods = PAYMENT_METHODS.filter((m) => byMethod.some((b) => b.method === m))
   const recordedLabel =
     recordedBy.length > 1 ? `${recordedBy.length} staff members` : (recordedBy[0] ?? 'No staff')
@@ -38,7 +40,7 @@ export function CollectionSummary({
           </div>
         </div>
         <p className="font-mono text-4xl font-bold tracking-tight tabular-nums">
-          {formatMoney(total)}
+          {formatMinor(totalMinor, currency)}
         </p>
         <div className="flex gap-1">
           {methods.length === 0 ? (
@@ -49,10 +51,10 @@ export function CollectionSummary({
                 key={b.method}
                 className="h-2 rounded-sm"
                 style={{
-                  width: `${total > 0 ? Math.max((b.total / total) * 100, 2) : 0}%`,
+                  width: `${totalMinor > 0 ? Math.max((b.totalMinor / totalMinor) * 100, 2) : 0}%`,
                   backgroundColor: PAYMENT_METHOD_META[b.method].color
                 }}
-                title={`${PAYMENT_METHOD_META[b.method].label} — ${formatMoney(b.total)}`}
+                title={`${PAYMENT_METHOD_META[b.method].label} — ${formatMinor(b.totalMinor, currency)}`}
               />
             ))
           )}
@@ -64,7 +66,7 @@ export function CollectionSummary({
           const meta = PAYMENT_METHOD_META[method]
           const bucket = byMethod.find((b) => b.method === method)!
           const Icon = meta.icon
-          const share = total > 0 ? (bucket.total / total) * 100 : 0
+          const share = totalMinor > 0 ? (bucket.totalMinor / totalMinor) * 100 : 0
           return (
             <div
               key={method}
@@ -83,7 +85,7 @@ export function CollectionSummary({
                 <span className="text-xs font-medium text-muted-foreground">{meta.label}</span>
               </div>
               <span className="font-mono text-xl font-bold tabular-nums">
-                {formatMoney(bucket.total)}
+                {formatMinor(bucket.totalMinor, currency)}
               </span>
               <span className="text-xs text-muted-foreground tabular-nums">
                 {bucket.count} {bucket.count === 1 ? 'payment' : 'payments'} · {share.toFixed(0)}%

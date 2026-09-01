@@ -8,7 +8,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { discountBadgeText } from '../pricing'
 import { formatDate } from '../format'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Offer, Plan } from '../types'
+import type { CurrencyCode } from '@/lib/money'
 import { OfferLifecycleBadge } from './catalog-status-badge'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
@@ -38,7 +40,8 @@ function buildColumns(
   plans: Plan[],
   onEdit: (offer: Offer) => void,
   onDeactivate: (offer: Offer) => void,
-  onHistory: (offer: Offer) => void
+  onHistory: (offer: Offer) => void,
+  currency: CurrencyCode
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.name, {
@@ -62,14 +65,14 @@ function buildColumns(
       ),
       sortFn: 'alphanumeric'
     }),
-    helper.accessor((row) => discountBadgeText(row), {
+    helper.accessor((row) => discountBadgeText(row, currency), {
       id: 'discount',
       header: () => 'Discount',
       enableSorting: false,
       cell: ({ row }) => (
         <span className="inline-flex items-center gap-1.5 font-mono text-sm font-medium text-primary tabular-nums">
           <BadgePercent className="size-3.5 text-primary/70" />
-          {discountBadgeText(row.original)}
+          {discountBadgeText(row.original, currency)}
         </span>
       )
     }),
@@ -190,9 +193,10 @@ export function OfferTable({
   onDeactivate: (offer: Offer) => void
   onHistory: (offer: Offer) => void
 }): React.JSX.Element {
+  const currency = useCurrency()
   const columns = useMemo(
-    () => buildColumns(plans, onEdit, onDeactivate, onHistory),
-    [plans, onEdit, onDeactivate, onHistory]
+    () => buildColumns(plans, onEdit, onDeactivate, onHistory, currency),
+    [plans, onEdit, onDeactivate, onHistory, currency]
   )
 
   const exportData = useMemo(
@@ -200,14 +204,14 @@ export function OfferTable({
       offers.map((r) => ({
         name: r.name,
         code: r.code,
-        discount: discountBadgeText(r),
+        discount: discountBadgeText(r, currency),
         appliesTo: appliesToLabel(r, plans),
         startDate: r.startDate,
         endDate: r.endDate ?? '',
         uses: r.maxUses > 0 ? `${r.usedCount} / ${r.maxUses}` : `${r.usedCount} used`,
         lifecycle: r.endDate ? 'Fixed' : 'Open'
       })),
-    [offers, plans]
+    [offers, plans, currency]
   )
 
   return (

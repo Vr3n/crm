@@ -1,7 +1,5 @@
 /** Presentational helpers for the dashboard — day deltas and cold-lead math. */
 
-export { formatMoney } from '@/lib/money'
-
 /** Whole days from "now" to the given timestamp (negative when past). */
 export function daysUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now()

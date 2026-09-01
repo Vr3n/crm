@@ -1,26 +1,27 @@
 import { useMemo } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { Label } from '@/components/ui/label'
 import type { FinanceInvoice } from '../types'
 
 export interface AllocationDraft {
   invoiceId: string
-  amount: number
+  amountMinor: number
   enabled: boolean
 }
 
 interface AllocationSectionProps {
   invoices: FinanceInvoice[]
-  paymentAmount: number
+  paymentAmountMinor: number
   allocations: AllocationDraft[]
   onAllocationsChange: (allocs: AllocationDraft[]) => void
   isLoading: boolean
 }
 
 function invoiceDue(inv: FinanceInvoice): number {
-  return inv.status === 'VOID' ? 0 : Math.max(0, inv.total - inv.paid)
+  return inv.status === 'VOID' ? 0 : Math.max(0, inv.totalMinor - inv.paidMinor)
 }
 
 /**
@@ -28,15 +29,17 @@ function invoiceDue(inv: FinanceInvoice): number {
  *
  * Shows each outstanding invoice as a card with a toggle checkbox and a
  * read-only display of how much is allocated. The allocation amounts are
- * driven by the parent's Amount field — not by per-invoice inputs.
+ * driven by the parent's Amount field — not by per-invoice inputs. All
+ * amounts are integer minor units.
  */
 export function AllocationSection({
   invoices,
-  paymentAmount,
+  paymentAmountMinor,
   allocations,
   onAllocationsChange,
   isLoading
 }: AllocationSectionProps): React.JSX.Element {
+  const currency = useCurrency()
   const sorted = useMemo(
     () =>
       [...invoices]
@@ -44,13 +47,6 @@ export function AllocationSection({
         .sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime()),
     [invoices]
   )
-
-  const totalAllocated = useMemo(
-    () => allocations.filter((a) => a.enabled).reduce((s, a) => s + (a.amount || 0), 0),
-    [allocations]
-  )
-
-  const remaining = paymentAmount - totalAllocated
 
   const getDraft = useMemo(
     () =>
@@ -65,22 +61,22 @@ export function AllocationSection({
     if (checked) {
       const otherAllocated = allocations
         .filter((a) => a.enabled && a.invoiceId !== invoice.id)
-        .reduce((s, a) => s + (a.amount || 0), 0)
-      const available = Math.max(0, paymentAmount - otherAllocated)
-      const amount = Math.min(due, available)
+        .reduce((s, a) => s + (a.amountMinor || 0), 0)
+      const available = Math.max(0, paymentAmountMinor - otherAllocated)
+      const amountMinor = Math.min(due, available)
       if (existing) {
         onAllocationsChange(
-          allocations.map((a) => (a.invoiceId === invoice.id ? { ...a, enabled: true, amount } : a))
+          allocations.map((a) => (a.invoiceId === invoice.id ? { ...a, enabled: true, amountMinor } : a))
         )
         return
       }
-      onAllocationsChange([...allocations, { invoiceId: invoice.id, amount, enabled: true }])
+      onAllocationsChange([...allocations, { invoiceId: invoice.id, amountMinor, enabled: true }])
       return
     }
     if (existing) {
       onAllocationsChange(
         allocations.map((a) =>
-          a.invoiceId === invoice.id ? { ...a, enabled: false, amount: 0 } : a
+          a.invoiceId === invoice.id ? { ...a, enabled: false, amountMinor: 0 } : a
         )
       )
     }
@@ -119,7 +115,7 @@ export function AllocationSection({
           const due = invoiceDue(invoice)
           const draft = getDraft(invoice.id)
           const enabled = draft?.enabled ?? false
-          const allocatedAmount = draft?.amount ?? 0
+          const allocatedAmount = draft?.amountMinor ?? 0
           const progress = due > 0 ? Math.min(1, allocatedAmount / due) : 0
 
           return (
@@ -154,11 +150,11 @@ export function AllocationSection({
                 </div>
                 {enabled ? (
                   <span className="font-mono text-xs font-medium tabular-nums text-foreground">
-                    {formatMoney(allocatedAmount)}
+                    {formatMinor(allocatedAmount, currency)}
                   </span>
                 ) : (
                   <span className="font-mono text-xs font-bold tabular-nums text-amber-700 dark:text-amber-500">
-                    {formatMoney(due)} due
+                    {formatMinor(due, currency)} due
                   </span>
                 )}
               </label>
@@ -168,7 +164,7 @@ export function AllocationSection({
                 <div className="border-t border-border/60 px-3 py-2">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-[10px] font-bold tabular-nums text-amber-700 dark:text-amber-500">
-                      {formatMoney(allocatedAmount)} of {formatMoney(due)}
+                      {formatMinor(allocatedAmount, currency)} of {formatMinor(due, currency)}
                     </span>
                     <span
                       className={cn(
@@ -198,25 +194,6 @@ export function AllocationSection({
           )
         })}
       </div>
-
-      {/* Summary line */}
-      {totalAllocated > 0 && (
-        <p
-          className={cn(
-            'pt-1 text-xs tabular-nums',
-            remaining < 0 ? 'text-destructive' : 'text-muted-foreground'
-          )}
-        >
-          Allocating{' '}
-          <span className="font-medium text-foreground">{formatMoney(totalAllocated)}</span>
-          {paymentAmount > 0 ? ` of ${formatMoney(paymentAmount)}` : ''}
-          {remaining > 0 ? (
-            <span className="text-muted-foreground"> · {formatMoney(remaining)} unallocated</span>
-          ) : remaining === 0 ? (
-            <span className="text-green-600 dark:text-green-400"> · Fully allocated</span>
-          ) : null}
-        </p>
-      )}
     </div>
   )
 }

@@ -16,7 +16,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { formatDate, formatDateTime, initials } from '@/features/leads/format'
 import { PAYMENT_METHOD_META, type PaymentMethod } from '@/lib/payment-methods'
-import { formatMoney } from '@/lib/money'
+import { formatMinor, formatRate } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { can, useSession } from '@/context/session-context'
 import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
 import { INVOICE_STATUS_META } from '../constants'
@@ -91,6 +92,7 @@ function StatTile({
 }
 
 function AllocationRow({ invoice }: { invoice: Invoice }): React.JSX.Element {
+  const currency = useCurrency()
   if (invoice.allocations.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -118,7 +120,7 @@ function AllocationRow({ invoice }: { invoice: Invoice }): React.JSX.Element {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-sm font-semibold tabular-nums">{formatMoney(a.amount)}</span>
+              <span className="text-sm font-semibold tabular-nums">{formatMinor(a.amountMinor, currency)}</span>
               <span className="text-xs text-muted-foreground">{formatDateTime(a.receivedAt)}</span>
             </div>
           </div>
@@ -129,6 +131,7 @@ function AllocationRow({ invoice }: { invoice: Invoice }): React.JSX.Element {
 }
 
 function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
+  const currency = useCurrency()
   return (
     <>
       <div className="overflow-hidden rounded-md border border-border">
@@ -145,31 +148,31 @@ function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{l.description}</p>
-              {l.discountAmount > 0 ? (
+              {l.discountMinor > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Discount {formatMoney(l.discountAmount)}
+                  Discount {formatMinor(l.discountMinor, currency)}
                 </p>
               ) : null}
             </div>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
               {l.quantity}
             </span>
-            <span className="text-right text-xs tabular-nums">{formatMoney(l.unitPrice)}</span>
+            <span className="text-right text-xs tabular-nums">{formatMinor(l.unitPriceMinor, currency)}</span>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
-              {l.taxRate}%
+              {formatRate(l.taxRateBps)}
             </span>
           </div>
         ))}
       </div>
       <div className="flex flex-col items-end gap-1">
         <span className="text-xs text-muted-foreground">
-          Subtotal <span className="font-mono tabular-nums">{formatMoney(invoice.subtotal)}</span>
+          Subtotal <span className="font-mono tabular-nums">{formatMinor(invoice.subtotalMinor, currency)}</span>
         </span>
         <span className="text-xs text-muted-foreground">
-          Tax (GST) <span className="font-mono tabular-nums">{formatMoney(invoice.taxTotal)}</span>
+          Tax (GST) <span className="font-mono tabular-nums">{formatMinor(invoice.taxTotalMinor, currency)}</span>
         </span>
         <span className="text-sm font-semibold">
-          Total <span className="font-mono tabular-nums">{formatMoney(invoice.total)}</span>
+          Total <span className="font-mono tabular-nums">{formatMinor(invoice.totalMinor, currency)}</span>
         </span>
       </div>
     </>
@@ -215,6 +218,7 @@ export function InvoiceDetailsSheet({
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
   const session = useSession()
+  const currency = useCurrency()
   // `invoice` stays set while `open` goes false so the content persists through
   // the close (exit) animation instead of flashing empty.
   const { data, isLoading, isError } = useInvoice(invoice?.id)
@@ -276,7 +280,7 @@ export function InvoiceDetailsSheet({
                   <div className="flex gap-2.5">
                     <StatTile
                       label="Total"
-                      value={formatMoney(data.total)}
+                      value={formatMinor(data.totalMinor, currency)}
                       tone={
                         data.status === 'VOID' || data.status === 'UNCOLLECTIBLE'
                           ? 'muted'
@@ -285,13 +289,13 @@ export function InvoiceDetailsSheet({
                     />
                     <StatTile
                       label="Paid"
-                      value={formatMoney(data.paidAmount)}
-                      tone={data.paidAmount > 0 ? 'accent' : 'muted'}
+                      value={formatMinor(data.paidMinor, currency)}
+                      tone={data.paidMinor > 0 ? 'accent' : 'muted'}
                     />
                     <StatTile
                       label="Outstanding"
-                      value={formatMoney(data.outstanding)}
-                      tone={data.outstanding > 0 ? 'danger' : 'muted'}
+                      value={formatMinor(data.outstandingMinor, currency)}
+                      tone={data.outstandingMinor > 0 ? 'danger' : 'muted'}
                     />
                   </div>
 

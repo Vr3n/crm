@@ -5,24 +5,27 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Timeline, type TimelineEntry } from '@/components/timeline'
 import { usePlanVersions } from '../queries'
-import { formatMoney, formatDate } from '../format'
+import { formatDate } from '../format'
+import { formatMinor, formatRate, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 
 /**
  * Maps PlanVersion[] into generic TimelineEntry[] for the universal
  * Timeline component. Each version shows the price at that point in time.
  */
 function mapPlanVersionsToEntries(
-  versions: { id: number; basePrice: number; taxRate: number; effectiveFrom: string }[]
+  versions: { id: number; basePriceMinor: number; taxRateBps: number; effectiveFrom: string }[],
+  currency: CurrencyCode
 ): TimelineEntry[] {
   return versions.map((v, index) => ({
     id: v.id,
     label: index === 0 ? 'Current price' : 'Previous price',
     date: v.effectiveFrom,
-    description: v.taxRate > 0 ? `Tax rate: ${v.taxRate}%` : undefined,
+    description: v.taxRateBps > 0 ? `Tax rate: ${formatRate(v.taxRateBps)}` : undefined,
     icon: Tag,
     iconTone: index === 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
     badge: index === 0 ? { label: 'Current', variant: 'secondary' as const } : undefined,
-    meta: formatMoney(v.basePrice),
+    meta: formatMinor(v.basePriceMinor, currency),
     isCurrent: index === 0
   }))
 }
@@ -53,6 +56,7 @@ export function PlanPriceTimeline({
   planName?: string
 }): React.JSX.Element {
   const query = usePlanVersions(planId)
+  const currency = useCurrency()
 
   if (query.isLoading) {
     return (
@@ -96,7 +100,7 @@ export function PlanPriceTimeline({
     )
   }
 
-  const entries = mapPlanVersionsToEntries(query.data ?? [])
+  const entries = mapPlanVersionsToEntries(query.data ?? [], currency)
 
   return (
     <Card>

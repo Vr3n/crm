@@ -1,4 +1,5 @@
 import type { OrgBranding } from '../types'
+import { formatMinor, type CurrencyCode } from '../../../shared/contracts/money'
 
 /**
  * Shared CSS reset and base styles for print-only HTML templates.
@@ -288,10 +289,9 @@ export function buildFooter(generatedAt: string): string {
   `
 }
 
-/** Formats a money amount in paise to Indian rupees. */
-export function formatRupees(amountMinor: number): string {
-  const rupees = amountMinor / 100
-  return '₹ ' + rupees.toLocaleString('en-IN', { minimumFractionDigits: 0 })
+/** Formats a money amount in minor units for display. */
+export function formatRupees(amountMinor: number, currency: CurrencyCode = 'INR'): string {
+  return formatMinor(amountMinor, currency)
 }
 
 /** Formats an ISO date string to a readable format. */

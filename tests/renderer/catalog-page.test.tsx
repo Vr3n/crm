@@ -126,7 +126,7 @@ describe('PlansPage', () => {
 
     await screen.findByText('Annual Premium')
     expect(screen.getByText('GST18 · 18%')).toBeInTheDocument()
-    expect(screen.getByText('₹500')).toBeInTheDocument()
+    expect(screen.getByText('₹500.00')).toBeInTheDocument()
   })
 
   it('edits a plan and sends tax/registration fields converted to wire units', async () => {
@@ -141,7 +141,7 @@ describe('PlansPage', () => {
     const dialog = await screen.findByRole('dialog', { name: /Edit plan/ })
     expect(within(dialog).getByLabelText(/Tax code/)).toHaveValue('GST18')
     expect(within(dialog).getByLabelText(/Tax rate/)).toHaveValue(18)
-    expect(within(dialog).getByLabelText(/Registration fee/)).toHaveValue(500)
+    expect(within(dialog).getByLabelText(/Registration fee/)).toHaveValue('500')
 
     await user.clear(within(dialog).getByLabelText(/Tax rate/))
     await user.type(within(dialog).getByLabelText(/Tax rate/), '12')
@@ -169,8 +169,8 @@ describe('PlansPage', () => {
     await screen.findByRole('dialog', { name: /Annual Premium — price history/ })
     expect(window.api.catalog.listPlanVersions).toHaveBeenCalledWith({ planId: 1 })
     const historyDialog = screen.getByRole('dialog', { name: /Annual Premium — price history/ })
-    expect(await within(historyDialog).findByText('₹2,000')).toBeInTheDocument()
-    expect(within(historyDialog).getByText('₹2,200')).toBeInTheDocument()
+    expect(await within(historyDialog).findByText('₹2,000.00')).toBeInTheDocument()
+    expect(within(historyDialog).getByText('₹2,200.00')).toBeInTheDocument()
   })
 })
 
@@ -223,6 +223,6 @@ describe('OffersPage', () => {
     expect(window.api.catalog.listOfferVersions).toHaveBeenCalledWith({ offerId: 1 })
     const historyDialog = screen.getByRole('dialog', { name: /Flash Sale — discount history/ })
     expect(await within(historyDialog).findByText('20%')).toBeInTheDocument()
-    expect(within(historyDialog).getByText('−₹500')).toBeInTheDocument()
+    expect(within(historyDialog).getByText('−₹500.00')).toBeInTheDocument()
   })
 })

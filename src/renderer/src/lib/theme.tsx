@@ -20,9 +20,9 @@ export function useTheme(): { theme: Theme; resolved: 'light' | 'dark'; setTheme
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
       const stored = localStorage.getItem(THEME_KEY) as Theme | null
-      return stored ?? 'system'
+      return stored ?? 'light'
     } catch {
-      return 'system'
+      return 'light'
     }
   })
 

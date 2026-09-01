@@ -18,12 +18,12 @@ export function buildDayCollection(payments: PaymentRecord[], day: Date): DayCol
     return t >= from && t <= to
   })
 
-  const byMethod = new Map<PaymentRecord['method'], { total: number; count: number }>()
-  let total = 0
+  const byMethod = new Map<PaymentRecord['method'], { totalMinor: number; count: number }>()
+  let totalMinor = 0
   for (const p of rows) {
-    total += p.amount
-    const bucket = byMethod.get(p.method) ?? { total: 0, count: 0 }
-    bucket.total += p.amount
+    totalMinor += p.amountMinor
+    const bucket = byMethod.get(p.method) ?? { totalMinor: 0, count: 0 }
+    bucket.totalMinor += p.amountMinor
     bucket.count += 1
     byMethod.set(p.method, bucket)
   }
@@ -32,11 +32,11 @@ export function buildDayCollection(payments: PaymentRecord[], day: Date): DayCol
 
   return {
     date: startOfDay(day).toISOString(),
-    total,
+    totalMinor,
     paymentCount: rows.length,
     recordedBy,
     byMethod: [...byMethod.entries()]
-      .map(([method, v]) => ({ method, total: v.total, count: v.count }))
-      .sort((a, b) => b.total - a.total)
+      .map(([method, v]) => ({ method, totalMinor: v.totalMinor, count: v.count }))
+      .sort((a, b) => b.totalMinor - a.totalMinor)
   }
 }

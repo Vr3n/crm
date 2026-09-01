@@ -22,7 +22,7 @@ export interface MembershipFreeze {
   endDate: string
   reason: string
   /** Gym-defined fee for this freeze (policy, not logic). */
-  fee: number
+  feeMinor: number
   billingBehavior: FreezeBillingBehavior
   accessBehavior: FreezeAccessBehavior
   /** Days the membership end date was pushed out. */
@@ -37,10 +37,10 @@ export interface Membership {
   /** plan_name_snapshot — never recomputed from the plan, prices change. */
   plan: string
   planId?: string
-  price: number
-  discount: number
+  priceMinor: number
+  discountMinor: number
   billingFrequency: BillingFrequency
-  registrationFee: number
+  registrationFeeMinor: number
   startDate: string
   endDate: string
   /** Cached index; the UI derives the effective state via effectiveStatus(). */
@@ -74,17 +74,17 @@ export interface Customer {
   invoices?: CustomerInvoice[]
 }
 
-/** One invoice in finished rupees — paid/outstanding derived from allocations. */
+/** One invoice in minor units — paid/outstanding derived from allocations. */
 export interface CustomerInvoice {
   id: string
   invoiceNo: string
   status: 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE'
   issuedAt: string
-  subtotal: number
-  tax: number
-  total: number
-  paidAmount: number
-  outstanding: number
+  subtotalMinor: number
+  taxMinor: number
+  totalMinor: number
+  paidMinor: number
+  outstandingMinor: number
 }
 
 /**

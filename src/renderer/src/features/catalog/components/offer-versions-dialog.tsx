@@ -9,6 +9,7 @@ import {
 import { useOfferVersions } from '../queries'
 import { discountBadgeText } from '../pricing'
 import { formatDate } from '../format'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Offer } from '../types'
 
 /**
@@ -27,6 +28,7 @@ export function OfferVersionsDialog({
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
   const { data: versions = [], isLoading } = useOfferVersions(offer?.id ?? null)
+  const currency = useCurrency()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,7 +57,7 @@ export function OfferVersionsDialog({
                 {versions.map((v) => (
                   <tr key={v.id} className="odd:bg-muted/30">
                     <td className="px-4 py-2.5 font-mono text-xs font-medium tabular-nums">
-                      {discountBadgeText(v)}
+                      {discountBadgeText(v, currency)}
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
                       {formatDate(v.effectiveFrom)}

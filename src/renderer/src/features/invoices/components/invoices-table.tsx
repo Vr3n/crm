@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDate } from '@/features/leads/format'
-import { formatMoney } from '@/lib/money'
+import { formatMinor, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import {
@@ -46,7 +47,8 @@ const helper = createColumnHelper<DashboardFeatures, Invoice>()
 
 function buildColumns(
   onView: (row: Invoice) => void,
-  onMakePayment: (row: Invoice) => void
+  onMakePayment: (row: Invoice) => void,
+  currency: CurrencyCode
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor('invoiceNo', {
@@ -91,7 +93,7 @@ function buildColumns(
         return <span className="block truncate text-sm">{name}</span>
       }
     }),
-    helper.accessor('outstanding', {
+    helper.accessor('outstandingMinor', {
       id: 'outstanding',
       header: ({ column }) => (
         <div className="flex w-full justify-end">
@@ -101,7 +103,7 @@ function buildColumns(
         </div>
       ),
       cell: ({ row }) => {
-        const amount = row.original.outstanding
+        const amount = row.original.outstandingMinor
         const isSettled = amount === 0
         return (
           <div className="text-right">
@@ -111,14 +113,14 @@ function buildColumns(
                 isSettled ? 'text-success' : 'text-destructive'
               )}
             >
-              {formatMoney(amount)}
+              {formatMinor(amount, currency)}
             </span>
           </div>
         )
       },
       sortFn: 'basic'
     }),
-    helper.accessor('total', {
+    helper.accessor('totalMinor', {
       id: 'total',
       header: ({ column }) => (
         <div className="flex w-full justify-end">
@@ -130,7 +132,7 @@ function buildColumns(
       cell: ({ row }) => (
         <div className="text-right">
           <span className="font-mono text-sm font-semibold tabular-nums">
-            {formatMoney(row.original.total)}
+            {formatMinor(row.original.totalMinor, currency)}
           </span>
         </div>
       ),
@@ -143,7 +145,7 @@ function buildColumns(
         const isOpenish = row.original.status === 'OPEN' || row.original.status === 'PARTIALLY_PAID'
         return (
           <div className="flex items-center justify-end gap-1.5">
-            {isOpenish && row.original.outstanding > 0 ? (
+            {isOpenish && row.original.outstandingMinor > 0 ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -225,6 +227,7 @@ export function InvoicesTable({
   const { data, isLoading } = useInvoices()
   const navigate = useNavigate()
   const location = useLocation()
+  const currency = useCurrency()
   const [range, setRange] = useState<DateRange>()
   const [status, setStatus] = useState<InvoiceStatus | undefined>()
 
@@ -236,8 +239,8 @@ export function InvoicesTable({
   )
 
   const columns = useMemo(
-    () => buildColumns(handleView, onMakePayment),
-    [handleView, onMakePayment]
+    () => buildColumns(handleView, onMakePayment, currency),
+    [handleView, onMakePayment, currency]
   )
 
   const presets = useMemo<DateRangePreset[]>(() => {
@@ -270,8 +273,8 @@ export function InvoicesTable({
         customer: r.customer.name,
         phone: r.customer.phone ?? '',
         plan: r.lines[0]?.description?.replace(/\s*\(.*$/, '') ?? '',
-        outstanding: r.outstanding,
-        total: r.total,
+        outstanding: r.outstandingMinor,
+        total: r.totalMinor,
         status: r.status
       })),
     [filtered]

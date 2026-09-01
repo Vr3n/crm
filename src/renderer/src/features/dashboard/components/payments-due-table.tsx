@@ -6,7 +6,8 @@ import { Wallet } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/features/leads/format'
-import { formatMoney } from '../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { PAGE_SIZE_OPTIONS } from '../constants'
 import { usePaymentsDue } from '../queries'
 import type { PaymentDue } from '../types'
@@ -25,8 +26,8 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Client', key: 'client', format: 'text' },
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Email', key: 'email', format: 'text' },
-  { header: 'Amount Due', key: 'amountDue', format: 'money' },
-  { header: 'Total', key: 'total', format: 'money' },
+  { header: 'Amount Due', key: 'amountDueMinor', format: 'money' },
+  { header: 'Total', key: 'totalMinor', format: 'money' },
   { header: 'Plan', key: 'plan', format: 'text' },
   { header: 'Purchased', key: 'purchasedAt', format: 'date' }
 ]
@@ -57,7 +58,7 @@ function buildColumns(
         <ContactCell phone={row.original.member.phone} email={row.original.member.email} />
       )
     }),
-    helper.accessor('amountDue', {
+    helper.accessor('amountDueMinor', {
       header: ({ column }) => (
         <SortButton
           sorted={column.getIsSorted()}
@@ -68,7 +69,7 @@ function buildColumns(
         </SortButton>
       ),
       cell: ({ row }) => (
-        <AmountCell amountDue={row.original.amountDue} total={row.original.total} />
+        <AmountCell amountDue={row.original.amountDueMinor} total={row.original.totalMinor} />
       ),
       meta: { align: 'right' } as DataTableColumnMeta,
       sortFn: 'basic'
@@ -107,12 +108,13 @@ function buildColumns(
 
 /** Money cell, right-aligned, destructive tone, with the total as muted context. */
 function AmountCell({ amountDue, total }: { amountDue: number; total: number }): React.JSX.Element {
+  const currency = useCurrency()
   return (
     <div className="flex flex-col items-end gap-0.5">
       <span className="font-mono text-sm font-semibold tabular-nums text-destructive">
-        {formatMoney(amountDue)}
+        {formatMinor(amountDue, currency)}
       </span>
-      <span className="text-xs text-muted-foreground">of {formatMoney(total)}</span>
+      <span className="text-xs text-muted-foreground">of {formatMinor(total, currency)}</span>
     </div>
   )
 }
@@ -178,7 +180,7 @@ export function PaymentsDueTable({
   }, [])
 
   const filtered = useMemo(() => {
-    const rows = (data ?? []).filter((r) => r.amountDue > 0)
+    const rows = (data ?? []).filter((r) => r.amountDueMinor > 0)
     if (!range?.from && !range?.to) return rows
     const from = range.from ? startOfDay(range.from).getTime() : Number.NEGATIVE_INFINITY
     const to = range.to ? endOfDay(range.to).getTime() : Number.POSITIVE_INFINITY
@@ -194,8 +196,8 @@ export function PaymentsDueTable({
         client: r.member.name,
         phone: r.member.phone,
         email: r.member.email ?? '',
-        amountDue: r.amountDue,
-        total: r.total,
+        amountDueMinor: r.amountDueMinor,
+        totalMinor: r.totalMinor,
         plan: r.plan,
         purchasedAt: r.purchasedAt
       })),
@@ -229,7 +231,7 @@ export function PaymentsDueTable({
             data={filtered}
             getRowId={(row) => row.id}
             isLoading={isLoading}
-            initialSorting={[{ id: 'amountDue', desc: true }]}
+            initialSorting={[{ id: 'amountDueMinor', desc: true }]}
             initialPageSize={6}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
             showPagination={false}

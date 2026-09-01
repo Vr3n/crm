@@ -2,14 +2,15 @@ import { FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Timeline, type TimelineEntry } from '@/components/timeline'
 import { formatDate } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import { formatMinor, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Invoice } from '../types'
 
 /**
  * Maps Invoice[] into generic TimelineEntry[] for the universal
  * Timeline component. Each invoice becomes a timeline entry.
  */
-function mapInvoicesToEntries(invoices: Invoice[]): TimelineEntry[] {
+function mapInvoicesToEntries(invoices: Invoice[], currency: CurrencyCode): TimelineEntry[] {
   return [...invoices]
     .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
     .map((inv) => ({
@@ -34,9 +35,9 @@ function mapInvoicesToEntries(invoices: Invoice[]): TimelineEntry[] {
               : ('secondary' as const)
       },
       meta:
-        inv.outstanding > 0
-          ? `${formatMoney(inv.total)} · ${formatMoney(inv.outstanding)} due`
-          : formatMoney(inv.total)
+        inv.outstandingMinor > 0
+          ? `${formatMinor(inv.totalMinor, currency)} · ${formatMinor(inv.outstandingMinor, currency)} due`
+          : formatMinor(inv.totalMinor, currency)
     }))
 }
 
@@ -47,7 +48,8 @@ function mapInvoicesToEntries(invoices: Invoice[]): TimelineEntry[] {
  * tables are implemented.
  */
 export function InvoiceTimeline({ invoices }: { invoices: Invoice[] }): React.JSX.Element {
-  const entries = mapInvoicesToEntries(invoices)
+  const currency = useCurrency()
+  const entries = mapInvoicesToEntries(invoices, currency)
 
   return (
     <Card>

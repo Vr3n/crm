@@ -36,7 +36,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { can, useSession } from '@/context/session-context'
-import { formatMinor, rupeesToMinor } from '@/lib/money'
+import { formatMinor, parseToMinor, formatRate, percentToBps, minorToMajor, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { usePlans } from '@/features/catalog/queries'
 import type { Plan } from '@/features/catalog/types'
@@ -74,11 +75,11 @@ const MAX_500 = (value: string): string | undefined =>
   value.length > 500 ? 'Keep it under 500 characters' : undefined
 
 /** Judges the first keystroke instantly so bad formats never get typed twice. */
-function moneyValidator(required: boolean) {
+function moneyValidator(required: boolean, currency: CurrencyCode) {
   return ({ value }: { value: string }): string | undefined => {
     if (!value) return required ? 'Enter an amount' : undefined
     if (!/^[0-9]/.test(value)) return 'Numbers only'
-    return rupeesToMinor(value) !== undefined ? undefined : 'Rupees, up to 2 decimals'
+    return parseToMinor(value, currency) !== undefined ? undefined : 'Amount, up to 2 decimals'
   }
 }
 
@@ -251,12 +252,14 @@ function LinesSection({
   draftId,
   lines,
   seedPlanId,
-  canEdit
+  canEdit,
+  currency
 }: {
   draftId: number
   lines: DraftLine[]
   seedPlanId?: number
   canEdit: boolean
+  currency: CurrencyCode
 }): React.JSX.Element {
   const removeLine = useRemoveInvoiceLine(draftId)
   const { data: plans } = usePlans()
@@ -294,14 +297,14 @@ function LinesSection({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{l.description}</p>
                 {l.discountMinor > 0 ? (
-                  <p className="text-xs text-muted-foreground">Discount −{formatMinor(l.discountMinor)}</p>
+                  <p className="text-xs text-muted-foreground">Discount −{formatMinor(l.discountMinor, currency)}</p>
                 ) : null}
               </div>
               <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{l.quantity}</span>
-              <span className="w-24 text-right font-mono text-xs tabular-nums">{formatMinor(l.unitPriceMinor)}</span>
-              <span className="w-20 text-right text-xs tabular-nums text-muted-foreground">{l.taxRateBps / 100}%</span>
+              <span className="w-24 text-right font-mono text-xs tabular-nums">{formatMinor(l.unitPriceMinor, currency)}</span>
+              <span className="w-20 text-right text-xs tabular-nums text-muted-foreground">{formatRate(l.taxRateBps)}</span>
               <div className="flex w-28 items-center justify-end gap-1">
-                <span className="font-mono text-sm tabular-nums">{formatMinor(l.lineTotalMinor)}</span>
+                <span className="font-mono text-sm tabular-nums">{formatMinor(l.lineTotalMinor, currency)}</span>
                 {canEdit ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -332,6 +335,7 @@ function LinesSection({
           plan={pickedPlan}
           activePlans={activePlans}
           onPlanPicked={setManualPlan}
+          currency={currency}
         />
       ) : null}
     </section>
@@ -340,13 +344,13 @@ function LinesSection({
 
 const EMPTY_LINE_VALUES: LineValues = { description: '', quantity: '1', unitPrice: '', discount: '', taxRate: '0' }
 
-function lineValuesFromPlan(plan: Plan | null): LineValues {
+function lineValuesFromPlan(plan: Plan | null, currency: CurrencyCode): LineValues {
   if (!plan) return EMPTY_LINE_VALUES
   return {
     ...EMPTY_LINE_VALUES,
     description: plan.name,
-    unitPrice: plan.basePrice.toFixed(2),
-    taxRate: String(plan.taxRate)
+    unitPrice: minorToMajor(plan.basePriceMinor, currency),
+    taxRate: String(plan.taxRateBps / 100)
   }
 }
 
@@ -367,29 +371,31 @@ function LineEntryForm({
   draftId,
   plan,
   activePlans,
-  onPlanPicked
+  onPlanPicked,
+  currency
 }: {
   draftId: number
   plan: Plan | null
   activePlans: Plan[]
   onPlanPicked: (plan: Plan | null) => void
+  currency: CurrencyCode
 }): React.JSX.Element {
   const addLine = useAddInvoiceLine(draftId)
   const [planOpen, setPlanOpen] = useState(false)
 
   const form = useForm({
-    defaultValues: lineValuesFromPlan(plan),
+    defaultValues: lineValuesFromPlan(plan, currency),
     onSubmit: async ({ value }) => {
       if (!plan && value.description.trim() === '') return
-      const unitPriceMinor = rupeesToMinor(value.unitPrice)
+      const unitPriceMinor = parseToMinor(value.unitPrice, currency)
       if (unitPriceMinor === undefined) return
       await addLine.mutateAsync({
         invoiceId: draftId,
         description: plan && value.description === plan.name ? plan.name : value.description.trim(),
         quantity: Math.max(1, Math.floor(Number(value.quantity))),
         unitPriceMinor,
-        discountMinor: value.discount ? (rupeesToMinor(value.discount) ?? 0) : 0,
-        taxRateBps: Math.round(Number(value.taxRate || 0) * 100),
+        discountMinor: value.discount ? (parseToMinor(value.discount, currency) ?? 0) : 0,
+        taxRateBps: percentToBps(Number(value.taxRate || 0)),
         planId: plan?.id ?? null
       })
       // Keep the last tax rate for consecutive lines; clear the rest.
@@ -440,7 +446,7 @@ function LineEntryForm({
                         <CommandItem key={p.id} value={p.name} onSelect={() => { onPlanPicked(p); setPlanOpen(false) }}>
                           <span className="min-w-0 flex-1 truncate">{p.name}</span>
                           <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                            ₹{p.basePrice.toLocaleString('en-IN')}
+                            {formatMinor(p.basePriceMinor, currency)}
                           </span>
                         </CommandItem>
                       ))}
@@ -501,14 +507,14 @@ function LineEntryForm({
               </Field>
             )}
           </form.Field>
-          <form.Field name="unitPrice" validators={{ onChange: moneyValidator(true) }}>
+          <form.Field name="unitPrice" validators={{ onChange: moneyValidator(true, currency) }}>
             {(field) => (
               <Field
                 id="line-price"
-                label="Unit price (₹)"
+                label="Unit price"
                 labelEnd={
-                  rupeesToMinor(field.state.value) !== undefined ? (
-                    <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatMinor(rupeesToMinor(field.state.value)!)}</span>
+                  parseToMinor(field.state.value, currency) !== undefined ? (
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatMinor(parseToMinor(field.state.value, currency)!, currency)}</span>
                   ) : undefined
                 }
                 error={field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined}
@@ -525,9 +531,9 @@ function LineEntryForm({
             )}
           </form.Field>
           <div className="grid grid-cols-2 gap-3">
-            <form.Field name="discount" validators={{ onChange: moneyValidator(false) }}>
+            <form.Field name="discount" validators={{ onChange: moneyValidator(false, currency) }}>
               {(field) => (
-                <Field id="line-discount" label="Discount (₹)" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+                <Field id="line-discount" label="Discount" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
                   <Input
                     id="line-discount"
                     inputMode="decimal"
@@ -585,6 +591,7 @@ export function NewInvoiceDialog({
   seedPlanId
 }: NewInvoiceDialogProps): React.JSX.Element {
   const session = useSession()
+  const currency = useCurrency()
   const canCreate = can(session.permissions, session.isSuper, 'invoice.create')
   const canFinalize = can(session.permissions, session.isSuper, 'invoice.finalize')
 
@@ -738,18 +745,18 @@ export function NewInvoiceDialog({
                       address: detail.invoice.billingAddress ?? ''
                     }}
                   />
-                  <LinesSection draftId={draftId} lines={lines} seedPlanId={seedPlanId} canEdit={canCreate} />
+                  <LinesSection draftId={draftId} lines={lines} seedPlanId={seedPlanId} canEdit={canCreate} currency={currency} />
                 </div>
               )}
 
               <DialogFooter className="items-center gap-3 sm:justify-between">
                 <div className="flex flex-col items-start text-sm">
                   <span className="text-xs text-muted-foreground">
-                    Subtotal {formatMinor(detail?.invoice.subtotalMinor ?? 0)} · Tax{' '}
-                    {formatMinor(detail?.invoice.taxMinor ?? 0)}
+                    Subtotal {formatMinor(detail?.invoice.subtotalMinor ?? 0, currency)} · Tax{' '}
+                    {formatMinor(detail?.invoice.taxMinor ?? 0, currency)}
                   </span>
                   <span className="font-semibold">
-                    Total <span className="font-mono tabular-nums">{formatMinor(detail?.invoice.totalMinor ?? 0)}</span>
+                    Total <span className="font-mono tabular-nums">{formatMinor(detail?.invoice.totalMinor ?? 0, currency)}</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

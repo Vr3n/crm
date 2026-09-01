@@ -3,6 +3,7 @@ import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import ExcelJS from 'exceljs'
+import { exponentFor, type CurrencyCode } from '../../../src/shared/contracts/money'
 
 let tempDir: string
 
@@ -14,25 +15,36 @@ afterAll(async () => {
   await rm(tempDir, { recursive: true, force: true })
 })
 
+const CURRENCY_FORMATS: Record<CurrencyCode, string> = {
+  INR: '₹#,##0.00', USD: '$#,##0.00', EUR: '€#,##0.00', GBP: '£#,##0.00',
+  JPY: '¥#,##0', KRW: '₩#,##0', VND: '₫#,##0', CLP: '$#,##0',
+  ISK: 'kr#,##0', KWD: 'د.ك#,##0.000', BHD: 'د.ب#,##0.000',
+  OMR: 'ر.ع#,##0.000', JOD: 'د.ا#,##0.000', TND: 'د.ت#,##0.000',
+  AED: 'د.إ#,##0.00', SGD: 'S$#,##0.00'
+}
+
 /**
  * The export service uses `app.getPath('documents')` at runtime. We test the
  * workbook generation logic directly by building the workbook inline — same
  * algorithm as exportTableToExcel but without the Electron path dependency.
+ * Money cells receive integer minor units and are converted to major via
+ * `exponentFor(currency)`.
  */
 function buildWorkbook(input: {
   sheetName: string
   columns: { header: string; key: string; width?: number; format?: string }[]
   rows: Record<string, unknown>[]
+  currency?: CurrencyCode
 }): Promise<Buffer> {
   const HEADER_FILL: ExcelJS.Fill = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FF1A1A2E' }
   }
-  const MONEY = '₹#,##0.00'
   const DATE = 'dd MMM yyyy'
   const DATETIME = 'dd MMM yyyy, hh:mm AM/PM'
   const NUMBER = '#,##0.##'
+  const currency = input.currency ?? 'INR'
 
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet(input.sheetName, {
@@ -60,7 +72,12 @@ function buildWorkbook(input: {
     const values = input.columns.map((col) => {
       const raw = row[col.key]
       if (raw == null || raw === '') return null
-      if (col.format === 'money' || col.format === 'number') {
+      if (col.format === 'money') {
+        const minor = typeof raw === 'number' ? raw : parseFloat(String(raw))
+        if (Number.isNaN(minor)) return null
+        return minor / 10 ** exponentFor(currency)
+      }
+      if (col.format === 'number') {
         const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
         return isNaN(num) ? null : num
       }
@@ -73,7 +90,7 @@ function buildWorkbook(input: {
       cell.font = { size: 11, name: 'Calibri' }
       cell.alignment = { vertical: 'middle', horizontal: 'left' }
 
-      if (col.format === 'money') cell.numFmt = MONEY
+      if (col.format === 'money') cell.numFmt = CURRENCY_FORMATS[currency]
       else if (col.format === 'date') cell.numFmt = DATE
       else if (col.format === 'datetime') cell.numFmt = DATETIME
       else if (col.format === 'number') cell.numFmt = NUMBER
@@ -118,14 +135,15 @@ describe('exportTableToExcel workbook generation', () => {
     expect(ws.getCell('B2').value).toBe('9876543210')
   })
 
-  it('applies money format (₹#,##0.00)', async () => {
+  it('applies money format (₹#,##0.00) and converts minor→major', async () => {
     const buffer = await buildWorkbook({
       sheetName: 'Payments',
       columns: [
         { header: 'Amount', key: 'amount', format: 'money' },
         { header: 'Label', key: 'label', format: 'text' }
       ],
-      rows: [{ amount: 1500, label: 'Monthly' }]
+      rows: [{ amount: 150000, label: 'Monthly' }],
+      currency: 'INR'
     })
 
     const wb = new ExcelJS.Workbook()
@@ -134,6 +152,22 @@ describe('exportTableToExcel workbook generation', () => {
     const amountCell = ws.getCell('A2')
     expect(amountCell.value).toBe(1500)
     expect(amountCell.numFmt).toBe('₹#,##0.00')
+  })
+
+  it('applies AED money format and converts minor→major', async () => {
+    const buffer = await buildWorkbook({
+      sheetName: 'Payments',
+      columns: [{ header: 'Amount', key: 'amount', format: 'money' }],
+      rows: [{ amount: 10050 }],
+      currency: 'AED'
+    })
+
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buffer)
+    const ws = wb.getWorksheet('Payments')
+    const amountCell = ws.getCell('A2')
+    expect(amountCell.value).toBe(100.5)
+    expect(amountCell.numFmt).toBe('د.إ#,##0.00')
   })
 
   it('applies date format (dd MMM yyyy)', async () => {

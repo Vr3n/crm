@@ -8,9 +8,9 @@
  * exist this is a frontend prototype over seeded mock data; the async facade
  * in `api.ts` is the seam where IPC-backed queries drop in.
  *
- * Amounts are whole rupees on the read model (the domain stores integer paise,
- * Module 04 §34). `paidAmount` / `outstanding` are derived from the
- * allocations at build time — never maintained by the UI.
+ * Amounts are in integer minor units (paise) on the read model (Module 04 §34).
+ * `paidMinor` / `outstandingMinor` are derived from the allocations at build
+ * time — never maintained by the UI.
  */
 
 import type { PaymentMethod } from '@/lib/payment-methods'
@@ -32,17 +32,17 @@ export interface InvoiceLine {
   id: string
   description: string
   quantity: number
-  unitPrice: number
-  discountAmount: number
-  taxRate: number
-  taxAmount: number
-  lineTotal: number
+  unitPriceMinor: number
+  discountMinor: number
+  taxRateBps: number
+  taxAmountMinor: number
+  lineTotalMinor: number
 }
 
 /** Money received and allocated against this invoice (Module 05 §16). */
 export interface InvoiceAllocation {
   id: string
-  amount: number
+  amountMinor: number
   method: PaymentMethod
   reference: string
   receivedAt: string
@@ -65,13 +65,13 @@ export interface Invoice {
   allocations: InvoiceAllocation[]
   createdBy: string
   /** Derived, never stored: sum of line amounts before tax. */
-  subtotal: number
+  subtotalMinor: number
   /** Derived: sum of per-line tax. */
-  taxTotal: number
+  taxTotalMinor: number
   /** Derived: subtotal + tax. */
-  total: number
+  totalMinor: number
   /** Derived: sum of allocations. */
-  paidAmount: number
+  paidMinor: number
   /** Derived: total − paid (clamped at 0). */
-  outstanding: number
+  outstandingMinor: number
 }

@@ -15,21 +15,20 @@ export type AccessWindow = 'ALL_HOURS' | 'TIMED'
 /**
  * A pricing plan — the current catalog of how memberships are sold. Plans can be
  * edited freely because a Membership snapshots the price at sale time (Module 03).
- * `taxRate`/`registrationFee` are display units (percent / rupees); they are
- * converted to bps/paise on the wire.
+ * `taxRateBps`/`registrationFeeMinor` are integer minor units (bps / paise).
  */
 export interface Plan {
   id: number
   name: string
   duration: PlanDuration
   billing: BillingFrequency
-  basePrice: number
+  basePriceMinor: number
   accessWindow: AccessWindow
   startTime: string
   endTime: string
   taxCode: string | null
-  taxRate: number
-  registrationFee: number
+  taxRateBps: number
+  registrationFeeMinor: number
   freezePolicyId: number | null
   prorationPolicyId: number | null
   cancellationPolicyId: number | null
@@ -51,8 +50,8 @@ export type PlanInput = Omit<
 export interface PlanVersion {
   id: number
   planId: number
-  basePrice: number
-  taxRate: number
+  basePriceMinor: number
+  taxRateBps: number
   effectiveFrom: string
   createdAt: string
 }
@@ -75,8 +74,9 @@ export type OfferLifecycle = 'LIVE' | 'UPCOMING' | 'ENDED' | 'PAUSED'
 /**
  * A promotional offer applied against plan base prices. Offers can change freely —
  * the discount math is snapshotted onto the Membership/Invoice at sale time.
- * `value` is display units (percent / rupees / months); `code` is derived from
- * the name for display only (the backend stores no code). `maxUses` is 0 when
+ * `value` is an integer minor count for `FIXED_AMOUNT`/`OVERRIDE_PRICE` and a
+ * whole unit for `PERCENTAGE`/`FREE_PERIOD` (percent / months); `code` is derived
+ * from the name for display only (the backend stores no code). `maxUses` is 0 when
  * the offer is unlimited.
  */
 export interface Offer {
@@ -87,7 +87,7 @@ export interface Offer {
   discountType: DiscountType
   value: number
   applicablePlanIds: number[]
-  minPurchase: number
+  minPurchaseMinor: number
   maxUses: number
   usedCount: number
   startDate: string
@@ -105,7 +105,7 @@ export interface FreezePolicy {
   billingBehavior: FreezeBillingBehavior
   accessBehavior: FreezeAccessBehavior
   extendOrCredit: FreezeExtendOrCredit
-  fee: number
+  feeMinor: number
   freeFreezeCountPerYear: number
   description: string | null
 }

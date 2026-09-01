@@ -11,7 +11,6 @@ import {
 import { currentOrganizationId } from '../auth/session'
 import { memberRecordRequestSchema } from '../../shared/contracts/dashboard'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
-import { toRupees } from '../../shared/contracts/money'
 import { handle } from './handle'
 
 /**
@@ -204,7 +203,6 @@ export function registerDashboardIpc(): void {
     return invoiceRows.map((inv) => {
       const person = personByCustomer.get(inv.customer_id)
       const paid = paidByInvoice.get(inv.id) ?? 0
-      // Read models ship finished rupees — minor converts here exactly once.
       return {
         id: String(inv.id),
         member: {
@@ -215,8 +213,8 @@ export function registerDashboardIpc(): void {
         },
         plan: firstLineByInvoice.get(inv.id) ?? 'Invoice',
         purchasedAt: inv.created_at,
-        amountDue: toRupees(inv.total_minor - paid),
-        total: toRupees(inv.total_minor)
+        amountDueMinor: inv.total_minor - paid,
+        totalMinor: inv.total_minor
       }
     })
   })
@@ -267,7 +265,7 @@ export function registerDashboardIpc(): void {
           label: 'Invoice',
           periodStart: inv.created_at,
           periodEnd: inv.created_at,
-          amount: Math.round(inv.total_minor / 100),
+          amountMinor: inv.total_minor,
           status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
           paidAt: inv.status === 'PAID' ? inv.created_at : undefined
         }))
@@ -287,7 +285,7 @@ export function registerDashboardIpc(): void {
         label: 'Invoice',
         periodStart: inv.created_at,
         periodEnd: inv.created_at,
-        amount: Math.round(inv.total_minor / 100),
+        amountMinor: inv.total_minor,
         status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
         paidAt: inv.status === 'PAID' ? inv.created_at : undefined
       }))
@@ -340,7 +338,7 @@ export function registerDashboardIpc(): void {
           label: 'Invoice',
           periodStart: inv.created_at,
           periodEnd: inv.created_at,
-          amount: Math.round(inv.total_minor / 100),
+          amountMinor: inv.total_minor,
           status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
           paidAt: inv.status === 'PAID' ? inv.created_at : undefined
         }))
@@ -360,7 +358,7 @@ export function registerDashboardIpc(): void {
         label: 'Invoice',
         periodStart: inv.created_at,
         periodEnd: inv.created_at,
-        amount: Math.round(inv.total_minor / 100),
+        amountMinor: inv.total_minor,
         status: (inv.status === 'PAID' ? 'PAID' : 'OVERDUE') as 'PAID' | 'OVERDUE',
         paidAt: inv.status === 'PAID' ? inv.created_at : undefined
       }))

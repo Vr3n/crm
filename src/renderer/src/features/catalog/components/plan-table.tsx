@@ -5,23 +5,25 @@ import { DataTable, type DashboardFeatures } from '@/features/dashboard/componen
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { formatMoney } from '@/lib/money'
+import { formatMinor, formatRate } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { billingFrequencyLabel, durationLabel } from '../constants'
 import { formatDate } from '../format'
 import type { Plan } from '../types'
 import { PlanStatusBadge } from './catalog-status-badge'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
+import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Name', key: 'name', format: 'text' },
   { header: 'Description', key: 'description', format: 'text' },
   { header: 'Duration', key: 'duration', format: 'text' },
   { header: 'Billing', key: 'billing', format: 'text' },
-  { header: 'Price', key: 'price', format: 'money' },
+  { header: 'Price', key: 'priceMinor', format: 'money' },
   { header: 'Tax Rate', key: 'taxRate', format: 'number' },
   { header: 'Tax Code', key: 'taxCode', format: 'text' },
-  { header: 'Registration Fee', key: 'registrationFee', format: 'money' },
+  { header: 'Registration Fee', key: 'registrationFeeMinor', format: 'money' },
   { header: 'Access', key: 'access', format: 'text' },
   { header: 'Created', key: 'createdAt', format: 'date' },
   { header: 'Status', key: 'status', format: 'text' }
@@ -32,7 +34,8 @@ const helper = createColumnHelper<DashboardFeatures, Plan>()
 function buildColumns(
   onEdit: (plan: Plan) => void,
   onDelete: (plan: Plan) => void,
-  onHistory: (plan: Plan) => void
+  onHistory: (plan: Plan) => void,
+  currency: CurrencyCode
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.name, {
@@ -74,7 +77,7 @@ function buildColumns(
       enableSorting: false,
       cell: ({ row }) => <span className="text-sm">{billingFrequencyLabel(row.original.billing)}</span>
     }),
-    helper.accessor((row) => row.basePrice, {
+    helper.accessor((row) => row.basePriceMinor, {
       id: 'price',
       header: ({ column }) => (
         <SortButton
@@ -87,31 +90,31 @@ function buildColumns(
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm font-medium tabular-nums">
-          {formatMoney(row.original.basePrice)}
+          {formatMinor(row.original.basePriceMinor, currency)}
         </span>
       ),
       sortFn: 'basic'
     }),
-    helper.accessor((row) => row.taxRate, {
+    helper.accessor((row) => row.taxRateBps, {
       id: 'tax',
       header: () => 'Tax',
       enableSorting: false,
       cell: ({ row }) => (
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          {row.original.taxRate > 0
-            ? `${row.original.taxCode ?? 'GST'} · ${row.original.taxRate}%`
+          {row.original.taxRateBps > 0
+            ? `${row.original.taxCode ?? 'GST'} · ${formatRate(row.original.taxRateBps)}`
             : '—'}
         </span>
       )
     }),
-    helper.accessor((row) => row.registrationFee, {
+    helper.accessor((row) => row.registrationFeeMinor, {
       id: 'registration',
       header: () => 'Registration',
       enableSorting: false,
       cell: ({ row }) => (
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          {row.original.registrationFee > 0
-            ? formatMoney(row.original.registrationFee)
+          {row.original.registrationFeeMinor > 0
+            ? formatMinor(row.original.registrationFeeMinor, currency)
             : '—'}
         </span>
       )
@@ -214,7 +217,8 @@ export function PlanTable({
   onDelete: (plan: Plan) => void
   onHistory: (plan: Plan) => void
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(onEdit, onDelete, onHistory), [onEdit, onDelete, onHistory])
+  const currency = useCurrency()
+  const columns = useMemo(() => buildColumns(onEdit, onDelete, onHistory, currency), [onEdit, onDelete, onHistory, currency])
 
   const exportData = useMemo(
     () =>
@@ -223,10 +227,10 @@ export function PlanTable({
         description: r.description ?? '',
         duration: durationLabel(r.duration),
         billing: billingFrequencyLabel(r.billing),
-        price: r.basePrice,
-        taxRate: r.taxRate,
+        priceMinor: r.basePriceMinor,
+        taxRate: r.taxRateBps / 100,
         taxCode: r.taxCode ?? '',
-        registrationFee: r.registrationFee,
+        registrationFeeMinor: r.registrationFeeMinor,
         access: r.accessWindow === 'TIMED' ? `${r.startTime}–${r.endTime}` : 'All hours',
         createdAt: r.createdAt,
         status: r.isActive ? 'Active' : 'Inactive'

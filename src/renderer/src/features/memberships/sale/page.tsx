@@ -44,6 +44,8 @@ import { usePlans } from '@/features/catalog/queries'
 import { displayPhone } from '@/features/leads/format'
 import { useSellMembership } from './queries'
 import { pdfApi } from '@/features/pdf/api'
+import { parseToMinor, formatMinor, formatRate, minorToMajor, sanitizeMoneyInput } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Plan, Offer } from '@/features/catalog/types'
 
 function daysForDuration(duration: Plan['duration']): number {
@@ -82,6 +84,7 @@ function todayISO(): string {
 export function MembershipSalePage(): React.JSX.Element {
   const session = useSession()
   const navigate = useNavigate()
+  const currency = useCurrency()
   const [showNewLead, setShowNewLead] = useState(false)
   const [showNewPlan, setShowNewPlan] = useState(false)
   const [showNewOffer, setShowNewOffer] = useState(false)
@@ -108,15 +111,15 @@ export function MembershipSalePage(): React.JSX.Element {
     },
     onSubmit: async ({ value }) => {
       setServerError(null)
-      const baseMinor = value.baseInput === '' ? 0 : Math.round(Number(value.baseInput.replace(/,/g, '')) * 100)
+      const baseMinor = value.baseInput === '' ? 0 : (parseToMinor(value.baseInput, currency) ?? 0)
       let discountValueMinor: number | null = null
       if (value.discountType !== 'NONE') {
         const raw = value.discountValue.replace(/,/g, '')
         const n = Number(raw)
         if (value.discountType === 'PERCENTAGE') discountValueMinor = Math.round(n)
-        else discountValueMinor = Math.round(n * 100)
+        else discountValueMinor = parseToMinor(raw, currency) ?? 0
       }
-      const paidMinor = value.paidInput === '' ? 0 : Math.round(Number(value.paidInput.replace(/,/g, '')) * 100)
+      const paidMinor = value.paidInput === '' ? 0 : (parseToMinor(value.paidInput, currency) ?? 0)
       try {
         const res = await sellMutation.mutateAsync({
           leadId: value.leadId!,
@@ -166,20 +169,25 @@ export function MembershipSalePage(): React.JSX.Element {
   // To avoid extra query, offer object is kept via onChange handler below storing it in form meta? Instead track offer object separately:
   // For prototype keep a local offer object synced via onChange
   const [offerObj, setOfferObj] = useState<Offer | null>(null)
-  const displayBase = baseInput === '' ? null : Number(baseInput.replace(/,/g, '')) || null
-  const isDirty = selectedPlan !== null && displayBase !== null && displayBase !== selectedPlan.basePrice
+  const displayBase = baseInput === '' ? null : (parseToMinor(baseInput, currency) ?? 0)
+  const isDirty = selectedPlan !== null && displayBase !== null && displayBase !== selectedPlan.basePriceMinor
 
   const manualDiscount = (() => {
     if (displayBase === null || !discountType || (discountType as string) === 'NONE' || discountValue === '') return 0
-    const v = Number(discountValue.replace(/,/g, ''))
-    if (Number.isNaN(v)) return 0
     switch (discountType as string) {
-      case 'PERCENTAGE':
+      case 'PERCENTAGE': {
+        const v = Number(discountValue.replace(/,/g, ''))
+        if (Number.isNaN(v)) return 0
         return Math.round((displayBase * v) / 100)
-      case 'FIXED_AMOUNT':
+      }
+      case 'FIXED_AMOUNT': {
+        const v = parseToMinor(discountValue, currency) ?? 0
         return Math.min(v, displayBase)
-      case 'OVERRIDE_PRICE':
+      }
+      case 'OVERRIDE_PRICE': {
+        const v = parseToMinor(discountValue, currency) ?? 0
         return Math.max(0, displayBase - v)
+      }
       case 'FREE_PERIOD':
         return 0
       case 'NONE':
@@ -190,9 +198,9 @@ export function MembershipSalePage(): React.JSX.Element {
   })()
   const discountAmount = manualDiscount
   const finalPrice = displayBase !== null ? Math.max(0, displayBase - discountAmount) : null
-  const maxPayment = finalPrice !== null ? Math.round(finalPrice * (1 + (selectedPlan?.taxRate ?? 0) / 100)) : null
-  const paidAmount = paidInput === '' ? null : Number(paidInput.replace(/,/g, ''))
-  const paidValid = paidAmount === null || (!Number.isNaN(paidAmount) && paidAmount >= 0)
+  const maxPayment = finalPrice !== null ? finalPrice + Math.round((finalPrice * (selectedPlan?.taxRateBps ?? 0)) / 10000) : null
+  const paidAmount = paidInput === '' ? null : (parseToMinor(paidInput, currency) ?? 0)
+  const paidValid = paidAmount === null || paidAmount >= 0
   const paidOverMax = paidAmount !== null && maxPayment !== null && paidAmount > maxPayment
 
   // Use leadDetail as effective lead (simplified, no selectedLead cache needed because leadId now drives lookup)
@@ -293,7 +301,7 @@ export function MembershipSalePage(): React.JSX.Element {
                       onChange={(p) => {
                         field.handleChange(p ? p.id : null)
                         // sync base price without useEffect
-                        form.setFieldValue('baseInput', p ? String(p.basePrice) : '')
+                        form.setFieldValue('baseInput', p ? minorToMajor(p.basePriceMinor, currency) : '')
                         // auto-update end date if linked
                         if (p) {
                           const newEnd = addDays(form.getFieldValue('startDate'), daysForDuration(p.duration) - 1)
@@ -328,20 +336,20 @@ export function MembershipSalePage(): React.JSX.Element {
                     <div className="flex items-center gap-2 rounded-none bg-white px-3 py-2.5 text-xs">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-medium">₹{selectedPlan.basePrice.toLocaleString('en-IN')}</span>
+                          <span className="font-medium">{formatMinor(selectedPlan.basePriceMinor, currency)}</span>
                           <span className="text-muted-foreground">·</span>
                           <span>{selectedPlan.duration}</span>
                           <span className="text-muted-foreground">·</span>
-                          <span>Tax {selectedPlan.taxRate}%</span>
-                          {selectedPlan.registrationFee > 0 ? (
+                          <span>Tax {formatRate(selectedPlan.taxRateBps)}</span>
+                          {selectedPlan.registrationFeeMinor > 0 ? (
                             <>
                               <span className="text-muted-foreground">·</span>
-                              <span>Reg ₹{selectedPlan.registrationFee.toLocaleString('en-IN')}</span>
+                              <span>Reg {formatMinor(selectedPlan.registrationFeeMinor, currency)}</span>
                             </>
                           ) : null}
                         </div>
                         {isDirty && displayBase !== null ? (
-                          <p className="mt-1 text-[11px] text-amber-600">Edited — differs from plan · ₹{selectedPlan.basePrice.toLocaleString('en-IN')} → ₹{displayBase.toLocaleString('en-IN')}</p>
+                          <p className="mt-1 text-[11px] text-amber-600">Edited — differs from plan · {formatMinor(selectedPlan.basePriceMinor, currency)} → {formatMinor(displayBase, currency)}</p>
                         ) : null}
                       </div>
                       <Button
@@ -370,7 +378,7 @@ export function MembershipSalePage(): React.JSX.Element {
                     className="h-7 gap-1 px-2 text-xs self-start"
                     onClick={() => {
                       if (selectedPlan) {
-                        form.setFieldValue('baseInput', String(selectedPlan.basePrice))
+                        form.setFieldValue('baseInput', minorToMajor(selectedPlan.basePriceMinor, currency))
                       }
                     }}
                   >
@@ -534,16 +542,6 @@ export function MembershipSalePage(): React.JSX.Element {
                   <Label htmlFor="sale-base" className="text-xs">Base Price <span className="text-destructive">*</span></Label>
                   <form.Field name="baseInput">
                     {(field) => {
-                      const restrictToTwoDecimals = (v: string): string => {
-                        let cleaned = v.replace(/[^0-9.,]/g, '')
-                        const firstDot = cleaned.indexOf('.')
-                        if (firstDot !== -1) {
-                          const before = cleaned.slice(0, firstDot + 1)
-                          const after = cleaned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
-                          cleaned = before + after
-                        }
-                        return cleaned
-                      }
                       return (
                         <InputGroup>
                           <InputGroupAddon align="start" className="pointer-events-none">
@@ -555,7 +553,7 @@ export function MembershipSalePage(): React.JSX.Element {
                             inputMode="decimal"
                             placeholder="e.g. 5000"
                             value={field.state.value}
-                            onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
+                            onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
                             className="pl-9 font-mono tabular-nums"
                           />
                         </InputGroup>
@@ -590,16 +588,6 @@ export function MembershipSalePage(): React.JSX.Element {
                     <Label className="text-xs">Discount value</Label>
                     <form.Field name="discountValue">
                       {(field) => {
-                        const restrictToTwoDecimals = (v: string): string => {
-                          let cleaned = v.replace(/[^0-9.,]/g, '')
-                          const firstDot = cleaned.indexOf('.')
-                          if (firstDot !== -1) {
-                            const before = cleaned.slice(0, firstDot + 1)
-                            const after = cleaned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
-                            cleaned = before + after
-                          }
-                          return cleaned
-                        }
                         const DiscountIcon =
                           discountType === 'PERCENTAGE'
                             ? Percent
@@ -616,7 +604,7 @@ export function MembershipSalePage(): React.JSX.Element {
                               inputMode="decimal"
                               placeholder={discountType === 'PERCENTAGE' ? 'e.g. 20' : discountType === 'FREE_PERIOD' ? 'e.g. 1' : 'e.g. 500'}
                               value={field.state.value}
-                              onChange={(e) => field.handleChange(restrictToTwoDecimals(e.target.value))}
+                              onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
                               className="pl-9 font-mono tabular-nums"
                             />
                           </InputGroup>
@@ -628,24 +616,24 @@ export function MembershipSalePage(): React.JSX.Element {
                 <div className="grid gap-1.5">
                   <Label className="text-xs">Final Price</Label>
                   <div className="flex h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-mono font-bold tabular-nums text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {finalPrice !== null ? `₹${finalPrice.toLocaleString('en-IN')}` : '—'}
+                    {finalPrice !== null ? formatMinor(finalPrice, currency) : '—'}
                   </div>
                   {discountAmount > 0 ? (
-                    <p className="text-[11px] text-muted-foreground">Discount amount: -₹{discountAmount.toLocaleString('en-IN')}</p>
+                    <p className="text-[11px] text-muted-foreground">Discount amount: -{formatMinor(discountAmount, currency)}</p>
                   ) : (
                     <p className="text-[11px] text-muted-foreground">No discount applied</p>
                   )}
                 </div>
-                {selectedPlan && selectedPlan.registrationFee > 0 ? (
-                  <p className="text-[11px] text-muted-foreground">+ Registration ₹{selectedPlan.registrationFee.toLocaleString('en-IN')} {selectedPlan.taxRate ? `· Tax ${selectedPlan.taxRate}%` : ''}</p>
-                ) : selectedPlan && selectedPlan.taxRate ? (
-                  <p className="text-[11px] text-muted-foreground">Tax {selectedPlan.taxRate}% on base</p>
+                {selectedPlan && selectedPlan.registrationFeeMinor > 0 ? (
+                  <p className="text-[11px] text-muted-foreground">+ Registration {formatMinor(selectedPlan.registrationFeeMinor, currency)} {selectedPlan.taxRateBps ? `· Tax ${formatRate(selectedPlan.taxRateBps)}` : ''}</p>
+                ) : selectedPlan && selectedPlan.taxRateBps ? (
+                  <p className="text-[11px] text-muted-foreground">Tax {formatRate(selectedPlan.taxRateBps)} on base</p>
                 ) : null}
                 {discountAmount > 0 && displayBase !== null && discountAmount > displayBase ? (
                   <p className="text-[11px] text-destructive">Discount exceeds base price</p>
                 ) : null}
                 {finalPrice === 0 && displayBase !== null ? (
-                  <p className="text-[11px] text-amber-600">Free trial — final price is ₹0. You’ll be asked to confirm trial days on sell.</p>
+                  <p className="text-[11px] text-amber-600">Free trial — final price is 0. You’ll be asked to confirm trial days on sell.</p>
                 ) : null}
               </div>
             </SaleSectionCard>
@@ -708,7 +696,7 @@ export function MembershipSalePage(): React.JSX.Element {
           onOpenChange={setShowNewPlan}
           onCreated={(created) => {
             form.setFieldValue('planId', created.id)
-            form.setFieldValue('baseInput', String(created.basePrice))
+            form.setFieldValue('baseInput', minorToMajor(created.basePriceMinor, currency))
             form.setFieldValue('endDate', addDays(form.getFieldValue('startDate'), daysForDuration(created.duration) - 1))
             setDateLinked(true)
           }}

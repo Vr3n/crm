@@ -26,6 +26,8 @@ import {
   DURATIONS
 } from '../constants'
 import { useCreatePlan, useUpdatePlan } from '../queries'
+import { minorToMajor, parseToMinor, percentToBps, sanitizeMoneyInput } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { AccessWindow, BillingFrequency, Plan, PlanDuration } from '../types'
 
 /**
@@ -47,14 +49,15 @@ export function PlanFormDialog({
   const isEdit = plan !== null
   const create = useCreatePlan()
   const update = useUpdatePlan()
+  const currency = useCurrency()
 
   const [name, setName] = useState(plan?.name ?? '')
   const [duration, setDuration] = useState<PlanDuration>(plan?.duration ?? 'MONTHLY')
   const [billing, setBilling] = useState<BillingFrequency>(plan?.billing ?? 'ONE_TIME')
-  const [price, setPrice] = useState(plan ? String(plan.basePrice) : '')
+  const [price, setPrice] = useState(plan ? minorToMajor(plan.basePriceMinor, currency) : '')
   const [taxCode, setTaxCode] = useState(plan?.taxCode ?? '')
-  const [taxRate, setTaxRate] = useState(plan ? String(plan.taxRate) : '')
-  const [registrationFee, setRegistrationFee] = useState(plan ? String(plan.registrationFee) : '0')
+  const [taxRate, setTaxRate] = useState(plan ? String(plan.taxRateBps / 100) : '')
+  const [registrationFee, setRegistrationFee] = useState(plan ? minorToMajor(plan.registrationFeeMinor, currency) : '0')
   const [accessWindow, setAccessWindow] = useState<AccessWindow>(plan?.accessWindow ?? 'ALL_HOURS')
   const [startTime, setStartTime] = useState(plan?.startTime ?? '06:00')
   const [endTime, setEndTime] = useState(plan?.endTime ?? '23:00')
@@ -70,10 +73,10 @@ export function PlanFormDialog({
       name: name.trim(),
       duration,
       billing,
-      basePrice: priceValue,
+      basePriceMinor: parseToMinor(price, currency) ?? 0,
       taxCode: taxCode.trim().toUpperCase(),
-      taxRate: Number(taxRate || 0),
-      registrationFee: Number(registrationFee || 0),
+      taxRateBps: percentToBps(Number(taxRate || 0)),
+      registrationFeeMinor: parseToMinor(registrationFee, currency) ?? 0,
       accessWindow,
       startTime,
       endTime,
@@ -160,10 +163,10 @@ export function PlanFormDialog({
               </Label>
               <Input
                 id="pl-price"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={(e) => setPrice(sanitizeMoneyInput(e.target.value))}
                 placeholder="0"
                 className="font-mono tabular-nums"
               />
@@ -214,10 +217,10 @@ export function PlanFormDialog({
               <Label htmlFor="pl-reg-fee">Registration fee</Label>
               <Input
                 id="pl-reg-fee"
-                type="number"
-                min={0}
+                type="text"
+                inputMode="decimal"
                 value={registrationFee}
-                onChange={(e) => setRegistrationFee(e.target.value)}
+                onChange={(e) => setRegistrationFee(sanitizeMoneyInput(e.target.value))}
                 placeholder="0"
                 className="font-mono tabular-nums"
               />

@@ -1,3 +1,5 @@
+import type { CurrencyCode } from '@/lib/money'
+
 type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number'
 
 export interface ExportColumn {
@@ -12,6 +14,7 @@ export interface ExportTableInput {
   filename: string
   columns: ExportColumn[]
   rows: Record<string, unknown>[]
+  currency: CurrencyCode
 }
 
 /**

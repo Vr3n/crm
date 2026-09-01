@@ -12,6 +12,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { usePlans } from '@/features/catalog/queries'
+import { formatMinor, formatRate } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Plan } from '@/features/catalog/types'
 
 export function PlanPicker({
@@ -25,6 +27,7 @@ export function PlanPicker({
 }): React.JSX.Element {
   const { data: plans = [] } = usePlans()
   const [open, setOpen] = useState(false)
+  const currency = useCurrency()
 
   const activePlans = useMemo(() => plans.filter((p) => p.isActive), [plans])
   const selected = activePlans.find((p) => p.id === value) ?? null
@@ -78,7 +81,7 @@ export function PlanPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{plan.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      ₹{plan.basePrice.toLocaleString('en-IN')} · {plan.duration} · {plan.taxRate}% tax
+                      {formatMinor(plan.basePriceMinor, currency)} · {plan.duration} · {formatRate(plan.taxRateBps)} tax
                     </span>
                   </span>
                   {selected?.id === plan.id ? <Package className="ml-auto size-3.5" /> : null}

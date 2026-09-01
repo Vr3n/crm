@@ -28,6 +28,8 @@ import { useCustomers, useOutstandingInvoices, useRecordPayment } from '../queri
 import { pdfApi } from '@/features/pdf/api'
 import { CustomerPicker } from './customer-picker'
 import { AllocationSection, type AllocationDraft } from './allocation-section'
+import { parseToMinor, sanitizeMoneyInput } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { PersonRef } from '@/features/dashboard/types'
 
 /**
@@ -60,6 +62,7 @@ export function RecordPaymentDialog({
   preSelectedInvoiceId
 }: RecordPaymentDialogProps): React.JSX.Element {
   const navigate = useNavigate()
+  const currency = useCurrency()
   const record = useRecordPayment()
   const { data: allCustomers = [] } = useCustomers()
   const [picked, setPicked] = useState<PersonRef | null>(preSelectedCustomer ?? null)
@@ -70,7 +73,7 @@ export function RecordPaymentDialog({
   const [allocations, setAllocations] = useState<AllocationDraft[]>([])
 
   const totalAllocated = useMemo(
-    () => allocations.filter((a) => a.enabled).reduce((s, a) => s + (a.amount || 0), 0),
+    () => allocations.filter((a) => a.enabled).reduce((s, a) => s + (a.amountMinor || 0), 0),
     [allocations]
   )
 
@@ -85,16 +88,16 @@ export function RecordPaymentDialog({
     onSubmit: async ({ value }) => {
       if (!picked) return
       const allocs = allocations
-        .filter((a) => a.enabled && (a.amount || 0) > 0)
+        .filter((a) => a.enabled && (a.amountMinor || 0) > 0)
         .map((a) => ({
           invoiceId: a.invoiceId,
-          amount: Math.round(a.amount * 100)
+          amountMinor: a.amountMinor
         }))
       try {
         const result = await record.mutateAsync({
           customerId: picked.id,
           paymentDate: value.paymentDate,
-          amountMinor: Math.round(Number(value.amount.replace(/,/g, '')) * 100),
+          amountMinor: parseToMinor(String(value.amount), currency) ?? 0,
           paymentMethod: value.method,
           reference: value.reference,
           notes: value.notes,
@@ -147,7 +150,7 @@ export function RecordPaymentDialog({
 
       return outstanding.map((inv) => ({
         invoiceId: inv.id,
-        amount: inv.id === preSelectedInvoiceId ? Math.max(0, inv.total - inv.paid) : 0,
+        amountMinor: inv.id === preSelectedInvoiceId ? Math.max(0, inv.totalMinor - inv.paidMinor) : 0,
         enabled: inv.id === preSelectedInvoiceId
       }))
     })
@@ -160,9 +163,9 @@ export function RecordPaymentDialog({
   /* eslint-disable react-hooks/set-state-in-effect -- intentional: derive allocations from amount */
   useEffect(() => {
     if (!outstanding?.length) return
-    const amt = Number(amount) || 0
+    const amt = parseToMinor(amount, currency) ?? 0
     if (amt <= 0) {
-      setAllocations((prev) => prev.map((a) => ({ ...a, amount: 0 })))
+      setAllocations((prev) => prev.map((a) => ({ ...a, amountMinor: 0 })))
       return
     }
 
@@ -172,14 +175,14 @@ export function RecordPaymentDialog({
 
     let remaining = amt
     const newAllocations: AllocationDraft[] = sorted.map((inv) => {
-      const due = Math.max(0, inv.total - inv.paid)
+      const due = Math.max(0, inv.totalMinor - inv.paidMinor)
       const allocAmount = Math.min(due, remaining)
       remaining = Math.max(0, remaining - allocAmount)
-      return { invoiceId: inv.id, amount: allocAmount, enabled: allocAmount > 0 }
+      return { invoiceId: inv.id, amountMinor: allocAmount, enabled: allocAmount > 0 }
     })
 
     setAllocations(newAllocations)
-  }, [amount, outstanding])
+  }, [amount, currency, outstanding])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCustomerChange = useCallback((customer: PersonRef) => {
@@ -187,7 +190,8 @@ export function RecordPaymentDialog({
     setAllocations([])
   }, [])
 
-  const overAllocated = !!amount && Number(amount) > 0 && totalAllocated > Number(amount)
+  const overAllocated =
+    !!amount && (parseToMinor(amount, currency) ?? 0) > 0 && totalAllocated > (parseToMinor(amount, currency) ?? 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -262,16 +266,15 @@ export function RecordPaymentDialog({
                 {(field) => (
                   <div className="grid gap-1.5">
                     <Label htmlFor={`pay-${field.name}`}>
-                      Amount (₹) <span className="text-destructive">*</span>
+                      Amount <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id={`pay-${field.name}`}
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
+                      type="text"
+                      inputMode="decimal"
                       value={field.state.value}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
                       placeholder="0"
                     />
                     {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
@@ -333,7 +336,7 @@ export function RecordPaymentDialog({
             {picked ? (
               <AllocationSection
                 invoices={outstanding ?? []}
-                paymentAmount={Number(amount) || 0}
+                paymentAmountMinor={parseToMinor(amount, currency) ?? 0}
                 allocations={allocations}
                 onAllocationsChange={setAllocations}
                 isLoading={loadingInvoices}

@@ -34,7 +34,7 @@ describe('Invoice Document Template', () => {
         description: 'Gold Plan (12 months)',
         quantity: 1,
         unitPrice: 2000000,
-        taxRate: 18,
+        taxRate: '18%',
         discountAmount: 0,
         lineTotal: 2000000
       }
@@ -123,7 +123,7 @@ describe('Invoice Document Template', () => {
       ]
     }
     const html = renderInvoiceDocument(ctx)
-    expect(html).toContain('₹ 2,000')
+    expect(html).toContain('₹2,000.00')
   })
 
   it('shows tax rate above Tax (GST) in totals', () => {
@@ -139,17 +139,17 @@ describe('Invoice Document Template', () => {
     expect(html).toContain('UPI')
   })
 
-  it('shows amounts in rupees (paise / 100)', () => {
+  it('shows amounts formatted via formatMinor', () => {
     const html = renderInvoiceDocument(baseCtx)
-    expect(html).toContain('₹ 20,000')
-    expect(html).toContain('₹ 3,600')
-    expect(html).toContain('₹ 23,600')
+    expect(html).toContain('₹20,000.00')
+    expect(html).toContain('₹3,600.00')
+    expect(html).toContain('₹23,600.00')
   })
 
   it('shows outstanding as zero when fully paid', () => {
     const html = renderInvoiceDocument(baseCtx)
     expect(html).toContain('Outstanding')
-    expect(html).toContain('₹ 0')
+    expect(html).toContain('₹0.00')
   })
 
   it('shows outstanding when partially paid', () => {
@@ -160,7 +160,7 @@ describe('Invoice Document Template', () => {
       allocations: [baseCtx.allocations[0]]
     }
     const html = renderInvoiceDocument(ctx)
-    expect(html).toContain('₹ 8,600')
+    expect(html).toContain('₹8,600.00')
   })
 
   it('shows no-payments message when allocations empty', () => {
@@ -245,7 +245,7 @@ describe('Invoice Document Template', () => {
     }
     const html = renderInvoiceDocument(ctx)
     expect(html).toContain('Discount')
-    expect(html).toContain('− ₹ 2,000')
+    expect(html).toContain('− ₹2,000.00')
   })
 })
 
@@ -294,9 +294,9 @@ describe('Payment Receipt Template', () => {
     expect(html).toContain('Viren')
   })
 
-  it('shows amount in rupees (paise / 100)', () => {
+  it('shows amount formatted via formatMinor', () => {
     const html = renderPaymentReceipt(baseCtx)
-    expect(html).toContain('₹ 15,000')
+    expect(html).toContain('₹15,000.00')
   })
 
   it('includes payment method', () => {
@@ -327,7 +327,7 @@ describe('Payment Receipt Template', () => {
   it('shows outstanding below total allocated', () => {
     const html = renderPaymentReceipt(baseCtx)
     expect(html).toContain('Outstanding')
-    expect(html).toContain('₹ 8,600')
+    expect(html).toContain('₹8,600.00')
     expect(html).toContain('#991B1B')
   })
 
@@ -338,7 +338,7 @@ describe('Payment Receipt Template', () => {
     }
     const html = renderPaymentReceipt(ctx)
     expect(html).toContain('Outstanding')
-    expect(html).toContain('₹ 0')
+    expect(html).toContain('₹0.00')
     expect(html).toContain('#6B7280')
   })
 

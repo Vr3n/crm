@@ -7,13 +7,16 @@ import { Timeline, type TimelineEntry } from '@/components/timeline'
 import { useOfferVersions } from '../queries'
 import { discountBadgeText } from '../pricing'
 import { formatDate } from '../format'
+import { useCurrency } from '@/hooks/use-currency'
+import type { CurrencyCode } from '@/lib/money'
 
 /**
  * Maps OfferVersion[] into generic TimelineEntry[] for the universal
  * Timeline component. Each version shows the discount at that point in time.
  */
 function mapOfferVersionsToEntries(
-  versions: { id: number; discountType: string; value: number; effectiveFrom: string }[]
+  versions: { id: number; discountType: string; value: number; effectiveFrom: string }[],
+  currency: CurrencyCode
 ): TimelineEntry[] {
   return versions.map((v, index) => ({
     id: v.id,
@@ -27,7 +30,8 @@ function mapOfferVersionsToEntries(
       v as {
         discountType: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'OVERRIDE_PRICE' | 'FREE_PERIOD'
         value: number
-      }
+      },
+      currency
     ),
     isCurrent: index === 0
   }))
@@ -59,6 +63,7 @@ export function OfferPriceTimeline({
   offerName?: string
 }): React.JSX.Element {
   const query = useOfferVersions(offerId)
+  const currency = useCurrency()
 
   if (query.isLoading) {
     return (
@@ -102,7 +107,7 @@ export function OfferPriceTimeline({
     )
   }
 
-  const entries = mapOfferVersionsToEntries(query.data ?? [])
+  const entries = mapOfferVersionsToEntries(query.data ?? [], currency)
 
   return (
     <Card>

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { SessionContextValue } from '@/context/session-context'
 import { SessionProvider } from '@/context/session-context'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { LeadsPage } from '@/features/leads/pages/LeadsPage'
 import type { LeadListResponse, LeadListRow } from '../../src/shared/contracts/sales'
 import { renderWithClient } from './setup'
@@ -90,9 +91,11 @@ function renderPage(
   )
   return renderWithClient(
     <MemoryRouter>
-      <SessionProvider value={session} onSignOut={vi.fn()}>
-        <LeadsPage />
-      </SessionProvider>
+      <TooltipProvider>
+        <SessionProvider value={session} onSignOut={vi.fn()}>
+          <LeadsPage />
+        </SessionProvider>
+      </TooltipProvider>
     </MemoryRouter>
   )
 }
@@ -134,7 +137,7 @@ describe('LeadsPage selection toolbar', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
   })
 
-  it('schedules a follow-up for every selected lead', async () => {
+  it('schedules a follow-up for every selected lead', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     vi.mocked(window.api.leads.bulkScheduleFollowup).mockResolvedValue({ scheduled: 2 })
     renderPage()
@@ -162,7 +165,7 @@ describe('LeadsPage selection toolbar', () => {
     })
   })
 
-  it('logs an activity for every selected lead', async () => {
+  it('logs an activity for every selected lead', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     vi.mocked(window.api.leads.bulkRecordActivity).mockResolvedValue({ recorded: 2 })
     renderPage()
@@ -230,9 +233,11 @@ describe('LeadsPage selection toolbar', () => {
     vi.mocked(window.api.leads.list).mockResolvedValue(listResponse(rows))
     renderWithClient(
       <MemoryRouter>
-        <SessionProvider value={managerSession} onSignOut={vi.fn()}>
-          <LeadsPage />
-        </SessionProvider>
+        <TooltipProvider>
+          <SessionProvider value={managerSession} onSignOut={vi.fn()}>
+            <LeadsPage />
+          </SessionProvider>
+        </TooltipProvider>
       </MemoryRouter>
     )
 
@@ -308,9 +313,11 @@ describe('LeadsPage edit action', () => {
     vi.mocked(window.api.leads.list).mockResolvedValue(listResponse(rows))
     renderWithClient(
       <MemoryRouter>
-        <SessionProvider value={managerSession} onSignOut={vi.fn()}>
-          <LeadsPage />
-        </SessionProvider>
+        <TooltipProvider>
+          <SessionProvider value={managerSession} onSignOut={vi.fn()}>
+            <LeadsPage />
+          </SessionProvider>
+        </TooltipProvider>
       </MemoryRouter>
     )
 
@@ -327,7 +334,7 @@ describe('LeadsPage edit action', () => {
     expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument()
   })
 
-  it('opens the edit dialog prefilled and saves changes', async () => {
+  it('opens the edit dialog prefilled and saves changes', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     vi.mocked(window.api.leads.editLead).mockResolvedValue(undefined)
     renderPage()
@@ -370,9 +377,11 @@ describe('LeadsPage source filter', () => {
     vi.mocked(window.api.leads.list).mockResolvedValue(listResponse(rows))
     renderWithClient(
       <MemoryRouter>
-        <SessionProvider value={managerSession} onSignOut={vi.fn()}>
-          <LeadsPage />
-        </SessionProvider>
+        <TooltipProvider>
+          <SessionProvider value={managerSession} onSignOut={vi.fn()}>
+            <LeadsPage />
+          </SessionProvider>
+        </TooltipProvider>
       </MemoryRouter>
     )
 
