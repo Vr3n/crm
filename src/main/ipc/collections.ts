@@ -5,7 +5,8 @@ import {
   paymentAllocations,
   invoices,
   customers,
-  people
+  people,
+  users
 } from '../db/schema'
 import { currentOrganizationId } from '../auth/session'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
@@ -44,6 +45,11 @@ interface PersonRow {
   full_name: string
   phone: string | null
   email: string | null
+}
+
+interface UserRow {
+  id: number
+  full_name: string
 }
 
 export function registerCollectionsIpc(): void {
@@ -122,6 +128,17 @@ export function registerCollectionsIpc(): void {
     const personMap = new Map(personRows.map((p) => [p.id, p]))
     const personByCustomer = new Map(customerRows.map((c) => [c.id, personMap.get(c.person_id)]))
 
+    // Fetch users for recordedBy names
+    const userIds = [...new Set(paymentRows.map((p) => p.created_by))]
+    const userRows = userIds.length > 0
+      ? getDrizzle()
+          .select()
+          .from(users)
+          .where(sql`${users.id} IN (${sql.join(userIds.map((id) => sql`${id}`), sql`, `)})`)
+          .all() as UserRow[]
+      : []
+    const userMap = new Map(userRows.map((u) => [u.id, u.full_name]))
+
     return paymentRows.map((p) => {
       const person = personByCustomer.get(p.customer_id)
       const allocs = allocsByPayment.get(p.id) ?? []
@@ -137,7 +154,7 @@ export function registerCollectionsIpc(): void {
         amountMinor: p.amount_minor,
         method: p.payment_method,
         receivedAt: p.payment_date,
-        receivedBy: String(p.created_by),
+        receivedBy: userMap.get(p.created_by) ?? 'Unknown',
         allocations: allocs.map((a) => ({
           invoiceNo: invoiceMap.get(a.invoice_id) ?? `INV-${a.invoice_id}`,
           amountMinor: a.amount_minor
@@ -198,6 +215,12 @@ export function registerCollectionsIpc(): void {
           .get() as PersonRow | undefined
       : undefined
 
+    const user = getDrizzle()
+      .select()
+      .from(users)
+      .where(eq(users.id, payment.created_by))
+      .get() as UserRow | undefined
+
     return {
       id: String(payment.id),
       reference: payment.reference ?? `PAY-${payment.id}`,
@@ -210,7 +233,7 @@ export function registerCollectionsIpc(): void {
       amountMinor: payment.amount_minor,
       method: payment.payment_method,
       receivedAt: payment.payment_date,
-      receivedBy: String(payment.created_by),
+      receivedBy: user?.full_name ?? 'Unknown',
       allocations: allocRows.map((a) => ({
         invoiceNo: invoiceMap.get(a.invoice_id) ?? `INV-${a.invoice_id}`,
         amountMinor: a.amount_minor
