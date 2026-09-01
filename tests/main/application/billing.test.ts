@@ -175,7 +175,7 @@ describe('finalizeInvoice', () => {
 
     const finalized = finalizeInvoice({ invoiceId: invoice.id })
     expect(finalized.status).toBe('OPEN')
-    expect(finalized.number).toMatch(/^INV-\d{4}-\d{6}$/)
+    expect(finalized.number).toMatch(/^[A-Z]{3}-\d{6}-\d{2}$/)
     expect(finalized.finalizedAt).toBeTruthy()
   })
 

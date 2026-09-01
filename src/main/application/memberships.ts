@@ -4,6 +4,7 @@ import { requirePermission, currentOrganizationId, requireSession } from '../aut
 import { PERMISSIONS } from '../db/permissions'
 import { ValidationError, NotFoundError, OverpaymentNotAllowedError } from '../domain/errors'
 import { calculateSalePricing } from '../domain/pricing'
+import { deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
 import { leadRepo, personRepo, stageRepo } from '../repositories/sales'
 import { planRepo, offerRepo } from '../repositories/catalog'
 import { customerRepo } from '../repositories/membership'
@@ -43,14 +44,6 @@ function addDays(dateStr: string, days: number): string {
   d.setDate(d.getDate() + days)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-function deriveInvoicePrefix(orgName: string, explicit?: string | null): string {
-  if (explicit && explicit.trim().length > 0) return explicit.trim().toUpperCase().slice(0, 6)
-  return orgName.split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join('').slice(0, 3) || 'ORG'
-}
-function formatDDMMYY(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${String(date.getFullYear()).slice(-2)}`
 }
 
 export function sellMembership(input: SellMembershipInput): SellMembershipResult {

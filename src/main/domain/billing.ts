@@ -132,10 +132,20 @@ export const InvoiceCalculationService = {
 }
 
 /**
- * Generates an invoice number in the format INV-YYMMDD-CUSTOMERID.
- * The caller must ensure this is called inside a transaction with the sequence lock.
+ * Derives a short uppercase invoice prefix from the organization name.
+ * Uses the first letter of each word (max 3 chars), e.g. "Crown Vitality" → "CRO".
+ * An explicit prefix (from `organizations.org_invoice_prefix`) takes precedence.
  */
-export function generateInvoiceNumber(customerId: number, today: string): string {
-  const date = today.replace(/-/g, '').slice(2, 8) // YYMMDD from YYYY-MM-DD
-  return `INV-${date}-${String(customerId).padStart(4, '0')}`
+export function deriveInvoicePrefix(orgName: string, explicit?: string | null): string {
+  if (explicit && explicit.trim().length > 0) return explicit.trim().toUpperCase().slice(0, 6)
+  return orgName.split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join('').slice(0, 3) || 'ORG'
+}
+
+/**
+ * Formats a date as DDMMYY for the invoice sequence key.
+ * e.g. 2026-09-01 → "010926"
+ */
+export function formatDDMMYY(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${String(date.getFullYear()).slice(-2)}`
 }

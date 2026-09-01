@@ -2,7 +2,8 @@ import { withTransaction } from '../db/connection'
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
 import { customerRepo } from '../repositories/membership'
 import { invoiceRepo, invoiceLineRepo, invoiceSequenceRepo } from '../repositories/billing'
-import { InvoiceCalculationService } from '../domain/billing'
+import { InvoiceCalculationService, deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
+import { organizationRepo } from '../repositories/identity'
 import {
   InvoiceAlreadyFinalizedError,
   InvoiceEmptyError,
@@ -213,14 +214,16 @@ export function nextInvoiceNumberPreview(): InvoiceNumberPreview {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 
-  const year = new Date().toISOString().slice(0, 4)
-  const prefix = 'INV'
-  const nextValue = invoiceSequenceRepo.peekNext(organizationId, year, prefix)
+  const org = organizationRepo.findById(organizationId)
+  const prefix = deriveInvoicePrefix(org?.name ?? 'ORG', (org as any)?.org_invoice_prefix ?? null)
+  const now = new Date()
+  const dateKey = formatDDMMYY(now)
+  const nextValue = invoiceSequenceRepo.peekNext(organizationId, dateKey, prefix)
   return {
-    year,
+    dateKey,
     prefix,
     nextValue,
-    preview: `${prefix}-${year}-${String(nextValue).padStart(6, '0')}`
+    preview: `${prefix}-${dateKey}-${String(nextValue).padStart(2, '0')}`
   }
 }
 
@@ -239,14 +242,15 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
     if (lines.length === 0) throw new InvoiceEmptyError()
 
     // Generate the real invoice number atomically
-    const today = new Date().toISOString().slice(0, 10)
-    const year = today.slice(0, 4)
-    const prefix = 'INV'
+    const org = organizationRepo.findById(organizationId)
+    const prefix = deriveInvoicePrefix(org?.name ?? 'ORG', (org as any)?.org_invoice_prefix ?? null)
+    const now = new Date()
+    const dateKey = formatDDMMYY(now)
 
     // Ensure sequence exists and increment atomically
-    invoiceSequenceRepo.getOrCreate(organizationId, year, prefix)
-    const seqValue = invoiceSequenceRepo.incrementAndGet(organizationId, year, prefix)
-    const invoiceNumber = `${prefix}-${year}-${String(seqValue).padStart(6, '0')}`
+    invoiceSequenceRepo.getOrCreate(organizationId, dateKey, prefix)
+    const seqValue = invoiceSequenceRepo.incrementAndGet(organizationId, dateKey, prefix)
+    const invoiceNumber = `${prefix}-${dateKey}-${String(seqValue).padStart(2, '0')}`
 
     // Check for collision (extremely unlikely but defensive)
     const existing = invoiceRepo.getByNumber(organizationId, invoiceNumber)

@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   InvoiceCalculationService,
-  generateInvoiceNumber,
-  assertValidInvoiceTransition
+  assertValidInvoiceTransition,
+  deriveInvoicePrefix,
+  formatDDMMYY
 } from '../../src/main/domain/billing'
 
 describe('InvoiceCalculationService', () => {
@@ -61,20 +62,50 @@ describe('InvoiceCalculationService', () => {
   })
 })
 
-describe('generateInvoiceNumber', () => {
-  it('generates INV-YYMMDD-CUSTOMERID format', () => {
-    const number = generateInvoiceNumber(42, '2026-08-21')
-    expect(number).toBe('INV-260821-0042')
+describe('deriveInvoicePrefix', () => {
+  it('derives initials from multi-word org name', () => {
+    expect(deriveInvoicePrefix('Crown Vitality')).toBe('CRO')
   })
 
-  it('pads customer ID to 4 digits', () => {
-    const number = generateInvoiceNumber(1, '2026-01-01')
-    expect(number).toBe('INV-260101-0001')
+  it('derives single letter from single-word org name', () => {
+    expect(deriveInvoicePrefix('Fitness')).toBe('F')
   })
 
-  it('handles large customer IDs', () => {
-    const number = generateInvoiceNumber(12345, '2026-12-31')
-    expect(number).toBe('INV-261231-12345')
+  it('uses explicit prefix when provided', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', 'MYORG')).toBe('MYORG')
+  })
+
+  it('trims and uppercases explicit prefix', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', '  abc  ')).toBe('ABC')
+  })
+
+  it('limits explicit prefix to 6 chars', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', 'LONGPREFIX')).toBe('LONGPR')
+  })
+
+  it('falls back to ORG for empty org name', () => {
+    expect(deriveInvoicePrefix('')).toBe('ORG')
+  })
+
+  it('handles null explicit prefix', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', null)).toBe('CRO')
+  })
+})
+
+describe('formatDDMMYY', () => {
+  it('formats date as DDMMYY', () => {
+    const date = new Date(2026, 0, 1) // Jan 1, 2026
+    expect(formatDDMMYY(date)).toBe('010126')
+  })
+
+  it('pads single-digit day and month', () => {
+    const date = new Date(2026, 8, 1) // Sep 1, 2026
+    expect(formatDDMMYY(date)).toBe('010926')
+  })
+
+  it('handles end of year', () => {
+    const date = new Date(2026, 11, 31) // Dec 31, 2026
+    expect(formatDDMMYY(date)).toBe('311226')
   })
 })
 
