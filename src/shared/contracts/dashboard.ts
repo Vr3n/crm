@@ -32,7 +32,13 @@ export const paymentDueSchema = z.object({
   plan: z.string(),
   purchasedAt: z.string(),
   amountDueMinor: z.number().int(),
-  totalMinor: z.number().int()
+  totalMinor: z.number().int(),
+  invoiceNumber: z.string(),
+  planStartDate: z.string(),
+  planEndDate: z.string(),
+  joiningDate: z.string(),
+  membershipAmountMinor: z.number().int(),
+  membershipPurchasedAt: z.string()
 })
 export type PaymentDueOutput = z.infer<typeof paymentDueSchema>
 

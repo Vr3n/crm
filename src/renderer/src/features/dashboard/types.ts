@@ -37,6 +37,12 @@ export interface PaymentDue {
   purchasedAt: string
   amountDueMinor: number
   totalMinor: number
+  invoiceNumber: string
+  planStartDate: string
+  planEndDate: string
+  joiningDate: string
+  membershipAmountMinor: number
+  membershipPurchasedAt: string
 }
 
 /** Settlement state of a membership invoice. */
