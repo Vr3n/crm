@@ -35,8 +35,8 @@ export interface PaymentDue {
   member: PersonRef
   plan: string
   purchasedAt: string
-  amountDue: number
-  total: number
+  amountDueMinor: number
+  totalMinor: number
 }
 
 /** Settlement state of a membership invoice. */
@@ -49,7 +49,7 @@ export interface MembershipInvoice {
   label: string
   periodStart: string
   periodEnd: string
-  amount: number
+  amountMinor: number
   status: InvoiceStatus
   paidAt?: string
 }
@@ -68,8 +68,8 @@ export interface MembershipDetails {
   plan: string
   purchasedAt: string
   expiresAt: string
-  amountDue?: number
-  total?: number
+  amountDueMinor?: number
+  totalMinor?: number
 }
 
 /** Read model for the member record drawer (Membership → Lead → Invoices). */

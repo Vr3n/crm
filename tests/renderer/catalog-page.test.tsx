@@ -126,7 +126,7 @@ describe('PlansPage', () => {
 
     await screen.findByText('Annual Premium')
     expect(screen.getByText('GST18 · 18%')).toBeInTheDocument()
-    expect(screen.getByText('₹500')).toBeInTheDocument()
+    expect(screen.getByText('₹500.00')).toBeInTheDocument()
   })
 
   it('edits a plan and sends tax/registration fields converted to wire units', async () => {
@@ -169,8 +169,8 @@ describe('PlansPage', () => {
     await screen.findByRole('dialog', { name: /Annual Premium — price history/ })
     expect(window.api.catalog.listPlanVersions).toHaveBeenCalledWith({ planId: 1 })
     const historyDialog = screen.getByRole('dialog', { name: /Annual Premium — price history/ })
-    expect(await within(historyDialog).findByText('₹2,000')).toBeInTheDocument()
-    expect(within(historyDialog).getByText('₹2,200')).toBeInTheDocument()
+    expect(await within(historyDialog).findByText('₹2,000.00')).toBeInTheDocument()
+    expect(within(historyDialog).getByText('₹2,200.00')).toBeInTheDocument()
   })
 })
 
@@ -223,6 +223,6 @@ describe('OffersPage', () => {
     expect(window.api.catalog.listOfferVersions).toHaveBeenCalledWith({ offerId: 1 })
     const historyDialog = screen.getByRole('dialog', { name: /Flash Sale — discount history/ })
     expect(await within(historyDialog).findByText('20%')).toBeInTheDocument()
-    expect(within(historyDialog).getByText('−₹500')).toBeInTheDocument()
+    expect(within(historyDialog).getByText('−₹500.00')).toBeInTheDocument()
   })
 })

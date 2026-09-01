@@ -36,7 +36,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { can, useSession } from '@/context/session-context'
-import { formatMinor, parseToMinor, formatRate, type CurrencyCode } from '@/lib/money'
+import { formatMinor, parseToMinor, formatRate, percentToBps, minorToMajor, type CurrencyCode } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { usePlans } from '@/features/catalog/queries'
@@ -344,13 +344,13 @@ function LinesSection({
 
 const EMPTY_LINE_VALUES: LineValues = { description: '', quantity: '1', unitPrice: '', discount: '', taxRate: '0' }
 
-function lineValuesFromPlan(plan: Plan | null): LineValues {
+function lineValuesFromPlan(plan: Plan | null, currency: CurrencyCode): LineValues {
   if (!plan) return EMPTY_LINE_VALUES
   return {
     ...EMPTY_LINE_VALUES,
     description: plan.name,
-    unitPrice: plan.basePrice.toFixed(2),
-    taxRate: String(plan.taxRate)
+    unitPrice: minorToMajor(plan.basePriceMinor, currency),
+    taxRate: String(plan.taxRateBps / 100)
   }
 }
 
@@ -384,7 +384,7 @@ function LineEntryForm({
   const [planOpen, setPlanOpen] = useState(false)
 
   const form = useForm({
-    defaultValues: lineValuesFromPlan(plan),
+    defaultValues: lineValuesFromPlan(plan, currency),
     onSubmit: async ({ value }) => {
       if (!plan && value.description.trim() === '') return
       const unitPriceMinor = parseToMinor(value.unitPrice, currency)
@@ -395,7 +395,7 @@ function LineEntryForm({
         quantity: Math.max(1, Math.floor(Number(value.quantity))),
         unitPriceMinor,
         discountMinor: value.discount ? (parseToMinor(value.discount, currency) ?? 0) : 0,
-        taxRateBps: Math.round(Number(value.taxRate || 0) * 100),
+        taxRateBps: percentToBps(Number(value.taxRate || 0)),
         planId: plan?.id ?? null
       })
       // Keep the last tax rate for consecutive lines; clear the rest.
@@ -446,7 +446,7 @@ function LineEntryForm({
                         <CommandItem key={p.id} value={p.name} onSelect={() => { onPlanPicked(p); setPlanOpen(false) }}>
                           <span className="min-w-0 flex-1 truncate">{p.name}</span>
                           <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                            ₹{p.basePrice.toLocaleString('en-IN')}
+                            {formatMinor(p.basePriceMinor, currency)}
                           </span>
                         </CommandItem>
                       ))}
@@ -511,7 +511,7 @@ function LineEntryForm({
             {(field) => (
               <Field
                 id="line-price"
-                label="Unit price (₹)"
+                label="Unit price"
                 labelEnd={
                   parseToMinor(field.state.value, currency) !== undefined ? (
                     <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatMinor(parseToMinor(field.state.value, currency)!, currency)}</span>
@@ -533,7 +533,7 @@ function LineEntryForm({
           <div className="grid grid-cols-2 gap-3">
             <form.Field name="discount" validators={{ onChange: moneyValidator(false, currency) }}>
               {(field) => (
-                <Field id="line-discount" label="Discount (₹)" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
+                <Field id="line-discount" label="Discount" error={field.state.meta.isTouched ? field.state.meta.errors[0] : undefined}>
                   <Input
                     id="line-discount"
                     inputMode="decimal"

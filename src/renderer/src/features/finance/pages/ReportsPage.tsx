@@ -15,8 +15,8 @@ const REPORT_EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Issued', key: 'issuedAt', format: 'date' },
   { header: 'Customer', key: 'customer', format: 'text' },
   { header: 'Plan', key: 'plan', format: 'text' },
-  { header: 'Billed', key: 'total', format: 'money' },
-  { header: 'Paid', key: 'paid', format: 'money' },
+  { header: 'Billed', key: 'totalMinor', format: 'money' },
+  { header: 'Paid', key: 'paidMinor', format: 'money' },
   { header: 'Outstanding', key: 'outstanding', format: 'money' },
   { header: 'Status', key: 'status', format: 'text' }
 ]
@@ -60,9 +60,9 @@ export function ReportsPage(): React.JSX.Element {
       issuedAt: r.issuedAt,
       customer: r.customer.name,
       plan: r.line?.replace(/\s*\(.*$/, '') ?? '',
-      total: r.total,
-      paid: r.paid,
-      outstanding: r.total - r.paid,
+      totalMinor: r.totalMinor,
+      paidMinor: r.paidMinor,
+      outstanding: r.totalMinor - r.paidMinor,
       status: r.status
     }))
   }, [invoices])

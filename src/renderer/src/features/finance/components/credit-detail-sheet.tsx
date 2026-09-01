@@ -2,7 +2,8 @@ import { PiggyBank, ReceiptText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { formatDate, initials } from '@/features/leads/format'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { CREDIT_STATUS_META } from '../constants'
 import { creditApplied, creditRemaining, creditStatusOf } from '../build'
@@ -33,6 +34,7 @@ export function CreditDetailSheet({
 }): React.JSX.Element {
   const status = credit ? creditStatusOf(credit) : null
   const meta = status ? CREDIT_STATUS_META[status] : null
+  const currency = useCurrency()
   const applied = credit ? creditApplied(credit) : 0
   const remaining = credit ? creditRemaining(credit) : 0
 
@@ -61,7 +63,7 @@ export function CreditDetailSheet({
               <div className="flex items-baseline justify-between rounded-md border border-border bg-card px-3 py-2.5">
                 <span className="text-xs text-muted-foreground">Credit value</span>
                 <span className="font-mono text-2xl font-semibold tabular-nums">
-                  {formatMoney(credit.amount)}
+                  {formatMinor(credit.amountMinor, currency)}
                 </span>
               </div>
               <div className="flex divide-x divide-border rounded-md border border-border bg-card">
@@ -69,7 +71,7 @@ export function CreditDetailSheet({
                   <span className="text-[11px] tracking-wide text-muted-foreground uppercase">
                     Applied
                   </span>
-                  <span className="text-sm font-semibold tabular-nums">{formatMoney(applied)}</span>
+                  <span className="text-sm font-semibold tabular-nums">{formatMinor(applied, currency)}</span>
                 </div>
                 <div className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
                   <span className="text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -81,7 +83,7 @@ export function CreditDetailSheet({
                       remaining > 0 ? 'text-primary' : 'text-muted-foreground'
                     )}
                   >
-                    {formatMoney(remaining)}
+                    {formatMinor(remaining, currency)}
                   </span>
                 </div>
               </div>
@@ -129,7 +131,7 @@ export function CreditDetailSheet({
                             </p>
                           </div>
                           <span className="font-mono text-sm font-semibold tabular-nums">
-                            {formatMoney(a.amount)}
+                            {formatMinor(a.amountMinor, currency)}
                           </span>
                         </div>
                       ))}

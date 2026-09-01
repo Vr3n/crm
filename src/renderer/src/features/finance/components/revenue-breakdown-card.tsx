@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { RevenueRow } from '../build'
 
 const TONE_GRADIENT: Record<string, { start: string; end: string }> = {
@@ -26,7 +26,8 @@ export function RevenueBreakdownCard({
   tone: 'primary' | 'success' | 'destructive'
   rows: RevenueRow[]
 }): React.JSX.Element {
-  const total = rows.reduce((s, r) => s + r.amount, 0)
+  const total = rows.reduce((s, r) => s + r.amountMinor, 0)
+  const currency = useCurrency()
   const toneClass =
     tone === 'success'
       ? 'bg-success/10 text-success'
@@ -49,23 +50,23 @@ export function RevenueBreakdownCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3.5">
-        <p className="font-mono text-2xl font-semibold tabular-nums">{formatMoney(total)}</p>
+        <p className="font-mono text-2xl font-semibold tabular-nums">{formatMinor(total, currency)}</p>
         <div className="flex flex-col gap-3">
           {rows.map((row) => (
             <div key={row.key} className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="truncate text-xs font-medium">{row.label}</span>
-                <span className="font-mono text-xs tabular-nums">{formatMoney(row.amount)}</span>
+                <span className="font-mono text-xs tabular-nums">{formatMinor(row.amountMinor, currency)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-primary"
-                    style={{ width: `${total > 0 ? (row.amount / total) * 100 : 0}%` }}
+                    style={{ width: `${total > 0 ? (row.amountMinor / total) * 100 : 0}%` }}
                   />
                 </div>
                 <span className="w-9 shrink-0 text-right font-mono text-[11px] text-muted-foreground tabular-nums">
-                  {total > 0 ? Math.round((row.amount / total) * 100) : 0}%
+                  {total > 0 ? Math.round((row.amountMinor / total) * 100) : 0}%
                 </span>
               </div>
             </div>

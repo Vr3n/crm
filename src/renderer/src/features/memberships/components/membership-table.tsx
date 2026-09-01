@@ -4,12 +4,15 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { EXPIRING_SOON_DAYS } from '@/features/customers/constants'
-import { daysUntil, formatMoney, formatShortDate } from '@/features/customers/format'
+import { daysUntil, formatShortDate } from '@/features/customers/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import type { MembershipRow } from '../types'
 import { MembershipStatusBadge } from '@/features/customers/components/status-badge'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
+import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Member', key: 'customerName', format: 'text' },
@@ -18,8 +21,8 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Status', key: 'status', format: 'text' },
   { header: 'Start', key: 'startDate', format: 'date' },
   { header: 'End', key: 'endDate', format: 'date' },
-  { header: 'Amount', key: 'price', format: 'money' },
-  { header: 'Discount', key: 'discount', format: 'money' },
+  { header: 'Amount', key: 'priceMinor', format: 'money' },
+  { header: 'Discount', key: 'discountMinor', format: 'money' },
   { header: 'Billing', key: 'billingFrequency', format: 'text' },
   { header: 'Freezes', key: 'freezeCount', format: 'number' },
   { header: 'Days Left', key: 'daysLeft', format: 'number' }
@@ -46,7 +49,7 @@ function DaysLeftCell({ row, now }: { row: MembershipRow; now: number }): React.
   )
 }
 
-function buildColumns(now: number): ReturnType<typeof helper.columns> {
+function buildColumns(now: number, currency: CurrencyCode): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.customerName, {
       id: 'customerName',
@@ -107,14 +110,14 @@ function buildColumns(now: number): ReturnType<typeof helper.columns> {
       ),
       sortFn: 'datetime'
     }),
-    helper.accessor((row) => row.price, {
+    helper.accessor((row) => row.priceMinor, {
       id: 'amount',
       header: () => 'Amount',
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="font-mono text-sm font-medium tabular-nums">
-            {formatMoney(row.original.price - row.original.discount)}
+            {formatMinor(row.original.priceMinor - row.original.discountMinor, currency)}
           </span>
           <span className="text-xs text-muted-foreground">
             {row.original.billingFrequency.charAt(0) +
@@ -161,7 +164,8 @@ export function MembershipTable({
   isLoading: boolean
   onOpenCustomer: (customerId: string) => void
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(now), [now])
+  const currency = useCurrency()
+  const columns = useMemo(() => buildColumns(now, currency), [now, currency])
 
   const exportData = useMemo(
     () =>
@@ -172,8 +176,8 @@ export function MembershipTable({
         status: r.status,
         startDate: r.startDate,
         endDate: r.endDate,
-        price: r.price,
-        discount: r.discount,
+        priceMinor: r.priceMinor,
+        discountMinor: r.discountMinor,
         billingFrequency: r.billingFrequency,
         freezeCount: r.freezeCount,
         daysLeft: daysUntil(r.endDate, now)

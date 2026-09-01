@@ -2,7 +2,8 @@ import { ArrowRightLeft, Info, Undo2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { formatDate, initials } from '@/features/leads/format'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { PaymentMethodBadge } from './payment-method-badge'
 import type { Refund } from '../types'
@@ -38,6 +39,7 @@ export function RefundDetailSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
+  const currency = useCurrency()
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full gap-0 border-l p-0 sm:max-w-md">
@@ -63,7 +65,7 @@ export function RefundDetailSheet({
               <div className="flex items-baseline justify-between rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2.5">
                 <span className="text-xs text-muted-foreground">Amount returned</span>
                 <span className="font-mono text-2xl font-semibold text-destructive tabular-nums">
-                  −{formatMoney(refund.amount)}
+                  −{formatMinor(refund.amountMinor, currency)}
                 </span>
               </div>
             </SheetHeader>

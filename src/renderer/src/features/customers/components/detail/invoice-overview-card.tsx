@@ -5,7 +5,9 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
 import { pdfApi } from '@/features/pdf/api'
-import { formatMoney, formatShortDate } from '../../format'
+import { formatShortDate } from '../../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { CustomerInvoice } from '../../types'
 
 const STATUS_CFG: Record<CustomerInvoice['status'], { label: string; className: string }> = {
@@ -41,8 +43,9 @@ export function InvoiceOverviewCard({
   className?: string
 }): React.JSX.Element {
   const inv = invoice
+  const currency = useCurrency()
   const cfg = STATUS_CFG[inv.status]
-  const settled = inv.outstanding <= 0 && inv.status !== 'VOID' && inv.status !== 'DRAFT'
+  const settled = inv.outstandingMinor <= 0 && inv.status !== 'VOID' && inv.status !== 'DRAFT'
   const [paymentOpen, setPaymentOpen] = useState(false)
 
   return (
@@ -65,16 +68,16 @@ export function InvoiceOverviewCard({
         <div className="mt-3 flex flex-col gap-1.5 border-t pt-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Subtotal</span>
-            <span className="font-mono tabular-nums">{formatMoney(inv.subtotal)}</span>
+            <span className="font-mono tabular-nums">{formatMinor(inv.subtotalMinor, currency)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Tax</span>
-            <span className="font-mono tabular-nums">{formatMoney(inv.tax)}</span>
+            <span className="font-mono tabular-nums">{formatMinor(inv.taxMinor, currency)}</span>
           </div>
           <div className="mt-1 flex items-center justify-between border-t pt-2">
             <span className="text-sm font-semibold tracking-tight">Total</span>
             <span className="font-mono text-base font-bold tabular-nums">
-              {formatMoney(inv.total)}
+              {formatMinor(inv.totalMinor, currency)}
             </span>
           </div>
         </div>
@@ -88,10 +91,10 @@ export function InvoiceOverviewCard({
           )}
         >
           <span className="text-xs font-medium">
-            {settled ? 'Paid in full ✓' : `Outstanding ${formatMoney(inv.outstanding)}`}
+            {settled ? 'Paid in full ✓' : `Outstanding ${formatMinor(inv.outstandingMinor, currency)}`}
           </span>
           <span className="font-mono text-xs font-semibold tabular-nums">
-            {formatMoney(inv.paidAmount)} paid
+            {formatMinor(inv.paidMinor, currency)} paid
           </span>
         </div>
 

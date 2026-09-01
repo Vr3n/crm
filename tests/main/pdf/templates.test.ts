@@ -34,7 +34,7 @@ describe('Invoice Document Template', () => {
         description: 'Gold Plan (12 months)',
         quantity: 1,
         unitPrice: 2000000,
-        taxRate: 18,
+        taxRate: '18%',
         discountAmount: 0,
         lineTotal: 2000000
       }

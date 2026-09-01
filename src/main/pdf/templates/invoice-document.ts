@@ -27,7 +27,7 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
   const hasAllocations = ctx.allocations.length > 0
   const totalDiscount = ctx.lines.reduce((sum, l) => sum + l.discountAmount, 0)
   // Derive tax rate from first line (all lines share the same rate in membership invoices)
-  const taxRate = ctx.lines.length > 0 ? ctx.lines[0].taxRate : 0
+  const taxRate = ctx.lines.length > 0 ? ctx.lines[0].taxRate : '0%'
 
   return `<!DOCTYPE html>
 <html>
@@ -113,7 +113,7 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
         </div>
         ` : ''}
         <div class="totals-row">
-          <span class="label">Tax (GST @ ${taxRate}%)</span>
+          <span class="label">Tax (GST @ ${taxRate})</span>
           <span class="value">${formatRupees(ctx.taxTotal)}</span>
         </div>
         <div class="totals-row grand">

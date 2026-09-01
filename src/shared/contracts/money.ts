@@ -18,7 +18,7 @@ import { z } from 'zod'
  */
 export const CURRENCIES = [
   'INR', 'USD', 'EUR', 'GBP', 'JPY', 'KRW', 'VND', 'CLP', 'ISK',
-  'KWD', 'BHD', 'OMR', 'JOD', 'TND'
+  'KWD', 'BHD', 'OMR', 'JOD', 'TND', 'AED', 'SGD'
 ] as const
 
 export type CurrencyCode = (typeof CURRENCIES)[number]
@@ -26,7 +26,8 @@ export type CurrencyCode = (typeof CURRENCIES)[number]
 const EXPONENTS: Record<CurrencyCode, number> = {
   INR: 2, USD: 2, EUR: 2, GBP: 2,
   JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0,
-  KWD: 3, BHD: 3, OMR: 3, JOD: 3, TND: 3
+  KWD: 3, BHD: 3, OMR: 3, JOD: 3, TND: 3,
+  AED: 2, SGD: 2
 }
 
 export interface Money {
@@ -132,6 +133,11 @@ export function formatMinor(minor: number, code: CurrencyCode, locale = 'en-IN')
 /** Format basis points as a percent string (e.g. "18%"). */
 export function formatRate(bps: number): string {
   return `${Math.round(bps) / 100}%`
+}
+
+/** Parse a decimal percent (e.g. 18.5) into integer basis points (1850). */
+export function percentToBps(percent: number): number {
+  return Math.round(percent * 100)
 }
 
 /* -------------------------------------------------------------------------- */

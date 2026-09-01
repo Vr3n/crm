@@ -9,7 +9,8 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { PAYMENT_METHODS } from '../constants'
@@ -17,6 +18,7 @@ import { PaymentMethodBadge } from './payment-method-badge'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
 import type { PaymentMethod, Refund } from '../types'
+import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Refund No', key: 'refundNo', format: 'text' },
@@ -25,14 +27,14 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Customer', key: 'customer', format: 'text' },
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Against', key: 'sourcePaymentNo', format: 'text' },
-  { header: 'Amount', key: 'amount', format: 'money' },
+  { header: 'Amount', key: 'amountMinor', format: 'money' },
   { header: 'Reason', key: 'reason', format: 'text' },
   { header: 'Method', key: 'method', format: 'text' }
 ]
 
 const helper = createColumnHelper<DashboardFeatures, Refund>()
 
-function buildColumns(): ReturnType<typeof helper.columns> {
+function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.refundNo, {
       id: 'refundNo',
@@ -95,7 +97,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
         </span>
       )
     }),
-    helper.accessor('amount', {
+    helper.accessor('amountMinor', {
       header: ({ column }) => (
         <SortButton
           className="text-primary"
@@ -107,7 +109,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm font-semibold text-destructive tabular-nums">
-          −{formatMoney(row.original.amount)}
+          −{formatMinor(row.original.amountMinor, currency)}
         </span>
       ),
       sortFn: 'basic'
@@ -146,7 +148,8 @@ export function RefundsTable({
   onMethodChange: (m: PaymentMethod | 'ALL') => void
   onOpen: (refund: Refund) => void
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(), [])
+  const currency = useCurrency()
+  const columns = useMemo(() => buildColumns(currency), [currency])
 
   const exportData = useMemo(
     () =>
@@ -157,7 +160,7 @@ export function RefundsTable({
         customer: r.customer.name,
         phone: r.customer.phone,
         sourcePaymentNo: r.sourcePaymentNo,
-        amount: r.amount,
+        amountMinor: r.amountMinor,
         reason: r.reason,
         method: r.method
       })),

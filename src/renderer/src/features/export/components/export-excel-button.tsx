@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { exportExcel, type ExportColumn } from '../api'
+import { useCurrency } from '@/hooks/use-currency'
 
 interface ExportExcelButtonProps {
   columns: ExportColumn[]
@@ -34,6 +35,7 @@ export function ExportExcelButton({
   disabled = false
 }: ExportExcelButtonProps): React.JSX.Element {
   const [loading, setLoading] = useState(false)
+  const currency = useCurrency()
 
   async function handleExport(): Promise<void> {
     if (rows.length === 0) {
@@ -50,7 +52,8 @@ export function ExportExcelButton({
         sheetName,
         filename: name,
         columns,
-        rows
+        rows,
+        currency
       })
       toast.success('Excel exported', {
         description: filePath

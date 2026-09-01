@@ -21,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { formatMoneyExact, sanitizeMoneyInput } from '@/lib/money'
-import { parseToMinor } from '@/lib/money'
+import { formatMinor, parseToMinor, sanitizeMoneyInput } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { PAYMENT_METHODS } from '../constants'
 import { useIssueRefund, usePaymentsFor } from '../queries'
 import { CustomerPicker } from './customer-picker'
@@ -45,6 +45,7 @@ export function IssueRefundDialog({
   refunds: Refund[]
 }): React.JSX.Element {
   const issue = useIssueRefund()
+  const currency = useCurrency()
   const [picked, setPicked] = useState<PersonRef | null>(null)
   const { data: payments, isLoading: loadingPayments } = usePaymentsFor(picked?.id)
 
@@ -53,8 +54,8 @@ export function IssueRefundDialog({
       new Map<string, number>(
         (payments ?? []).map((p) => [
           p.id,
-          p.amount -
-            refunds.filter((r) => r.sourcePaymentId === p.id).reduce((s, r) => s + r.amount, 0)
+          p.amountMinor -
+            refunds.filter((r) => r.sourcePaymentId === p.id).reduce((s, r) => s + r.amountMinor, 0)
         ])
       ),
     [payments, refunds]
@@ -75,7 +76,7 @@ export function IssueRefundDialog({
       try {
         await issue.mutateAsync({
           paymentId: source.id,
-          amountMinor: parseToMinor(String(value.amount), 'INR') ?? 0,
+          amountMinor: parseToMinor(String(value.amount), currency) ?? 0,
           reason: value.reason
         })
         setPicked(null)
@@ -150,9 +151,9 @@ export function IssueRefundDialog({
                           return (
                             <SelectItem key={p.id} value={p.id} disabled={avail <= 0}>
                               <span className="font-mono tabular-nums">
-                                {p.paymentNo} · {formatMoneyExact(p.amount)}
+                                {p.paymentNo} · {formatMinor(p.amountMinor, currency)}
                               </span>
-                              {avail <= 0 ? ' · fully refunded' : ` · ${formatMoneyExact(avail)} left`}
+                              {avail <= 0 ? ' · fully refunded' : ` · ${formatMinor(avail, currency)} left`}
                             </SelectItem>
                           )
                         })}
@@ -203,8 +204,9 @@ export function IssueRefundDialog({
                     if (!Number.isFinite(n) || n <= 0) return 'Amount must be positive'
                     const sourceId = fieldApi.form.getFieldValue('sourcePaymentId')
                     const avail = sourceId ? (remainingByPayment.get(sourceId) ?? 0) : 0
-                    if (avail > 0 && n > avail)
-                      return `At most ${formatMoneyExact(avail)} is available on this payment`
+                    const amtMinor = parseToMinor(value, currency) ?? 0
+                    if (avail > 0 && amtMinor > avail)
+                      return `At most ${formatMinor(avail, currency)} is available on this payment`
                     return undefined
                   }
                 }}
@@ -212,7 +214,7 @@ export function IssueRefundDialog({
                 {(field) => (
                   <div className="grid gap-1.5">
                     <Label htmlFor={`rf-${field.name}`}>
-                      Amount (₹) <span className="text-destructive">*</span>
+                      Amount <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id={`rf-${field.name}`}
@@ -233,7 +235,7 @@ export function IssueRefundDialog({
 
             {remaining > 0 ? (
               <p className="text-xs text-muted-foreground tabular-nums">
-                {formatMoneyExact(remaining)} available on the selected payment
+                {formatMinor(remaining, currency)} available on the selected payment
               </p>
             ) : null}
 

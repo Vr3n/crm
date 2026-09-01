@@ -1,5 +1,5 @@
 import type { Offer, OfferLifecycle } from './types'
-import { formatMoney } from './format'
+import { formatMinor, type CurrencyCode } from '@/lib/money'
 
 export interface DiscountLine {
   original: number
@@ -10,7 +10,9 @@ export interface DiscountLine {
 
 /**
  * Module 03 pricing math. The discount is computed against the plan's base price
- * and the result is snapshotted onto the Membership/Invoice at sale time.
+ * and the result is snapshotted onto the Membership/Invoice at sale time. All
+ * monetary values are integer minor units; `value` is minor for FIXED_AMOUNT /
+ * OVERRIDE_PRICE and a whole unit (percent / months) otherwise.
  *
  * - PERCENTAGE    → base × value%
  * - FIXED_AMOUNT  → flat value off, never below zero
@@ -20,43 +22,44 @@ export interface DiscountLine {
  */
 export function computeDiscountLine(
   offer: Offer,
-  basePrice: number
+  basePriceMinor: number,
+  currency: CurrencyCode
 ): DiscountLine {
   const { discountType, value } = offer
 
   if (discountType === 'PERCENTAGE') {
-    const discount = Math.round((basePrice * value) / 100)
+    const discount = Math.round((basePriceMinor * value) / 100)
     return {
-      original: basePrice,
+      original: basePriceMinor,
       discount,
-      final: basePrice - discount,
+      final: basePriceMinor - discount,
       note: `${value}% off`
     }
   }
 
   if (discountType === 'FIXED_AMOUNT') {
-    const discount = Math.min(value, basePrice)
+    const discount = Math.min(value, basePriceMinor)
     return {
-      original: basePrice,
+      original: basePriceMinor,
       discount,
-      final: basePrice - discount,
-      note: `${formatMoney(value)} off`
+      final: basePriceMinor - discount,
+      note: `${formatMinor(value, currency)} off`
     }
   }
 
   if (discountType === 'OVERRIDE_PRICE') {
     return {
-      original: basePrice,
-      discount: basePrice - value,
+      original: basePriceMinor,
+      discount: basePriceMinor - value,
       final: value,
-      note: `Flat ${formatMoney(value)}`
+      note: `Flat ${formatMinor(value, currency)}`
     }
   }
 
   return {
-    original: basePrice,
+    original: basePriceMinor,
     discount: 0,
-    final: basePrice,
+    final: basePriceMinor,
     note: `${value} month${value === 1 ? '' : 's'} free on renewal`
   }
 }
@@ -84,11 +87,14 @@ export function filterOffersByLifecycle(
   return offers.filter((offer) => offerLifecycle(offer, now) === lifecycle)
 }
 
-export function discountBadgeText(offer: { discountType: Offer['discountType']; value: number }): string {
+export function discountBadgeText(
+  offer: { discountType: Offer['discountType']; value: number },
+  currency: CurrencyCode
+): string {
   const { discountType, value } = offer
   if (discountType === 'PERCENTAGE') return `${value}%`
-  if (discountType === 'FIXED_AMOUNT') return `−${formatMoney(value)}`
-  if (discountType === 'OVERRIDE_PRICE') return formatMoney(value)
+  if (discountType === 'FIXED_AMOUNT') return `−${formatMinor(value, currency)}`
+  if (discountType === 'OVERRIDE_PRICE') return formatMinor(value, currency)
   return `${value}mo free`
 }
 

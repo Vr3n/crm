@@ -1,6 +1,7 @@
 import { BadgeCheck, Clock3, Crown, IndianRupee, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatMoney } from '@/lib/money'
+import { formatMinor, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Plan } from '../types'
 
 interface Metric {
@@ -8,7 +9,7 @@ interface Metric {
   label: string
   icon: LucideIcon
   chip: string
-  value: (plans: Plan[]) => string
+  value: (plans: Plan[], currency: CurrencyCode) => string
 }
 
 const METRICS: Metric[] = [
@@ -31,10 +32,10 @@ const METRICS: Metric[] = [
     label: 'Cheapest entry',
     icon: IndianRupee,
     chip: 'bg-muted text-muted-foreground',
-    value: (plans) => {
+    value: (plans, currency) => {
       const active = plans.filter((p) => p.isActive)
       if (active.length === 0) return '—'
-      return formatMoney(Math.min(...active.map((p) => p.basePrice)))
+      return formatMinor(Math.min(...active.map((p) => p.basePriceMinor)), currency)
     }
   },
   {
@@ -42,10 +43,10 @@ const METRICS: Metric[] = [
     label: 'Flagship plan',
     icon: Crown,
     chip: 'bg-warning/15 text-warning',
-    value: (plans) => {
+    value: (plans, currency) => {
       const active = plans.filter((p) => p.isActive)
       if (active.length === 0) return '—'
-      return formatMoney(Math.max(...active.map((p) => p.basePrice)))
+      return formatMinor(Math.max(...active.map((p) => p.basePriceMinor)), currency)
     }
   }
 ]
@@ -55,6 +56,7 @@ const METRICS: Metric[] = [
  * range (cheapest entry → flagship). Every number is derived from the rows.
  */
 export function PlanMetrics({ plans }: { plans: Plan[] }): React.JSX.Element {
+  const currency = useCurrency()
   return (
     <div className="flex flex-wrap items-stretch gap-2">
       {METRICS.map((m) => (
@@ -67,7 +69,7 @@ export function PlanMetrics({ plans }: { plans: Plan[] }): React.JSX.Element {
           </div>
           <div className="min-w-0">
             <p className="truncate font-mono text-lg leading-none font-semibold tabular-nums">
-              {m.value(plans)}
+              {m.value(plans, currency)}
             </p>
             <p className="truncate text-xs text-muted-foreground">{m.label}</p>
           </div>

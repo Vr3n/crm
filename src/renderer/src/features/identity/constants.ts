@@ -1,4 +1,5 @@
 import type { OrgStatus, PermissionGroup, StaffStatus } from './types'
+export { CURRENCIES } from '../../../../shared/contracts/money'
 
 /**
  * Identity constants — status metadata and the permission catalog.
@@ -22,9 +23,6 @@ export const TIMEZONES = [
   'Europe/London',
   'America/New_York'
 ]
-
-/** Currencies offered in the org-edit dialog. */
-export const CURRENCIES = ['INR', 'USD', 'AED', 'GBP', 'EUR', 'SGD']
 
 export const STAFF_STATUS_META: Record<StaffStatus, { label: string; tone: BadgeTone }> = {
   ACTIVE: { label: 'Active', tone: 'success' },

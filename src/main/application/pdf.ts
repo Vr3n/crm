@@ -6,6 +6,7 @@ import { organizations, customers, people, users, memberships } from '../db/sche
 import { eq, and, desc } from 'drizzle-orm'
 import { NotFoundError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
+import { formatRate } from '../../shared/contracts/money'
 import { renderPdf } from '../pdf/renderer'
 import { renderInvoiceDocument } from '../pdf/templates/invoice-document'
 import { renderPaymentReceipt } from '../pdf/templates/payment-receipt'
@@ -169,7 +170,7 @@ export function exportInvoicePdf(input: {
       description: l.description,
       quantity: l.quantity,
       unitPrice: l.unitPriceMinor,
-      taxRate: Math.round(l.taxRateBps / 100), // Convert basis points to percentage
+      taxRate: formatRate(l.taxRateBps),
       discountAmount: l.discountMinor,
       lineTotal: l.lineTotalMinor
     })),

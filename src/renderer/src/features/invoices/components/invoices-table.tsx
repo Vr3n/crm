@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDate } from '@/features/leads/format'
-import { formatMinor } from '@/lib/money'
+import { formatMinor, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import {
@@ -46,7 +47,8 @@ const helper = createColumnHelper<DashboardFeatures, Invoice>()
 
 function buildColumns(
   onView: (row: Invoice) => void,
-  onMakePayment: (row: Invoice) => void
+  onMakePayment: (row: Invoice) => void,
+  currency: CurrencyCode
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor('invoiceNo', {
@@ -111,7 +113,7 @@ function buildColumns(
                 isSettled ? 'text-success' : 'text-destructive'
               )}
             >
-              {formatMinor(amount)}
+              {formatMinor(amount, currency)}
             </span>
           </div>
         )
@@ -130,7 +132,7 @@ function buildColumns(
       cell: ({ row }) => (
         <div className="text-right">
           <span className="font-mono text-sm font-semibold tabular-nums">
-            {formatMinor(row.original.totalMinor)}
+            {formatMinor(row.original.totalMinor, currency)}
           </span>
         </div>
       ),
@@ -225,6 +227,7 @@ export function InvoicesTable({
   const { data, isLoading } = useInvoices()
   const navigate = useNavigate()
   const location = useLocation()
+  const currency = useCurrency()
   const [range, setRange] = useState<DateRange>()
   const [status, setStatus] = useState<InvoiceStatus | undefined>()
 
@@ -236,8 +239,8 @@ export function InvoicesTable({
   )
 
   const columns = useMemo(
-    () => buildColumns(handleView, onMakePayment),
-    [handleView, onMakePayment]
+    () => buildColumns(handleView, onMakePayment, currency),
+    [handleView, onMakePayment, currency]
   )
 
   const presets = useMemo<DateRangePreset[]>(() => {

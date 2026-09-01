@@ -14,7 +14,9 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/com
 import { cn } from '@/lib/utils'
 import { formatDate, initials } from '@/features/leads/format'
 import { EXPIRING_SOON_DAYS } from '../constants'
-import { daysUntil, formatMoney } from '../format'
+import { daysUntil } from '../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { useMemberRecord, usePaymentRecord } from '../queries'
 import type { MembershipExpiration, MembershipInvoice, PaymentDue } from '../types'
 
@@ -110,6 +112,7 @@ function StatTile({
 
 function InvoiceRow({ invoice }: { invoice: MembershipInvoice }): React.JSX.Element {
   const paid = invoice.status === 'PAID'
+  const currency = useCurrency()
   return (
     <div className="flex items-center gap-3 border-b border-border/60 py-2.5 last:border-0">
       <span
@@ -125,7 +128,7 @@ function InvoiceRow({ invoice }: { invoice: MembershipInvoice }): React.JSX.Elem
         <p className="truncate font-mono text-[11px] text-muted-foreground">{invoice.invoiceNo}</p>
       </div>
       <div className="flex flex-col items-end gap-1">
-        <span className="text-sm font-semibold tabular-nums">{formatMoney(invoice.amount)}</span>
+        <span className="text-sm font-semibold tabular-nums">{formatMinor(invoice.amountMinor, currency)}</span>
         <Badge
           variant={paid ? 'success' : 'destructive'}
           className="rounded-none px-1.5 py-0 text-[10px] tabular-nums"
@@ -138,21 +141,22 @@ function InvoiceRow({ invoice }: { invoice: MembershipInvoice }): React.JSX.Elem
 }
 
 function InvoiceSummary({ invoices }: { invoices: MembershipInvoice[] }): React.JSX.Element {
-  const billed = invoices.reduce((sum, i) => sum + i.amount, 0)
+  const currency = useCurrency()
+  const billed = invoices.reduce((sum, i) => sum + i.amountMinor, 0)
   const collected = invoices
     .filter((i) => i.status === 'PAID')
-    .reduce((sum, i) => sum + i.amount, 0)
+    .reduce((sum, i) => sum + i.amountMinor, 0)
   const outstanding = billed - collected
   return (
     <div className="flex divide-x divide-border rounded-md border border-border bg-card">
       <div className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
         <span className="text-[11px] tracking-wide text-muted-foreground uppercase">Billed</span>
-        <span className="text-sm font-semibold tabular-nums">{formatMoney(billed)}</span>
+        <span className="text-sm font-semibold tabular-nums">{formatMinor(billed, currency)}</span>
       </div>
       <div className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
         <span className="text-[11px] tracking-wide text-muted-foreground uppercase">Collected</span>
         <span className="text-sm font-semibold text-success tabular-nums">
-          {formatMoney(collected)}
+          {formatMinor(collected, currency)}
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
@@ -165,7 +169,7 @@ function InvoiceSummary({ invoices }: { invoices: MembershipInvoice[] }): React.
             outstanding > 0 ? 'text-destructive' : 'text-muted-foreground'
           )}
         >
-          {formatMoney(outstanding)}
+          {formatMinor(outstanding, currency)}
         </span>
       </div>
     </div>
@@ -215,7 +219,8 @@ export function MemberDetailsSheet({
 }): React.JSX.Element {
   // `row` stays set while `open` goes false, so the content persists through
   // the close (exit) animation instead of flashing empty.
-  const isPayment = row != null && 'amountDue' in row
+  const isPayment = row != null && 'amountDueMinor' in row
+  const currency = useCurrency()
   const {
     data: expData,
     isLoading: expLoading,
@@ -243,12 +248,12 @@ export function MemberDetailsSheet({
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <SheetTitle className="truncate text-lg">{row.member.name}</SheetTitle>
-                    {'amountDue' in row ? (
+                    {'amountDueMinor' in row ? (
                       <Badge
                         variant="destructive"
                         className="shrink-0 rounded-none px-2.5 py-1 tabular-nums"
                       >
-                        {formatMoney(row.amountDue)} due
+                        {formatMinor(row.amountDueMinor, currency)} due
                       </Badge>
                     ) : (
                       <StatusChip expiresAt={row.expiresAt} />
@@ -296,15 +301,15 @@ export function MemberDetailsSheet({
 
                   <section className="flex flex-col gap-3">
                     <SectionHeading icon={CalendarClock} title="Membership" />
-                    {'amountDue' in row ? (
+                    {'amountDueMinor' in row ? (
                       <>
                         <div className="flex gap-2.5">
                           <StatTile
                             label="Amount due"
-                            value={formatMoney(row.amountDue)}
+                            value={formatMinor(row.amountDueMinor, currency)}
                             tone="danger"
                           />
-                          <StatTile label="Total" value={formatMoney(row.total)} />
+                          <StatTile label="Total" value={formatMinor(row.totalMinor, currency)} />
                           <StatTile label="Purchased" value={formatDate(row.purchasedAt)} />
                         </div>
                         <div>
@@ -371,7 +376,7 @@ export function MemberDetailsSheet({
             </div>
 
             <SheetFooter className="border-t border-border/80">
-              {'amountDue' in row ? (
+              {'amountDueMinor' in row ? (
                 <div className="grid w-full grid-cols-2 gap-2.5">
                   <Button
                     variant="outline"

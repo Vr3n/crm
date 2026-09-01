@@ -21,7 +21,7 @@ export interface PdfInvoiceLine {
   description: string
   quantity: number
   unitPrice: number
-  taxRate: number
+  taxRate: string
   discountAmount: number
   lineTotal: number
 }

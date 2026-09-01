@@ -1,7 +1,9 @@
 import { CircleDashed, CreditCard, Receipt, Snowflake } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { effectiveStatus } from '../../build'
-import { formatMoney, formatShortDate } from '../../format'
+import { formatShortDate } from '../../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Membership } from '../../types'
 import { MembershipStatusBadge } from '../status-badge'
 import { GradientBorder } from './gradient-border'
@@ -36,6 +38,7 @@ export function CurrentMembershipCard({
   }
 
   const m = currentMembership
+  const currency = useCurrency()
   const eff = effectiveStatus(m, now)
   const startMs = new Date(m.startDate).getTime()
   const endMs = new Date(m.endDate).getTime()
@@ -43,7 +46,7 @@ export function CurrentMembershipCard({
   const openFreezes = m.freezes.filter(
     (f) => new Date(f.startDate).getTime() <= now && new Date(f.endDate).getTime() > now
   )
-  const paid = m.price - m.discount
+  const paid = m.priceMinor - m.discountMinor
 
   return (
     <GradientBorder>
@@ -61,11 +64,11 @@ export function CurrentMembershipCard({
             </p>
           </div>
           <div className="text-right">
-            <p className="font-mono text-xl font-semibold tabular-nums">{formatMoney(paid)}</p>
+            <p className="font-mono text-xl font-semibold tabular-nums">{formatMinor(paid, currency)}</p>
             <p className="text-xs text-muted-foreground">
-              {m.discount > 0 ? `${formatMoney(m.discount)} discount · ` : ''}
-              {m.registrationFee > 0
-                ? `+ ${formatMoney(m.registrationFee)} registration`
+              {m.discountMinor > 0 ? `${formatMinor(m.discountMinor, currency)} discount · ` : ''}
+              {m.registrationFeeMinor > 0
+                ? `+ ${formatMinor(m.registrationFeeMinor, currency)} registration`
                 : 'no registration fee'}
             </p>
           </div>

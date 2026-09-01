@@ -4,11 +4,13 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/features/leads/format'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
+import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Invoice', key: 'invoiceNo', format: 'text' },
@@ -16,8 +18,8 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Customer', key: 'customer', format: 'text' },
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Issued', key: 'issuedAt', format: 'date' },
-  { header: 'Billed', key: 'total', format: 'money' },
-  { header: 'Paid', key: 'paid', format: 'money' },
+  { header: 'Billed', key: 'totalMinor', format: 'money' },
+  { header: 'Paid', key: 'paidMinor', format: 'money' },
   { header: 'Outstanding', key: 'outstanding', format: 'money' },
   { header: 'Status', key: 'status', format: 'text' }
 ]
@@ -27,7 +29,7 @@ import type { FinanceInvoice } from '../types'
 
 const helper = createColumnHelper<DashboardFeatures, FinanceInvoice>()
 
-function buildColumns(): ReturnType<typeof helper.columns> {
+function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.invoiceNo, {
       id: 'invoiceNo',
@@ -76,7 +78,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       ),
       sortFn: 'datetime'
     }),
-    helper.accessor((row) => row.total, {
+    helper.accessor((row) => row.totalMinor, {
       id: 'total',
       header: ({ column }) => (
         <SortButton
@@ -88,11 +90,11 @@ function buildColumns(): ReturnType<typeof helper.columns> {
         </SortButton>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm tabular-nums">{formatMoney(row.original.total)}</span>
+        <span className="font-mono text-sm tabular-nums">{formatMinor(row.original.totalMinor, currency)}</span>
       ),
       sortFn: 'basic'
     }),
-    helper.accessor((row) => row.paid, {
+    helper.accessor((row) => row.paidMinor, {
       id: 'paid',
       header: ({ column }) => (
         <SortButton
@@ -104,7 +106,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
         </SortButton>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm tabular-nums">{formatMoney(row.original.paid)}</span>
+        <span className="font-mono text-sm tabular-nums">{formatMinor(row.original.paidMinor, currency)}</span>
       ),
       sortFn: 'basic'
     }),
@@ -121,7 +123,7 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm font-semibold text-destructive tabular-nums">
-          {formatMoney(invoiceDue(row.original))}
+          {formatMinor(invoiceDue(row.original), currency)}
         </span>
       ),
       sortFn: 'basic'
@@ -149,7 +151,8 @@ export function ReceivablesTable({
   invoices: FinanceInvoice[]
   isLoading: boolean
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(), [])
+  const currency = useCurrency()
+  const columns = useMemo(() => buildColumns(currency), [currency])
   const rows = useMemo(() => invoices.filter((i) => i.status !== 'VOID'), [invoices])
 
   const exportData = useMemo(
@@ -160,8 +163,8 @@ export function ReceivablesTable({
         customer: r.customer.name,
         phone: r.customer.phone,
         issuedAt: r.issuedAt,
-        total: r.total,
-        paid: r.paid,
+        totalMinor: r.totalMinor,
+        paidMinor: r.paidMinor,
         outstanding: invoiceDue(r),
         status: r.status
       })),

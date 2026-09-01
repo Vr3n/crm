@@ -11,7 +11,6 @@ import type {
   MembershipInvoiceOutput,
   MembershipDetailsOutput
 } from '../../../../shared/contracts/dashboard'
-import { minorToMajor } from '../../../../shared/contracts/money'
 
 function mapPaymentDue(row: PaymentDueOutput): PaymentDue {
   return {
@@ -19,8 +18,8 @@ function mapPaymentDue(row: PaymentDueOutput): PaymentDue {
     member: row.member,
     plan: row.plan,
     purchasedAt: row.purchasedAt,
-    amountDue: Number(minorToMajor(row.amountDueMinor, 'INR')),
-    total: Number(minorToMajor(row.totalMinor, 'INR'))
+    amountDueMinor: row.amountDueMinor,
+    totalMinor: row.totalMinor
   }
 }
 
@@ -31,7 +30,7 @@ function mapMembershipInvoice(row: MembershipInvoiceOutput): MembershipInvoice {
     label: row.label,
     periodStart: row.periodStart,
     periodEnd: row.periodEnd,
-    amount: Number(minorToMajor(row.amountMinor, 'INR')),
+    amountMinor: row.amountMinor,
     status: row.status,
     paidAt: row.paidAt
   }
@@ -42,8 +41,8 @@ function mapMembershipDetails(row: MembershipDetailsOutput): MembershipDetails {
     plan: row.plan,
     purchasedAt: row.purchasedAt,
     expiresAt: row.expiresAt,
-    amountDue: row.amountDueMinor != null ? Number(minorToMajor(row.amountDueMinor, 'INR')) : undefined,
-    total: row.totalMinor != null ? Number(minorToMajor(row.totalMinor, 'INR')) : undefined
+    amountDueMinor: row.amountDueMinor,
+    totalMinor: row.totalMinor
   }
 }
 

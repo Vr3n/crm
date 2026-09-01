@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
 import { exportTableToExcel } from '../application/export'
+import { currencyCodeSchema } from '../../shared/contracts/money'
 
 const exportColumnSchema = z.object({
   header: z.string().min(1),
@@ -14,7 +15,8 @@ const exportExcelInputSchema = z.object({
   sheetName: z.string().min(1).max(31), // Excel sheet name limit
   filename: z.string().min(1).max(200),
   columns: z.array(exportColumnSchema).min(1).max(100),
-  rows: z.array(z.record(z.string(), z.unknown())).max(10000)
+  rows: z.array(z.record(z.string(), z.unknown())).max(10000),
+  currency: currencyCodeSchema
 })
 
 export function registerExportIpc(): void {

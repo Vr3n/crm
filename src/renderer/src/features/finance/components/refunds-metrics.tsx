@@ -1,6 +1,7 @@
 import { BadgeCheck, PiggyBank, Undo2 } from 'lucide-react'
 import { creditApplied, creditRemaining, isSameMonth, sum } from '../build'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { FinanceMetric } from './finance-metric'
 import type { Credit, Refund } from '../types'
 
@@ -17,6 +18,7 @@ export function RefundsMetrics({
   credits: Credit[]
 }): React.JSX.Element {
   const now = new Date()
+  const currency = useCurrency()
   const monthRefunds = refunds.filter((r) => isSameMonth(r.refundDate, now))
   const available = credits.reduce((s, c) => s + creditRemaining(c), 0)
   const applied = credits.reduce((s, c) => s + creditApplied(c), 0)
@@ -26,27 +28,27 @@ export function RefundsMetrics({
       <FinanceMetric
         icon={Undo2}
         label="Refunds this month"
-        value={`-${formatMoney(sum(monthRefunds))}`}
+        value={`-${formatMinor(sum(monthRefunds), currency)}`}
         hint={`${monthRefunds.length} refunds`}
         tone="destructive"
       />
       <FinanceMetric
         icon={Undo2}
         label="Refunds · all time"
-        value={`-${formatMoney(sum(refunds))}`}
+        value={`-${formatMinor(sum(refunds), currency)}`}
         hint={`${refunds.length} refunds`}
         tone="muted"
       />
       <FinanceMetric
         icon={PiggyBank}
         label="Credit available"
-        value={formatMoney(available)}
+        value={formatMinor(available, currency)}
         hint="Can be applied to future invoices"
       />
       <FinanceMetric
         icon={BadgeCheck}
         label="Credit applied"
-        value={formatMoney(applied)}
+        value={formatMinor(applied, currency)}
         tone="success"
       />
     </div>

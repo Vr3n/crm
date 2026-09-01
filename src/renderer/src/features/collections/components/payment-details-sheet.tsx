@@ -4,7 +4,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { cn } from '@/lib/utils'
 import { formatDateTime, formatTime, initials } from '@/features/leads/format'
 import { PAYMENT_METHOD_META } from '@/lib/payment-methods'
-import { formatMoney } from '@/lib/money'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { usePayment } from '../queries'
 import type { PaymentRecord } from '../types'
 
@@ -82,6 +83,7 @@ export function PaymentDetailsSheet({
   // `payment` stays set while `open` goes false so the content persists through
   // the close (exit) animation instead of flashing empty.
   const { data, isLoading, isError } = usePayment(payment?.id)
+  const currency = useCurrency()
 
   const meta = data ? PAYMENT_METHOD_META[data.method] : undefined
 
@@ -136,7 +138,7 @@ export function PaymentDetailsSheet({
                   <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-4 py-3">
                     <span className="text-sm text-muted-foreground">Amount received</span>
                     <span className="font-mono text-2xl font-bold tabular-nums text-primary">
-                      {formatMoney(data.amount)}
+                      {formatMinor(data.amountMinor, currency)}
                     </span>
                   </div>
 
@@ -173,14 +175,14 @@ export function PaymentDetailsSheet({
                       <div>
                         {data.allocations.map((a) => (
                           <div
-                            key={`${a.invoiceNo}-${a.amount}`}
+                            key={`${a.invoiceNo}-${a.amountMinor}`}
                             className="flex items-center justify-between gap-3 border-b border-border/60 py-2.5 last:border-0"
                           >
                             <span className="font-mono text-sm font-medium tabular-nums">
                               {a.invoiceNo}
                             </span>
                             <span className="text-sm font-semibold tabular-nums">
-                              {formatMoney(a.amount)}
+                              {formatMinor(a.amountMinor, currency)}
                             </span>
                           </div>
                         ))}

@@ -21,7 +21,7 @@ export type PaymentAllocationStatus = 'FULLY_ALLOCATED' | 'PARTIALLY_ALLOCATED' 
 export interface PaymentAllocation {
   invoiceId: string
   invoiceNo: string
-  amount: number
+  amountMinor: number
 }
 
 /** Money recorded as received (Module 05 §15–16). Never edited after the fact. */
@@ -30,7 +30,7 @@ export interface Payment {
   paymentNo: string
   customer: PersonRef
   paymentDate: string
-  amount: number
+  amountMinor: number
   method: PaymentMethod
   reference?: string
   notes?: string
@@ -50,8 +50,8 @@ export interface FinanceInvoice {
   customer: PersonRef
   line: string
   issuedAt: string
-  total: number
-  paid: number
+  totalMinor: number
+  paidMinor: number
   status: InvoiceStatus
 }
 
@@ -61,7 +61,7 @@ export interface Refund {
   refundNo: string
   customer: PersonRef
   refundDate: string
-  amount: number
+  amountMinor: number
   sourcePaymentId: string
   sourcePaymentNo: string
   method: PaymentMethod
@@ -75,7 +75,7 @@ export type CreditStatus = 'AVAILABLE' | 'PARTIALLY_APPLIED' | 'APPLIED'
 /** A credit amount applied against a future invoice. */
 export interface CreditApplication {
   invoiceNo: string
-  amount: number
+  amountMinor: number
   appliedAt: string
 }
 
@@ -85,7 +85,7 @@ export interface Credit {
   creditNo: string
   customer: PersonRef
   issuedAt: string
-  amount: number
+  amountMinor: number
   reason: string
   source?: string
   createdBy: string

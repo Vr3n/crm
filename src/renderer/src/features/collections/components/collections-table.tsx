@@ -6,10 +6,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatTime } from '@/features/leads/format'
 import { PAYMENT_METHOD_META } from '@/lib/payment-methods'
-import { formatMoney } from '@/lib/money'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
+import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Reference', key: 'reference', format: 'text' },
@@ -18,7 +20,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Method', key: 'method', format: 'text' },
   { header: 'Allocated To', key: 'allocatedTo', format: 'text' },
-  { header: 'Amount', key: 'amount', format: 'money' },
+  { header: 'Amount', key: 'amountMinor', format: 'money' },
   { header: 'Recorded By', key: 'receivedBy', format: 'text' }
 ]
 import { PaymentDetailsSheet } from './payment-details-sheet'
@@ -26,7 +28,7 @@ import type { PaymentRecord } from '../types'
 
 const helper = createColumnHelper<DashboardFeatures, PaymentRecord>()
 
-function buildColumns(onView: (row: PaymentRecord) => void): ReturnType<typeof helper.columns> {
+function buildColumns(onView: (row: PaymentRecord) => void, currency: CurrencyCode): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor('reference', {
       id: 'reference',
@@ -97,7 +99,7 @@ function buildColumns(onView: (row: PaymentRecord) => void): ReturnType<typeof h
       ),
       sortFn: 'text'
     }),
-    helper.accessor('amount', {
+    helper.accessor('amountMinor', {
       id: 'amount',
       header: ({ column }) => (
         <Button
@@ -111,7 +113,7 @@ function buildColumns(onView: (row: PaymentRecord) => void): ReturnType<typeof h
       ),
       cell: ({ row }) => (
         <span className="block w-full text-right font-mono text-sm font-semibold tabular-nums">
-          {formatMoney(row.original.amount)}
+          {formatMinor(row.original.amountMinor, currency)}
         </span>
       ),
       sortFn: 'basic'
@@ -163,12 +165,13 @@ export function CollectionsTable({
 }): React.JSX.Element {
   const [selected, setSelected] = useState<PaymentRecord | null>(null)
   const [open, setOpen] = useState(false)
+  const currency = useCurrency()
 
   const handleView = useCallback((row: PaymentRecord) => {
     setSelected(row)
     setOpen(true)
   }, [])
-  const columns = useMemo(() => buildColumns(handleView), [handleView])
+  const columns = useMemo(() => buildColumns(handleView, currency), [handleView, currency])
 
   const exportData = useMemo(
     () =>
@@ -181,7 +184,7 @@ export function CollectionsTable({
         allocatedTo: r.allocations.length > 0
           ? r.allocations.map((a) => a.invoiceNo).join(', ')
           : 'On account',
-        amount: r.amount,
+        amountMinor: r.amountMinor,
         receivedBy: r.receivedBy
       })),
     [payments]

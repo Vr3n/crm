@@ -1,7 +1,9 @@
 import { CalendarClock, CreditCard, IndianRupee, Receipt } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { effectiveStatus } from '../../build'
-import { formatMoney, formatShortDate } from '../../format'
+import { formatShortDate } from '../../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Customer } from '../../types'
 
 /**
@@ -20,12 +22,13 @@ export function QuickStatsCard({
   className?: string
 }): React.JSX.Element {
   const invoices = customer.invoices ?? []
+  const currency = useCurrency()
 
   const outstanding = invoices
     .filter((inv) => inv.status !== 'VOID' && inv.status !== 'DRAFT')
-    .reduce((s, inv) => s + inv.outstanding, 0)
+    .reduce((s, inv) => s + inv.outstandingMinor, 0)
 
-  const totalPaid = invoices.reduce((s, inv) => s + inv.paidAmount, 0)
+  const totalPaid = invoices.reduce((s, inv) => s + inv.paidMinor, 0)
 
   const activeMemberships = customer.memberships.filter(
     (m) => effectiveStatus(m, now) === 'ACTIVE'
@@ -73,7 +76,7 @@ export function QuickStatsCard({
                   : 'text-emerald-700 dark:text-emerald-400'
               )}
             >
-              {formatMoney(outstanding)}
+              {formatMinor(outstanding, currency)}
             </p>
           </div>
         </div>
@@ -124,7 +127,7 @@ export function QuickStatsCard({
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground">Total paid</p>
             <p className="font-mono text-sm font-semibold tabular-nums">
-              {formatMoney(totalPaid)}
+              {formatMinor(totalPaid, currency)}
             </p>
           </div>
         </div>

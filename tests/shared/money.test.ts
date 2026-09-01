@@ -4,6 +4,8 @@ import {
   parseToMinor,
   exponentFor,
   formatMinor,
+  percentToBps,
+  formatRate
 } from '../../src/shared/contracts/money'
 
 describe('minorToMajor', () => {
@@ -141,8 +143,52 @@ describe('exponentFor', () => {
     expect(exponentFor('KWD')).toBe(3)
   })
 
+  it('returns 2 for AED', () => {
+    expect(exponentFor('AED')).toBe(2)
+  })
+
+  it('returns 2 for SGD', () => {
+    expect(exponentFor('SGD')).toBe(2)
+  })
+
   it('throws for unknown code XXX', () => {
     expect(() => exponentFor('XXX')).toThrow('Unknown currency: XXX')
+  })
+})
+
+describe('percentToBps / formatRate', () => {
+  it('converts 18.5% → 1850 bps', () => {
+    expect(percentToBps(18.5)).toBe(1850)
+  })
+
+  it('converts 18% → 1800 bps', () => {
+    expect(percentToBps(18)).toBe(1800)
+  })
+
+  it('formats 1850 bps → "18.5%"', () => {
+    expect(formatRate(1850)).toBe('18.5%')
+  })
+
+  it('formats 1800 bps → "18%"', () => {
+    expect(formatRate(1800)).toBe('18%')
+  })
+})
+
+describe('AED / SGD round-trip', () => {
+  it('parses "100.50" AED → 10050', () => {
+    expect(parseToMinor('100.50', 'AED')).toBe(10050)
+  })
+
+  it('parses "100.50" SGD → 10050', () => {
+    expect(parseToMinor('100.50', 'SGD')).toBe(10050)
+  })
+
+  it('AED: minorToMajor(10050) === "100.50"', () => {
+    expect(minorToMajor(10050, 'AED')).toBe('100.50')
+  })
+
+  it('SGD: minorToMajor(10050) === "100.50"', () => {
+    expect(minorToMajor(10050, 'SGD')).toBe('100.50')
   })
 })
 

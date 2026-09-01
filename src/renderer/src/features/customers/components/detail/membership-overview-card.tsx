@@ -1,7 +1,9 @@
 import { CreditCard, Receipt } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { effectiveStatus } from '../../build'
-import { formatMoney, formatShortDate } from '../../format'
+import { formatShortDate } from '../../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Membership } from '../../types'
 import { MembershipStatusBadge } from '../status-badge'
 
@@ -27,12 +29,13 @@ export function MembershipOverviewCard({
   className?: string
 }): React.JSX.Element {
   const m = membership
+  const currency = useCurrency()
   const eff = effectiveStatus(m, now)
   const startMs = new Date(m.startDate).getTime()
   const endMs = new Date(m.endDate).getTime()
   const elapsed = Math.max(0, Math.min(1, (now - startMs) / Math.max(1, endMs - startMs)))
   const daysLeft = Math.max(0, Math.ceil((endMs - now) / 86_400_000))
-  const paid = m.price - m.discount
+  const paid = m.priceMinor - m.discountMinor
   const openFreezes = m.freezes.filter(
     (f) => new Date(f.startDate).getTime() <= now && new Date(f.endDate).getTime() > now
   )
@@ -70,19 +73,19 @@ export function MembershipOverviewCard({
       <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t pt-3">
         <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           <span>
-            Base <span className="font-mono tabular-nums text-foreground">{formatMoney(m.price)}</span>
+            Base <span className="font-mono tabular-nums text-foreground">{formatMinor(m.priceMinor, currency)}</span>
           </span>
           <span>
             Discount{' '}
             <span className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
-              −{formatMoney(m.discount)}
+              −{formatMinor(m.discountMinor, currency)}
             </span>
           </span>
-          {m.registrationFee > 0 ? (
+          {m.registrationFeeMinor > 0 ? (
             <span>
               Registration{' '}
               <span className="font-mono tabular-nums text-foreground">
-                +{formatMoney(m.registrationFee)}
+                +{formatMinor(m.registrationFeeMinor, currency)}
               </span>
             </span>
           ) : null}
@@ -94,7 +97,7 @@ export function MembershipOverviewCard({
               hero ? 'text-2xl' : 'text-xl'
             )}
           >
-            {formatMoney(paid)}
+            {formatMinor(paid, currency)}
           </p>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Final price</p>
         </div>

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatMinor,
-  formatMoneyExact,
-  rupeesToMinor,
+  parseToMinor,
   sanitizeMoneyInput
 } from '../../src/renderer/src/lib/money'
 
@@ -10,36 +9,36 @@ import {
  * Money presentation/parse rules shared by every capture form (Module 04 §34):
  * staff type decimal rupees; the domain stores integer paise.
  */
-describe('rupeesToMinor', () => {
+describe('parseToMinor', () => {
   it('converts whole rupees to paise', () => {
-    expect(rupeesToMinor('19200')).toBe(1_920_000)
+    expect(parseToMinor('19200', 'INR')).toBe(1_920_000)
   })
 
   it('rounds half-even excess fractional digits', () => {
-    expect(rupeesToMinor('19.999')).toBe(2_000) // 19.999 → 20.00
-    expect(rupeesToMinor('19200.5')).toBe(1_920_050)
-    expect(rupeesToMinor('19200.05')).toBe(1_920_005)
+    expect(parseToMinor('19.999', 'INR')).toBe(2_000) // 19.999 → 20.00
+    expect(parseToMinor('19200.5', 'INR')).toBe(1_920_050)
+    expect(parseToMinor('19200.05', 'INR')).toBe(1_920_005)
   })
 
   it('accepts Indian-style grouping separators and currency glyphs', () => {
-    expect(rupeesToMinor('₹19,200.50')).toBe(1_920_050)
-    expect(rupeesToMinor(' 1200 ')).toBe(120_000)
+    expect(parseToMinor('₹19,200.50', 'INR')).toBe(1_920_050)
+    expect(parseToMinor(' 1200 ', 'INR')).toBe(120_000)
   })
 
   it('rejects non-numeric and negative input', () => {
-    expect(rupeesToMinor('')).toBeUndefined()
-    expect(rupeesToMinor('abc')).toBeUndefined()
-    expect(rupeesToMinor('-5')).toBeUndefined()
-    expect(rupeesToMinor('1.2.3')).toBeUndefined()
-    expect(rupeesToMinor('12,34.5.6')).toBeUndefined()
+    expect(parseToMinor('', 'INR')).toBeUndefined()
+    expect(parseToMinor('abc', 'INR')).toBeUndefined()
+    expect(parseToMinor('-5', 'INR')).toBeUndefined()
+    expect(parseToMinor('1.2.3', 'INR')).toBeUndefined()
+    expect(parseToMinor('12,34.5.6', 'INR')).toBeUndefined()
   })
 })
 
-describe('formatMinor / formatMoneyExact', () => {
+describe('formatMinor', () => {
   it('formats stored paise back to rupees with up to 2 decimals', () => {
-    expect(formatMinor(1_920_000)).toBe(formatMoneyExact(19200))
-    expect(formatMoneyExact(19200.5)).toMatch(/19,200\.5/)
-    expect(formatMoneyExact(0)).toMatch(/0/)
+    expect(formatMinor(1_920_000, 'INR')).toMatch(/19,200/)
+    expect(formatMinor(1_920_050, 'INR')).toMatch(/19,200\.5/)
+    expect(formatMinor(0, 'INR')).toMatch(/0/)
   })
 })
 
@@ -81,7 +80,7 @@ describe('sanitizeMoneyInput', () => {
     expect(sanitizeMoneyInput('1.2345', 0)).toBe('1.')
   })
 
-  it('produces a value that rupeesToMinor accepts for decimal input', () => {
-    expect(rupeesToMinor(sanitizeMoneyInput('1000.456'))).toBe(100_045) // 1000.45
+  it('produces a value that parseToMinor accepts for decimal input', () => {
+    expect(parseToMinor(sanitizeMoneyInput('1000.456'), 'INR')).toBe(100_045) // 1000.45
   })
 })

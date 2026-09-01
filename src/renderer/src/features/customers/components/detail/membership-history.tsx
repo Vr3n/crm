@@ -1,10 +1,13 @@
 import { History, Snowflake } from 'lucide-react'
 import { effectiveStatus } from '../../build'
-import { formatMoney, formatShortDate } from '../../format'
+import { formatShortDate } from '../../format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Customer, Membership } from '../../types'
 import { MembershipStatusBadge } from '../status-badge'
 
 function FreezeRows({ m }: { m: Membership }): React.JSX.Element | null {
+  const currency = useCurrency()
   if (m.freezes.length === 0) return null
   return (
     <div className="mt-2 flex flex-col gap-1">
@@ -19,7 +22,7 @@ function FreezeRows({ m }: { m: Membership }): React.JSX.Element | null {
           </span>
           <span>{f.reason}</span>
           <span className="text-muted-foreground/70">
-            · {f.extensionDays}d extension · fee {formatMoney(f.fee)}
+            · {f.extensionDays}d extension · fee {formatMinor(f.feeMinor, currency)}
           </span>
         </div>
       ))}
@@ -40,6 +43,7 @@ export function MembershipHistory({
   now: number
 }): React.JSX.Element {
   const sorted = [...customer.memberships].sort((a, b) => b.startDate.localeCompare(a.startDate))
+  const currency = useCurrency()
 
   return (
     <section className="rounded-lg border bg-card p-5">
@@ -73,7 +77,7 @@ export function MembershipHistory({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-semibold tabular-nums">
-                      {formatMoney(m.price - m.discount)}
+                      {formatMinor(m.priceMinor - m.discountMinor, currency)}
                     </span>
                     <MembershipStatusBadge status={eff} />
                   </div>

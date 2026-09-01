@@ -10,9 +10,9 @@ export interface MembershipRow {
   customerId: string
   customerName: string
   plan: string
-  price: number
-  discount: number
-  registrationFee: number
+  priceMinor: number
+  discountMinor: number
+  registrationFeeMinor: number
   billingFrequency: BillingFrequency
   startDate: string
   endDate: string

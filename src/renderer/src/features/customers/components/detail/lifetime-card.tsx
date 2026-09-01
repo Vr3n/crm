@@ -1,6 +1,7 @@
 import { CircleDashed, UserCheck, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCurrency } from '@/hooks/use-currency'
+import { formatMinor } from '@/lib/money'
 import { formatMonthYear, monthsSince } from '../../format'
 import type { Customer } from '../../types'
 
@@ -23,7 +24,7 @@ export function LifetimeCard({
 }): React.JSX.Element {
   const currency = useCurrency()
   const lifetimeValue = customer.memberships.reduce(
-    (sum, m) => sum + (m.price - m.discount + m.registrationFee),
+    (sum, m) => sum + (m.priceMinor - m.discountMinor + m.registrationFeeMinor),
     0
   )
   const freezeDays = customer.memberships.reduce(
@@ -52,11 +53,7 @@ export function LifetimeCard({
         Tenure & value
       </h3>
       <p className="mt-2 font-mono text-2xl font-bold tracking-tight tabular-nums">
-        {new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency,
-          maximumFractionDigits: 0
-        }).format(lifetimeValue)}
+        {formatMinor(lifetimeValue, currency)}
       </p>
       <p className="text-[11px] text-muted-foreground">
         lifetime value · since {formatMonthYear(customer.joinedAt)}

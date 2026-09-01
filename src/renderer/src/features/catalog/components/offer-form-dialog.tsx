@@ -22,7 +22,8 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { formatMoney, sanitizeMoneyInput } from '@/lib/money'
+import { formatMinor, minorToMajor, parseToMinor, sanitizeMoneyInput, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { DISCOUNT_TYPES, discountTypeLabel, FREE_PERIOD_MONTHS } from '../constants'
 import { computeDiscountLine, validateOfferInput } from '../pricing'
 import { codeFromName } from '../mappers'
@@ -42,6 +43,20 @@ const VALUE_PLACEHOLDER: Record<DiscountType, string> = {
   FIXED_AMOUNT: 'e.g. 500',
   OVERRIDE_PRICE: 'e.g. 17500',
   FREE_PERIOD: 'e.g. 1'
+}
+
+/** Render an offer's stored `value` as an editable major-unit string. */
+function valueFromMinor(discountType: DiscountType, value: number, currency: CurrencyCode): string {
+  if (discountType === 'PERCENTAGE' || discountType === 'FREE_PERIOD') return String(value)
+  return minorToMajor(value, currency)
+}
+
+/** Parse the editable value into minor (or whole for percent/months). */
+function valueToMinor(discountType: DiscountType, value: string, currency: CurrencyCode): number {
+  const n = Number(value)
+  if (Number.isNaN(n)) return 0
+  if (discountType === 'PERCENTAGE' || discountType === 'FREE_PERIOD') return Math.round(n)
+  return parseToMinor(value, currency) ?? 0
 }
 
 /**
@@ -65,12 +80,13 @@ export function OfferFormDialog({
   const isEdit = offer !== null
   const create = useCreateOffer()
   const update = useUpdateOffer()
+  const currency = useCurrency()
 
   const [name, setName] = useState(offer?.name ?? '')
   const [description, setDescription] = useState(offer?.description ?? '')
   const [discountType, setDiscountType] = useState<DiscountType>(offer?.discountType ?? 'PERCENTAGE')
-  const [value, setValue] = useState(offer ? String(offer.value) : '')
-  const [minPurchase, setMinPurchase] = useState(offer ? String(offer.minPurchase) : '0')
+  const [value, setValue] = useState(offer ? valueFromMinor(offer.discountType, offer.value, currency) : '')
+  const [minPurchase, setMinPurchase] = useState(offer ? minorToMajor(offer.minPurchaseMinor, currency) : '0')
   const [maxUses, setMaxUses] = useState(offer ? String(offer.maxUses || '') : '100')
   const [applicablePlanIds, setApplicablePlanIds] = useState<number[]>(offer?.applicablePlanIds ?? [])
   const [startDate, setStartDate] = useState(offer?.startDate ?? '')
@@ -83,35 +99,35 @@ export function OfferFormDialog({
       validateOfferInput({
         name,
         discountType,
-        value: Number(value),
-        minPurchase: Number(minPurchase),
+        value: valueToMinor(discountType, value, currency),
+        minPurchase: parseToMinor(minPurchase, currency) ?? 0,
         maxUses: Number(maxUses || 0),
         startDate,
         endDate: endDate || null
       }),
-    [name, discountType, value, minPurchase, maxUses, startDate, endDate]
+    [name, discountType, value, minPurchase, maxUses, startDate, endDate, currency]
   )
 
   const canSubmit = error === null
 
-  const minPurchaseValue = Number(minPurchase)
+  const minPurchaseMinor = parseToMinor(minPurchase, currency) ?? 0
 
   const qualifyingPlans = useMemo(
-    () => plans.filter((p) => p.basePrice >= minPurchaseValue),
-    [plans, minPurchaseValue]
+    () => plans.filter((p) => p.basePriceMinor >= minPurchaseMinor),
+    [plans, minPurchaseMinor]
   )
 
   // Auto-deselect plans that fall below the minimum purchase threshold.
   useEffect(() => {
-    if (minPurchaseValue > 0) {
+    if (minPurchaseMinor > 0) {
       setApplicablePlanIds((current) =>
         current.filter((id) => {
           const plan = plans.find((p) => p.id === id)
-          return plan && plan.basePrice >= minPurchaseValue
+          return plan && plan.basePriceMinor >= minPurchaseMinor
         })
       )
     }
-  }, [minPurchaseValue, plans])
+  }, [minPurchaseMinor, plans])
 
   function togglePlan(planId: number): void {
     setApplicablePlanIds((current) =>
@@ -136,9 +152,9 @@ export function OfferFormDialog({
       name: name.trim(),
       description: description.trim(),
       discountType,
-      value: Number(value),
+      value: valueToMinor(discountType, value, currency),
       applicablePlanIds,
-      minPurchase: Number(minPurchase),
+      minPurchaseMinor: parseToMinor(minPurchase, currency) ?? 0,
       maxUses: Number(maxUses || 0),
       startDate,
       endDate: endDate || null,
@@ -306,7 +322,7 @@ export function OfferFormDialog({
                         <Checkbox checked={checked} onCheckedChange={() => togglePlan(plan.id)} />
                         <span className="min-w-0 flex-1 truncate text-sm">{plan.name}</span>
                         <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                          {formatMoney(plan.basePrice)}
+                          {formatMinor(plan.basePriceMinor, currency)}
                         </span>
                       </label>
                     )
@@ -368,9 +384,9 @@ export function OfferFormDialog({
                       code: codeFromName(name),
                       description,
                       discountType,
-                      value: Number(value),
+                      value: valueToMinor(discountType, value, currency),
                       applicablePlanIds,
-                      minPurchase: Number(minPurchase),
+                      minPurchaseMinor: parseToMinor(minPurchase, currency) ?? 0,
                       maxUses: Number(maxUses || 0),
                       usedCount: 0,
                       startDate,
@@ -379,7 +395,8 @@ export function OfferFormDialog({
                       eligibility,
                       createdAt: ''
                     },
-                    plan.basePrice
+                    plan.basePriceMinor,
+                    currency
                   )
                   return (
                     <div
@@ -390,7 +407,7 @@ export function OfferFormDialog({
                       <span className="flex shrink-0 items-center gap-1.5 font-mono tabular-nums">
                         {!freePeriod ? (
                           <span className="text-muted-foreground line-through">
-                            {formatMoney(line.original)}
+                            {formatMinor(line.original, currency)}
                           </span>
                         ) : null}
                         <span
@@ -399,7 +416,7 @@ export function OfferFormDialog({
                             freePeriod ? 'text-foreground' : 'text-success'
                           )}
                         >
-                          {formatMoney(line.final)}
+                          {formatMinor(line.final, currency)}
                         </span>
                       </span>
                     </div>

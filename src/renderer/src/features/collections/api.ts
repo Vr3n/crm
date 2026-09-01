@@ -1,20 +1,19 @@
 import type { PaymentRecord, PaymentAllocation } from './types'
 import type { PaymentRecordOutput } from '../../../../shared/contracts/collections'
-import { minorToMajor } from '../../../../shared/contracts/money'
 
 function mapPaymentRecord(row: PaymentRecordOutput): PaymentRecord {
   return {
     id: row.id,
     reference: row.reference,
     customer: row.customer,
-    amount: Number(minorToMajor(row.amountMinor, 'INR')),
+    amountMinor: row.amountMinor,
     method: row.method as PaymentRecord['method'],
     receivedAt: row.receivedAt,
     receivedBy: row.receivedBy,
     allocations: row.allocations.map(
       (a): PaymentAllocation => ({
         invoiceNo: a.invoiceNo,
-        amount: Number(minorToMajor(a.amountMinor, 'INR'))
+        amountMinor: a.amountMinor
       })
     ),
     notes: row.notes

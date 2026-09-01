@@ -27,7 +27,7 @@ export interface CustomerRef {
 /** Which invoice(s) a payment was allocated against (empty = on account). */
 export interface PaymentAllocation {
   invoiceNo: string
-  amount: number
+  amountMinor: number
 }
 
 /** A single payment — money that arrived, never edited after the fact. */
@@ -35,7 +35,7 @@ export interface PaymentRecord {
   id: string
   reference: string
   customer: CustomerRef
-  amount: number
+  amountMinor: number
   method: PaymentMethod
   receivedAt: string
   receivedBy: string
@@ -46,14 +46,14 @@ export interface PaymentRecord {
 /** Method subtotal within a day's collection. */
 export interface MethodTotal {
   method: PaymentMethod
-  total: number
+  totalMinor: number
   count: number
 }
 
 /** Derived, per-day summary of the collection report. */
 export interface DayCollection {
   date: string
-  total: number
+  totalMinor: number
   paymentCount: number
   recordedBy: string[]
   byMethod: MethodTotal[]

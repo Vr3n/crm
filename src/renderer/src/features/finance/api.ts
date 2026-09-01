@@ -1,6 +1,5 @@
 import type { Payment, Refund, Credit, FinanceInvoice, InvoiceStatus } from './types'
 import type { PersonRef } from '@/features/dashboard/types'
-import { minorToMajor } from '../../../../shared/contracts/money'
 
 interface RecordPaymentInput {
   customerId: string
@@ -9,7 +8,7 @@ interface RecordPaymentInput {
   paymentMethod: string
   reference?: string
   notes?: string
-  allocations?: { invoiceId: string; amount: number }[]
+  allocations?: { invoiceId: string; amountMinor: number }[]
 }
 
 interface IssueRefundInput {
@@ -27,7 +26,8 @@ interface IssueCreditInput {
 
 /**
  * Thin IPC facade for the finance surface. Every method delegates to the
- * preload bridge (`window.api.finance.*`).
+ * preload bridge (`window.api.finance.*`). Money fields stay integer minor
+ * units end-to-end; formatting happens only in components via `formatMinor`.
  */
 export const api = {
   payments: (): Promise<Payment[]> =>
@@ -49,8 +49,8 @@ export const api = {
           customer: { id: customerId, name: row.customerName, phone: row.customerPhone },
           line: row.line,
           issuedAt: row.issuedAt,
-          total: Number(minorToMajor(row.totalMinor, 'INR')),
-          paid: Number(minorToMajor(row.paidMinor, 'INR')),
+          totalMinor: row.totalMinor,
+          paidMinor: row.paidMinor,
           status: row.status as InvoiceStatus
         }))
       ),
@@ -75,7 +75,7 @@ export const api = {
         await window.api.finance.allocatePayment({
           paymentId: paymentRow.id,
           invoiceId: parseInt(alloc.invoiceId, 10),
-          amountMinor: alloc.amount
+          amountMinor: alloc.amountMinor
         })
       }
     }
@@ -86,7 +86,7 @@ export const api = {
       paymentNo: `PAY-${paymentRow.id}`,
       customer: { id: input.customerId, name: '' },
       paymentDate: input.paymentDate,
-      amount: Number(minorToMajor(input.amountMinor, 'INR')),
+      amountMinor: input.amountMinor,
       method: input.paymentMethod as Payment['method'],
       reference: input.reference,
       notes: input.notes,
@@ -94,7 +94,7 @@ export const api = {
       allocations: (input.allocations ?? []).map((a) => ({
         invoiceId: a.invoiceId,
         invoiceNo: '',
-        amount: Number(minorToMajor(a.amount, 'INR'))
+        amountMinor: a.amountMinor
       })),
       refundIds: []
     } as Payment

@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-
+import { formatMinor, formatRate, parseToMinor, sanitizeMoneyInput } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Plan } from '@/features/catalog/types'
 
 const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER'] as const
@@ -47,6 +48,7 @@ export function OrderSummary({
   isDirty?: boolean
   leadName?: string | null
 }): React.JSX.Element {
+  const currency = useCurrency()
   const amountDue = finalPrice !== null && paidAmount !== null ? Math.max(0, finalPrice - paidAmount) : null
   const exceedsMax = maxPayment !== null && paidAmount !== null && paidAmount > maxPayment
 
@@ -57,9 +59,9 @@ export function OrderSummary({
         ? `${discountValue}%`
         : discountType === 'FREE_PERIOD'
           ? `${discountValue} months`
-          : `₹${Number(discountValue.replace(/,/g, '')).toLocaleString('en-IN')}`
+          : formatMinor(parseToMinor(discountValue, currency) ?? 0, currency)
       : '—'
-  const discountAmountLabel = discountAmount > 0 ? `-${formatRupees(discountAmount)}` : '—'
+  const discountAmountLabel = discountAmount > 0 ? `-${formatMinor(discountAmount, currency)}` : '—'
 
   return (
     <Card className="gap-0 rounded-2xl border bg-card py-0 shadow-sm">
@@ -91,7 +93,7 @@ export function OrderSummary({
 
         {/* Totals */}
         <div className="flex flex-col gap-2 px-5 py-3 text-sm">
-          <Row label="Base Price" value={basePrice !== null ? formatRupees(basePrice) : '—'} />
+          <Row label="Base Price" value={basePrice !== null ? formatMinor(basePrice, currency) : '—'} />
           <Row label="Discount type" value={discountTypeLabel} muted />
           <Row label="Discount value" value={discountValueLabel} muted />
           <Row
@@ -100,8 +102,8 @@ export function OrderSummary({
             muted
             valueClass={discountAmount > 0 ? 'text-success font-medium' : undefined}
           />
-          <Row label="Tax" value={plan ? `${plan.taxRate}%` : '—'} muted dim />
-          <Row label="Registration fee" value={plan && plan.registrationFee > 0 ? formatRupees(plan.registrationFee) : '—'} muted dim />
+          <Row label="Tax" value={plan ? formatRate(plan.taxRateBps) : '—'} muted dim />
+          <Row label="Registration fee" value={plan && plan.registrationFeeMinor > 0 ? formatMinor(plan.registrationFeeMinor, currency) : '—'} muted dim />
         </div>
 
         <Separator />
@@ -110,7 +112,7 @@ export function OrderSummary({
         <div className="flex items-center justify-between bg-emerald-50 px-5 py-3 dark:bg-emerald-950/20">
           <span className="text-sm font-semibold tracking-tight text-emerald-700 dark:text-emerald-300">Final Price</span>
           <span aria-live="polite" className="font-mono text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
-            {finalPrice !== null ? formatRupees(finalPrice) : '—'}
+            {finalPrice !== null ? formatMinor(finalPrice, currency) : '—'}
           </span>
         </div>
 
@@ -121,7 +123,7 @@ export function OrderSummary({
           <div className="grid gap-1.5">
             <Label htmlFor="summary-paid" className="text-xs">
               Paid Amount <span className="text-destructive">*</span>
-              {maxPayment !== null ? <span className="font-normal text-muted-foreground"> · max {formatRupees(maxPayment)}</span> : null}
+              {maxPayment !== null ? <span className="font-normal text-muted-foreground"> · max {formatMinor(maxPayment, currency)}</span> : null}
             </Label>
             <InputGroup>
               <InputGroupAddon align="start" className="pointer-events-none">
@@ -133,16 +135,7 @@ export function OrderSummary({
                 inputMode="decimal"
                 placeholder="e.g. 4000"
                 value={paidInput}
-                onChange={(e) => {
-                  let v = e.target.value.replace(/[^0-9.,]/g, '')
-                  const firstDot = v.indexOf('.')
-                  if (firstDot !== -1) {
-                    const before = v.slice(0, firstDot + 1)
-                    const after = v.slice(firstDot + 1).replace(/\./g, '').slice(0, 2)
-                    v = before + after
-                  }
-                  onPaidChange?.(v)
-                }}
+                onChange={(e) => onPaidChange?.(sanitizeMoneyInput(e.target.value))}
                 className="pl-9 font-mono tabular-nums"
               />
             </InputGroup>
@@ -177,12 +170,12 @@ export function OrderSummary({
             exceedsMax ? (
               <div className="flex items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-center text-base font-bold text-destructive shadow-sm">
                 <AlertCircle className="size-5 shrink-0" />
-                Exceeds max {formatRupees(maxPayment!)}
+                Exceeds max {formatMinor(maxPayment!, currency)}
               </div>
             ) : amountDue !== null && amountDue > 0 ? (
               <div className="flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-center text-base font-bold text-amber-700 shadow-sm dark:border-amber-900/30 dark:bg-amber-950/30 dark:text-amber-400">
                 <HandCoins className="size-5 shrink-0" />
-                Amount due {formatRupees(amountDue)}
+                Amount due {formatMinor(amountDue, currency)}
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-400">
@@ -204,10 +197,6 @@ export function OrderSummary({
       </CardContent>
     </Card>
   )
-}
-
-function formatRupees(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN')}`
 }
 
 function Row({

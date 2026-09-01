@@ -1,6 +1,4 @@
-/** Module 02 presentational helpers — money and short date ranges. */
-
-export { formatMoney } from '@/lib/money'
+/** Module 02 presentational helpers — short date ranges. */
 
 /** "5 Jan" — the directory default so months stay abbreviated (design guide). */
 export function formatShortDate(iso: string): string {

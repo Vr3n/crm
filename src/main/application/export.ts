@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { logger } from '../lib/logger'
+import { exponentFor, type CurrencyCode } from '../../shared/contracts/money'
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
@@ -22,6 +23,7 @@ export interface ExportTableInput {
   filename: string
   columns: ExportColumn[]
   rows: Record<string, unknown>[]
+  currency: CurrencyCode
 }
 
 /* -------------------------------------------------------------------------- */
@@ -46,7 +48,14 @@ const DATA_FONT: Partial<ExcelJS.Font> = {
   name: 'Calibri'
 }
 
-const MONEY_FORMAT = '₹#,##0.00'
+const CURRENCY_FORMATS: Record<CurrencyCode, string> = {
+  INR: '₹#,##0.00', USD: '$#,##0.00', EUR: '€#,##0.00', GBP: '£#,##0.00',
+  JPY: '¥#,##0', KRW: '₩#,##0', VND: '₫#,##0', CLP: '$#,##0',
+  ISK: 'kr#,##0', KWD: 'د.ك#,##0.000', BHD: 'د.ب#,##0.000',
+  OMR: 'ر.ع#,##0.000', JOD: 'د.ا#,##0.000', TND: 'د.ت#,##0.000',
+  AED: 'د.إ#,##0.00', SGD: 'S$#,##0.00'
+}
+
 const DATE_FORMAT = 'dd MMM yyyy'
 const DATETIME_FORMAT = 'dd MMM yyyy, hh:mm AM/PM'
 const NUMBER_FORMAT = '#,##0.##'
@@ -85,7 +94,7 @@ function sanitizeFilename(name: string): string {
  * generation — no database access, no domain logic.
  */
 export async function exportTableToExcel(input: ExportTableInput): Promise<string> {
-  const { sheetName, filename, columns, rows } = input
+  const { sheetName, filename, columns, rows, currency } = input
 
   const workbook = new ExcelJS.Workbook()
   workbook.creator = 'CrownCRM'
@@ -114,7 +123,12 @@ export async function exportTableToExcel(input: ExportTableInput): Promise<strin
     const values = columns.map((col) => {
       const raw = row[col.key]
       if (raw == null || raw === '') return null
-      if (col.format === 'money' || col.format === 'number') {
+      if (col.format === 'money') {
+        const minor = typeof raw === 'number' ? raw : parseFloat(String(raw))
+        if (Number.isNaN(minor)) return null
+        return minor / 10 ** exponentFor(currency)
+      }
+      if (col.format === 'number') {
         const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
         return isNaN(num) ? null : num
       }
@@ -129,7 +143,7 @@ export async function exportTableToExcel(input: ExportTableInput): Promise<strin
       cell.alignment = { vertical: 'middle', horizontal: 'left' }
 
       if (col.format === 'money') {
-        cell.numFmt = MONEY_FORMAT
+        cell.numFmt = CURRENCY_FORMATS[currency]
       } else if (col.format === 'date') {
         cell.numFmt = DATE_FORMAT
       } else if (col.format === 'datetime') {

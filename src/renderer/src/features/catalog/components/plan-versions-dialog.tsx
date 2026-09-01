@@ -6,7 +6,8 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { formatMoney } from '@/lib/money'
+import { formatMinor, formatRate } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { usePlanVersions } from '../queries'
 import type { Plan } from '../types'
 import { formatDate } from '../format'
@@ -26,6 +27,7 @@ export function PlanVersionsDialog({
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
   const { data: versions = [], isLoading } = usePlanVersions(plan?.id ?? null)
+  const currency = useCurrency()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,10 +62,10 @@ export function PlanVersionsDialog({
                 {versions.map((v) => (
                   <tr key={v.id} className="odd:bg-muted/30">
                     <td className="px-4 py-2.5 font-mono font-medium tabular-nums">
-                      {formatMoney(v.basePrice)}
+                      {formatMinor(v.basePriceMinor, currency)}
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground tabular-nums">
-                      {v.taxRate > 0 ? `${v.taxRate}%` : '—'}
+                      {v.taxRateBps > 0 ? formatRate(v.taxRateBps) : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
                       {formatDate(v.effectiveFrom)}

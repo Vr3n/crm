@@ -18,7 +18,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { EmptyState } from '@/components/empty-state'
 import { cn } from '@/lib/utils'
 import { formatDate, formatDateTime, initials } from '@/lib/format'
-import { formatMinor } from '@/lib/money'
+import { formatMinor, formatRate } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { PAYMENT_METHOD_META, type PaymentMethod } from '@/lib/payment-methods'
 import { can, useSession } from '@/context/session-context'
 import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
@@ -105,6 +106,7 @@ function StatTile({
 /* -------------------------------------------------------------------------- */
 
 function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
+  const currency = useCurrency()
   return (
     <>
       <div className="overflow-hidden rounded-md border border-border">
@@ -123,29 +125,29 @@ function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
               <p className="truncate text-sm font-medium">{l.description}</p>
               {l.discountMinor > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Discount {formatMinor(l.discountMinor)}
+                  Discount {formatMinor(l.discountMinor, currency)}
                 </p>
               ) : null}
             </div>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
               {l.quantity}
             </span>
-            <span className="text-right text-xs tabular-nums">{formatMinor(l.unitPriceMinor)}</span>
+            <span className="text-right text-xs tabular-nums">{formatMinor(l.unitPriceMinor, currency)}</span>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
-              {l.taxRateBps / 100}%
+              {formatRate(l.taxRateBps)}
             </span>
           </div>
         ))}
       </div>
       <div className="flex flex-col items-end gap-1 pt-2">
         <span className="text-xs text-muted-foreground">
-          Subtotal <span className="font-mono tabular-nums">{formatMinor(invoice.subtotalMinor)}</span>
+          Subtotal <span className="font-mono tabular-nums">{formatMinor(invoice.subtotalMinor, currency)}</span>
         </span>
         <span className="text-xs text-muted-foreground">
-          Tax (GST) <span className="font-mono tabular-nums">{formatMinor(invoice.taxTotalMinor)}</span>
+          Tax (GST) <span className="font-mono tabular-nums">{formatMinor(invoice.taxTotalMinor, currency)}</span>
         </span>
         <span className="text-sm font-semibold">
-          Total <span className="font-mono tabular-nums">{formatMinor(invoice.totalMinor)}</span>
+          Total <span className="font-mono tabular-nums">{formatMinor(invoice.totalMinor, currency)}</span>
         </span>
       </div>
     </>
@@ -157,6 +159,7 @@ function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
 /* -------------------------------------------------------------------------- */
 
 function AllocationRows({ invoice }: { invoice: Invoice }): React.JSX.Element {
+  const currency = useCurrency()
   if (invoice.allocations.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -184,7 +187,7 @@ function AllocationRows({ invoice }: { invoice: Invoice }): React.JSX.Element {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-sm font-semibold tabular-nums">{formatMinor(a.amountMinor)}</span>
+              <span className="text-sm font-semibold tabular-nums">{formatMinor(a.amountMinor, currency)}</span>
               <span className="text-xs text-muted-foreground">{formatDateTime(a.receivedAt)}</span>
             </div>
           </div>
@@ -265,6 +268,7 @@ export function InvoiceDetailPage(): React.JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const session = useSession()
+  const currency = useCurrency()
   const { data: invoice, isLoading, isError } = useInvoice(id)
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
@@ -444,19 +448,19 @@ export function InvoiceDetailPage(): React.JSX.Element {
       <div className="flex gap-2.5">
         <StatTile
           label="Total"
-          value={formatMinor(invoice.totalMinor)}
+          value={formatMinor(invoice.totalMinor, currency)}
           tone={
             invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE' ? 'muted' : 'accent'
           }
         />
         <StatTile
           label="Paid"
-          value={formatMinor(invoice.paidMinor)}
+          value={formatMinor(invoice.paidMinor, currency)}
           tone={invoice.paidMinor > 0 ? 'accent' : 'muted'}
         />
         <StatTile
           label="Outstanding"
-          value={formatMinor(invoice.outstandingMinor)}
+          value={formatMinor(invoice.outstandingMinor, currency)}
           tone={invoice.outstandingMinor > 0 ? 'danger' : 'muted'}
         />
       </div>

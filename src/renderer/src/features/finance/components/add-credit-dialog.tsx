@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useIssueCredit } from '../queries'
 import { parseToMinor, sanitizeMoneyInput } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { CustomerPicker } from './customer-picker'
 import type { PersonRef } from '@/features/dashboard/types'
 
@@ -32,6 +33,7 @@ export function AddCreditDialog({
   onOpenChange: (open: boolean) => void
 }): React.JSX.Element {
   const issue = useIssueCredit()
+  const currency = useCurrency()
   const [picked, setPicked] = useState<PersonRef | null>(null)
 
   const form = useForm({
@@ -46,7 +48,7 @@ export function AddCreditDialog({
       try {
         await issue.mutateAsync({
           customerId: picked.id,
-          amountMinor: parseToMinor(String(value.amount), 'INR') ?? 0,
+          amountMinor: parseToMinor(String(value.amount), currency) ?? 0,
           reason: value.reason.trim()
         })
         setPicked(null)
@@ -123,7 +125,7 @@ export function AddCreditDialog({
                 {(field) => (
                   <div className="grid gap-1.5">
                     <Label htmlFor={`cr-${field.name}`}>
-                      Amount (₹) <span className="text-destructive">*</span>
+                      Amount <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id={`cr-${field.name}`}

@@ -1,6 +1,7 @@
 import { ChartPie } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatMoney } from '@/features/dashboard/format'
+import { formatMinor } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import { METHOD_ICON } from '../constants'
 import { collectionsByMethod } from '../build'
 import type { Payment } from '../types'
@@ -19,7 +20,8 @@ export function MethodShareCard({
   to?: Date
 }): React.JSX.Element {
   const methods = collectionsByMethod(payments, from, to)
-  const total = methods.reduce((s, m) => s + m.amount, 0)
+  const total = methods.reduce((s, m) => s + m.amountMinor, 0)
+  const currency = useCurrency()
 
   return (
     <Card
@@ -44,8 +46,8 @@ export function MethodShareCard({
                   <div
                     key={m.key}
                     className="flex items-center justify-center bg-primary transition-[flex-basis]"
-                    style={{ flexBasis: `${(m.amount / total) * 100}%` }}
-                    title={`${m.label} — ${formatMoney(m.amount)}`}
+                    style={{ flexBasis: `${(m.amountMinor / total) * 100}%` }}
+                    title={`${m.label} — ${formatMinor(m.amountMinor, currency)}`}
                   >
                     {Icon ? <Icon className="size-2.5 text-primary-foreground" /> : null}
                   </div>
@@ -63,9 +65,9 @@ export function MethodShareCard({
                       </span>
                     ) : null}
                     <span className="min-w-0 flex-1 truncate text-xs font-medium">{m.label}</span>
-                    <span className="font-mono text-xs tabular-nums">{formatMoney(m.amount)}</span>
+                    <span className="font-mono text-xs tabular-nums">{formatMinor(m.amountMinor, currency)}</span>
                     <span className="w-12 text-right font-mono text-xs font-semibold tabular-nums">
-                      {Math.round((m.amount / total) * 100)}%
+                      {Math.round((m.amountMinor / total) * 100)}%
                     </span>
                   </div>
                 )
