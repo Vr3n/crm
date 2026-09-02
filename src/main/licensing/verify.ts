@@ -113,7 +113,12 @@ export function verifyLicense(userDataPath: string): LicenseStatus {
     return { state: 'INVALID', reason: 'BAD_SIGNATURE' }
   }
 
-  const localFingerprint = collectFingerprint()
+  let localFingerprint: DeviceFingerprint
+  try {
+    localFingerprint = collectFingerprint()
+  } catch {
+    return { state: 'INVALID', reason: 'FINGERPRINT_MISMATCH' }
+  }
   if (!meetsThreshold(localFingerprint, license.device_fingerprint)) {
     return { state: 'INVALID', reason: 'FINGERPRINT_MISMATCH' }
   }

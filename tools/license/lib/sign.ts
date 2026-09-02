@@ -1,5 +1,6 @@
 import { createPrivateKey, sign, createHash } from 'node:crypto'
 import { randomUUID } from 'node:crypto'
+import { canonicalPayload } from '../../../src/main/licensing/canonical'
 
 function sha256(value: string): string {
   return createHash('sha256').update(value.trim().toUpperCase()).digest('hex')
@@ -20,25 +21,6 @@ export interface LicenseData {
 
 export interface SignedLicense extends LicenseData {
   signature: string
-}
-
-/**
- * Build the canonical payload (sorted keys, no whitespace) — must match
- * the verifier's canonicalPayload() in src/main/licensing/crypto.ts.
- */
-export function canonicalPayload(data: LicenseData): string {
-  return JSON.stringify(deepSort(data))
-}
-
-function deepSort(obj: unknown): unknown {
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    const sorted: Record<string, unknown> = {}
-    for (const k of Object.keys(obj as Record<string, unknown>).sort()) {
-      sorted[k] = deepSort((obj as Record<string, unknown>)[k])
-    }
-    return sorted
-  }
-  return obj
 }
 
 export function signLicense(data: LicenseData, privateKeyPem: string): SignedLicense {

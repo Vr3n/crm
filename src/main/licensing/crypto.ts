@@ -1,4 +1,7 @@
 import { createPublicKey, verify } from 'node:crypto'
+import { canonicalPayload } from './canonical'
+
+export { canonicalPayload }
 
 /**
  * Ed25519 public key for license signature verification.
@@ -32,29 +35,4 @@ export function verifySignature(payload: string, signatureHex: string): boolean 
   } catch {
     return false
   }
-}
-
-/**
- * Build the canonical string that was signed. The signature covers every
- * field in the license *except* `signature`, serialized with sorted keys
- * and no whitespace — identical output on issuer and verifier.
- *
- * Recursively sorts keys at every nesting level so nested objects like
- * `device_fingerprint` are serialized deterministically.
- */
-export function canonicalPayload(license: Record<string, unknown>): string {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally discard signature
-  const { signature: _, ...rest } = license
-  return JSON.stringify(deepSort(rest))
-}
-
-function deepSort(obj: unknown): unknown {
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    const sorted: Record<string, unknown> = {}
-    for (const k of Object.keys(obj as Record<string, unknown>).sort()) {
-      sorted[k] = deepSort((obj as Record<string, unknown>)[k])
-    }
-    return sorted
-  }
-  return obj
 }
