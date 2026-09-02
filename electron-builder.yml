@@ -1,5 +1,6 @@
 appId: com.electron.app
 productName: app
+afterPack: scripts/after-pack.ts
 directories:
   buildResources: build
 files:
@@ -10,11 +11,9 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-electronFuses:
-  EnableEmbeddedAsarIntegrityValidation: true
-  OnlyLoadAppFromAsar: true
 asarUnpack:
   - 'resources/**'
+npmRebuild: false
 win:
   executableName: app
 nsis:
@@ -41,7 +40,6 @@ linux:
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
-npmRebuild: false
 publish:
   provider: generic
   url: https://example.com/auto-updates

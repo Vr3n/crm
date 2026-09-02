@@ -77,7 +77,7 @@ export const paymentMethodRepo = {
 /* Payments                                                                    */
 /* -------------------------------------------------------------------------- */
 
-interface PaymentRow {
+export interface PaymentRow {
   id: number
   organization_id: number
   customer_id: number

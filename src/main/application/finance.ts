@@ -8,20 +8,17 @@ import {
   allocationRepo,
   refundRepo,
   creditRepo,
-  creditAllocationRepo
+  creditAllocationRepo,
+  type PaymentRow
 } from '../repositories/finance'
-import { PaymentAllocationService } from '../domain/finance'
+import { PaymentAllocationService, type Refund } from '../domain/finance'
 import {
-  PaymentOverAllocatedError,
-  RefundExceedsPaymentError,
-  CreditExceedsBalanceError,
   NotFoundError,
   ValidationError
 } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
-import type { InvoiceStatus } from '../domain/billing'
 import { asc, eq, and, inArray, sql } from 'drizzle-orm'
-import { invoices, paymentAllocations, creditAllocations, invoiceLines, customers, people } from '../db/schema'
+import { invoices, payments, paymentAllocations, creditAllocations, invoiceLines, customers, people } from '../db/schema'
 import { toRupees } from '../../shared/contracts/money'
 
 /**
@@ -42,7 +39,7 @@ function mapPaymentToRow(payment: ReturnType<typeof paymentRepo.getById> extends
   }
 }
 
-function mapRefundToRow(refund: ReturnType<typeof refundRepo.getByPayment> extends infer T ? NonNullable<T>[number] : never) {
+function mapRefundToRow(refund: Refund) {
   return {
     id: refund.id,
     paymentId: refund.paymentId,
@@ -683,7 +680,6 @@ function resolveInvoiceNumbers(
 export function getAllPayments() {
   requirePermission(PERMISSIONS.PAYMENT_VIEW)
   const organizationId = currentOrganizationId()
-  const userId = requireSession().userId
 
   const allPayments = paymentRepo.listAll(organizationId)
   if (allPayments.length === 0) return []
