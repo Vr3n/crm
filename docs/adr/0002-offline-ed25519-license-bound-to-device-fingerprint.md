@@ -39,6 +39,8 @@ tracked against the Organization in the vendor ledger, never by the app (see ADR
 - `MATCH_THRESHOLD = 3` is a hypothesis, not a validated constant — it must be tested
   against real reinstall / BIOS / disk / CPU scenarios before first customer ship, and
   lives as a fixed constant in the native module, not in the license.
+  ([ADR-0005](./0005-match-threshold-is-a-fixed-constant-gated-by-preship-validation.md)
+  records the validation path and pre-ship checklist.)
 - The failure dialog must expose a "copy support info" action so the customer can relay the
   current fingerprint and Organization to the vendor for a Reissue.
 
