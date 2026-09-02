@@ -1,7 +1,8 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import iconWin from '../../resources/icon.ico?asset'
+import iconLinux from '../../resources/icon.linux.png?asset'
 import { openDatabase } from './db/connection'
 import { runMigrations } from './db/migrations'
 import { seedPermissions } from './db/seed'
@@ -27,7 +28,8 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'win32' ? { icon: iconWin } : {}),
+    ...(process.platform === 'linux' ? { icon: iconLinux } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
