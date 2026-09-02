@@ -127,7 +127,12 @@ export const IPC_CHANNELS = {
   IDENTITY_ROLES: 'identity:roles',
   IDENTITY_UPDATE_STAFF: 'identity:updateStaff',
   IDENTITY_UPDATE_ROLE: 'identity:updateRole',
-  IDENTITY_UPDATE_ORGANIZATION: 'identity:updateOrganization'
+  IDENTITY_UPDATE_ORGANIZATION: 'identity:updateOrganization',
+
+  // Licensing
+  LICENSE_STATUS: 'license:status',
+  LICENSE_ACTIVATE: 'license:activate',
+  LICENSE_SUPPORT_INFO: 'license:supportInfo'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

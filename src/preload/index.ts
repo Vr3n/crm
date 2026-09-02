@@ -92,6 +92,11 @@ import type {
   RoleOutput
 } from '../shared/contracts/identity-read'
 import type {
+  LicenseStatus,
+  ActivateLicenseInput,
+  LicenseSupportInfo
+} from '../shared/contracts/license'
+import type {
   AssignLeadInput,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
@@ -360,6 +365,13 @@ const api = {
       call(IPC_CHANNELS.IDENTITY_STAFF),
     roles: (): Promise<RoleOutput[]> =>
       call(IPC_CHANNELS.IDENTITY_ROLES)
+  },
+  license: {
+    status: (): Promise<LicenseStatus> => call(IPC_CHANNELS.LICENSE_STATUS),
+    activate: (input: ActivateLicenseInput): Promise<LicenseStatus> =>
+      call(IPC_CHANNELS.LICENSE_ACTIVATE, input),
+    supportInfo: (): Promise<LicenseSupportInfo> =>
+      call(IPC_CHANNELS.LICENSE_SUPPORT_INFO)
   }
 }
 

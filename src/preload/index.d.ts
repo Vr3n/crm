@@ -123,6 +123,11 @@ import type {
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
+import type {
+  LicenseStatus,
+  ActivateLicenseInput,
+  LicenseSupportInfo
+} from '../shared/contracts/license'
 
 declare global {
   interface Window {
@@ -271,6 +276,11 @@ declare global {
       }
       memberships: {
         sell: (input: SellMembershipInput) => Promise<SellMembershipResult>
+      }
+      license: {
+        status: () => Promise<LicenseStatus>
+        activate: (input: ActivateLicenseInput) => Promise<LicenseStatus>
+        supportInfo: () => Promise<LicenseSupportInfo>
       }
     }
   }
