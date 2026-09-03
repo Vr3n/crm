@@ -340,6 +340,7 @@ export const leadListRowSchema = z.object({
   personName: z.string(),
   phone: z.string(),
   email: z.string().nullable(),
+  photoFilename: z.string().nullable(),
   sourceId: z.number().int().positive(),
   sourceName: z.string().nullable(),
   stageId: z.number().int().positive(),
@@ -377,7 +378,8 @@ export const peopleListSchema = z.array(
     id: z.number().int().positive(),
     fullName: z.string(),
     phone: z.string(),
-    email: z.string().nullable()
+    email: z.string().nullable(),
+    photoFilename: z.string().nullable()
   })
 )
 export type PeopleList = z.infer<typeof peopleListSchema>

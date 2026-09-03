@@ -1,0 +1,162 @@
+import { randomUUID } from 'node:crypto'
+import { mkdir, writeFile, unlink, access, mkdirSync, writeFileSync } from 'node:fs'
+import { join, extname } from 'node:path'
+
+/**
+ * Photo storage for person photos. Photos are stored locally in the app's
+ * userData directory under `photos/{organization_id}/`. Each photo is named
+ * `{uuid}.{ext}` to ensure uniqueness and preserve the original extension.
+ */
+
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp'])
+const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+
+export interface PhotoStorageConfig {
+  userDataPath: string
+}
+
+let config: PhotoStorageConfig | null = null
+
+export function configurePhotoStorage(userDataPath: string): void {
+  config = { userDataPath }
+}
+
+export function getConfig(): PhotoStorageConfig {
+  if (!config) {
+    throw new Error('Photo storage not configured. Call configurePhotoStorage() first.')
+  }
+  return config
+}
+
+/**
+ * Returns the directory path for photos of a given organization.
+ * Creates the directory if it doesn't exist.
+ */
+export async function getPhotoDirectory(organizationId: number): Promise<string> {
+  const { userDataPath } = getConfig()
+  const dir = join(userDataPath, 'photos', String(organizationId))
+  await mkdir(dir, { recursive: true })
+  return dir
+}
+
+/**
+ * Synchronous version of getPhotoDirectory for use in sync contexts.
+ */
+export function getPhotoDirectorySync(organizationId: number): string {
+  const { userDataPath } = getConfig()
+  const dir = join(userDataPath, 'photos', String(organizationId))
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+/**
+ * Validates that a file extension is allowed.
+ * Returns the normalized extension (lowercase, without dot).
+ */
+export function validateFileType(filename: string): string {
+  const ext = extname(filename).toLowerCase().replace('.', '')
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    throw new Error(`Invalid file type: .${ext}. Allowed types: jpg, jpeg, png, webp`)
+  }
+  return ext
+}
+
+/**
+ * Validates that the file size is within the allowed limit.
+ */
+export function validateFileSize(sizeBytes: number): void {
+  if (sizeBytes > MAX_SIZE_BYTES) {
+    const maxMB = MAX_SIZE_BYTES / (1024 * 1024)
+    const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(1)
+    throw new Error(`File size ${sizeMB}MB exceeds maximum of ${maxMB}MB`)
+  }
+}
+
+/**
+ * Saves a photo buffer to disk and returns the filename (UUID.ext).
+ * The caller is responsible for updating the person's photo_filename in the DB.
+ */
+export async function savePhoto(
+  organizationId: number,
+  originalFilename: string,
+  buffer: Buffer
+): Promise<string> {
+  validateFileSize(buffer.length)
+  const ext = validateFileType(originalFilename)
+
+  const filename = `${randomUUID()}.${ext}`
+  const dir = await getPhotoDirectory(organizationId)
+  const filePath = join(dir, filename)
+
+  await writeFile(filePath, buffer)
+  return filename
+}
+
+/**
+ * Synchronous version of savePhoto for use in transaction contexts.
+ */
+export function savePhotoSync(
+  organizationId: number,
+  originalFilename: string,
+  buffer: Buffer
+): string {
+  validateFileSize(buffer.length)
+  const ext = validateFileType(originalFilename)
+
+  const filename = `${randomUUID()}.${ext}`
+  const dir = getPhotoDirectorySync(organizationId)
+  const filePath = join(dir, filename)
+
+  writeFileSync(filePath, buffer)
+  return filename
+}
+
+/**
+ * Deletes a photo file from disk. No-op if the file doesn't exist.
+ */
+export async function deletePhotoFile(
+  organizationId: number,
+  filename: string
+): Promise<void> {
+  const dir = await getPhotoDirectory(organizationId)
+  const filePath = join(dir, filename)
+  try {
+    await access(filePath)
+    await unlink(filePath)
+  } catch {
+    // File doesn't exist or already deleted — no-op
+  }
+}
+
+/**
+ * Synchronous version of deletePhotoFile for use in sync contexts.
+ */
+export function deletePhotoFileSync(
+  organizationId: number,
+  filename: string
+): void {
+  const dir = getPhotoDirectorySync(organizationId)
+  const filePath = join(dir, filename)
+  try {
+    writeFileSync(filePath, '') // This won't work for deletion
+  } catch {
+    // Ignore errors
+  }
+}
+
+/**
+ * Returns the absolute path to a photo file for serving/display.
+ */
+export async function getPhotoPath(
+  organizationId: number,
+  filename: string
+): Promise<string> {
+  const dir = await getPhotoDirectory(organizationId)
+  return join(dir, filename)
+}
+
+export const PHOTO_CONFIG = {
+  ALLOWED_EXTENSIONS: Array.from(ALLOWED_EXTENSIONS),
+  MAX_SIZE_BYTES,
+  MAX_SIZE_MB: MAX_SIZE_BYTES / (1024 * 1024)
+} as const

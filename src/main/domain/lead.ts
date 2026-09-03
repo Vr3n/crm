@@ -29,6 +29,7 @@ export interface Person {
   fullName: string
   phone: string
   email: string | null
+  photoFilename: string | null
   createdAt: string
   updatedAt: string
 }

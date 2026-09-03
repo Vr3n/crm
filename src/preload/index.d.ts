@@ -116,6 +116,12 @@ import type {
   ScheduleFollowUpInput,
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
+import type {
+  UpdatePersonPhotoInput,
+  DeletePersonPhotoInput,
+  GetPersonPhotoInput,
+  PersonPhotoOutput
+} from '../shared/contracts/person-photo'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type { LicenseStatus } from '../shared/contracts/license'
 
@@ -281,6 +287,11 @@ declare global {
       }
       license: {
         status: () => Promise<LicenseStatus>
+      }
+      person: {
+        updatePhoto: (input: UpdatePersonPhotoInput) => Promise<PersonPhotoOutput>
+        deletePhoto: (input: DeletePersonPhotoInput) => Promise<void>
+        getPhoto: (input: GetPersonPhotoInput) => Promise<PersonPhotoOutput>
       }
     }
   }

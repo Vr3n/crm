@@ -36,6 +36,7 @@ interface PersonRow {
   full_name: string
   phone: string
   email: string | null
+  photo_filename: string | null
   created_at: string
   updated_at: string
 }
@@ -118,6 +119,7 @@ function mapPerson(row: PersonRow): Person {
     fullName: row.full_name,
     phone: row.phone,
     email: row.email,
+    photoFilename: row.photo_filename,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -228,14 +230,15 @@ export const personRepo = {
     query: string,
     limit: number,
     offset: number
-  ): { id: number; fullName: string; phone: string; email: string | null }[] {
+  ): { id: number; fullName: string; phone: string; email: string | null; photoFilename: string | null }[] {
     const term = `%${query}%`
     return getDrizzle()
       .select({
         id: people.id,
         fullName: people.full_name,
         phone: people.phone,
-        email: people.email
+        email: people.email,
+        photoFilename: people.photo_filename
       })
       .from(people)
       .where(
@@ -281,6 +284,20 @@ export const personRepo = {
         full_name: input.fullName,
         phone: input.phone,
         email: input.email,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  /** Updates only the photo_filename field on a person. */
+  updatePhoto(organizationId: number, id: number, photoFilename: string | null): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        photo_filename: photoFilename,
         updated_at: sql`(datetime('now'))`
       })
       .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
@@ -675,6 +692,7 @@ export const leadRepo = {
       personName: string
       phone: string
       email: string | null
+      photoFilename: string | null
       sourceId: number
       sourceName: string | null
       stageId: number
@@ -714,6 +732,7 @@ export const leadRepo = {
         personName: people.full_name,
         phone: people.phone,
         email: people.email,
+        photoFilename: people.photo_filename,
         sourceId: leads.source_id,
         sourceName: leadSources.name,
         stageId: leads.current_stage_id,

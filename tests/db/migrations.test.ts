@@ -79,7 +79,7 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records versions 0, 3-20 including membership sale idempotency, permission, joining-date, org branding and followup notes migrations', () => {
+  it('records versions 0, 3-22 including membership sale idempotency, permission, joining-date, org branding, followup notes, and person photo migrations', () => {
     runMigrations()
     const rows = getDb().prepare('SELECT version, name FROM schema_migrations').all() as {
       version: number
@@ -105,7 +105,8 @@ describe('runMigrations', () => {
       { version: 18, name: 'membership_joining_date' },
       { version: 19, name: 'org_branding' },
       { version: 20, name: 'followup_notes' },
-      { version: 21, name: 'followup_cancel_reason' }
+      { version: 21, name: 'followup_cancel_reason' },
+      { version: 22, name: 'person_photo' }
     ])
   })
 
@@ -115,7 +116,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(20)
+    expect(row.n).toBe(21)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -162,7 +163,7 @@ describe('runMigrations', () => {
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
     expect(appliedVersions()).toEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22
     ])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
@@ -183,7 +184,7 @@ describe('runMigrations', () => {
     runMigrations()
 
     expect(appliedVersions()).toEqual([
-      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22
     ])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)
@@ -267,6 +268,16 @@ describe('runMigrations', () => {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE (organization_id, name)
       );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -340,6 +351,16 @@ describe('runMigrations', () => {
       CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
       CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
       CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -417,6 +438,16 @@ describe('runMigrations', () => {
         role_id INTEGER NOT NULL,
         permission_id INTEGER NOT NULL,
         PRIMARY KEY (role_id, permission_id)
+      );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
       );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -509,6 +540,16 @@ describe('runMigrations', () => {
         permission_id INTEGER NOT NULL,
         PRIMARY KEY (role_id, permission_id)
       );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -587,6 +628,16 @@ describe('runMigrations', () => {
       CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
       CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
       CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE membership_plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,

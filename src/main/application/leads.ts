@@ -676,6 +676,7 @@ export function listLeads(input: LeadListRequest): LeadListResponse {
     personName: row.personName,
     phone: row.phone,
     email: row.email,
+    photoFilename: row.photoFilename,
     sourceId: row.sourceId,
     sourceName: row.sourceName,
     stageId: row.stageId,

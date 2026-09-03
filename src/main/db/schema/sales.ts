@@ -21,6 +21,7 @@ export const people = sqliteTable(
     full_name: text('full_name').notNull(),
     phone: text('phone').notNull(),
     email: text('email'),
+    photo_filename: text('photo_filename'),
     created_at: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),
