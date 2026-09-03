@@ -155,3 +155,11 @@ export class DuplicateTransactionError extends DomainError {
     this.name = 'DuplicateTransactionError'
   }
 }
+
+/** The person is blacklisted and cannot have new memberships. */
+export class BlacklistedPersonError extends DomainError {
+  constructor(message = 'This person is blacklisted and cannot be sold a membership') {
+    super(message, ERROR_CODES.VALIDATION_ERROR)
+    this.name = 'BlacklistedPersonError'
+  }
+}

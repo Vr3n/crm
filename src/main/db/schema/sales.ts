@@ -21,6 +21,10 @@ export const people = sqliteTable(
     full_name: text('full_name').notNull(),
     phone: text('phone').notNull(),
     email: text('email'),
+    is_blacklisted: integer('is_blacklisted', { mode: 'boolean' }).notNull().default(false),
+    blacklisted_reason: text('blacklisted_reason'),
+    blacklisted_at: text('blacklisted_at'),
+    blacklisted_by: integer('blacklisted_by').references(() => users.id),
     created_at: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),

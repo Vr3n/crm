@@ -36,6 +36,10 @@ interface PersonRow {
   full_name: string
   phone: string
   email: string | null
+  is_blacklisted: boolean
+  blacklisted_reason: string | null
+  blacklisted_at: string | null
+  blacklisted_by: number | null
   created_at: string
   updated_at: string
 }
@@ -118,6 +122,10 @@ function mapPerson(row: PersonRow): Person {
     fullName: row.full_name,
     phone: row.phone,
     email: row.email,
+    isBlacklisted: row.is_blacklisted,
+    blacklistedReason: row.blacklisted_reason,
+    blacklistedAt: row.blacklisted_at,
+    blacklistedBy: row.blacklisted_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -228,14 +236,15 @@ export const personRepo = {
     query: string,
     limit: number,
     offset: number
-  ): { id: number; fullName: string; phone: string; email: string | null }[] {
+  ): { id: number; fullName: string; phone: string; email: string | null; isBlacklisted: boolean }[] {
     const term = `%${query}%`
     return getDrizzle()
       .select({
         id: people.id,
         fullName: people.full_name,
         phone: people.phone,
-        email: people.email
+        email: people.email,
+        isBlacklisted: people.is_blacklisted
       })
       .from(people)
       .where(
@@ -281,6 +290,43 @@ export const personRepo = {
         full_name: input.fullName,
         phone: input.phone,
         email: input.email,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  blacklist(
+    organizationId: number,
+    id: number,
+    reason: string | null,
+    byUserId: number
+  ): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        is_blacklisted: true,
+        blacklisted_reason: reason,
+        blacklisted_at: sql`(datetime('now'))`,
+        blacklisted_by: byUserId,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  unblacklist(organizationId: number, id: number): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        is_blacklisted: false,
+        blacklisted_reason: null,
+        blacklisted_at: null,
+        blacklisted_by: null,
         updated_at: sql`(datetime('now'))`
       })
       .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))

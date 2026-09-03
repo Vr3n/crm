@@ -29,6 +29,10 @@ export interface Person {
   fullName: string
   phone: string
   email: string | null
+  isBlacklisted: boolean
+  blacklistedReason: string | null
+  blacklistedAt: string | null
+  blacklistedBy: number | null
   createdAt: string
   updatedAt: string
 }
