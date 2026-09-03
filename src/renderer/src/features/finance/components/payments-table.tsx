@@ -144,7 +144,6 @@ function buildColumns(): ReturnType<typeof helper.columns> {
     helper.display({
       id: 'actions',
       header: () => <div className="text-right">Actions</div>,
-      size: 80,
       cell: ({ row }) => (
         <div className="flex items-center justify-end">
           <Tooltip>

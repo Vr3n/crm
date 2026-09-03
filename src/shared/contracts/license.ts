@@ -1,45 +1,17 @@
-import { z } from 'zod'
-
 /**
  * Licensing contracts — shared between main, preload, and renderer.
- * Zod schemas validate at the IPC boundary; derived types are the
- * single source of truth for all three layers.
+ *
+ * The machine install lock binds a CrownCRM install to the PC it was
+ * installed on. The renderer only ever asks whether the current machine
+ * matches the lock (ACTIVE) or not (LOCKED). There is no activation, no
+ * license content, and no vendor hand-off.
  */
 
-// --- License status ---
+export type LicenseState = 'ACTIVE' | 'LOCKED'
 
-export type LicenseState = 'ACTIVE' | 'UNLICENSED' | 'INVALID'
-
-export type LicenseReason =
-  | 'NO_LICENSE'
-  | 'BAD_SIGNATURE'
-  | 'FINGERPRINT_MISMATCH'
-  | 'CORRUPT'
+export type LicenseReason = 'NO_LOCK' | 'FINGERPRINT_MISMATCH' | 'CORRUPT'
 
 export interface LicenseStatus {
   state: LicenseState
   reason?: LicenseReason
-  organization?: string
-  product?: string
-  issued?: string
-  licenseId?: string
-}
-
-// --- IPC inputs ---
-
-export const activateLicenseInputSchema = z.object({
-  licenseContent: z.string().min(1).max(4096)
-})
-export type ActivateLicenseInput = z.infer<typeof activateLicenseInputSchema>
-
-// --- Support info (for "copy support info" button) ---
-
-export interface LicenseSupportInfo {
-  organization: string | null
-  fingerprint: {
-    machineGuid: string
-    motherboard: string
-    systemDisk: string
-    cpu: string
-  }
 }

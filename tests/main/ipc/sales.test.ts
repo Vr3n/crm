@@ -354,7 +354,7 @@ describe('registerSalesIpc', () => {
     expect(result.ok).toBe(true)
     expect(result.data).toEqual({ scheduled: 2 })
     const stored = getDb()
-      .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id IN (?, ?)')
+      .prepare("SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id IN (?, ?) AND title = 'Re-call'")
       .get(first.leadId, second.leadId) as { n: number }
     expect(stored.n).toBe(2)
   })

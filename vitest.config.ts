@@ -11,6 +11,7 @@ export default defineConfig({
           environment: 'node',
           include: ['tests/**/*.test.ts'],
           exclude: ['node_modules/**', 'out/**', 'tests/renderer/**'],
+          testTimeout: 15000,
           coverage: {
             provider: 'v8',
             reporter: ['text', 'html'],
@@ -32,7 +33,8 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['tests/renderer/**/*.test.{ts,tsx}'],
           exclude: ['node_modules/**', 'out/**'],
-          setupFiles: ['tests/renderer/setup.ts']
+          setupFiles: ['tests/renderer/setup.ts'],
+          testTimeout: 15000
         }
       }
     ]

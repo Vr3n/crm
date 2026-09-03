@@ -40,10 +40,10 @@ export const api = {
   customers: (): Promise<PersonRef[]> =>
     window.api.customers.list().then((rows) =>
       rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        phone: row.phone,
-        email: row.email
+        id: row.customer.id,
+        name: row.customer.name,
+        phone: row.customer.phone,
+        email: row.customer.email
       }))
     ),
   outstandingInvoicesFor: (customerId: string): Promise<FinanceInvoice[]> =>

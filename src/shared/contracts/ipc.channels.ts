@@ -130,9 +130,7 @@ export const IPC_CHANNELS = {
   IDENTITY_UPDATE_ORGANIZATION: 'identity:updateOrganization',
 
   // Licensing
-  LICENSE_STATUS: 'license:status',
-  LICENSE_ACTIVATE: 'license:activate',
-  LICENSE_SUPPORT_INFO: 'license:supportInfo'
+  LICENSE_STATUS: 'license:status'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

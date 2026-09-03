@@ -7,60 +7,54 @@ for why these items exist.
 
 ---
 
-## 1. Hardware validation — `MATCH_THRESHOLD` empirical verification
+## 1. Machine-binding validation
 
-Run each scenario on real hardware. Record expected and actual behavior. Sign off after
-each; all four must pass before go-live.
+The install lock binds to the Windows MachineGuid (`reg.exe`). Verify the core
+scenarios on real hardware. Sign off after each; all must pass before go-live.
 
-**Threshold under test:** `MATCH_THRESHOLD = 3` (hardcoded in `src/main/licensing/fingerprint.ts`)
-
-### Scenario A — Fresh Windows reinstall (same hardware)
+### Scenario A — Fresh install on a clean PC
 
 - **Device:** ___________________
 - **Date:** ___________________
-- **Expected:** Grant (≥3 component hashes match)
-- **Actual:** □ Grant □ Reject
+- **Expected:** Installer writes `machine.lock` into the install directory; app runs with no prompt.
+- **Actual:** □ Pass □ Fail
 - **Sign-off:** ___________________
 
-### Scenario B — System disk replaced
+### Scenario B — Copy the install folder to another PC
 
 - **Device:** ___________________
 - **Date:** ___________________
-- **Expected:** Grant (machine GUID, motherboard, CPU = 3/4 match)
-- **Actual:** □ Grant □ Reject
+- **Expected:** The copied app shows the "not licensed for this computer" blocking screen (MachineGuid differs).
+- **Actual:** □ Pass □ Fail
 - **Sign-off:** ___________________
 
-### Scenario C — BIOS update
+### Scenario C — Reinstall Windows on the same PC (new MachineGuid)
 
 - **Device:** ___________________
 - **Date:** ___________________
-- **Expected:** Grant (all 4 components should remain unchanged through a BIOS update; 1 change at most)
-- **Actual:** □ Grant □ Reject
+- **Expected:** Old install blocks until CrownCRM is reinstalled, which writes a fresh lock and runs.
+- **Actual:** □ Pass □ Fail
 - **Sign-off:** ___________________
 
-### Scenario D — CPU change
+### Scenario D — Hardware change (disk / CPU / motherboard swap) without reinstalling Windows
 
 - **Device:** ___________________
 - **Date:** ___________________
-- **Expected:** Depends on threshold — motherboard + disk + machine GUID remain; validate
-- **Actual:** □ Grant □ Reject
+- **Expected:** App still runs (MachineGuid unchanged by hardware swaps).
+- **Actual:** □ Pass □ Fail
 - **Sign-off:** ___________________
-
-**If any scenario produces the wrong result:** change `MATCH_THRESHOLD` in
-`src/main/licensing/fingerprint.ts`, recompile, re-run all scenarios, and document the
-change in ADR-0005 or a follow-up ADR.
 
 ---
 
 ## 2. Failure-dialog UAT with a non-technical person
 
-Walk one non-technical person through the activation and invalid-license flows. Confirm:
+Walk one non-technical person through the copy-to-another-PC flow. Confirm:
 
-- [ ] The activation wizard ("Paste your license file") is clear and non-intimidating.
-- [ ] Selecting an invalid or mismatched file shows a readable failure message.
-- [ ] The "copy support info" button produces a block of text that can be pasted into an
-      email without confusion.
-- [ ] The retry button re-runs fingerprint collection and verification (not cached state).
+- [ ] A fresh install on PC-A runs with no prompt whatsoever (lock auto-generated at install).
+- [ ] Copying the installed folder (`Program Files\CrownCRM`) to PC-B and launching there
+      shows the single "not licensed for this computer" blocking screen.
+- [ ] Reinstalling on PC-B restores a working app.
+- [ ] The blocking screen has no confusing inputs, license fields, or support-copy actions.
 
 **UAT participant:** ___________________
 **Date:** ___________________
@@ -86,22 +80,20 @@ during install. Code-signing prevents these for non-technical staff.
 
 ---
 
-## 4. Packaging sanity — no secrets in the shipped artifact
+## 4. Packaging sanity — the shipped artifact binds correctly
 
-The built `.exe` / installer must not contain any vendor-internal material. Verify against
-the `electron-builder.yml` `files` exclusion list (`!tools/*`, `!src/*`, etc.).
+The built `.exe` / installer must generate a working `machine.lock` on install and
+must not contain any vendor-internal material.
 
-- [ ] `tools/` directory is absent (no keys, no ledger, no CLI).
-- [ ] `tools/license/keys/` is absent — the Ed25519 private key is not in the ASAR or
-      alongside it.
-- [ ] `ledger.json` is absent.
-- [ ] `src/` source files are absent (only the built `out/` or `dist/` is present).
+- [ ] `tools/` is absent (no keys, no ledger, no CLI).
+- [ ] `src/` source files are absent (only the built `out/` / `dist/` is present).
 - [ ] `.env` files are absent.
-- [ ] The embedded public key in `src/main/licensing/crypto.ts` matches the private key
-      used by the issuance CLI — test by issuing a license with the CLI and verifying it
-      passes validation in the app.
+- [ ] No `license.dat`, private key, or signature code ships in the ASAR.
+- [ ] `scripts/install-binding.nsh` is wired via `electron-builder.yml` (`nsis.include`).
+- [ ] Install the built setup on a clean PC; confirm `machine.lock` exists in the
+      install directory and the app runs with no prompt.
 
-**Verified by (inspect the packaged ASAR):** ___________________
+**Verified by (inspect the packaged ASAR + a clean install):** ___________________
 **Date:** ___________________
 **Sign-off:** ___________________
 

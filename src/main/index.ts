@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import icon from '../../build/icon.png?asset'
 import { openDatabase } from './db/connection'
 import { runMigrations } from './db/migrations'
 import { seedPermissions } from './db/seed'
@@ -20,6 +20,8 @@ import { registerIdentityReadIpc } from './ipc/identity-read'
 import { registerPdfIpc } from './ipc/pdf'
 import { registerLicenseIpc } from './ipc/license'
 import { restoreRememberedLogin } from './application/identity'
+import { ensureInstallLock } from './licensing/ensure'
+import { generateInstallLock, getInstallDir } from './licensing/install-lock'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -51,7 +53,27 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-  electronApp.setAppUserModelId('com.gymcrm.app')
+  electronApp.setAppUserModelId('com.crowncrm.app')
+
+  // Install-time machine binding: the NSIS installer runs the freshly
+  // installed exe with --generate-binding (elevated) to write machine.lock
+  // into the install directory. Do nothing else and exit immediately.
+  if (process.argv.includes('--generate-binding')) {
+    try {
+      generateInstallLock(getInstallDir())
+      console.log('Install lock written.')
+    } catch (err) {
+      console.error('Failed to write install lock:', err)
+      process.exitCode = 1
+    }
+    app.quit()
+    return
+  }
+
+  // Ensure the install lock exists (no-op on a normally installed app);
+  // verifyInstallLock / LicenseGate refuse to run when it is missing or the
+  // machine does not match.
+  ensureInstallLock()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -60,9 +82,9 @@ app.whenReady().then(async () => {
   // Database foundation: connection -> migrations -> seeds
   logger.info('main process started', {
     logLevel: process.env.GYMCRM_LOG_LEVEL ?? 'info',
-    database: join(app.getPath('userData'), 'gym-crm.db')
+    database: join(app.getPath('userData'), 'CrownCRM.db')
   })
-  openDatabase(join(app.getPath('userData'), 'gym-crm.db'))
+  openDatabase(join(app.getPath('userData'), 'CrownCRM.db'))
   runMigrations()
   seedPermissions()
 

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type Dispatch, type SetStateAction } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/features/dashboard/format'
@@ -16,7 +16,7 @@ interface AllocationSectionProps {
   paymentAmount: number
   preSelectedInvoiceId?: string
   allocations: AllocationDraft[]
-  onAllocationsChange: (allocs: AllocationDraft[]) => void
+  onAllocationsChange: Dispatch<SetStateAction<AllocationDraft[]>>
   isLoading: boolean
 }
 
@@ -34,7 +34,6 @@ function invoiceDue(inv: FinanceInvoice): number {
 export function AllocationSection({
   invoices,
   paymentAmount,
-  preSelectedInvoiceId,
   allocations,
   onAllocationsChange,
   isLoading
@@ -60,7 +59,7 @@ export function AllocationSection({
     [allocations]
   )
 
-  const toggleInvoice = (invoice: FinanceInvoice, checked: boolean) => {
+  const toggleInvoice = (invoice: FinanceInvoice, checked: boolean): void => {
     const due = invoiceDue(invoice)
     onAllocationsChange((prev) => {
       const existing = prev.find((a) => a.invoiceId === invoice.id)

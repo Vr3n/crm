@@ -1,101 +1,46 @@
-# Licensing Reactivation Runbook
+# Licensing Support Runbook
 
-How to reissue a license when a gym changes hardware or loses their license file.
+How to recover a gym whose CrownCRM install has stopped running because the
+machine no longer matches its install lock.
 
-## When to reissue
+## What the lock does
 
-- Gym replaces a hard drive, motherboard, or other core component and the fingerprint
-  no longer matches
-- Fresh Windows install on the same hardware
-- License.dat was deleted or corrupted
-- Gym bought a second PC (new license, same organization)
+Each CrownCRM install is bound to the computer it was installed on via a
+`machine.lock` file (holding the Windows MachineGuid) in the install directory.
+On launch the app reads the current MachineGuid and compares it to the lock. If
+they do not match, the app shows **"CrownCRM is not licensed for this computer"**
+and will not open.
 
-## How to reissue
+There is no license file to issue, no activation screen, and no reactivation
+budget. The only recovery is a reinstall.
 
-### 1. Get the customer's current fingerprint
+## When recovery is needed
 
-Ask the customer to run CrownCRM. On the activation screen they can click
-**"Copy fingerprint to clipboard"**. Paste it into your email/chat. It looks like:
+- The gym **reinstalled Windows**, which generates a new MachineGuid that no
+  longer matches the old lock.
+- The gym copied the installed application folder to another PC — the lock
+  belongs to the original machine, so it will not run on the new one.
+- `machine.lock` was deleted or corrupted (app shows the blocked screen).
 
-```
-Organization: Iron Peak Fitness
+## How to recover
 
-Fingerprint:
-  Machine GUID : fe072342-ff9b-4651-...
-  Motherboard  : INVALID
-  System Disk  : ESS3B1O27CNA17868
-  CPU          : BFEBFBFF000706E5
-```
+**Reinstall CrownCRM on that computer.** Run the installer again; the
+`customInstall` step writes a fresh `machine.lock` bound to that machine, and
+the app runs normally. The customer's data lives in `%APPDATA%\CrownCRM\` and is
+untouched by a reinstall.
 
-### 2. Check the reactivation budget
-
-```bash
-npx tsx tools/license/issue.ts list
-```
-
-Look at the org's `Reactivations: X/2 used`. If X >= 2, the budget is exhausted.
-Contact the gym to discuss options (paid reactivation, new license, etc.).
-
-### 3. Issue a new license
-
-```bash
-npx tsx tools/license/issue.ts reissue \
-  "Iron Peak Fitness" \
-  "fe072342-ff9b-4651-a4a6-65753b283047" \
-  "INVALID" \
-  "ESS3B1O27CNA17868" \
-  "BFEBFBFF000706E5"
-```
-
-This:
-- Creates a new `tools/license/issued/<uuid>.dat` file
-- Increments the reactivation counter in `ledger.json`
-- Prints the license JSON
-
-### 4. Send the license to the customer
-
-Email the `license.dat` file content (or the whole JSON). The customer
-selects it in the activation screen.
-
-### 5. Verify it worked
-
-Ask the customer to confirm they see the normal app screen. If they still
-see the invalid dialog, have them re-copy their fingerprint and compare
-the hashes against what you issued.
-
-## First-time activation (new customer)
-
-Same as above, but use `issue` instead of `reissue`:
-
-```bash
-npx tsx tools/license/issue.ts issue \
-  "New Gym Name" \
-  "<machineGuid>" \
-  "<motherboard>" \
-  "<systemDisk>" \
-  "<cpu>"
-```
-
-The initial issue does not consume reactivation budget.
-
-## Budget management
-
-- Default reactivation limit: 2 per organization
-- Tracked in `tools/license/ledger.json` (gitignored, never ships)
-- To increase an org's budget, edit `ledger.json` directly and set
-  `reactivation_limit` to a higher number
-- The budget is advisory — it triggers a support conversation, not a
-  cryptographic block
+If the gym wants to run on a **second PC**, install CrownCRM there too — each
+install gets its own lock.
 
 ## Troubleshooting
 
-**"No reactivations remaining"** — the org has used 2 reissues. Either
-increase the limit in `ledger.json` or discuss with the gym.
+**App shows the blocked screen right after installing.** The install-time
+binding step failed to write `machine.lock`. Reinstall, or check that
+`machine.lock` exists in the install directory after the installer finishes.
 
-**Fingerprint shows "INVALID" for motherboard** — this is normal on
-virtual machines. The 3-of-4 threshold handles it; 3 other matches are
-sufficient.
+**App worked, then stopped after a Windows reinstall.** Reinstalling Windows
+generates a new MachineGuid. Reinstall CrownCRM — the installer writes a fresh
+lock.
 
-**Customer says license file doesn't work** — have them re-copy the
-fingerprint. Common issue: extra whitespace or missing characters when
-pasting.
+**Replacing a hard drive, CPU, or motherboard** does not change the MachineGuid,
+so the app keeps running — no recovery needed.

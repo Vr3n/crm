@@ -1,22 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { Crown } from 'lucide-react'
 import { api } from '../api'
-import { ActivateLicense } from './activate-license'
-import { LicenseInvalid } from './license-invalid'
+import { LicenseBlocked } from './license-blocked'
 import type { LicenseStatus } from '../types'
 
 interface LicenseGateProps {
-  /** If true, the license has been verified — render children. */
+  /** If true, the install lock matched this machine — render children. */
   children: React.ReactNode
 }
 
 /**
- * Gates the entire app behind a license check.
+ * Gates the entire app behind the machine install lock.
  * Renders:
  * - A loading spinner while verifying,
- * - The activation wizard if UNLICENSED,
- * - A support/retry dialog if INVALID,
+ * - A blocking screen if the machine does not match the lock (LOCKED),
  * - `children` if ACTIVE.
+ *
+ * There is no activation step — the lock is generated during install and
+ * verified here; a mismatch (e.g. the app folder was copied to another PC)
+ * simply refuses to run.
  */
 export function LicenseGate({ children }: LicenseGateProps): React.JSX.Element {
   const statusQuery = useQuery({
@@ -27,16 +29,7 @@ export function LicenseGate({ children }: LicenseGateProps): React.JSX.Element {
     refetchOnWindowFocus: false
   })
 
-  const supportQuery = useQuery({
-    queryKey: ['license', 'supportInfo'],
-    queryFn: api.supportInfo,
-    staleTime: Infinity,
-    retry: false,
-    refetchOnWindowFocus: false
-  })
-
   const status: LicenseStatus | undefined = statusQuery.data
-  const supportInfo = supportQuery.data
 
   // Loading
   if (statusQuery.isPending) {
@@ -45,7 +38,7 @@ export function LicenseGate({ children }: LicenseGateProps): React.JSX.Element {
         <div className="flex size-12 animate-pulse items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Crown className="size-6" />
         </div>
-        <p className="text-sm text-muted-foreground">Verifying license…</p>
+        <p className="text-sm text-muted-foreground">Verifying this computer…</p>
       </div>
     )
   }
@@ -55,22 +48,6 @@ export function LicenseGate({ children }: LicenseGateProps): React.JSX.Element {
     return <>{children}</>
   }
 
-  // Unlicensed — show activation wizard
-  if (status?.state === 'UNLICENSED') {
-    return (
-      <ActivateLicense
-        onSuccess={() => statusQuery.refetch()}
-        supportInfo={supportInfo}
-      />
-    )
-  }
-
-  // Invalid — show support/retry dialog
-  return (
-    <LicenseInvalid
-      status={status ?? { state: 'INVALID', reason: 'CORRUPT' }}
-      onRetry={() => statusQuery.refetch()}
-      supportInfo={supportInfo}
-    />
-  )
+  // Locked — machine does not match the install lock
+  return <LicenseBlocked status={status ?? { state: 'LOCKED', reason: 'NO_LOCK' }} />
 }
