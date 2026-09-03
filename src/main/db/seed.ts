@@ -42,6 +42,7 @@ export const SEED_ROLES: SeedRole[] = [
       'org.view',
       'user.view',
       'role.view',
+      'person.blacklist',
       'lead.view',
       'lead.create',
       'lead.assign',
@@ -94,6 +95,7 @@ export const SEED_ROLES: SeedRole[] = [
     is_system: false,
     is_super: false,
     permissions: [
+      'person.blacklist',
       'lead.view',
       'lead.create',
       'lead.record_activity',
@@ -119,6 +121,7 @@ export const SEED_ROLES: SeedRole[] = [
     is_system: false,
     is_super: false,
     permissions: [
+      'person.blacklist',
       'lead.view',
       'lead.record_activity',
       'followup.view',

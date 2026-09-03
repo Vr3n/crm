@@ -20,6 +20,7 @@ import { registerIdentityReadIpc } from './ipc/identity-read'
 import { registerPdfIpc } from './ipc/pdf'
 import { registerExportIpc } from './ipc/export'
 import { registerLicenseIpc } from './ipc/license'
+import { registerBlacklistIpc } from './ipc/blacklist'
 import { restoreRememberedLogin } from './application/identity'
 import { ensureInstallLock } from './licensing/ensure'
 import { generateInstallLock, getInstallDir } from './licensing/install-lock'
@@ -111,6 +112,7 @@ app.whenReady().then(async () => {
   registerPdfIpc()
   registerExportIpc()
   registerLicenseIpc()
+  registerBlacklistIpc()
 
   createWindow()
 

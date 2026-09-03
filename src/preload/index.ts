@@ -353,6 +353,14 @@ const api = {
     sell: (input: SellMembershipInput): Promise<SellMembershipResult> =>
       call(IPC_CHANNELS.MEMBERSHIPS_SELL, input)
   },
+  blacklist: {
+    toggle: (input: {
+      personId: number
+      action: 'blacklist' | 'unblacklist'
+      reason: string | null
+    }): Promise<{ personId: number; isBlacklisted: boolean }> =>
+      call(IPC_CHANNELS.PERSON_BLACKLIST_TOGGLE, input)
+  },
   invoices: {
     list: (): Promise<InvoiceOutput[]> => call(IPC_CHANNELS.INVOICES_LIST),
     get: (input: InvoiceReadIdRequest): Promise<InvoiceOutput | undefined> =>

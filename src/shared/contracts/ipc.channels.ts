@@ -103,6 +103,9 @@ export const IPC_CHANNELS = {
   CUSTOMERS_LIST: 'customers:list',
   CUSTOMERS_GET: 'customers:get',
 
+  // Person blacklist
+  PERSON_BLACKLIST_TOGGLE: 'person:blacklistToggle',
+
   // Invoices (Module 04 read models)
   INVOICES_LIST: 'invoices:list',
   INVOICES_GET: 'invoices:get',

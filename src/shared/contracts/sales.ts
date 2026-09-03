@@ -377,7 +377,8 @@ export const peopleListSchema = z.array(
     id: z.number().int().positive(),
     fullName: z.string(),
     phone: z.string(),
-    email: z.string().nullable()
+    email: z.string().nullable(),
+    isBlacklisted: z.boolean()
   })
 )
 export type PeopleList = z.infer<typeof peopleListSchema>

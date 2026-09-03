@@ -3,6 +3,7 @@ import { getDrizzle } from '../db/connection'
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
 import { PERMISSIONS } from '../db/permissions'
 import { ValidationError, NotFoundError, OverpaymentNotAllowedError } from '../domain/errors'
+import { BlacklistedPersonError } from '../domain/errors'
 import { calculateSalePricing, type DiscountType } from '../domain/pricing'
 import { deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
 import { leadRepo, personRepo, stageRepo } from '../repositories/sales'
@@ -89,6 +90,12 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
   if (!lead) throw new NotFoundError('Lead not found')
   const person = personRepo.findById(organizationId, lead.personId)
   if (!person) throw new NotFoundError('Person not found for lead')
+
+  if (person.isBlacklisted) {
+    throw new BlacklistedPersonError(
+      `Cannot sell membership: person "${person.fullName}" is blacklisted`
+    )
+  }
 
   const plan = planRepo.getById(organizationId, input.planId)
   if (!plan) throw new NotFoundError('Plan not found')
