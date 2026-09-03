@@ -23,7 +23,10 @@ import { logger, short } from '../lib/logger'
  * malformed payload is rejected as VALIDATION_ERROR without reaching the
  * handler.
  */
-export function handle<T extends unknown[], R>(channel: string, fn: (...args: T) => Promise<R> | R): void
+export function handle<T extends unknown[], R>(
+  channel: string,
+  fn: (...args: T) => Promise<R> | R
+): void
 export function handle<T, R>(
   channel: string,
   schema: ZodType<T>,
@@ -51,7 +54,12 @@ export function handle<T, R>(
       return { ok: true, data }
     } catch (err) {
       const error = toIpcError(err)
-      logger.warn(`ipc ${channel} failed`, `${Date.now() - startedAt}ms`, error.code, short(error.message))
+      logger.warn(
+        `ipc ${channel} failed`,
+        `${Date.now() - startedAt}ms`,
+        error.code,
+        short(error.message)
+      )
       return { ok: false, error }
     }
   })

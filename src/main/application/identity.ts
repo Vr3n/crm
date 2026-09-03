@@ -1,6 +1,7 @@
 import { withTransaction, getDb } from '../db/connection'
 import {
   seedCatalogPoliciesForOrganization,
+  seedOffersForOrganization,
   seedPlansForOrganization,
   seedRolesForOrganization,
   seedSalesReferenceData
@@ -107,6 +108,7 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
     seedRolesForOrganization(org.id)
     seedSalesReferenceData(org.id)
     seedPlansForOrganization(org.id)
+    seedOffersForOrganization(org.id)
     seedCatalogPoliciesForOrganization(org.id)
 
     const ownerRole = roleRepo.findByName(org.id, 'Owner')

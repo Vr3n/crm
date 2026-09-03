@@ -30,13 +30,9 @@ export function QuickStatsCard({
 
   const totalPaid = invoices.reduce((s, inv) => s + inv.paidMinor, 0)
 
-  const activeMemberships = customer.memberships.filter(
-    (m) => effectiveStatus(m, now) === 'ACTIVE'
-  )
+  const activeMemberships = customer.memberships.filter((m) => effectiveStatus(m, now) === 'ACTIVE')
 
-  const nextRenewal = activeMemberships
-    .map((m) => m.endDate)
-    .sort((a, b) => a.localeCompare(b))[0]
+  const nextRenewal = activeMemberships.map((m) => m.endDate).sort((a, b) => a.localeCompare(b))[0]
 
   const daysUntilRenewal = nextRenewal
     ? Math.max(0, Math.ceil((new Date(nextRenewal).getTime() - now) / 86_400_000))
@@ -48,7 +44,12 @@ export function QuickStatsCard({
         'crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm',
         className
       )}
-      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--primary)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Quick stats

@@ -2,12 +2,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import type { ReferenceData } from '../../../../shared/contracts/sales'
 import { api } from './api'
 import { LOST_REASONS, normalizeSource, SOURCES } from './constants'
-import type {
-  ActivityTypeKey,
-  LostReasonKey,
-  SourceKey,
-  StageKey
-} from './types'
+import type { ActivityTypeKey, LostReasonKey, SourceKey, StageKey } from './types'
 
 export const referenceKeys = {
   all: ['reference-data'] as const
@@ -152,7 +147,5 @@ const ACTIVITY_TYPE_KEYS = new Set<ActivityTypeKey>([
 
 /** Resolve a backend activity-type name to a canonical key (names are the keys). */
 export function activityTypeKeyFromName(name: string): ActivityTypeKey {
-  return ACTIVITY_TYPE_KEYS.has(name as ActivityTypeKey)
-    ? (name as ActivityTypeKey)
-    : 'NOTE'
+  return ACTIVITY_TYPE_KEYS.has(name as ActivityTypeKey) ? (name as ActivityTypeKey) : 'NOTE'
 }

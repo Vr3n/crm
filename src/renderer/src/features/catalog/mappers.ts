@@ -180,7 +180,9 @@ export function mapPolicyLookupSet(set: PolicyLookupSet): PolicyLookups {
 }
 
 /** The policy-creation inputs (used by the admin screen when it lands). */
-export function mapFreezePolicyCreateInput(input: Omit<FreezePolicy, 'id'>): CreateFreezePolicyInput {
+export function mapFreezePolicyCreateInput(
+  input: Omit<FreezePolicy, 'id'>
+): CreateFreezePolicyInput {
   return {
     name: input.name,
     billingBehavior: input.billingBehavior,

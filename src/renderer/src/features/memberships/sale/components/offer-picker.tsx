@@ -31,16 +31,16 @@ export function OfferPicker({
   const filtered = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
     const sellable = offers.filter(
-      (o) =>
-        o.isActive &&
-        o.startDate <= today &&
-        (o.endDate === null || o.endDate >= today)
+      (o) => o.isActive && o.startDate <= today && (o.endDate === null || o.endDate >= today)
     )
     if (!planId) return sellable
-    return sellable.filter((o) => o.applicablePlanIds.length === 0 || o.applicablePlanIds.includes(planId))
+    return sellable.filter(
+      (o) => o.applicablePlanIds.length === 0 || o.applicablePlanIds.includes(planId)
+    )
   }, [offers, planId])
 
-  const selected = filtered.find((o) => o.id === value) ?? offers.find((o) => o.id === value) ?? null
+  const selected =
+    filtered.find((o) => o.id === value) ?? offers.find((o) => o.id === value) ?? null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -92,7 +92,11 @@ export function OfferPicker({
                     <span className="block truncate">{offer.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {offer.discountType} · {offer.value}
-                      {offer.discountType === 'PERCENTAGE' ? '%' : offer.discountType === 'FREE_PERIOD' ? ' months' : ''}
+                      {offer.discountType === 'PERCENTAGE'
+                        ? '%'
+                        : offer.discountType === 'FREE_PERIOD'
+                          ? ' months'
+                          : ''}
                     </span>
                   </span>
                   {selected?.id === offer.id ? <BadgePercent className="ml-auto size-3.5" /> : null}

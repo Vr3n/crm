@@ -2,7 +2,8 @@ import { withTransaction } from '../db/connection'
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
 import { customerRepo } from '../repositories/membership'
 import { invoiceRepo, invoiceLineRepo, invoiceSequenceRepo } from '../repositories/billing'
-import { InvoiceCalculationService } from '../domain/billing'
+import { InvoiceCalculationService, deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
+import { organizationRepo } from '../repositories/identity'
 import {
   InvoiceAlreadyFinalizedError,
   InvoiceEmptyError,
@@ -12,6 +13,11 @@ import {
 } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import type { Invoice, InvoiceLine } from '../domain/billing'
+import type { Organization } from '../domain/identity'
+
+type InvoiceOutput = Omit<Invoice, 'organizationId' | 'createdBy'>
+type InvoiceLineOutput = Omit<InvoiceLine, 'organizationId'>
+type OrganizationWithPrefix = Organization & { org_invoice_prefix: string | null }
 import type {
   AddInvoiceLineInput,
   CreateInvoiceInput,
@@ -30,7 +36,7 @@ import type {
  * derives the org/user from the session, and owns one `withTransaction` boundary.
  */
 
-function mapInvoiceToRow(invoice: Invoice) {
+function mapInvoiceToRow(invoice: Invoice): InvoiceOutput {
   return {
     id: invoice.id,
     number: invoice.number,
@@ -52,7 +58,7 @@ function mapInvoiceToRow(invoice: Invoice) {
   }
 }
 
-function mapLineToRow(line: InvoiceLine) {
+function mapLineToRow(line: InvoiceLine): InvoiceLineOutput {
   return {
     id: line.id,
     invoiceId: line.invoiceId,
@@ -70,7 +76,7 @@ function mapLineToRow(line: InvoiceLine) {
 }
 
 /** Creates a DRAFT invoice for a customer. */
-export function createInvoice(input: CreateInvoiceInput) {
+export function createInvoice(input: CreateInvoiceInput): InvoiceOutput {
   requirePermission(PERMISSIONS.INVOICE_CREATE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -101,7 +107,7 @@ export function createInvoice(input: CreateInvoiceInput) {
 }
 
 /** Appends a line to a DRAFT invoice and recomputes draft totals. */
-export function addInvoiceLine(input: AddInvoiceLineInput) {
+export function addInvoiceLine(input: AddInvoiceLineInput): InvoiceLineOutput {
   requirePermission(PERMISSIONS.INVOICE_CREATE)
   const organizationId = currentOrganizationId()
 
@@ -144,7 +150,7 @@ export function addInvoiceLine(input: AddInvoiceLineInput) {
 }
 
 /** Removes a line from a DRAFT invoice and recomputes draft totals. */
-export function removeInvoiceLine(input: RemoveInvoiceLineInput) {
+export function removeInvoiceLine(input: RemoveInvoiceLineInput): void {
   requirePermission(PERMISSIONS.INVOICE_CREATE)
   const organizationId = currentOrganizationId()
 
@@ -184,7 +190,7 @@ export function removeInvoiceLine(input: RemoveInvoiceLineInput) {
 }
 
 /** Updates the billing snapshot on a DRAFT invoice. Never touches `customers`. */
-export function updateBillingSnapshot(input: UpdateBillingSnapshotInput) {
+export function updateBillingSnapshot(input: UpdateBillingSnapshotInput): InvoiceOutput {
   requirePermission(PERMISSIONS.INVOICE_CREATE)
   const organizationId = currentOrganizationId()
 
@@ -199,9 +205,7 @@ export function updateBillingSnapshot(input: UpdateBillingSnapshotInput) {
     billingAddress: input.billingAddress
   })
 
-  return mapInvoiceToRow(
-    invoiceRepo.getById(organizationId, input.invoiceId) ?? invoice
-  )
+  return mapInvoiceToRow(invoiceRepo.getById(organizationId, input.invoiceId) ?? invoice)
 }
 
 /**
@@ -213,19 +217,24 @@ export function nextInvoiceNumberPreview(): InvoiceNumberPreview {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 
-  const year = new Date().toISOString().slice(0, 4)
-  const prefix = 'INV'
-  const nextValue = invoiceSequenceRepo.peekNext(organizationId, year, prefix)
+  const org = organizationRepo.findById(organizationId)
+  const prefix = deriveInvoicePrefix(
+    org?.name ?? 'ORG',
+    (org as OrganizationWithPrefix)?.org_invoice_prefix ?? null
+  )
+  const now = new Date()
+  const dateKey = formatDDMMYY(now)
+  const nextValue = invoiceSequenceRepo.peekNext(organizationId, dateKey, prefix)
   return {
-    year,
+    dateKey,
     prefix,
     nextValue,
-    preview: `${prefix}-${year}-${String(nextValue).padStart(6, '0')}`
+    preview: `${prefix}-${dateKey}-${String(nextValue).padStart(2, '0')}`
   }
 }
 
 /** Finalizes a DRAFT invoice: assigns the business number and freezes it. */
-export function finalizeInvoice(input: FinalizeInvoiceInput) {
+export function finalizeInvoice(input: FinalizeInvoiceInput): InvoiceOutput {
   requirePermission(PERMISSIONS.INVOICE_FINALIZE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -239,22 +248,26 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
     if (lines.length === 0) throw new InvoiceEmptyError()
 
     // Generate the real invoice number atomically
-    const today = new Date().toISOString().slice(0, 10)
-    const year = today.slice(0, 4)
-    const prefix = 'INV'
+    const org = organizationRepo.findById(organizationId)
+    const prefix = deriveInvoicePrefix(
+      org?.name ?? 'ORG',
+      (org as OrganizationWithPrefix)?.org_invoice_prefix ?? null
+    )
+    const now = new Date()
+    const dateKey = formatDDMMYY(now)
 
     // Ensure sequence exists and increment atomically
-    invoiceSequenceRepo.getOrCreate(organizationId, year, prefix)
-    const seqValue = invoiceSequenceRepo.incrementAndGet(organizationId, year, prefix)
-    const invoiceNumber = `${prefix}-${year}-${String(seqValue).padStart(6, '0')}`
+    invoiceSequenceRepo.getOrCreate(organizationId, dateKey, prefix)
+    const seqValue = invoiceSequenceRepo.incrementAndGet(organizationId, dateKey, prefix)
+    const invoiceNumber = `${prefix}-${dateKey}-${String(seqValue).padStart(2, '0')}`
 
     // Check for collision (extremely unlikely but defensive)
     const existing = invoiceRepo.getByNumber(organizationId, invoiceNumber)
     if (existing) throw new InvoiceNumberCollisionError()
 
-    const now = new Date().toISOString()
+    const finalizedAt = new Date().toISOString()
     invoiceRepo.updateStatus(organizationId, input.invoiceId, 'OPEN', {
-      finalizedAt: now,
+      finalizedAt,
       finalizedBy: userId
     })
 
@@ -267,11 +280,19 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
 
     // We need to update the number field directly since updateStatus doesn't support it
     // For now, we'll use the number as-is from the sequence
-    return mapInvoiceToRow({ ...invoice, number: invoiceNumber, status: 'OPEN', finalizedAt: now, finalizedBy: userId })
+    return mapInvoiceToRow({
+      ...invoice,
+      number: invoiceNumber,
+      status: 'OPEN',
+      finalizedAt: now.toISOString(),
+      finalizedBy: userId
+    })
   })
 }
 
-/** Voids an OPEN invoice. Financial values are kept. */export function voidInvoice(input: VoidInvoiceInput) {
+/** Voids an OPEN invoice. Financial values are kept. */ export function voidInvoice(
+  input: VoidInvoiceInput
+): InvoiceOutput {
   requirePermission(PERMISSIONS.INVOICE_VOID)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -289,11 +310,17 @@ export function finalizeInvoice(input: FinalizeInvoiceInput) {
     voidReason: input.reason
   })
 
-  return mapInvoiceToRow({ ...invoice, status: 'VOID', voidedAt: now, voidedBy: userId, voidReason: input.reason })
+  return mapInvoiceToRow({
+    ...invoice,
+    status: 'VOID',
+    voidedAt: now,
+    voidedBy: userId,
+    voidReason: input.reason
+  })
 }
 
 /** Marks an OPEN invoice as uncollectible. */
-export function markUncollectible(input: MarkUncollectibleInput) {
+export function markUncollectible(input: MarkUncollectibleInput): InvoiceOutput {
   requirePermission(PERMISSIONS.INVOICE_VOID)
   const organizationId = currentOrganizationId()
 
@@ -315,7 +342,10 @@ export function markUncollectible(input: MarkUncollectibleInput) {
 /* -------------------------------------------------------------------------- */
 
 /** Gets an invoice with its lines. */
-export function getInvoice(input: InvoiceIdRequest) {
+export function getInvoice(input: InvoiceIdRequest): {
+  invoice: InvoiceOutput
+  lines: InvoiceLineOutput[]
+} {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -331,7 +361,7 @@ export function getInvoice(input: InvoiceIdRequest) {
 }
 
 /** Lists all invoices for a customer. */
-export function listInvoicesByCustomer(input: CustomerInvoicesRequest) {
+export function listInvoicesByCustomer(input: CustomerInvoicesRequest): InvoiceOutput[] {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -340,7 +370,7 @@ export function listInvoicesByCustomer(input: CustomerInvoicesRequest) {
 }
 
 /** Lists all open (unpaid/partially paid) invoices. */
-export function listOpenInvoices() {
+export function listOpenInvoices(): InvoiceOutput[] {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 

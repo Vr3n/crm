@@ -19,6 +19,7 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       notes: f.notes,
       completedAt: f.completedAt,
       cancelledAt: f.cancelledAt,
+      cancelledReason: f.cancelledReason,
       ownerId: lead.owner?.id,
       ownerName: lead.owner?.name
     }))
@@ -49,7 +50,10 @@ export function sortFollowUpRows(rows: FollowUpRow[]): FollowUpRow[] {
   return [...rows].sort((a, b) => {
     const aDone = a.completedAt || a.cancelledAt
     const bDone = b.completedAt || b.cancelledAt
-    if (aDone && bDone) return (b.completedAt ?? b.cancelledAt ?? '').localeCompare(a.completedAt ?? a.cancelledAt ?? '')
+    if (aDone && bDone)
+      return (b.completedAt ?? b.cancelledAt ?? '').localeCompare(
+        a.completedAt ?? a.cancelledAt ?? ''
+      )
     if (aDone) return 1
     if (bDone) return -1
     return a.dueAt.localeCompare(b.dueAt)

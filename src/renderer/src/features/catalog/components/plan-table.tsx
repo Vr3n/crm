@@ -75,7 +75,9 @@ function buildColumns(
       id: 'billing',
       header: () => 'Billing',
       enableSorting: false,
-      cell: ({ row }) => <span className="text-sm">{billingFrequencyLabel(row.original.billing)}</span>
+      cell: ({ row }) => (
+        <span className="text-sm">{billingFrequencyLabel(row.original.billing)}</span>
+      )
     }),
     helper.accessor((row) => row.basePriceMinor, {
       id: 'price',
@@ -218,7 +220,10 @@ export function PlanTable({
   onHistory: (plan: Plan) => void
 }): React.JSX.Element {
   const currency = useCurrency()
-  const columns = useMemo(() => buildColumns(onEdit, onDelete, onHistory, currency), [onEdit, onDelete, onHistory, currency])
+  const columns = useMemo(
+    () => buildColumns(onEdit, onDelete, onHistory, currency),
+    [onEdit, onDelete, onHistory, currency]
+  )
 
   const exportData = useMemo(
     () =>
@@ -253,13 +258,7 @@ export function PlanTable({
       emptyTitle="No plans match"
       emptyDescription="Try clearing the filters, or add a new plan to the catalog."
       headerTone="primary"
-      toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Plans"
-        />
-      }
+      toolbar={<ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Plans" />}
     />
   )
 }

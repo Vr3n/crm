@@ -211,6 +211,7 @@ export const leadFollowups = sqliteTable(
     completed_by: integer('completed_by').references(() => users.id),
     cancelled_at: text('cancelled_at'),
     cancelled_by: integer('cancelled_by').references(() => users.id),
+    cancelled_reason: text('cancelled_reason'),
     created_by: integer('created_by')
       .notNull()
       .references(() => users.id),

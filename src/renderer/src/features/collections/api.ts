@@ -10,12 +10,10 @@ function mapPaymentRecord(row: PaymentRecordOutput): PaymentRecord {
     method: row.method as PaymentRecord['method'],
     receivedAt: row.receivedAt,
     receivedBy: row.receivedBy,
-    allocations: row.allocations.map(
-      (a): PaymentAllocation => ({
-        invoiceNo: a.invoiceNo,
-        amountMinor: a.amountMinor
-      })
-    ),
+    allocations: row.allocations.map((a): PaymentAllocation => ({
+      invoiceNo: a.invoiceNo,
+      amountMinor: a.amountMinor
+    })),
     notes: row.notes
   }
 }

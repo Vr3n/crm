@@ -103,10 +103,7 @@ export const PaymentAllocationService = {
    * Calculates the outstanding balance on an invoice.
    * outstanding = total_minor - net_allocated (clamped to 0)
    */
-  calculateOutstanding(
-    invoiceTotalMinor: number,
-    netAllocated: number
-  ): number {
+  calculateOutstanding(invoiceTotalMinor: number, netAllocated: number): number {
     return Math.max(0, invoiceTotalMinor - netAllocated)
   },
 
@@ -150,10 +147,7 @@ export const PaymentAllocationService = {
    * Validates that a refund does not exceed the net paid amount.
    * Throws REFUND_EXCEEDS_PAYMENT if it does.
    */
-  validateRefund(
-    netPaidAmount: number,
-    refundAmount: number
-  ): void {
+  validateRefund(netPaidAmount: number, refundAmount: number): void {
     if (refundAmount > netPaidAmount) {
       throw new RefundExceedsPaymentError()
     }
@@ -163,10 +157,7 @@ export const PaymentAllocationService = {
    * Validates that a credit application does not exceed the remaining credit balance.
    * Throws CREDIT_EXCEEDS_BALANCE if it does.
    */
-  validateCreditApplication(
-    creditRemainingMinor: number,
-    applicationAmount: number
-  ): void {
+  validateCreditApplication(creditRemainingMinor: number, applicationAmount: number): void {
     if (applicationAmount > creditRemainingMinor) {
       throw new CreditExceedsBalanceError()
     }

@@ -41,7 +41,7 @@ export function DashboardActions({
       onClick: onScheduleFollowUp
     },
     {
-      label: 'Schedule Activity',
+      label: 'Record Activity',
       icon: ClipboardList,
       iconBg: 'bg-warning/10',
       iconColor: 'text-warning',

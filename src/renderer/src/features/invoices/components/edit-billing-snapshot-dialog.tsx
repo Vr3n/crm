@@ -106,7 +106,11 @@ export function EditBillingSnapshotDialog({
                   <Field
                     id="snap-name"
                     label="Name"
-                    error={field.state.meta.isTouched || submitted ? field.state.meta.errors[0] : undefined}
+                    error={
+                      field.state.meta.isTouched || submitted
+                        ? field.state.meta.errors[0]
+                        : undefined
+                    }
                   >
                     <Input
                       id="snap-name"
@@ -114,13 +118,19 @@ export function EditBillingSnapshotDialog({
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       aria-invalid={
-                        (field.state.meta.isTouched || submitted) && field.state.meta.errors.length > 0
+                        (field.state.meta.isTouched || submitted) &&
+                        field.state.meta.errors.length > 0
                       }
                     />
                   </Field>
                 )}
               </form.Field>
-              <form.Field name="phone" validators={{ onChange: ({ value }) => (value.length > 20 ? 'Max 20 characters' : undefined) }}>
+              <form.Field
+                name="phone"
+                validators={{
+                  onChange: ({ value }) => (value.length > 20 ? 'Max 20 characters' : undefined)
+                }}
+              >
                 {(field) => (
                   <Field
                     id="snap-phone"
@@ -162,7 +172,12 @@ export function EditBillingSnapshotDialog({
                   </Field>
                 )}
               </form.Field>
-              <form.Field name="address" validators={{ onChange: ({ value }) => (value.length > 500 ? 'Max 500 characters' : undefined) }}>
+              <form.Field
+                name="address"
+                validators={{
+                  onChange: ({ value }) => (value.length > 500 ? 'Max 500 characters' : undefined)
+                }}
+              >
                 {(field) => (
                   <Field
                     id="snap-address"
@@ -187,9 +202,20 @@ export function EditBillingSnapshotDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <form.Subscribe selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting, isDirty: s.isDirty })}>
+          <form.Subscribe
+            selector={(s) => ({
+              canSubmit: s.canSubmit,
+              isSubmitting: s.isSubmitting,
+              isDirty: s.isDirty
+            })}
+          >
             {({ canSubmit, isSubmitting, isDirty }) => (
-              <LoadingButton type="submit" disabled={!canSubmit || !isDirty} loading={isSubmitting} loadingLabel="Saving…">
+              <LoadingButton
+                type="submit"
+                disabled={!canSubmit || !isDirty}
+                loading={isSubmitting}
+                loadingLabel="Saving…"
+              >
                 Save details
               </LoadingButton>
             )}

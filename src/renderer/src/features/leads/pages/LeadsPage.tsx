@@ -25,9 +25,9 @@ const LEAD_EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Source', key: 'source', format: 'text' },
   { header: 'Stage', key: 'stage', format: 'text' },
   { header: 'Owner', key: 'owner', format: 'text' },
-  { header: 'Next Follow-up', key: 'nextFollowUp', format: 'text' },
-  { header: 'Last Activity', key: 'lastActivity', format: 'text' },
-  { header: 'Created', key: 'createdAt', format: 'datetime' }
+  { header: 'Next Follow-up', key: 'nextFollowUp', format: 'datetime' },
+  { header: 'Last Activity', key: 'lastActivity', format: 'datetime' },
+  { header: 'Acquired', key: 'createdAt', format: 'datetime' }
 ]
 
 // Lazy-load the dialogs so their module graphs (Radix Dialog/Select, the query
@@ -190,17 +190,10 @@ export function LeadsPage(): React.JSX.Element {
         title="Leads"
         description={`${session.organizationName} · sales pipeline`}
         actions={
-          <>
-            <ExportExcelButton
-              columns={LEAD_EXPORT_COLUMNS}
-              rows={leadExportData}
-              sheetName="Leads"
-            />
-            <Button onClick={() => setNewOpen(true)}>
-              <Plus />
-              New lead
-            </Button>
-          </>
+          <Button onClick={() => setNewOpen(true)}>
+            <Plus />
+            New lead
+          </Button>
         }
       />
 
@@ -242,6 +235,11 @@ export function LeadsPage(): React.JSX.Element {
         <Card className="gap-0 py-0">
           <CardContent className="flex flex-col gap-3 px-3 py-3">
             <div className="flex items-center justify-between gap-3">
+              <ExportExcelButton
+                columns={LEAD_EXPORT_COLUMNS}
+                rows={leadExportData}
+                sheetName="Leads"
+              />
               {selected.size > 0 ? (
                 <LeadSelectionToolbar
                   count={selected.size}

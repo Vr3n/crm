@@ -61,7 +61,12 @@ export function MembershipsPage(): React.JSX.Element {
 
       <Card className="gap-0 py-0">
         <CardContent className="px-3 py-3">
-          <MembershipTable rows={rows} now={now} isLoading={isLoading} onOpenCustomer={openCustomer} />
+          <MembershipTable
+            rows={rows}
+            now={now}
+            isLoading={isLoading}
+            onOpenCustomer={openCustomer}
+          />
         </CardContent>
       </Card>
     </div>

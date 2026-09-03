@@ -115,9 +115,7 @@ describe('roleRepo', () => {
 
   it('returns every catalog permission for a super role', () => {
     const { role } = seedOrgWithRoles('Owner')
-    expect(roleRepo.findPermissionCodes(role.id).sort()).toEqual(
-      [...ALL_PERMISSION_CODES].sort()
-    )
+    expect(roleRepo.findPermissionCodes(role.id).sort()).toEqual([...ALL_PERMISSION_CODES].sort())
   })
 
   it('returns exactly the configured grants for a non-super role', () => {
@@ -188,9 +186,7 @@ describe('staffRepo', () => {
     })
     expect(staffRepo.findActiveMembership(org.id, 99999)).toBeNull()
 
-    getDb()
-      .prepare('UPDATE users SET status = ? WHERE id = ?')
-      .run('INACTIVE', user.id)
+    getDb().prepare('UPDATE users SET status = ? WHERE id = ?').run('INACTIVE', user.id)
     expect(staffRepo.findActiveMembership(org.id, user.id)).toBeNull()
   })
 })

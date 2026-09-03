@@ -52,7 +52,9 @@ export const paymentMethodRepo = {
     const rows = getDrizzle()
       .select()
       .from(paymentMethods)
-      .where(and(eq(paymentMethods.organization_id, organizationId), eq(paymentMethods.active, true)))
+      .where(
+        and(eq(paymentMethods.organization_id, organizationId), eq(paymentMethods.active, true))
+      )
       .orderBy(asc(paymentMethods.sort_order))
       .all() as PaymentMethodRow[]
     return rows.map(mapPaymentMethod)
@@ -216,7 +218,10 @@ export const allocationRepo = {
       .where(
         and(
           eq(paymentAllocations.organization_id, organizationId),
-          sql`${paymentAllocations.payment_id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${paymentAllocations.payment_id} IN (${sql.join(
+            paymentIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as AllocationRow[]
@@ -318,7 +323,10 @@ export const refundRepo = {
       .where(
         and(
           eq(refunds.organization_id, organizationId),
-          sql`${refunds.payment_id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${refunds.payment_id} IN (${sql.join(
+            paymentIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as RefundRow[]
@@ -329,9 +337,7 @@ export const refundRepo = {
     const rows = getDrizzle()
       .select()
       .from(refunds)
-      .where(
-        and(eq(refunds.organization_id, organizationId), eq(refunds.payment_id, paymentId))
-      )
+      .where(and(eq(refunds.organization_id, organizationId), eq(refunds.payment_id, paymentId)))
       .all() as RefundRow[]
     return rows.map(mapRefund)
   },
@@ -412,9 +418,7 @@ export const creditRepo = {
     const rows = getDrizzle()
       .select()
       .from(credits)
-      .where(
-        and(eq(credits.organization_id, organizationId), eq(credits.customer_id, customerId))
-      )
+      .where(and(eq(credits.organization_id, organizationId), eq(credits.customer_id, customerId)))
       .orderBy(asc(credits.created_at))
       .all() as CreditRow[]
     return rows.map(mapCredit)
@@ -424,9 +428,7 @@ export const creditRepo = {
     const row = getDrizzle()
       .select({ total: sql<number>`COALESCE(SUM(${credits.remaining_minor}), 0)` })
       .from(credits)
-      .where(
-        and(eq(credits.organization_id, organizationId), eq(credits.customer_id, customerId))
-      )
+      .where(and(eq(credits.organization_id, organizationId), eq(credits.customer_id, customerId)))
       .get() as { total: number }
     return row.total
   },
@@ -501,7 +503,10 @@ export const creditAllocationRepo = {
       .where(
         and(
           eq(creditAllocations.organization_id, organizationId),
-          sql`${creditAllocations.credit_id} IN (${sql.join(creditIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${creditAllocations.credit_id} IN (${sql.join(
+            creditIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as CreditAllocationRow[]

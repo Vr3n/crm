@@ -59,8 +59,8 @@ describe('registerCatalogIpc', () => {
       data: Array<{ name: string }>
     }
     expect(result.ok).toBe(true)
-    expect(result.data).toHaveLength(7)
-    expect(result.data.map((p) => p.name)).toContain('Annual Premium')
+    expect(result.data).toHaveLength(3)
+    expect(result.data.map((p) => p.name)).toContain('Annual')
   })
 
   it('creates a plan over IPC', async () => {
@@ -166,7 +166,10 @@ describe('registerCatalogIpc', () => {
     const target = planRepo.list(organizationId)[0]
     updatePlan({ planId: target.id, ...VALID_PLAN, name: target.name, basePriceMinor: 999999 })
 
-    const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_PLAN_VERSIONS)({}, { planId: target.id })) as {
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_PLAN_VERSIONS)(
+      {},
+      { planId: target.id }
+    )) as {
       ok: true
       data: Array<{ planId: number; basePriceMinor: number }>
     }
@@ -199,7 +202,10 @@ describe('registerCatalogIpc', () => {
   it('deactivates an offer over IPC', async () => {
     seedOrgWithSession()
     const created = createOffer({ ...VALID_OFFER, name: 'Flash Sale' })
-    const result = (await handlerFor(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER)({}, { offerId: created.id })) as {
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER)(
+      {},
+      { offerId: created.id }
+    )) as {
       ok: true
       data: undefined
     }
@@ -249,7 +255,10 @@ describe('registerCatalogIpc', () => {
 
   it('returns the permission error envelope for offer deactivate as Sales', async () => {
     seedOrgWithSession('Sales')
-    const result = (await handlerFor(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER)({}, { offerId: 1 })) as {
+    const result = (await handlerFor(IPC_CHANNELS.CATALOG_DEACTIVATE_OFFER)(
+      {},
+      { offerId: 1 }
+    )) as {
       ok: false
       error: { code: string }
     }
@@ -261,7 +270,11 @@ describe('registerCatalogIpc', () => {
     seedOrgWithSession()
     const result = (await handlerFor(IPC_CHANNELS.CATALOG_LIST_POLICY_LOOKUPS)({})) as {
       ok: true
-      data: { freezePolicies: unknown[]; prorationPolicies: unknown[]; cancellationPolicies: unknown[] }
+      data: {
+        freezePolicies: unknown[]
+        prorationPolicies: unknown[]
+        cancellationPolicies: unknown[]
+      }
     }
     expect(result.ok).toBe(true)
     expect(result.data.freezePolicies).toHaveLength(3)

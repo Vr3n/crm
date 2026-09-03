@@ -56,19 +56,21 @@ describe('VoidInvoiceDialog', { timeout: 20000 }, () => {
   it('requires a non-empty reason before submitting', async () => {
     mockBilling()
     const onOpenChange = vi.fn()
-    render(<VoidInvoiceDialog open invoiceId={5} invoiceNo="INV-2026-000147" onOpenChange={onOpenChange} />)
+    render(
+      <VoidInvoiceDialog open invoiceId={5} invoiceNo="CRO-010926-01" onOpenChange={onOpenChange} />
+    )
     const user = userEvent.setup()
 
     const submit = screen.getByRole('button', { name: 'Void invoice' })
     expect(submit).toBeDisabled()
 
-    await user.type(screen.getByLabelText(/^Reason/), 'Duplicate of INV-2026-000146')
+    await user.type(screen.getByLabelText(/^Reason/), 'Duplicate of CRO-010926-01')
     await user.click(submit)
 
     await waitFor(() => {
       expect(window.api.billing.void).toHaveBeenCalledWith({
         invoiceId: 5,
-        reason: 'Duplicate of INV-2026-000146'
+        reason: 'Duplicate of CRO-010926-01'
       })
     })
     await waitFor(() => {
@@ -91,7 +93,14 @@ describe('VoidInvoiceDialog', { timeout: 20000 }, () => {
 describe('MarkUncollectibleDialog', () => {
   it('submits the write-off with its reason', async () => {
     mockBilling()
-    render(<MarkUncollectibleDialog open invoiceId={9} invoiceNo="INV-2026-000090" onOpenChange={vi.fn()} />)
+    render(
+      <MarkUncollectibleDialog
+        open
+        invoiceId={9}
+        invoiceNo="CRO-010926-02"
+        onOpenChange={vi.fn()}
+      />
+    )
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText(/^Reason/), 'Customer relocated abroad')

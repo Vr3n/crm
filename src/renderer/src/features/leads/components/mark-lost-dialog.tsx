@@ -130,11 +130,7 @@ export function MarkLostDialog({
           </form.Field>
 
           <DialogFooter className="mt-6">
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </LoadingButton>
             <LoadingButton

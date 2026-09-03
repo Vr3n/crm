@@ -119,7 +119,10 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
             <span className="font-mono text-xs tabular-nums">
               <span className="font-medium">{formatMinor(applied, currency)}</span>
               {remaining > 0 ? (
-                <span className="text-muted-foreground"> · {formatMinor(remaining, currency)} left</span>
+                <span className="text-muted-foreground">
+                  {' '}
+                  · {formatMinor(remaining, currency)} left
+                </span>
               ) : null}
             </span>
           </div>

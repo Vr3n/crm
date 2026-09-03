@@ -81,7 +81,8 @@ export function PlanPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{plan.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {formatMinor(plan.basePriceMinor, currency)} · {plan.duration} · {formatRate(plan.taxRateBps)} tax
+                      {formatMinor(plan.basePriceMinor, currency)} · {plan.duration} ·{' '}
+                      {formatRate(plan.taxRateBps)} tax
                     </span>
                   </span>
                   {selected?.id === plan.id ? <Package className="ml-auto size-3.5" /> : null}

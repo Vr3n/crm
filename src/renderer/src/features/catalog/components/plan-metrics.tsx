@@ -64,7 +64,9 @@ export function PlanMetrics({ plans }: { plans: Plan[] }): React.JSX.Element {
           key={m.key}
           className="flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3"
         >
-          <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', m.chip)}>
+          <div
+            className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', m.chip)}
+          >
             <m.icon className="size-4" />
           </div>
           <div className="min-w-0">

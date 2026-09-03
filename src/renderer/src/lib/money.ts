@@ -33,6 +33,9 @@ export function sanitizeMoneyInput(value: string, maxFractionDigits = 2): string
   const dot = cleaned.indexOf('.')
   if (dot === -1) return cleaned
   const before = cleaned.slice(0, dot + 1)
-  const after = cleaned.slice(dot + 1).replace(/\./g, '').slice(0, maxFractionDigits)
+  const after = cleaned
+    .slice(dot + 1)
+    .replace(/\./g, '')
+    .slice(0, maxFractionDigits)
   return before + after
 }

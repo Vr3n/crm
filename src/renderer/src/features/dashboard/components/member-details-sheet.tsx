@@ -128,7 +128,9 @@ function InvoiceRow({ invoice }: { invoice: MembershipInvoice }): React.JSX.Elem
         <p className="truncate font-mono text-[11px] text-muted-foreground">{invoice.invoiceNo}</p>
       </div>
       <div className="flex flex-col items-end gap-1">
-        <span className="text-sm font-semibold tabular-nums">{formatMinor(invoice.amountMinor, currency)}</span>
+        <span className="text-sm font-semibold tabular-nums">
+          {formatMinor(invoice.amountMinor, currency)}
+        </span>
         <Badge
           variant={paid ? 'success' : 'destructive'}
           className="rounded-none px-1.5 py-0 text-[10px] tabular-nums"

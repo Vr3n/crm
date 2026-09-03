@@ -68,11 +68,11 @@ export function CustomerDetailPage(): React.JSX.Element {
     )
   }
 
-  const sortedMemberships = [...customer.memberships].sort(
-    (a, b) => b.startDate.localeCompare(a.startDate)
+  const sortedMemberships = [...customer.memberships].sort((a, b) =>
+    b.startDate.localeCompare(a.startDate)
   )
-  const sortedInvoices = [...(customer.invoices ?? [])].sort(
-    (a, b) => b.issuedAt.localeCompare(a.issuedAt)
+  const sortedInvoices = [...(customer.invoices ?? [])].sort((a, b) =>
+    b.issuedAt.localeCompare(a.issuedAt)
   )
 
   return (

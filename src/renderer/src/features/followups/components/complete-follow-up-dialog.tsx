@@ -156,8 +156,7 @@ export function CompleteFollowUpDialog({
                 <form.Field
                   name="activityTypeId"
                   validators={{
-                    onChange: ({ value }) =>
-                      activityOpen && !value ? 'Choose a type' : undefined
+                    onChange: ({ value }) => (activityOpen && !value ? 'Choose a type' : undefined)
                   }}
                 >
                   {(field) => (
@@ -243,11 +242,7 @@ export function CompleteFollowUpDialog({
           </FieldGroup>
 
           <DialogFooter className="mt-6">
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </LoadingButton>
             <LoadingButton

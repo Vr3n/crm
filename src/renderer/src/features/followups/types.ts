@@ -19,6 +19,7 @@ export interface FollowUpRow {
   notes?: string
   completedAt?: string
   cancelledAt?: string
+  cancelledReason?: string
   ownerId?: number
   ownerName?: string
 }

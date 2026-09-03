@@ -28,9 +28,12 @@ interface PersonRow {
 interface MembershipRow {
   id: number
   customer_id: number
+  plan_id: number
   plan_name_snapshot: string
   start_date: string
   end_date: string
+  joining_date: string
+  final_price_minor: number
   status: string
   created_at: string
 }
@@ -48,6 +51,7 @@ interface InvoiceLineRow {
   id: number
   invoice_id: number
   description: string
+  plan_id: number | null
 }
 
 interface AllocationRow {
@@ -86,7 +90,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(customers.organization_id, organizationId),
-          sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${customers.id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as Array<{ id: number; person_id: number }>
@@ -97,7 +104,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(people.organization_id, organizationId),
-          sql`${people.id} IN (${sql.join(personIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${people.id} IN (${sql.join(
+            personIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as PersonRow[]
@@ -147,7 +157,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(paymentAllocations.organization_id, organizationId),
-          sql`${paymentAllocations.invoice_id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${paymentAllocations.invoice_id} IN (${sql.join(
+            invoiceIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as AllocationRow[]
@@ -164,7 +177,10 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(customers.organization_id, organizationId),
-          sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${customers.id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as Array<{ id: number; person_id: number }>
@@ -175,34 +191,69 @@ export function registerDashboardIpc(): void {
       .where(
         and(
           eq(people.organization_id, organizationId),
-          sql`${people.id} IN (${sql.join(personIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${people.id} IN (${sql.join(
+            personIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as PersonRow[]
     const personMap = new Map(personRows.map((p) => [p.id, p]))
     const personByCustomer = new Map(customerRows.map((c) => [c.id, personMap.get(c.person_id)]))
 
-    // Fetch first line description for each invoice
+    // Fetch first line description and plan_id for each invoice
     const allLines = getDrizzle()
       .select()
       .from(invoiceLines)
       .where(
         and(
           eq(invoiceLines.organization_id, organizationId),
-          sql`${invoiceLines.invoice_id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${invoiceLines.invoice_id} IN (${sql.join(
+            invoiceIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as InvoiceLineRow[]
     const firstLineByInvoice = new Map<number, string>()
+    const planIdByInvoice = new Map<number, number | null>()
     for (const l of allLines) {
       if (!firstLineByInvoice.has(l.invoice_id)) {
         firstLineByInvoice.set(l.invoice_id, l.description)
+        planIdByInvoice.set(l.invoice_id, l.plan_id)
+      }
+    }
+
+    // Fetch memberships for these customers to get plan duration and membership amount
+    const membershipRows = getDrizzle()
+      .select()
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.organization_id, organizationId),
+          sql`${memberships.customer_id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
+        )
+      )
+      .orderBy(sql`${memberships.created_at} DESC`)
+      .all() as MembershipRow[]
+    // Key: "customerId-planId" → most recent membership
+    const membershipByKey = new Map<string, MembershipRow>()
+    for (const m of membershipRows) {
+      const key = `${m.customer_id}-${m.plan_id}`
+      if (!membershipByKey.has(key)) {
+        membershipByKey.set(key, m)
       }
     }
 
     return invoiceRows.map((inv) => {
       const person = personByCustomer.get(inv.customer_id)
       const paid = paidByInvoice.get(inv.id) ?? 0
+      const firstPlanId = planIdByInvoice.get(inv.id)
+      const membership =
+        firstPlanId != null ? membershipByKey.get(`${inv.customer_id}-${firstPlanId}`) : undefined
       return {
         id: String(inv.id),
         member: {
@@ -211,10 +262,16 @@ export function registerDashboardIpc(): void {
           phone: person?.phone ?? undefined,
           email: person?.email ?? undefined
         },
-        plan: firstLineByInvoice.get(inv.id) ?? 'Invoice',
+        plan: membership?.plan_name_snapshot ?? firstLineByInvoice.get(inv.id) ?? 'Invoice',
         purchasedAt: inv.created_at,
         amountDueMinor: inv.total_minor - paid,
-        totalMinor: inv.total_minor
+        totalMinor: inv.total_minor,
+        invoiceNumber: inv.number,
+        planStartDate: membership?.start_date ?? inv.created_at,
+        planEndDate: membership?.end_date ?? inv.created_at,
+        joiningDate: membership?.joining_date ?? inv.created_at,
+        membershipAmountMinor: membership?.final_price_minor ?? inv.total_minor,
+        membershipPurchasedAt: membership?.created_at ?? inv.created_at
       }
     })
   })
@@ -236,7 +293,10 @@ export function registerDashboardIpc(): void {
       .select()
       .from(memberships)
       .where(
-        and(eq(memberships.organization_id, organizationId), eq(memberships.customer_id, customerId))
+        and(
+          eq(memberships.organization_id, organizationId),
+          eq(memberships.customer_id, customerId)
+        )
       )
       .orderBy(asc(memberships.created_at))
       .all() as MembershipRow[]
@@ -309,7 +369,10 @@ export function registerDashboardIpc(): void {
       .select()
       .from(memberships)
       .where(
-        and(eq(memberships.organization_id, organizationId), eq(memberships.customer_id, customerId))
+        and(
+          eq(memberships.organization_id, organizationId),
+          eq(memberships.customer_id, customerId)
+        )
       )
       .orderBy(asc(memberships.created_at))
       .all() as MembershipRow[]

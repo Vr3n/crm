@@ -69,8 +69,17 @@ export function MembershipMetrics({
       {METRICS.map((m) => (
         <div
           key={m.key}
-          className={cn('crm-gradient-border flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3')}
-          style={m.gradient ? { '--gradient-start': m.gradient.start, '--gradient-end': m.gradient.end } as React.CSSProperties : undefined}
+          className={cn(
+            'crm-gradient-border flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3'
+          )}
+          style={
+            m.gradient
+              ? ({
+                  '--gradient-start': m.gradient.start,
+                  '--gradient-end': m.gradient.end
+                } as React.CSSProperties)
+              : undefined
+          }
         >
           <div
             className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', m.chip)}

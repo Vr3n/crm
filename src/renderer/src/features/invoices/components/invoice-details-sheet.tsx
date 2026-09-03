@@ -120,7 +120,9 @@ function AllocationRow({ invoice }: { invoice: Invoice }): React.JSX.Element {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-sm font-semibold tabular-nums">{formatMinor(a.amountMinor, currency)}</span>
+              <span className="text-sm font-semibold tabular-nums">
+                {formatMinor(a.amountMinor, currency)}
+              </span>
               <span className="text-xs text-muted-foreground">{formatDateTime(a.receivedAt)}</span>
             </div>
           </div>
@@ -157,7 +159,9 @@ function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
             <span className="text-right text-xs tabular-nums text-muted-foreground">
               {l.quantity}
             </span>
-            <span className="text-right text-xs tabular-nums">{formatMinor(l.unitPriceMinor, currency)}</span>
+            <span className="text-right text-xs tabular-nums">
+              {formatMinor(l.unitPriceMinor, currency)}
+            </span>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
               {formatRate(l.taxRateBps)}
             </span>
@@ -166,13 +170,22 @@ function InvoiceLines({ invoice }: { invoice: Invoice }): React.JSX.Element {
       </div>
       <div className="flex flex-col items-end gap-1">
         <span className="text-xs text-muted-foreground">
-          Subtotal <span className="font-mono tabular-nums">{formatMinor(invoice.subtotalMinor, currency)}</span>
+          Subtotal{' '}
+          <span className="font-mono tabular-nums">
+            {formatMinor(invoice.subtotalMinor, currency)}
+          </span>
         </span>
         <span className="text-xs text-muted-foreground">
-          Tax (GST) <span className="font-mono tabular-nums">{formatMinor(invoice.taxTotalMinor, currency)}</span>
+          Tax (GST){' '}
+          <span className="font-mono tabular-nums">
+            {formatMinor(invoice.taxTotalMinor, currency)}
+          </span>
         </span>
         <span className="text-sm font-semibold">
-          Total <span className="font-mono tabular-nums">{formatMinor(invoice.totalMinor, currency)}</span>
+          Total{' '}
+          <span className="font-mono tabular-nums">
+            {formatMinor(invoice.totalMinor, currency)}
+          </span>
         </span>
       </div>
     </>
@@ -237,237 +250,242 @@ export function InvoiceDetailsSheet({
 
   return (
     <>
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 border-l p-0 sm:max-w-md">
-        {invoice && (
-          <>
-            <SheetHeader className="gap-3 border-b border-border/80 pr-12">
-              <div className="flex items-start gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 font-heading text-sm font-semibold text-primary">
-                  {initials(invoice.customer.name)}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <SheetTitle className="truncate text-lg">{invoice.customer.name}</SheetTitle>
-                    {data ? <InvoiceStatusBadge status={data.status} /> : null}
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="w-full gap-0 border-l p-0 sm:max-w-md">
+          {invoice && (
+            <>
+              <SheetHeader className="gap-3 border-b border-border/80 pr-12">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 font-heading text-sm font-semibold text-primary">
+                    {initials(invoice.customer.name)}
                   </div>
-                  <p className="truncate font-mono text-xs text-muted-foreground">
-                    {invoice.invoiceNo}
-                  </p>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <SheetTitle className="truncate text-lg">{invoice.customer.name}</SheetTitle>
+                      {data ? <InvoiceStatusBadge status={data.status} /> : null}
+                    </div>
+                    <p className="truncate font-mono text-xs text-muted-foreground">
+                      {invoice.invoiceNo}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Phone className="size-3.5 shrink-0" />
-                  {invoice.customer.phone ?? '—'}
-                </span>
-                {invoice.customer.email && (
+                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5">
-                    <Mail className="size-3.5 shrink-0" />
-                    <span className="truncate">{invoice.customer.email}</span>
+                    <Phone className="size-3.5 shrink-0" />
+                    {invoice.customer.phone ?? '—'}
                   </span>
-                )}
-              </div>
-            </SheetHeader>
+                  {invoice.customer.email && (
+                    <span className="flex items-center gap-1.5">
+                      <Mail className="size-3.5 shrink-0" />
+                      <span className="truncate">{invoice.customer.email}</span>
+                    </span>
+                  )}
+                </div>
+              </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto px-5 py-5">
-              {isLoading ? (
-                <InvoiceSkeleton />
-              ) : isError || !data ? (
-                <p className="text-sm text-muted-foreground">Couldn&apos;t load this invoice.</p>
-              ) : (
-                <div className="flex flex-col gap-8">
-                  <div className="flex gap-2.5">
-                    <StatTile
-                      label="Total"
-                      value={formatMinor(data.totalMinor, currency)}
-                      tone={
-                        data.status === 'VOID' || data.status === 'UNCOLLECTIBLE'
-                          ? 'muted'
-                          : 'accent'
-                      }
-                    />
-                    <StatTile
-                      label="Paid"
-                      value={formatMinor(data.paidMinor, currency)}
-                      tone={data.paidMinor > 0 ? 'accent' : 'muted'}
-                    />
-                    <StatTile
-                      label="Outstanding"
-                      value={formatMinor(data.outstandingMinor, currency)}
-                      tone={data.outstandingMinor > 0 ? 'danger' : 'muted'}
-                    />
-                  </div>
+              <div className="flex-1 overflow-y-auto px-5 py-5">
+                {isLoading ? (
+                  <InvoiceSkeleton />
+                ) : isError || !data ? (
+                  <p className="text-sm text-muted-foreground">Couldn&apos;t load this invoice.</p>
+                ) : (
+                  <div className="flex flex-col gap-8">
+                    <div className="flex gap-2.5">
+                      <StatTile
+                        label="Total"
+                        value={formatMinor(data.totalMinor, currency)}
+                        tone={
+                          data.status === 'VOID' || data.status === 'UNCOLLECTIBLE'
+                            ? 'muted'
+                            : 'accent'
+                        }
+                      />
+                      <StatTile
+                        label="Paid"
+                        value={formatMinor(data.paidMinor, currency)}
+                        tone={data.paidMinor > 0 ? 'accent' : 'muted'}
+                      />
+                      <StatTile
+                        label="Outstanding"
+                        value={formatMinor(data.outstandingMinor, currency)}
+                        tone={data.outstandingMinor > 0 ? 'danger' : 'muted'}
+                      />
+                    </div>
 
-                  <section className="flex flex-col gap-3">
-                    <SectionHeading
-                      icon={ReceiptText}
-                      title="Invoice lines"
-                      hint={
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {meta?.label} · {data.lines.length}{' '}
-                          {data.lines.length === 1 ? 'line' : 'lines'}
-                        </span>
-                      }
-                    />
-                    <InvoiceLines invoice={data} />
-                  </section>
-
-                  <section className="flex flex-col gap-3">
-                    <SectionHeading icon={Wallet} title="Payments allocated" />
-                    <AllocationRow invoice={data} />
-                  </section>
-
-                  <section className="flex flex-col gap-3">
-                    <SectionHeading icon={CalendarClock} title="Details" />
-                    <div>
-                      <KeyValue label="Issued" value={formatDate(data.issuedAt)} />
-                      {data.dueAt ? <KeyValue label="Due" value={formatDate(data.dueAt)} /> : null}
-                      <KeyValue label="Status" value={meta?.label ?? data.status} />
-                      <KeyValue
-                        label="Created by"
-                        value={
-                          <span className="flex items-center gap-1.5">
-                            <UserRound className="size-3.5 text-muted-foreground" />
-                            {data.createdBy}
+                    <section className="flex flex-col gap-3">
+                      <SectionHeading
+                        icon={ReceiptText}
+                        title="Invoice lines"
+                        hint={
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {meta?.label} · {data.lines.length}{' '}
+                            {data.lines.length === 1 ? 'line' : 'lines'}
                           </span>
                         }
                       />
-                    </div>
-                  </section>
-                </div>
-              )}
-            </div>
+                      <InvoiceLines invoice={data} />
+                    </section>
 
-            {isDraft ? (
-              <SheetFooter className="border-t border-border/80">
-                <div className="grid w-full grid-cols-2 gap-2.5">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={canEditSnapshot ? -1 : 0} className="contents">
-                        <Button
-                          variant="outline"
-                          disabled={!canEditSnapshot}
-                          onClick={() => setSnapshotOpen(true)}
-                        >
-                          <UserRoundPen />
-                          Edit billing details
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!canEditSnapshot ? (
-                      <TooltipContent>Requires the invoice.create permission</TooltipContent>
-                    ) : null}
-                  </Tooltip>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      toast('Continue draft', {
-                        description: 'Reopen the draft from the register to add lines and finalize.'
-                      })
-                    }
-                  >
-                    Add lines / Finalize
-                  </Button>
-                </div>
-              </SheetFooter>
-            ) : data && isOpenish ? (
-              <SheetFooter className="border-t border-border/80">
-                <div className="grid w-full grid-cols-2 gap-2.5">
-                  <Button onClick={() => setPaymentDialogOpen(true)}>Record payment</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      toast('Follow-up scheduled', {
-                        description: 'Follow-up scheduling arrives with the Members module.'
-                      })
-                    }
-                  >
-                    Schedule follow-up
-                  </Button>
-                  <LifecycleButton
-                    label="Void"
-                    enabled={canLifecycle}
-                    tooltip="Requires the invoice.void permission"
-                    onClick={() => setVoidOpen(true)}
-                  />
-                  <LifecycleButton
-                    label="Mark uncollectible"
-                    enabled={canLifecycle}
-                    tooltip="Requires the invoice.void permission"
-                    onClick={() => setUncollectibleOpen(true)}
-                  />
-                </div>
-              </SheetFooter>
-            ) : data != null &&
-              (data.status === 'PAID' || data.status === 'VOID' || data.status === 'UNCOLLECTIBLE') ? (
-              <SheetFooter className="border-t border-border/80">
-                <div className="grid w-full grid-cols-2 gap-2.5">
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      toast('Print / PDF', {
-                        description: 'Printable invoices arrive with the Reports module.'
-                      })
-                    }
-                  >
-                    Print / PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      toast('Email invoice', {
-                        description: 'Email delivery arrives with the Reports module.'
-                      })
-                    }
-                  >
-                    Email invoice
-                  </Button>
-                </div>
-              </SheetFooter>
-            ) : null}
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
-    {invoice && isDraft ? (
-      <EditBillingSnapshotDialog
-        open={snapshotOpen}
-        onOpenChange={setSnapshotOpen}
-        invoiceId={numericId}
-        invoiceNo={invoice.invoiceNo}
-        initial={{
-          name: data.billingName ?? invoice.customer.name,
-          phone: data.billingPhone ?? '',
-          email: data.billingEmail ?? '',
-          address: data.billingAddress ?? ''
-        }}
-      />
-    ) : null}
-    {invoice && isOpenish ? (
-      <>
-        <VoidInvoiceDialog
-          open={voidOpen}
-          onOpenChange={setVoidOpen}
+                    <section className="flex flex-col gap-3">
+                      <SectionHeading icon={Wallet} title="Payments allocated" />
+                      <AllocationRow invoice={data} />
+                    </section>
+
+                    <section className="flex flex-col gap-3">
+                      <SectionHeading icon={CalendarClock} title="Details" />
+                      <div>
+                        <KeyValue label="Issued" value={formatDate(data.issuedAt)} />
+                        {data.dueAt ? (
+                          <KeyValue label="Due" value={formatDate(data.dueAt)} />
+                        ) : null}
+                        <KeyValue label="Status" value={meta?.label ?? data.status} />
+                        <KeyValue
+                          label="Created by"
+                          value={
+                            <span className="flex items-center gap-1.5">
+                              <UserRound className="size-3.5 text-muted-foreground" />
+                              {data.createdBy}
+                            </span>
+                          }
+                        />
+                      </div>
+                    </section>
+                  </div>
+                )}
+              </div>
+
+              {isDraft ? (
+                <SheetFooter className="border-t border-border/80">
+                  <div className="grid w-full grid-cols-2 gap-2.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={canEditSnapshot ? -1 : 0} className="contents">
+                          <Button
+                            variant="outline"
+                            disabled={!canEditSnapshot}
+                            onClick={() => setSnapshotOpen(true)}
+                          >
+                            <UserRoundPen />
+                            Edit billing details
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!canEditSnapshot ? (
+                        <TooltipContent>Requires the invoice.create permission</TooltipContent>
+                      ) : null}
+                    </Tooltip>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        toast('Continue draft', {
+                          description:
+                            'Reopen the draft from the register to add lines and finalize.'
+                        })
+                      }
+                    >
+                      Add lines / Finalize
+                    </Button>
+                  </div>
+                </SheetFooter>
+              ) : data && isOpenish ? (
+                <SheetFooter className="border-t border-border/80">
+                  <div className="grid w-full grid-cols-2 gap-2.5">
+                    <Button onClick={() => setPaymentDialogOpen(true)}>Record payment</Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        toast('Follow-up scheduled', {
+                          description: 'Follow-up scheduling arrives with the Members module.'
+                        })
+                      }
+                    >
+                      Schedule follow-up
+                    </Button>
+                    <LifecycleButton
+                      label="Void"
+                      enabled={canLifecycle}
+                      tooltip="Requires the invoice.void permission"
+                      onClick={() => setVoidOpen(true)}
+                    />
+                    <LifecycleButton
+                      label="Mark uncollectible"
+                      enabled={canLifecycle}
+                      tooltip="Requires the invoice.void permission"
+                      onClick={() => setUncollectibleOpen(true)}
+                    />
+                  </div>
+                </SheetFooter>
+              ) : data != null &&
+                (data.status === 'PAID' ||
+                  data.status === 'VOID' ||
+                  data.status === 'UNCOLLECTIBLE') ? (
+                <SheetFooter className="border-t border-border/80">
+                  <div className="grid w-full grid-cols-2 gap-2.5">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        toast('Print / PDF', {
+                          description: 'Printable invoices arrive with the Reports module.'
+                        })
+                      }
+                    >
+                      Print / PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        toast('Email invoice', {
+                          description: 'Email delivery arrives with the Reports module.'
+                        })
+                      }
+                    >
+                      Email invoice
+                    </Button>
+                  </div>
+                </SheetFooter>
+              ) : null}
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+      {invoice && isDraft ? (
+        <EditBillingSnapshotDialog
+          open={snapshotOpen}
+          onOpenChange={setSnapshotOpen}
           invoiceId={numericId}
           invoiceNo={invoice.invoiceNo}
+          initial={{
+            name: data.billingName ?? invoice.customer.name,
+            phone: data.billingPhone ?? '',
+            email: data.billingEmail ?? '',
+            address: data.billingAddress ?? ''
+          }}
         />
-        <MarkUncollectibleDialog
-          open={uncollectibleOpen}
-          onOpenChange={setUncollectibleOpen}
-          invoiceId={numericId}
-          invoiceNo={invoice.invoiceNo}
+      ) : null}
+      {invoice && isOpenish ? (
+        <>
+          <VoidInvoiceDialog
+            open={voidOpen}
+            onOpenChange={setVoidOpen}
+            invoiceId={numericId}
+            invoiceNo={invoice.invoiceNo}
+          />
+          <MarkUncollectibleDialog
+            open={uncollectibleOpen}
+            onOpenChange={setUncollectibleOpen}
+            invoiceId={numericId}
+            invoiceNo={invoice.invoiceNo}
+          />
+        </>
+      ) : null}
+      {invoice && (
+        <RecordPaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          preSelectedCustomerId={invoice.customer.id}
+          preSelectedInvoiceId={invoice.id}
         />
-      </>
-    ) : null}
-    {invoice && (
-      <RecordPaymentDialog
-        open={paymentDialogOpen}
-        onOpenChange={setPaymentDialogOpen}
-        preSelectedCustomerId={invoice.customer.id}
-        preSelectedInvoiceId={invoice.id}
-      />
-    )}
+      )}
     </>
   )
 }
@@ -488,7 +506,12 @@ function LifecycleButton({
     <Tooltip>
       <TooltipTrigger asChild>
         <span tabIndex={enabled ? -1 : 0}>
-          <Button variant="outline" className="text-destructive hover:text-destructive" disabled={!enabled} onClick={onClick}>
+          <Button
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            disabled={!enabled}
+            onClick={onClick}
+          >
             {label}
           </Button>
         </span>

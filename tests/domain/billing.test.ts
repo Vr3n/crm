@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   InvoiceCalculationService,
-  generateInvoiceNumber,
-  assertValidInvoiceTransition
+  assertValidInvoiceTransition,
+  deriveInvoicePrefix,
+  formatDDMMYY
 } from '../../src/main/domain/billing'
 
 describe('InvoiceCalculationService', () => {
@@ -37,8 +38,20 @@ describe('InvoiceCalculationService', () => {
   describe('calculateDraftTotals', () => {
     it('sums line values correctly (no float drift)', () => {
       const lines = [
-        { unitPriceMinor: 100000, quantity: 1, discountMinor: 0, taxAmountMinor: 18000, lineTotalMinor: 118000 },
-        { unitPriceMinor: 50000, quantity: 2, discountMinor: 5000, taxAmountMinor: 17100, lineTotalMinor: 117100 }
+        {
+          unitPriceMinor: 100000,
+          quantity: 1,
+          discountMinor: 0,
+          taxAmountMinor: 18000,
+          lineTotalMinor: 118000
+        },
+        {
+          unitPriceMinor: 50000,
+          quantity: 2,
+          discountMinor: 5000,
+          taxAmountMinor: 17100,
+          lineTotalMinor: 117100
+        }
       ]
       const totals = InvoiceCalculationService.calculateDraftTotals(lines)
       expect(totals.subtotalMinor).toBe(195000) // (100000*1 - 0) + (50000*2 - 5000)
@@ -53,7 +66,13 @@ describe('InvoiceCalculationService', () => {
 
     it('handles single line', () => {
       const lines = [
-        { unitPriceMinor: 200000, quantity: 1, discountMinor: 10000, taxAmountMinor: 34200, lineTotalMinor: 224200 }
+        {
+          unitPriceMinor: 200000,
+          quantity: 1,
+          discountMinor: 10000,
+          taxAmountMinor: 34200,
+          lineTotalMinor: 224200
+        }
       ]
       const totals = InvoiceCalculationService.calculateDraftTotals(lines)
       expect(totals).toEqual({ subtotalMinor: 190000, taxMinor: 34200, totalMinor: 224200 })
@@ -61,20 +80,50 @@ describe('InvoiceCalculationService', () => {
   })
 })
 
-describe('generateInvoiceNumber', () => {
-  it('generates INV-YYMMDD-CUSTOMERID format', () => {
-    const number = generateInvoiceNumber(42, '2026-08-21')
-    expect(number).toBe('INV-260821-0042')
+describe('deriveInvoicePrefix', () => {
+  it('derives initials from multi-word org name', () => {
+    expect(deriveInvoicePrefix('Crown Vitality')).toBe('CV')
   })
 
-  it('pads customer ID to 4 digits', () => {
-    const number = generateInvoiceNumber(1, '2026-01-01')
-    expect(number).toBe('INV-260101-0001')
+  it('derives single letter from single-word org name', () => {
+    expect(deriveInvoicePrefix('Fitness')).toBe('F')
   })
 
-  it('handles large customer IDs', () => {
-    const number = generateInvoiceNumber(12345, '2026-12-31')
-    expect(number).toBe('INV-261231-12345')
+  it('uses explicit prefix when provided', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', 'MYORG')).toBe('MYORG')
+  })
+
+  it('trims and uppercases explicit prefix', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', '  abc  ')).toBe('ABC')
+  })
+
+  it('limits explicit prefix to 6 chars', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', 'LONGPREFIX')).toBe('LONGPR')
+  })
+
+  it('falls back to ORG for empty org name', () => {
+    expect(deriveInvoicePrefix('')).toBe('ORG')
+  })
+
+  it('handles null explicit prefix', () => {
+    expect(deriveInvoicePrefix('Crown Vitality', null)).toBe('CV')
+  })
+})
+
+describe('formatDDMMYY', () => {
+  it('formats date as DDMMYY', () => {
+    const date = new Date(2026, 0, 1) // Jan 1, 2026
+    expect(formatDDMMYY(date)).toBe('010126')
+  })
+
+  it('pads single-digit day and month', () => {
+    const date = new Date(2026, 8, 1) // Sep 1, 2026
+    expect(formatDDMMYY(date)).toBe('010926')
+  })
+
+  it('handles end of year', () => {
+    const date = new Date(2026, 11, 31) // Dec 31, 2026
+    expect(formatDDMMYY(date)).toBe('311226')
   })
 })
 
@@ -89,9 +138,13 @@ describe('assertValidInvoiceTransition', () => {
   })
 
   it('rejects invalid transitions', () => {
-    expect(() => assertValidInvoiceTransition('DRAFT', 'PAID')).toThrow('Invalid invoice transition')
+    expect(() => assertValidInvoiceTransition('DRAFT', 'PAID')).toThrow(
+      'Invalid invoice transition'
+    )
     expect(() => assertValidInvoiceTransition('PAID', 'OPEN')).toThrow('Invalid invoice transition')
     expect(() => assertValidInvoiceTransition('VOID', 'OPEN')).toThrow('Invalid invoice transition')
-    expect(() => assertValidInvoiceTransition('UNCOLLECTIBLE', 'PAID')).toThrow('Invalid invoice transition')
+    expect(() => assertValidInvoiceTransition('UNCOLLECTIBLE', 'PAID')).toThrow(
+      'Invalid invoice transition'
+    )
   })
 })

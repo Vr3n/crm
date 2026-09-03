@@ -40,8 +40,17 @@ export function FinanceMetric({
   const gradient = TONE_GRADIENT[tone]
   return (
     <div
-      className={cn('crm-gradient-border flex min-w-40 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3')}
-      style={gradient ? { '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties : undefined}
+      className={cn(
+        'crm-gradient-border flex min-w-40 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3'
+      )}
+      style={
+        gradient
+          ? ({
+              '--gradient-start': gradient.start,
+              '--gradient-end': gradient.end
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       <div
         className={cn(

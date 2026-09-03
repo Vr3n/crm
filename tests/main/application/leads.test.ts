@@ -169,7 +169,7 @@ describe('createLead', () => {
   it('persists plan, goal, and notes', () => {
     const { organizationId } = seedOrgWithSession()
     const sourceId = createSourceId(organizationId)
-    const planId = planIdByName(organizationId, 'Annual Premium')
+    const planId = planIdByName(organizationId, 'Annual')
 
     const { leadId } = createLead({
       fullName: 'Sana Kapoor',
@@ -213,7 +213,7 @@ describe('createLead', () => {
     const { organizationId: orgA } = seedOrgWithSession()
     const { organizationId: orgB } = seedOrgWithSession()
     const sourceId = createSourceId(orgA)
-    const foreignPlan = planIdByName(orgB, 'Annual Premium')
+    const foreignPlan = planIdByName(orgB, 'Annual')
 
     expect(() =>
       createLead({
@@ -298,7 +298,7 @@ describe('editLead', () => {
       phone,
       email: 'rahul@example.com',
       sourceId,
-      planId: planIdByName(organizationId, 'Annual Premium'),
+      planId: planIdByName(organizationId, 'Annual'),
       goal: 'Weight loss',
       notes: 'Prefers evening sessions'
     })
@@ -314,7 +314,7 @@ describe('editLead', () => {
     })
     expect(lead).toMatchObject({
       sourceId,
-      planId: planIdByName(organizationId, 'Annual Premium'),
+      planId: planIdByName(organizationId, 'Annual'),
       goal: 'Weight loss',
       notes: 'Prefers evening sessions'
     })
@@ -842,9 +842,9 @@ describe('bulkScheduleFollowUp', () => {
     const { leadId } = createLeadFor(organizationId)
     // createLead already auto-created the default follow-up for this lead.
     const before = (
-      getDb()
-        .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?')
-        .get(leadId) as { n: number }
+      getDb().prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id = ?').get(leadId) as {
+        n: number
+      }
     ).n
     expect(() =>
       bulkScheduleFollowUp({
@@ -1128,7 +1128,7 @@ describe('listLeads', () => {
   it('round-trips plan, goal, and notes in list rows', () => {
     const { organizationId } = seedOrgWithSession()
     const sourceId = createSourceId(organizationId)
-    const planId = planIdByName(organizationId, 'Premium Quarterly')
+    const planId = planIdByName(organizationId, 'Quarterly')
     createLead({
       fullName: 'Neha',
       phone: '9333333333',
@@ -1141,7 +1141,7 @@ describe('listLeads', () => {
     const row = listLeads({ page: 1, limit: 50 }).items[0]
     expect(row).toMatchObject({
       planId,
-      planName: 'Premium Quarterly',
+      planName: 'Quarterly',
       goal: 'Muscle gain',
       notes: 'Prefers evening batch'
     })
@@ -1216,13 +1216,12 @@ describe('searchLeadPlans', () => {
   it('returns only active catalog plans matching the query, case-insensitively', () => {
     seedOrgWithSession()
 
-    // The seeded catalog has exactly one "Annual Premium"; Weekend Access is
-    // seeded inactive and must never be suggested.
+    // The seeded catalog has exactly one active plan matching "annual".
     expect(searchLeadPlans({ query: 'annual' })).toEqual([
-      { id: expect.any(Number), name: 'Annual Premium' }
+      { id: expect.any(Number), name: 'Annual' }
     ])
     expect(searchLeadPlans({ query: '  ANNUAL  ' })).toEqual([
-      { id: expect.any(Number), name: 'Annual Premium' }
+      { id: expect.any(Number), name: 'Annual' }
     ])
     expect(searchLeadPlans({ query: 'weekend' })).toEqual([])
   })

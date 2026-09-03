@@ -42,8 +42,7 @@ export function OffersPage(): React.JSX.Element {
     const needle = filters.search.trim().toLowerCase()
     return filterOffersByLifecycle(offers, filters.lifecycle)
       .filter(
-        (offer) =>
-          filters.discountType === 'ALL' || offer.discountType === filters.discountType
+        (offer) => filters.discountType === 'ALL' || offer.discountType === filters.discountType
       )
       .filter((offer) => {
         if (!filters.dateRange?.from && !filters.dateRange?.to) return true

@@ -36,7 +36,7 @@ function planId(): number {
   return (
     getDb()
       .prepare('SELECT id FROM membership_plans WHERE name = ? ORDER BY id LIMIT 1')
-      .get('Annual Premium') as { id: number }
+      .get('Annual') as { id: number }
   ).id
 }
 
@@ -228,7 +228,7 @@ describe('registerSalesIpc', () => {
       { query: 'annual' }
     )) as { ok: true; data: Array<{ id: number; name: string }> }
     expect(result.ok).toBe(true)
-    expect(result.data).toEqual([{ id: planId(), name: 'Annual Premium' }])
+    expect(result.data).toEqual([{ id: planId(), name: 'Annual' }])
   })
 
   it('rejects a malformed plan search before the use case', async () => {
@@ -354,9 +354,7 @@ describe('registerSalesIpc', () => {
     expect(result.ok).toBe(true)
     expect(result.data).toEqual({ scheduled: 2 })
     const stored = getDb()
-      .prepare(
-        'SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id IN (?, ?) AND title = ?'
-      )
+      .prepare('SELECT COUNT(*) AS n FROM lead_followups WHERE lead_id IN (?, ?) AND title = ?')
       .get(first.leadId, second.leadId, 'Re-call') as { n: number }
     expect(stored.n).toBe(2)
   })

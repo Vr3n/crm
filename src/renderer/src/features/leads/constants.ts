@@ -117,10 +117,12 @@ export function filterLeads(leads: Lead[], filters: LeadFilters): Lead[] {
 
   const q = filters.search?.trim().toLowerCase() ?? ''
   return leads.filter((l) => {
-    if (new Date(l.createdAt).getTime() < cutoff) return false
+    if (toUTCDate(l.createdAt).getTime() < cutoff) return false
     if (filters.stage && filters.stage !== 'ALL' && l.stage !== filters.stage) return false
-    if (filters.sourceId && filters.sourceId !== 'ALL' && l.sourceId !== filters.sourceId) return false
-    if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId) return false
+    if (filters.sourceId && filters.sourceId !== 'ALL' && l.sourceId !== filters.sourceId)
+      return false
+    if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId)
+      return false
     if (q) {
       const hay = [l.name, l.phone, l.email].join(' ').toLowerCase()
       if (!hay.includes(q)) return false
@@ -133,6 +135,18 @@ export function sortLeads(leads: Lead[]): Lead[] {
   return [...leads].sort((a, b) => {
     const order = (k: StageKey): string => STAGE_MAP.get(k)!.label
     const d = order(a.stage).localeCompare(order(b.stage))
-    return d !== 0 ? d : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    return d !== 0 ? d : toUTCDate(b.createdAt).getTime() - toUTCDate(a.createdAt).getTime()
   })
+}
+
+/**
+ * Parse a datetime string from SQLite's `datetime('now')` as UTC.
+ * SQLite stores UTC without a 'Z' suffix; V8 parses space-separated
+ * dates as LOCAL time, so we normalise to force UTC parsing.
+ */
+function toUTCDate(iso: string): Date {
+  if (iso.endsWith('Z') || iso.includes('+')) {
+    return new Date(iso)
+  }
+  return new Date(iso.replace(' ', 'T') + 'Z')
 }

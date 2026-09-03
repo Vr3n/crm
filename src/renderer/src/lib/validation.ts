@@ -22,9 +22,7 @@ export function isValidIndianMobile(value: string): boolean {
   if (!value || value.trim().length === 0) return false
   const cleaned = value.trim().replace(/[\s()-]/g, '')
   return (
-    MOBILE_RE.test(cleaned) ||
-    LANDLINE_WITH_STD_RE.test(cleaned) ||
-    LANDLINE_LOCAL_RE.test(cleaned)
+    MOBILE_RE.test(cleaned) || LANDLINE_WITH_STD_RE.test(cleaned) || LANDLINE_LOCAL_RE.test(cleaned)
   )
 }
 

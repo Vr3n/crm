@@ -70,10 +70,10 @@ function mockApi(): void {
     finalize: vi.fn(),
     updateSnapshot: vi.fn(),
     nextNumber: vi.fn().mockResolvedValue({
-      year: '2026',
-      prefix: 'INV',
-      nextValue: 148,
-      preview: 'INV-2026-000148'
+      dateKey: '010926',
+      prefix: 'CRO',
+      nextValue: 1,
+      preview: 'CRO-010926-01'
     })
   } as never
   window.api.invoices = {
@@ -81,8 +81,9 @@ function mockApi(): void {
     get: vi.fn(),
     listByStatus: vi.fn().mockResolvedValue([])
   } as never
-  ;(window.api.catalog as { listPlans: ReturnType<typeof vi.fn> }).listPlans =
-    vi.fn().mockResolvedValue([])
+  ;(window.api.catalog as { listPlans: ReturnType<typeof vi.fn> }).listPlans = vi
+    .fn()
+    .mockResolvedValue([])
 }
 
 function renderDialog(seedPlanId?: number): ReturnType<typeof renderWithClient> {

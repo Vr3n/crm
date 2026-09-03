@@ -15,14 +15,33 @@ import type { Refund } from '../domain/finance'
 import { NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import { asc, eq, and, inArray, sql } from 'drizzle-orm'
-import { invoices, paymentAllocations, creditAllocations, invoiceLines, customers, people, payments } from '../db/schema'
+import {
+  invoices,
+  paymentAllocations,
+  creditAllocations,
+  invoiceLines,
+  customers,
+  people,
+  payments
+} from '../db/schema'
 
 /**
  * Module 05 (Finance) application use cases. Each Command gates on a permission,
  * derives the org/user from the session, and owns one `withTransaction` boundary.
  */
 
-function mapPaymentToRow(payment: ReturnType<typeof paymentRepo.getById> extends infer T ? NonNullable<T> : never) {
+function mapPaymentToRow(
+  payment: ReturnType<typeof paymentRepo.getById> extends infer T ? NonNullable<T> : never
+): {
+  id: number
+  customerId: number
+  paymentDate: string
+  amountMinor: number
+  paymentMethod: string
+  reference: string | null
+  notes: string | null
+  createdAt: string
+} {
   return {
     id: payment.id,
     customerId: payment.customerId,
@@ -35,7 +54,13 @@ function mapPaymentToRow(payment: ReturnType<typeof paymentRepo.getById> extends
   }
 }
 
-function mapRefundToRow(refund: Refund) {
+function mapRefundToRow(refund: Refund): {
+  id: number
+  paymentId: number
+  amountMinor: number
+  reason: string
+  createdAt: string
+} {
   return {
     id: refund.id,
     paymentId: refund.paymentId,
@@ -45,7 +70,17 @@ function mapRefundToRow(refund: Refund) {
   }
 }
 
-function mapCreditToRow(credit: ReturnType<typeof creditRepo.getById> extends infer T ? NonNullable<T> : never) {
+function mapCreditToRow(
+  credit: ReturnType<typeof creditRepo.getById> extends infer T ? NonNullable<T> : never
+): {
+  id: number
+  customerId: number
+  amountMinor: number
+  remainingMinor: number
+  reason: string
+  expiresAt: string | null
+  createdAt: string
+} {
   return {
     id: credit.id,
     customerId: credit.customerId,
@@ -58,7 +93,10 @@ function mapCreditToRow(credit: ReturnType<typeof creditRepo.getById> extends in
 }
 
 /** Collects all refunds across all payments allocated to an invoice. */
-function collectRefundsForInvoice(organizationId: number, invoiceId: number): Array<{ amountMinor: number }> {
+function collectRefundsForInvoice(
+  organizationId: number,
+  invoiceId: number
+): Array<{ amountMinor: number }> {
   const allocations = allocationRepo.listByInvoice(organizationId, invoiceId)
   const allRefunds: Array<{ amountMinor: number }> = []
   for (const alloc of allocations) {
@@ -69,7 +107,10 @@ function collectRefundsForInvoice(organizationId: number, invoiceId: number): Ar
 }
 
 /** Collects all credit allocations for an invoice. */
-function collectCreditsForInvoice(organizationId: number, invoiceId: number): Array<{ amountMinor: number }> {
+function collectCreditsForInvoice(
+  organizationId: number,
+  invoiceId: number
+): Array<{ amountMinor: number }> {
   return creditAllocationRepo.listByInvoice(organizationId, invoiceId)
 }
 
@@ -85,7 +126,16 @@ export function recordPayment(input: {
   paymentMethod: string
   reference?: string | null
   notes?: string | null
-}) {
+}): {
+  id: number
+  customerId: number
+  paymentDate: string
+  amountMinor: number
+  paymentMethod: string
+  reference: string | null
+  notes: string | null
+  createdAt: string
+} {
   requirePermission(PERMISSIONS.PAYMENT_RECORD)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -114,7 +164,17 @@ export function allocatePayment(input: {
   paymentId: number
   invoiceId: number
   amountMinor: number
-}) {
+}): {
+  allocation: {
+    id: number
+    paymentId: number
+    invoiceId: number
+    amountMinor: number
+    createdAt: string
+  }
+  unallocatedRemainder: number
+  invoiceStatus: string
+} {
   requirePermission(PERMISSIONS.PAYMENT_ALLOCATE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -136,8 +196,15 @@ export function allocatePayment(input: {
     const invoiceAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
     const invoiceRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
     const invoiceCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
-    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
-    const outstanding = PaymentAllocationService.calculateOutstanding(invoice.totalMinor, netAllocated)
+    const netAllocated = PaymentAllocationService.calculateNetAllocated(
+      invoiceAllocations,
+      invoiceRefunds,
+      invoiceCredits
+    )
+    const outstanding = PaymentAllocationService.calculateOutstanding(
+      invoice.totalMinor,
+      netAllocated
+    )
 
     // Validate allocation
     PaymentAllocationService.validateAllocation(
@@ -167,8 +234,15 @@ export function allocatePayment(input: {
     const newAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
     const newRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
     const newCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
-    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(newAllocations, newRefunds, newCredits)
-    const newStatus = PaymentAllocationService.deriveInvoiceStatus(newNetAllocated, invoice.totalMinor)
+    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(
+      newAllocations,
+      newRefunds,
+      newCredits
+    )
+    const newStatus = PaymentAllocationService.deriveInvoiceStatus(
+      newNetAllocated,
+      invoice.totalMinor
+    )
 
     invoiceRepo.updateStatus(organizationId, input.invoiceId, newStatus)
 
@@ -199,7 +273,27 @@ export function recordAndAllocatePayment(input: {
   invoiceId: number
   reference?: string | null
   notes?: string | null
-}) {
+}): {
+  payment: {
+    id: number
+    customerId: number
+    paymentDate: string
+    amountMinor: number
+    paymentMethod: string
+    reference: string | null
+    notes: string | null
+    createdAt: string
+  }
+  allocation: {
+    id: number
+    paymentId: number
+    invoiceId: number
+    amountMinor: number
+    createdAt: string
+  }
+  unallocatedRemainder: number
+  invoiceStatus: string
+} {
   requirePermission(PERMISSIONS.PAYMENT_RECORD)
   requirePermission(PERMISSIONS.PAYMENT_ALLOCATE)
   const organizationId = currentOrganizationId()
@@ -231,8 +325,15 @@ export function recordAndAllocatePayment(input: {
     const invoiceAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
     const invoiceRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
     const invoiceCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
-    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
-    const outstanding = PaymentAllocationService.calculateOutstanding(invoice.totalMinor, netAllocated)
+    const netAllocated = PaymentAllocationService.calculateNetAllocated(
+      invoiceAllocations,
+      invoiceRefunds,
+      invoiceCredits
+    )
+    const outstanding = PaymentAllocationService.calculateOutstanding(
+      invoice.totalMinor,
+      netAllocated
+    )
 
     // Validate and handle overpayment
     const existingAllocations = allocationRepo.listByPayment(organizationId, payment.id)
@@ -262,8 +363,15 @@ export function recordAndAllocatePayment(input: {
     const newAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
     const newRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
     const newCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
-    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(newAllocations, newRefunds, newCredits)
-    const newStatus = PaymentAllocationService.deriveInvoiceStatus(newNetAllocated, invoice.totalMinor)
+    const newNetAllocated = PaymentAllocationService.calculateNetAllocated(
+      newAllocations,
+      newRefunds,
+      newCredits
+    )
+    const newStatus = PaymentAllocationService.deriveInvoiceStatus(
+      newNetAllocated,
+      invoice.totalMinor
+    )
 
     invoiceRepo.updateStatus(organizationId, input.invoiceId, newStatus)
 
@@ -283,11 +391,13 @@ export function recordAndAllocatePayment(input: {
 }
 
 /** Issues a refund against a payment. Re-derives invoice state. */
-export function issueRefund(input: {
+export function issueRefund(input: { paymentId: number; amountMinor: number; reason: string }): {
+  id: number
   paymentId: number
   amountMinor: number
   reason: string
-}) {
+  createdAt: string
+} {
   requirePermission(PERMISSIONS.REFUND_CREATE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -324,8 +434,15 @@ export function issueRefund(input: {
       const invoiceAllocations = allocationRepo.listByInvoice(organizationId, invoiceId)
       const invoiceRefunds = collectRefundsForInvoice(organizationId, invoiceId)
       const invoiceCredits = collectCreditsForInvoice(organizationId, invoiceId)
-      const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
-      const newStatus = PaymentAllocationService.deriveInvoiceStatus(netAllocated, invoice.totalMinor)
+      const netAllocated = PaymentAllocationService.calculateNetAllocated(
+        invoiceAllocations,
+        invoiceRefunds,
+        invoiceCredits
+      )
+      const newStatus = PaymentAllocationService.deriveInvoiceStatus(
+        netAllocated,
+        invoice.totalMinor
+      )
 
       invoiceRepo.updateStatus(organizationId, invoiceId, newStatus)
     }
@@ -340,7 +457,15 @@ export function issueCredit(input: {
   amountMinor: number
   reason: string
   expiresAt?: string | null
-}) {
+}): {
+  id: number
+  customerId: number
+  amountMinor: number
+  remainingMinor: number
+  reason: string
+  expiresAt: string | null
+  createdAt: string
+} {
   requirePermission(PERMISSIONS.CREDIT_CREATE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -363,11 +488,17 @@ export function issueCredit(input: {
 }
 
 /** Applies credit to an invoice. Decrements remaining and re-derives invoice state. */
-export function applyCredit(input: {
-  creditId: number
-  invoiceId: number
-  amountMinor: number
-}) {
+export function applyCredit(input: { creditId: number; invoiceId: number; amountMinor: number }): {
+  allocation: {
+    id: number
+    creditId: number
+    invoiceId: number
+    amountMinor: number
+    createdAt: string
+  }
+  creditRemaining: number
+  invoiceStatus: string
+} {
   requirePermission(PERMISSIONS.CREDIT_APPLY)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
@@ -401,7 +532,11 @@ export function applyCredit(input: {
     const invoiceAllocations = allocationRepo.listByInvoice(organizationId, input.invoiceId)
     const invoiceRefunds = collectRefundsForInvoice(organizationId, input.invoiceId)
     const invoiceCredits = collectCreditsForInvoice(organizationId, input.invoiceId)
-    const netAllocated = PaymentAllocationService.calculateNetAllocated(invoiceAllocations, invoiceRefunds, invoiceCredits)
+    const netAllocated = PaymentAllocationService.calculateNetAllocated(
+      invoiceAllocations,
+      invoiceRefunds,
+      invoiceCredits
+    )
     const newStatus = PaymentAllocationService.deriveInvoiceStatus(netAllocated, invoice.totalMinor)
 
     invoiceRepo.updateStatus(organizationId, input.invoiceId, newStatus)
@@ -425,7 +560,14 @@ export function applyCredit(input: {
 /* -------------------------------------------------------------------------- */
 
 /** Gets the payment state of an invoice. */
-export function getInvoicePaymentState(input: { invoiceId: number }) {
+export function getInvoicePaymentState(input: { invoiceId: number }): {
+  invoiceId: number
+  totalMinor: number
+  allocatedMinor: number
+  refundedMinor: number
+  outstandingMinor: number
+  status: string
+} {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -437,7 +579,10 @@ export function getInvoicePaymentState(input: { invoiceId: number }) {
   const credits = collectCreditsForInvoice(organizationId, input.invoiceId)
 
   const netAllocated = PaymentAllocationService.calculateNetAllocated(allocations, refunds, credits)
-  const outstanding = PaymentAllocationService.calculateOutstanding(invoice.totalMinor, netAllocated)
+  const outstanding = PaymentAllocationService.calculateOutstanding(
+    invoice.totalMinor,
+    netAllocated
+  )
 
   return {
     invoiceId: invoice.id,
@@ -450,7 +595,16 @@ export function getInvoicePaymentState(input: { invoiceId: number }) {
 }
 
 /** Gets payment history for a customer. */
-export function getPaymentHistory(input: { customerId: number }) {
+export function getPaymentHistory(input: { customerId: number }): Array<{
+  id: number
+  customerId: number
+  paymentDate: string
+  amountMinor: number
+  paymentMethod: string
+  reference: string | null
+  notes: string | null
+  createdAt: string
+}> {
   requirePermission(PERMISSIONS.PAYMENT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -459,7 +613,13 @@ export function getPaymentHistory(input: { customerId: number }) {
 }
 
 /** Gets refund history for a payment. */
-export function getRefundHistory(input: { paymentId: number }) {
+export function getRefundHistory(input: { paymentId: number }): Array<{
+  id: number
+  paymentId: number
+  amountMinor: number
+  reason: string
+  createdAt: string
+}> {
   requirePermission(PERMISSIONS.REFUND_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -468,7 +628,7 @@ export function getRefundHistory(input: { paymentId: number }) {
 }
 
 /** Gets the credit balance for a customer. */
-export function getCreditBalance(input: { customerId: number }) {
+export function getCreditBalance(input: { customerId: number }): number {
   requirePermission(PERMISSIONS.CREDIT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -476,7 +636,15 @@ export function getCreditBalance(input: { customerId: number }) {
 }
 
 /** Lists all credits for a customer. */
-export function listCredits(input: { customerId: number }) {
+export function listCredits(input: { customerId: number }): Array<{
+  id: number
+  customerId: number
+  amountMinor: number
+  remainingMinor: number
+  reason: string
+  expiresAt: string | null
+  createdAt: string
+}> {
   requirePermission(PERMISSIONS.CREDIT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -485,7 +653,12 @@ export function listCredits(input: { customerId: number }) {
 }
 
 /** Lists active payment methods. */
-export function listPaymentMethods() {
+export function listPaymentMethods(): Array<{
+  id: number
+  name: string
+  sortOrder: number
+  active: boolean
+}> {
   requirePermission(PERMISSIONS.PAYMENT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -498,7 +671,17 @@ export function listPaymentMethods() {
  * with paid amounts derived from payment allocations.
  * Used by the RecordPaymentDialog to populate the allocation section.
  */
-export function getOutstandingInvoices(input: { customerId: number }) {
+export function getOutstandingInvoices(input: { customerId: number }): Array<{
+  id: string
+  invoiceNo: string
+  customerName: string
+  customerPhone: string | undefined
+  line: string
+  issuedAt: string
+  totalMinor: number
+  paidMinor: number
+  status: string
+}> {
   requirePermission(PERMISSIONS.PAYMENT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -513,7 +696,9 @@ export function getOutstandingInvoices(input: { customerId: number }) {
     ? (getDrizzle()
         .select()
         .from(people)
-        .where(and(eq(people.organization_id, organizationId), eq(people.id, customerRow.person_id)))
+        .where(
+          and(eq(people.organization_id, organizationId), eq(people.id, customerRow.person_id))
+        )
         .get() as { full_name: string; phone: string | null } | undefined)
     : undefined
 
@@ -632,7 +817,10 @@ function resolvePersonNames(
     .where(
       and(
         eq(people.organization_id, organizationId),
-        sql`${people.id} IN (${sql.join(uniqueIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${people.id} IN (${sql.join(
+          uniqueIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as Array<{ id: number; full_name: string; phone: string | null; email: string | null }>
@@ -648,10 +836,7 @@ function resolvePersonNames(
 }
 
 /** Batch-resolves invoice numbers for an array of invoice IDs. */
-function resolveInvoiceNumbers(
-  organizationId: number,
-  invoiceIds: number[]
-): Map<number, string> {
+function resolveInvoiceNumbers(organizationId: number, invoiceIds: number[]): Map<number, string> {
   if (invoiceIds.length === 0) return new Map()
   const uniqueIds = [...new Set(invoiceIds)]
   const rows = getDrizzle()
@@ -660,7 +845,10 @@ function resolveInvoiceNumbers(
     .where(
       and(
         eq(invoices.organization_id, organizationId),
-        sql`${invoices.id} IN (${sql.join(uniqueIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${invoices.id} IN (${sql.join(
+          uniqueIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as Array<{ id: number; number: string }>
@@ -673,7 +861,19 @@ function resolveInvoiceNumbers(
  * Returns all payments for the org, hydrated with customer names, allocations,
  * and refund references. Used by the Payments page table.
  */
-export function getAllPayments() {
+export function getAllPayments(): Array<{
+  id: string
+  paymentNo: string
+  customer: { id: string; name: string; phone: string | undefined; email: string | undefined }
+  paymentDate: string
+  amountMinor: number
+  method: string
+  reference: string | undefined
+  notes: string | undefined
+  createdBy: string
+  allocations: Array<{ invoiceId: string; invoiceNo: string; amountMinor: number }>
+  refundIds: string[]
+}> {
   requirePermission(PERMISSIONS.PAYMENT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -688,7 +888,10 @@ export function getAllPayments() {
     .where(
       and(
         eq(customers.organization_id, organizationId),
-        sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${customers.id} IN (${sql.join(
+          customerIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as Array<{ id: number; person_id: number }>
@@ -760,7 +963,18 @@ export function getAllPayments() {
  * Returns all refunds for the org, hydrated with customer names and linked
  * payment info. Used by the Refunds page table.
  */
-export function getAllRefunds() {
+export function getAllRefunds(): Array<{
+  id: string
+  refundNo: string
+  customer: { id: string; name: string; phone: string | undefined; email: string | undefined }
+  refundDate: string
+  amountMinor: number
+  sourcePaymentId: string
+  sourcePaymentNo: string
+  method: string
+  reason: string
+  createdBy: string
+}> {
   requirePermission(PERMISSIONS.REFUND_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -775,7 +989,10 @@ export function getAllRefunds() {
     .where(
       and(
         eq(payments.organization_id, organizationId),
-        sql`${payments.id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${payments.id} IN (${sql.join(
+          paymentIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as Array<{
@@ -793,7 +1010,10 @@ export function getAllRefunds() {
     .where(
       and(
         eq(customers.organization_id, organizationId),
-        sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${customers.id} IN (${sql.join(
+          customerIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as Array<{ id: number; person_id: number }>
@@ -835,7 +1055,16 @@ export function getAllRefunds() {
  * Returns all credits for the org, hydrated with customer names and
  * applications. Used by the Credits page table.
  */
-export function getAllCredits() {
+export function getAllCredits(): Array<{
+  id: string
+  creditNo: string
+  customer: { id: string; name: string; phone: string | undefined; email: string | undefined }
+  issuedAt: string
+  amountMinor: number
+  reason: string
+  createdBy: string
+  applications: Array<{ invoiceNo: string; amountMinor: number; appliedAt: string }>
+}> {
   requirePermission(PERMISSIONS.CREDIT_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -850,7 +1079,10 @@ export function getAllCredits() {
     .where(
       and(
         eq(customers.organization_id, organizationId),
-        sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+        sql`${customers.id} IN (${sql.join(
+          customerIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
       )
     )
     .all() as Array<{ id: number; person_id: number }>

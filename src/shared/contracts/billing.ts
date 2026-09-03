@@ -130,9 +130,10 @@ export type CustomerInvoicesRequest = z.infer<typeof customerInvoicesRequestSche
 /**
  * Display-only preview of the next invoice number (Module 04 §36). Never
  * reserves — the real number is assigned inside the finalize transaction.
+ * Format: {PREFIX}-DDMMYY-NN (e.g. CRO-010926-01)
  */
 export interface InvoiceNumberPreview {
-  year: string
+  dateKey: string
   prefix: string
   nextValue: number
   preview: string

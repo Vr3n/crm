@@ -64,9 +64,7 @@ describe('emailError', () => {
   })
 
   it('guides through the @ first, then the shape', () => {
-    expect(emailError('rahul.example.com', 'Email is required')).toBe(
-      'Email must contain an @'
-    )
+    expect(emailError('rahul.example.com', 'Email is required')).toBe('Email must contain an @')
     expect(emailError('rahul@example', 'Email is required')).toBe(
       'Enter a valid email like jane@example.com'
     )

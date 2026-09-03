@@ -17,21 +17,47 @@ import { z } from 'zod'
  * anything outside this table.
  */
 export const CURRENCIES = [
-  'INR', 'USD', 'EUR', 'GBP', 'JPY', 'KRW', 'VND', 'CLP', 'ISK',
-  'KWD', 'BHD', 'OMR', 'JOD', 'TND', 'AED', 'SGD'
+  'INR',
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'KRW',
+  'VND',
+  'CLP',
+  'ISK',
+  'KWD',
+  'BHD',
+  'OMR',
+  'JOD',
+  'TND',
+  'AED',
+  'SGD'
 ] as const
 
 export type CurrencyCode = (typeof CURRENCIES)[number]
 
 const EXPONENTS: Record<CurrencyCode, number> = {
-  INR: 2, USD: 2, EUR: 2, GBP: 2,
-  JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0,
-  KWD: 3, BHD: 3, OMR: 3, JOD: 3, TND: 3,
-  AED: 2, SGD: 2
+  INR: 2,
+  USD: 2,
+  EUR: 2,
+  GBP: 2,
+  JPY: 0,
+  KRW: 0,
+  VND: 0,
+  CLP: 0,
+  ISK: 0,
+  KWD: 3,
+  BHD: 3,
+  OMR: 3,
+  JOD: 3,
+  TND: 3,
+  AED: 2,
+  SGD: 2
 }
 
 export interface Money {
-  amount_minor: number   // integer minor units; zod: .int().safe()
+  amount_minor: number // integer minor units; zod: .int().safe()
   currency: CurrencyCode
 }
 
@@ -80,8 +106,8 @@ export function parseToMinor(input: string, code: CurrencyCode): number | undefi
   if (!match) return undefined
 
   const whole = match[1]
-  const frac  = match[2] ?? ''
-  const exp   = EXPONENTS[code as CurrencyCode]
+  const frac = match[2] ?? ''
+  const exp = EXPONENTS[code as CurrencyCode]
 
   if (frac.length <= exp) {
     const minor = Number(whole + frac.padEnd(exp, '0'))
@@ -90,14 +116,11 @@ export function parseToMinor(input: string, code: CurrencyCode): number | undefi
 
   // Round excess fractional digits half-even on the full digit string.
   const digits = whole + frac
-  const scale  = frac.length - exp
-  const kept   = digits.slice(0, -scale)
+  const scale = frac.length - exp
+  const kept = digits.slice(0, -scale)
   const excess = digits.slice(-scale)
-  const half   = '5' + '0'.repeat(scale - 1)
-  const up =
-    excess > half ? true
-    : excess < half ? false
-    : Number(kept[kept.length - 1]) % 2 === 1
+  const half = '5' + '0'.repeat(scale - 1)
+  const up = excess > half ? true : excess < half ? false : Number(kept[kept.length - 1]) % 2 === 1
 
   const keptLen = kept.length
   const keptNum = Number(kept) + (up ? 1 : 0)

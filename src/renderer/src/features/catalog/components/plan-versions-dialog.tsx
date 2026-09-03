@@ -31,18 +31,14 @@ export function PlanVersionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <History className="size-4 text-primary" />
             {plan?.name} — price history
           </DialogTitle>
           <DialogDescription>
-            Snapshots of the price at each edit. Memberships keep the price they
-            were sold at.
+            Snapshots of the price at each edit. Memberships keep the price they were sold at.
           </DialogDescription>
         </DialogHeader>
 
@@ -53,9 +49,7 @@ export function PlanVersionsDialog({
               Loading versions…
             </div>
           ) : versions.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              No recorded price changes yet.
-            </p>
+            <p className="p-6 text-sm text-muted-foreground">No recorded price changes yet.</p>
           ) : (
             <table className="w-full text-sm">
               <tbody className="divide-y">

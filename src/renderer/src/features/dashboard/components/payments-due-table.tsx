@@ -23,13 +23,17 @@ import { ExportExcelButton } from '@/features/export/components/export-excel-but
 import type { ExportColumn } from '@/features/export/api'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
-  { header: 'Client', key: 'client', format: 'text' },
+  { header: 'Client Name', key: 'clientName', format: 'text' },
   { header: 'Phone', key: 'phone', format: 'text' },
   { header: 'Email', key: 'email', format: 'text' },
   { header: 'Amount Due', key: 'amountDueMinor', format: 'money' },
-  { header: 'Total', key: 'totalMinor', format: 'money' },
+  { header: 'Membership Amount', key: 'membershipAmountMinor', format: 'money' },
   { header: 'Plan', key: 'plan', format: 'text' },
-  { header: 'Purchased', key: 'purchasedAt', format: 'date' }
+  { header: 'Start Date', key: 'planStartDate', format: 'isodate' },
+  { header: 'End Date', key: 'planEndDate', format: 'isodate' },
+  { header: 'Joining Date', key: 'joiningDate', format: 'isodate' },
+  { header: 'Invoice Number', key: 'invoiceNumber', format: 'text' },
+  { header: 'Membership Purchased', key: 'membershipPurchasedAt', format: 'isodate' }
 ]
 
 const helper = createColumnHelper<DashboardFeatures, PaymentDue>()
@@ -193,13 +197,17 @@ export function PaymentsDueTable({
   const exportData = useMemo(
     () =>
       filtered.map((r) => ({
-        client: r.member.name,
-        phone: r.member.phone,
+        clientName: r.member.name,
+        phone: r.member.phone ?? '',
         email: r.member.email ?? '',
         amountDueMinor: r.amountDueMinor,
-        totalMinor: r.totalMinor,
+        membershipAmountMinor: r.membershipAmountMinor,
         plan: r.plan,
-        purchasedAt: r.purchasedAt
+        planStartDate: r.planStartDate,
+        planEndDate: r.planEndDate,
+        joiningDate: r.joiningDate,
+        invoiceNumber: r.invoiceNumber,
+        membershipPurchasedAt: r.membershipPurchasedAt
       })),
     [filtered]
   )

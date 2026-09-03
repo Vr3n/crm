@@ -346,10 +346,7 @@ export const offerVersionRepo = {
       .select()
       .from(offerVersions)
       .where(
-        and(
-          eq(offerVersions.organization_id, organizationId),
-          eq(offerVersions.offer_id, offerId)
-        )
+        and(eq(offerVersions.organization_id, organizationId), eq(offerVersions.offer_id, offerId))
       )
       .orderBy(asc(offerVersions.created_at), asc(offerVersions.id))
       .all() as OfferVersionRow[]
@@ -477,10 +474,7 @@ export const offerRepo = {
       .select()
       .from(offers)
       .where(
-        and(
-          eq(offers.organization_id, organizationId),
-          sql`lower(${offers.name}) = lower(${name})`
-        )
+        and(eq(offers.organization_id, organizationId), sql`lower(${offers.name}) = lower(${name})`)
       )
       .get() as OfferRow | undefined
     return row ? mapOffer(row) : null
@@ -649,9 +643,7 @@ export const freezePolicyRepo = {
     const row = getDrizzle()
       .select()
       .from(freezePolicies)
-      .where(
-        and(eq(freezePolicies.organization_id, organizationId), eq(freezePolicies.id, id))
-      )
+      .where(and(eq(freezePolicies.organization_id, organizationId), eq(freezePolicies.id, id)))
       .get() as FreezePolicyRow | undefined
     return row ? mapFreezePolicy(row) : null
   },
@@ -817,7 +809,9 @@ export const prorationPolicyRepo = {
         description: input.description,
         updated_at: sql`(datetime('now'))`
       })
-      .where(and(eq(prorationPolicies.organization_id, organizationId), eq(prorationPolicies.id, id)))
+      .where(
+        and(eq(prorationPolicies.organization_id, organizationId), eq(prorationPolicies.id, id))
+      )
       .run()
   }
 }
@@ -926,7 +920,10 @@ export const cancellationPolicyRepo = {
         updated_at: sql`(datetime('now'))`
       })
       .where(
-        and(eq(cancellationPolicies.organization_id, organizationId), eq(cancellationPolicies.id, id))
+        and(
+          eq(cancellationPolicies.organization_id, organizationId),
+          eq(cancellationPolicies.id, id)
+        )
       )
       .run()
   }

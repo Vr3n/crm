@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
+import { useStore } from '@tanstack/react-store'
 import { Undo2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
@@ -11,8 +11,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { FieldGroup } from '@/components/ui/field'
+import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LoadingButton } from '@/components/ui/loading-button'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -21,13 +24,15 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { formatMinor, parseToMinor, sanitizeMoneyInput } from '@/lib/money'
+import { formatMinor, minorToMajor, parseToMinor, sanitizeMoneyInput } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { PAYMENT_METHODS } from '../constants'
 import { useIssueRefund, usePaymentsFor } from '../queries'
 import { CustomerPicker } from './customer-picker'
 import type { PersonRef } from '@/features/dashboard/types'
 import type { Refund } from '../types'
+
+const REQUIRED = <span className="text-destructive">*</span>
 
 /**
  * Issue a refund (Module 05 §17). The refund is a separate, dated, reasoned
@@ -51,12 +56,14 @@ export function IssueRefundDialog({
 
   const remainingByPayment = useMemo(
     () =>
-      new Map<string, number>(
-        (payments ?? []).map((p) => [
-          p.id,
-          p.amountMinor -
-            refunds.filter((r) => r.sourcePaymentId === p.id).reduce((s, r) => s + r.amountMinor, 0)
-        ])
+      new Map<string, { remaining: number; total: number }>(
+        (payments ?? []).map((p) => {
+          const pid = String(p.id)
+          const used = refunds
+            .filter((r) => r.sourcePaymentId === pid)
+            .reduce((s, r) => s + r.amountMinor, 0)
+          return [pid, { remaining: p.amountMinor - used, total: p.amountMinor }]
+        })
       ),
     [payments, refunds]
   )
@@ -71,11 +78,11 @@ export function IssueRefundDialog({
     },
     onSubmit: async ({ value }) => {
       if (!picked) return
-      const source = payments?.find((p) => p.id === value.sourcePaymentId)
+      const source = payments?.find((p) => String(p.id) === value.sourcePaymentId)
       if (!source) return
       try {
         await issue.mutateAsync({
-          paymentId: source.id,
+          paymentId: Number(source.id),
           amountMinor: parseToMinor(String(value.amount), currency) ?? 0,
           reason: value.reason
         })
@@ -88,10 +95,11 @@ export function IssueRefundDialog({
     }
   })
 
-  const remaining =
-    (form.state.values.sourcePaymentId
-      ? remainingByPayment.get(form.state.values.sourcePaymentId)
-      : undefined) ?? 0
+  const submitted = useStore(form.store, (s) => s.isSubmitted)
+  const sourcePaymentId = useStore(form.store, (s) => s.values.sourcePaymentId)
+  const selected = sourcePaymentId ? remainingByPayment.get(sourcePaymentId) : undefined
+  const remaining = selected?.remaining ?? 0
+  const totalAmount = selected?.total ?? 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,16 +121,15 @@ export function IssueRefundDialog({
             form.handleSubmit()
           }}
         >
-          <div className="grid gap-3">
+          <FieldGroup className="gap-4">
             <div className="grid gap-1.5">
-              <Label>
-                Customer <span className="text-destructive">*</span>
-              </Label>
+              <Label>Customer {REQUIRED}</Label>
               <CustomerPicker
                 value={picked?.id ?? ''}
                 onChange={(customer) => {
                   setPicked(customer)
                   form.setFieldValue('sourcePaymentId', '')
+                  form.setFieldValue('amount', '')
                 }}
               />
             </div>
@@ -131,43 +138,80 @@ export function IssueRefundDialog({
               <form.Field
                 name="sourcePaymentId"
                 validators={{
-                  onChange: ({ value }) => (value ? undefined : 'Pick the payment to refund')
+                  onChange: ({ value }) =>
+                    value ? undefined : 'Select the payment this refund is against'
                 }}
               >
                 {(field) => (
-                  <div className="grid gap-1.5">
-                    <Label htmlFor={`rf-${field.name}`}>
-                      Refund against <span className="text-destructive">*</span>
-                    </Label>
-                    <Select value={field.state.value} onValueChange={field.handleChange}>
-                      <SelectTrigger size="default" className="h-9 rounded-md text-sm">
-                        <SelectValue
-                          placeholder={loadingPayments ? 'Loading…' : 'Select a payment'}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(payments ?? []).map((p) => {
-                          const avail = remainingByPayment.get(p.id) ?? 0
-                          return (
-                            <SelectItem key={p.id} value={p.id} disabled={avail <= 0}>
-                              <span className="font-mono tabular-nums">
-                                {p.paymentNo} · {formatMinor(p.amountMinor, currency)}
-                              </span>
-                              {avail <= 0 ? ' · fully refunded' : ` · ${formatMinor(avail, currency)} left`}
-                            </SelectItem>
-                          )
-                        })}
-                        {!loadingPayments && !payments?.length ? (
-                          <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                            No payments recorded for this customer.
-                          </p>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                    {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                      <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
-                    ) : null}
-                  </div>
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label={<>Refund against {REQUIRED}</>}
+                    validate={(v) => (v ? undefined : 'Select the payment this refund is against')}
+                    completeWhen={(v) => Boolean(v)}
+                    labelEnd={
+                      remaining > 0 ? (
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {formatMinor(remaining, currency)} of {formatMinor(totalAmount, currency)}
+                        </span>
+                      ) : undefined
+                    }
+                  >
+                    {({ id, value, invalid, valid, describedBy }) => (
+                      <Select
+                        value={value}
+                        onValueChange={(v) => {
+                          field.handleChange(v)
+                          // Auto-fill amount with available on the selected payment
+                          const entry = remainingByPayment.get(v)
+                          if (entry && entry.remaining > 0) {
+                            form.setFieldValue('amount', minorToMajor(entry.remaining, currency))
+                          } else {
+                            form.setFieldValue('amount', '')
+                          }
+                        }}
+                      >
+                        <SelectTrigger
+                          id={id}
+                          aria-invalid={invalid}
+                          data-valid={valid}
+                          aria-describedby={describedBy}
+                          size="default"
+                          className="h-9 rounded-md text-sm"
+                        >
+                          <SelectValue
+                            placeholder={loadingPayments ? 'Loading…' : 'Select a payment'}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(payments ?? []).map((p) => {
+                            const pid = String(p.id)
+                            const entry = remainingByPayment.get(pid)
+                            const avail = entry?.remaining ?? 0
+                            const total = entry?.total ?? 0
+                            return (
+                              <SelectItem key={pid} value={pid} disabled={avail <= 0}>
+                                <span className="font-mono tabular-nums">
+                                  {p.paymentNo} ·{' '}
+                                  {avail <= 0
+                                    ? 'Fully refunded'
+                                    : `${formatMinor(avail, currency)} from ${formatMinor(total, currency)}`}
+                                </span>
+                              </SelectItem>
+                            )
+                          })}
+                          {!loadingPayments && !payments?.length ? (
+                            <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                              No payments recorded for this customer.
+                            </p>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
                 )}
               </form.Field>
             ) : null}
@@ -176,96 +220,126 @@ export function IssueRefundDialog({
               <form.Field
                 name="refundDate"
                 validators={{
-                  onChange: ({ value }) => (value ? undefined : 'Pick a date')
+                  onChange: ({ value }) => (value ? undefined : 'Select the refund date')
                 }}
               >
                 {(field) => (
-                  <div className="grid gap-1.5">
-                    <Label htmlFor={`rf-${field.name}`}>
-                      Date <span className="text-destructive">*</span>
-                    </Label>
-                    <DateTimePicker
-                      value={field.state.value}
-                      onChange={(iso) => field.handleChange(iso)}
-                    />
-                    {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                      <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
-                    ) : null}
-                  </div>
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label={<>Date {REQUIRED}</>}
+                    validate={(v) => (v ? undefined : 'Select the refund date')}
+                    completeWhen={(v) => Boolean(v)}
+                  >
+                    {({ id, invalid, describedBy }) => (
+                      <DateTimePicker
+                        value={field.state.value}
+                        onChange={(iso) => field.handleChange(iso)}
+                        id={id}
+                        invalid={invalid}
+                        aria-describedby={describedBy}
+                      />
+                    )}
+                  </FormField>
                 )}
               </form.Field>
 
               <form.Field
                 name="amount"
                 validators={{
+                  onChangeListenTo: ['sourcePaymentId'],
                   onChange: ({ value, fieldApi }) => {
                     const n = Number(value)
-                    if (!value) return 'Enter an amount'
-                    if (!Number.isFinite(n) || n <= 0) return 'Amount must be positive'
+                    if (!value) return 'Enter the refund amount'
+                    if (!Number.isFinite(n) || n <= 0) return 'Amount must be greater than zero'
                     const sourceId = fieldApi.form.getFieldValue('sourcePaymentId')
-                    const avail = sourceId ? (remainingByPayment.get(sourceId) ?? 0) : 0
+                    const entry = sourceId ? remainingByPayment.get(sourceId) : undefined
+                    const avail = entry?.remaining ?? 0
                     const amtMinor = parseToMinor(value, currency) ?? 0
                     if (avail > 0 && amtMinor > avail)
-                      return `At most ${formatMinor(avail, currency)} is available on this payment`
+                      return `Refund cannot exceed ${formatMinor(avail, currency)} available on this payment`
                     return undefined
                   }
                 }}
               >
                 {(field) => (
-                  <div className="grid gap-1.5">
-                    <Label htmlFor={`rf-${field.name}`}>
-                      Amount <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id={`rf-${field.name}`}
-                      type="text"
-                      inputMode="decimal"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(sanitizeMoneyInput(e.target.value))}
-                      placeholder="0"
-                    />
-                    {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                      <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
-                    ) : null}
-                  </div>
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label={<>Amount {REQUIRED}</>}
+                    validate={(v) => {
+                      const n = Number(v)
+                      if (!v) return 'Enter the refund amount'
+                      if (!Number.isFinite(n) || n <= 0) return 'Amount must be greater than zero'
+                      return undefined
+                    }}
+                    completeWhen={(v) => Boolean(v) && Number(v) > 0}
+                  >
+                    {({ id, value, invalid, valid, describedBy, onBlur, onChange }) => (
+                      <Input
+                        id={id}
+                        type="text"
+                        inputMode="decimal"
+                        value={value}
+                        onBlur={onBlur}
+                        onChange={(e) => onChange(sanitizeMoneyInput(e.target.value))}
+                        placeholder="0.00"
+                        aria-invalid={invalid}
+                        data-valid={valid}
+                        aria-describedby={describedBy}
+                      />
+                    )}
+                  </FormField>
                 )}
               </form.Field>
             </div>
 
-            {remaining > 0 ? (
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {formatMinor(remaining, currency)} available on the selected payment
-              </p>
-            ) : null}
-
             <form.Field
               name="method"
               validators={{
-                onChange: ({ value }) => (value ? undefined : 'Pick a method')
+                onChange: ({ value }) =>
+                  value ? undefined : 'Select how the money is being returned'
               }}
             >
               {(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={`rf-${field.name}`}>
-                    Return method <span className="text-destructive">*</span>
-                  </Label>
-                  <Select value={field.state.value} onValueChange={field.handleChange}>
-                    <SelectTrigger size="default" className="h-9 rounded-md text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map((m) => (
-                        <SelectItem key={m.key} value={m.key}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
-                  ) : null}
-                </div>
+                <FormField
+                  name={field.name}
+                  state={field.state}
+                  handleChange={field.handleChange}
+                  handleBlur={field.handleBlur}
+                  submitted={submitted}
+                  label={<>Return method {REQUIRED}</>}
+                  validate={(v) => (v ? undefined : 'Select how the money is being returned')}
+                  completeWhen={(v) => Boolean(v)}
+                >
+                  {({ id, value, invalid, valid, describedBy }) => (
+                    <Select value={value} onValueChange={field.handleChange}>
+                      <SelectTrigger
+                        id={id}
+                        aria-invalid={invalid}
+                        data-valid={valid}
+                        aria-describedby={describedBy}
+                        size="default"
+                        className="h-9 rounded-md text-sm"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_METHODS.map((m) => (
+                          <SelectItem key={m.key} value={m.key}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </FormField>
               )}
             </form.Field>
 
@@ -273,41 +347,57 @@ export function IssueRefundDialog({
               name="reason"
               validators={{
                 onChange: ({ value }) =>
-                  value.trim().length > 0 ? undefined : 'Why is this being refunded?'
+                  value.trim().length > 0 ? undefined : 'Enter a reason for the refund'
               }}
             >
               {(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={`rf-${field.name}`}>
-                    Reason <span className="text-destructive">*</span>
-                  </Label>
-                  <Textarea
-                    id={`rf-${field.name}`}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. PT package cancelled — unused sessions"
-                    rows={2}
-                  />
-                  {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
-                    <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
-                  ) : null}
-                </div>
+                <FormField
+                  name={field.name}
+                  state={field.state}
+                  handleChange={field.handleChange}
+                  handleBlur={field.handleBlur}
+                  submitted={submitted}
+                  label={<>Reason {REQUIRED}</>}
+                  validate={(v) =>
+                    v.trim().length > 0 ? undefined : 'Enter a reason for the refund'
+                  }
+                  completeWhen={(v) => v.trim().length > 0}
+                >
+                  {({ id, value, invalid, valid, describedBy, onBlur, onChange }) => (
+                    <Textarea
+                      id={id}
+                      value={value}
+                      onBlur={onBlur}
+                      onChange={(e) => onChange(e.target.value)}
+                      placeholder="e.g. PT package cancelled — unused sessions"
+                      rows={2}
+                      aria-invalid={invalid}
+                      data-valid={valid}
+                      aria-describedby={describedBy}
+                    />
+                  )}
+                </FormField>
               )}
             </form.Field>
-          </div>
+          </FieldGroup>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="mt-6">
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
-            </Button>
+            </LoadingButton>
             <form.Subscribe
               selector={(s) => ({ canSubmit: s.canSubmit, isSubmitting: s.isSubmitting })}
             >
               {({ canSubmit, isSubmitting }) => (
-                <Button type="submit" variant="destructive" disabled={!canSubmit || !picked}>
-                  {isSubmitting ? 'Issuing…' : 'Issue refund'}
-                </Button>
+                <LoadingButton
+                  type="submit"
+                  variant="destructive"
+                  disabled={!canSubmit || !picked}
+                  loading={isSubmitting}
+                  loadingLabel="Issuing…"
+                >
+                  Issue refund
+                </LoadingButton>
               )}
             </form.Subscribe>
           </DialogFooter>

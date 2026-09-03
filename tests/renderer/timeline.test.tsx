@@ -48,9 +48,7 @@ describe('Timeline', () => {
     expect(firstEntry).toBeInTheDocument()
     // The first entry should have the primary background marker
     const markers = firstEntry!.querySelectorAll('span')
-    const primaryMarker = Array.from(markers).find((m) =>
-      m.className.includes('bg-primary')
-    )
+    const primaryMarker = Array.from(markers).find((m) => m.className.includes('bg-primary'))
     expect(primaryMarker).toBeDefined()
   })
 
@@ -59,9 +57,7 @@ describe('Timeline', () => {
     const firstEntry = screen.getByText('Phone call').closest('li')
     const markers = firstEntry!.querySelectorAll('span')
     // The current marker has ring-primary/20; custom iconTone does not
-    const currentMarker = Array.from(markers).find((m) =>
-      m.className.includes('ring-primary/20')
-    )
+    const currentMarker = Array.from(markers).find((m) => m.className.includes('ring-primary/20'))
     expect(currentMarker).toBeUndefined()
   })
 

@@ -108,9 +108,7 @@ export function FollowUpDialog({
                       What to do <span className="text-destructive">*</span>
                     </>
                   }
-                  validate={(v) =>
-                    v.trim().length > 0 ? undefined : 'Give this follow-up a name'
-                  }
+                  validate={(v) => (v.trim().length > 0 ? undefined : 'Give this follow-up a name')}
                   completeWhen={(v) => v.trim().length > 0}
                   placeholder="e.g. Call to confirm trial"
                 />
@@ -167,11 +165,7 @@ export function FollowUpDialog({
           </FieldGroup>
 
           <DialogFooter className="mt-6">
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </LoadingButton>
             <LoadingButton

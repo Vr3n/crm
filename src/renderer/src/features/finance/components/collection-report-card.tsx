@@ -6,13 +6,23 @@ import { collectionsByMethod, refundsByMethod, type MethodTotal } from '../build
 import type { Payment, Refund } from '../types'
 import type { CurrencyCode } from '@/lib/money'
 
-function MethodBar({ row, total, currency }: { row: MethodTotal; total: number; currency: CurrencyCode }): React.JSX.Element {
+function MethodBar({
+  row,
+  total,
+  currency
+}: {
+  row: MethodTotal
+  total: number
+  currency: CurrencyCode
+}): React.JSX.Element {
   const pct = total > 0 ? (row.amountMinor / total) * 100 : 0
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-xs font-medium">{row.label}</span>
-        <span className="font-mono text-xs tabular-nums">{formatMinor(row.amountMinor, currency)}</span>
+        <span className="font-mono text-xs tabular-nums">
+          {formatMinor(row.amountMinor, currency)}
+        </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
@@ -46,7 +56,12 @@ export function CollectionReportCard({
   return (
     <Card
       className="crm-gradient-border"
-      style={{ '--gradient-start': 'var(--success)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--success)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
@@ -58,7 +73,9 @@ export function CollectionReportCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div>
-          <p className="font-mono text-4xl font-semibold tabular-nums">{formatMinor(total, currency)}</p>
+          <p className="font-mono text-4xl font-semibold tabular-nums">
+            {formatMinor(total, currency)}
+          </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {methods.length ? 'Gross collections in range' : 'No payments in range'}
           </p>

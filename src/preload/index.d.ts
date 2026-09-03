@@ -66,10 +66,7 @@ import type {
   PaymentMethodRow,
   OutstandingInvoiceRow
 } from '../shared/contracts/finance'
-import type {
-  CustomerIdRequest,
-  CustomerRowOutput
-} from '../shared/contracts/customers'
+import type { CustomerIdRequest, CustomerRowOutput } from '../shared/contracts/customers'
 import type {
   InvoiceIdRequest as InvoiceReadIdRequest,
   InvoicesByStatusRequest,
@@ -81,10 +78,7 @@ import type {
   PaymentDueOutput,
   MemberRecordOutput
 } from '../shared/contracts/dashboard'
-import type {
-  PaymentRecordOutput,
-  DayCollectionOutput
-} from '../shared/contracts/collections'
+import type { PaymentRecordOutput } from '../shared/contracts/collections'
 import type {
   OrganizationOutput,
   StaffMemberOutput,
@@ -123,6 +117,7 @@ import type {
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
+import type { LicenseStatus } from '../shared/contracts/license'
 
 declare global {
   interface Window {
@@ -226,7 +221,9 @@ declare global {
       finance: {
         recordPayment: (input: RecordPaymentInput) => Promise<PaymentRow>
         allocatePayment: (input: AllocatePaymentInput) => Promise<{ allocationId: number }>
-        recordAndAllocate: (input: RecordAndAllocatePaymentInput) => Promise<{ paymentId: number; allocationId: number }>
+        recordAndAllocate: (
+          input: RecordAndAllocatePaymentInput
+        ) => Promise<{ paymentId: number; allocationId: number }>
         issueRefund: (input: IssueRefundInput) => Promise<RefundRow>
         issueCredit: (input: IssueCreditInput) => Promise<CreditRow>
         applyCredit: (input: ApplyCreditInput) => Promise<{ creditAllocationId: number }>
@@ -236,7 +233,9 @@ declare global {
         creditBalance: (input: CustomerCreditBalanceRequest) => Promise<{ balanceMinor: number }>
         listCredits: (input: CustomerCreditBalanceRequest) => Promise<CreditRow[]>
         listPaymentMethods: () => Promise<PaymentMethodRow[]>
-        outstandingInvoicesFor: (input: OutstandingInvoicesRequest) => Promise<OutstandingInvoiceRow[]>
+        outstandingInvoicesFor: (
+          input: OutstandingInvoicesRequest
+        ) => Promise<OutstandingInvoiceRow[]>
         listPayments: () => Promise<unknown[]>
         listRefunds: () => Promise<unknown[]>
         listAllCredits: () => Promise<unknown[]>
@@ -279,6 +278,9 @@ declare global {
           columns: { header: string; key: string; width?: number; format?: string }[]
           rows: Record<string, unknown>[]
         }) => Promise<string>
+      }
+      license: {
+        status: () => Promise<LicenseStatus>
       }
     }
   }

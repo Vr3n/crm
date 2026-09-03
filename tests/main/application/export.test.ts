@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { mkdtemp, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import ExcelJS from 'exceljs'
@@ -16,11 +16,22 @@ afterAll(async () => {
 })
 
 const CURRENCY_FORMATS: Record<CurrencyCode, string> = {
-  INR: '₹#,##0.00', USD: '$#,##0.00', EUR: '€#,##0.00', GBP: '£#,##0.00',
-  JPY: '¥#,##0', KRW: '₩#,##0', VND: '₫#,##0', CLP: '$#,##0',
-  ISK: 'kr#,##0', KWD: 'د.ك#,##0.000', BHD: 'د.ب#,##0.000',
-  OMR: 'ر.ع#,##0.000', JOD: 'د.ا#,##0.000', TND: 'د.ت#,##0.000',
-  AED: 'د.إ#,##0.00', SGD: 'S$#,##0.00'
+  INR: '₹#,##0.00',
+  USD: '$#,##0.00',
+  EUR: '€#,##0.00',
+  GBP: '£#,##0.00',
+  JPY: '¥#,##0',
+  KRW: '₩#,##0',
+  VND: '₫#,##0',
+  CLP: '$#,##0',
+  ISK: 'kr#,##0',
+  KWD: 'د.ك#,##0.000',
+  BHD: 'د.ب#,##0.000',
+  OMR: 'ر.ع#,##0.000',
+  JOD: 'د.ا#,##0.000',
+  TND: 'د.ت#,##0.000',
+  AED: 'د.إ#,##0.00',
+  SGD: 'S$#,##0.00'
 }
 
 /**
@@ -81,6 +92,10 @@ function buildWorkbook(input: {
         const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
         return isNaN(num) ? null : num
       }
+      if (col.format === 'isodate' || col.format === 'datetime') {
+        const d = new Date(String(raw))
+        return Number.isNaN(d.getTime()) ? null : d
+      }
       return raw
     })
 
@@ -91,7 +106,7 @@ function buildWorkbook(input: {
       cell.alignment = { vertical: 'middle', horizontal: 'left' }
 
       if (col.format === 'money') cell.numFmt = CURRENCY_FORMATS[currency]
-      else if (col.format === 'date') cell.numFmt = DATE
+      else if (col.format === 'date' || col.format === 'isodate') cell.numFmt = DATE
       else if (col.format === 'datetime') cell.numFmt = DATETIME
       else if (col.format === 'number') cell.numFmt = NUMBER
 
@@ -184,7 +199,28 @@ describe('exportTableToExcel workbook generation', () => {
     expect(cell.numFmt).toBe('dd MMM yyyy')
   })
 
-  it('applies datetime format', async () => {
+  it('applies isodate format and converts ISO string to Date', async () => {
+    const buffer = await buildWorkbook({
+      sheetName: 'PlanDuration',
+      columns: [
+        { header: 'Start', key: 'start', format: 'isodate' },
+        { header: 'End', key: 'end', format: 'isodate' }
+      ],
+      rows: [{ start: '2026-01-15', end: '2026-02-15' }]
+    })
+
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(buffer)
+    const ws = wb.getWorksheet('PlanDuration')
+    const startCell = ws.getCell('A2')
+    const endCell = ws.getCell('B2')
+    expect(startCell.value).toBeInstanceOf(Date)
+    expect(startCell.numFmt).toBe('dd MMM yyyy')
+    expect(endCell.value).toBeInstanceOf(Date)
+    expect(endCell.numFmt).toBe('dd MMM yyyy')
+  })
+
+  it('applies datetime format and converts ISO string to Date', async () => {
     const buffer = await buildWorkbook({
       sheetName: 'Audit',
       columns: [{ header: 'Timestamp', key: 'ts', format: 'datetime' }],
@@ -194,7 +230,9 @@ describe('exportTableToExcel workbook generation', () => {
     const wb = new ExcelJS.Workbook()
     await wb.xlsx.load(buffer)
     const ws = wb.getWorksheet('Audit')
-    expect(ws.getCell('A2').numFmt).toBe('dd MMM yyyy, hh:mm AM/PM')
+    const cell = ws.getCell('A2')
+    expect(cell.value).toBeInstanceOf(Date)
+    expect(cell.numFmt).toBe('dd MMM yyyy, hh:mm AM/PM')
   })
 
   it('applies number format', async () => {
@@ -217,7 +255,10 @@ describe('exportTableToExcel workbook generation', () => {
         { header: 'A', key: 'a' },
         { header: 'B', key: 'b' }
       ],
-      rows: [{ a: '', b: null }, { a: 'hello', b: undefined }]
+      rows: [
+        { a: '', b: null },
+        { a: 'hello', b: undefined }
+      ]
     })
 
     const wb = new ExcelJS.Workbook()
@@ -261,7 +302,10 @@ describe('exportTableToExcel workbook generation', () => {
 describe('filename sanitization', () => {
   it('sanitizes special characters via inline logic', () => {
     function sanitize(name: string): string {
-      return name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').toLowerCase()
+      return name
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .toLowerCase()
     }
 
     expect(sanitize('Memberships Report')).toBe('memberships_report')

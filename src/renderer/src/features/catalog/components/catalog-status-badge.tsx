@@ -18,10 +18,5 @@ export function OfferLifecycleBadge({ offer }: { offer: Offer }): React.JSX.Elem
     ENDED: { label: 'Expired', tone: 'default' },
     PAUSED: { label: 'Paused', tone: 'warning' }
   } as const
-  return (
-    <StatusBadge
-      label={cfg[lifecycle].label}
-      tone={cfg[lifecycle].tone}
-    />
-  )
+  return <StatusBadge label={cfg[lifecycle].label} tone={cfg[lifecycle].tone} />
 }

@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { membershipSaleApi } from './api'
-import type { SellMembershipInput } from '../../../../../shared/contracts/membership-sale'
+import type { SellMembershipInput, SellMembershipResult } from '../../../../../shared/contracts/membership-sale'
 
-export function useSellMembership() {
+export function useSellMembership(): UseMutationResult<SellMembershipResult, unknown, SellMembershipInput, unknown> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SellMembershipInput) => membershipSaleApi.sell(input),
-    onSuccess: (data) => {
+    onSuccess: (data: SellMembershipResult) => {
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['customers'] })
       qc.invalidateQueries({ queryKey: ['memberships'] })

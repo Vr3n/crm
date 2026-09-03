@@ -7,7 +7,12 @@ import { SessionProvider } from '@/context/session-context'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { OffersPage } from '@/features/catalog/pages/OffersPage'
 import { PlansPage } from '@/features/catalog/pages/PlansPage'
-import type { OfferRow, OfferVersionRow, PlanRow, PlanVersionRow } from '../../src/shared/contracts/catalog'
+import type {
+  OfferRow,
+  OfferVersionRow,
+  PlanRow,
+  PlanVersionRow
+} from '../../src/shared/contracts/catalog'
 import { renderWithClient } from './setup'
 
 /**
@@ -149,7 +154,12 @@ describe('PlansPage', () => {
 
     await waitFor(() => {
       expect(window.api.catalog.updatePlan).toHaveBeenCalledWith(
-        expect.objectContaining({ planId: 1, taxCode: 'GST18', taxRateBps: 1200, registrationFeeMinor: 50000 })
+        expect.objectContaining({
+          planId: 1,
+          taxCode: 'GST18',
+          taxRateBps: 1200,
+          registrationFeeMinor: 50000
+        })
       )
     })
   })

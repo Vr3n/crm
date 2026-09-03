@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
-import { app } from 'electron'
+import { app, shell } from 'electron'
 import { logger } from '../lib/logger'
 import { exponentFor, type CurrencyCode } from '../../shared/contracts/money'
 
@@ -9,7 +9,7 @@ import { exponentFor, type CurrencyCode } from '../../shared/contracts/money'
 /* Types                                                                       */
 /* -------------------------------------------------------------------------- */
 
-export type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number'
+export type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number' | 'isodate'
 
 export interface ExportColumn {
   header: string
@@ -49,11 +49,22 @@ const DATA_FONT: Partial<ExcelJS.Font> = {
 }
 
 const CURRENCY_FORMATS: Record<CurrencyCode, string> = {
-  INR: '₹#,##0.00', USD: '$#,##0.00', EUR: '€#,##0.00', GBP: '£#,##0.00',
-  JPY: '¥#,##0', KRW: '₩#,##0', VND: '₫#,##0', CLP: '$#,##0',
-  ISK: 'kr#,##0', KWD: 'د.ك#,##0.000', BHD: 'د.ب#,##0.000',
-  OMR: 'ر.ع#,##0.000', JOD: 'د.ا#,##0.000', TND: 'د.ت#,##0.000',
-  AED: 'د.إ#,##0.00', SGD: 'S$#,##0.00'
+  INR: '₹#,##0.00',
+  USD: '$#,##0.00',
+  EUR: '€#,##0.00',
+  GBP: '£#,##0.00',
+  JPY: '¥#,##0',
+  KRW: '₩#,##0',
+  VND: '₫#,##0',
+  CLP: '$#,##0',
+  ISK: 'kr#,##0',
+  KWD: 'د.ك#,##0.000',
+  BHD: 'د.ب#,##0.000',
+  OMR: 'ر.ع#,##0.000',
+  JOD: 'د.ا#,##0.000',
+  TND: 'د.ت#,##0.000',
+  AED: 'د.إ#,##0.00',
+  SGD: 'S$#,##0.00'
 }
 
 const DATE_FORMAT = 'dd MMM yyyy'
@@ -68,7 +79,14 @@ function measureWidth(value: unknown, format?: CellFormat): number {
   if (value == null || value === '') return 8
   const str = String(value)
   // Add extra width for formatted columns (₹ symbol, date separators, etc.)
-  const overhead = format === 'money' ? 3 : format === 'datetime' ? 4 : format === 'date' ? 1 : 0
+  const overhead =
+    format === 'money'
+      ? 3
+      : format === 'datetime'
+        ? 4
+        : format === 'date' || format === 'isodate'
+          ? 1
+          : 0
   return Math.min(Math.max(str.length + overhead, 8), 50)
 }
 
@@ -78,7 +96,10 @@ async function ensureDir(dirPath: string): Promise<void> {
 }
 
 function sanitizeFilename(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').toLowerCase()
+  return name
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .toLowerCase()
 }
 
 /* -------------------------------------------------------------------------- */
@@ -132,6 +153,10 @@ export async function exportTableToExcel(input: ExportTableInput): Promise<strin
         const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
         return isNaN(num) ? null : num
       }
+      if (col.format === 'isodate' || col.format === 'datetime') {
+        const d = new Date(String(raw))
+        return Number.isNaN(d.getTime()) ? null : d
+      }
       return raw
     })
 
@@ -144,7 +169,7 @@ export async function exportTableToExcel(input: ExportTableInput): Promise<strin
 
       if (col.format === 'money') {
         cell.numFmt = CURRENCY_FORMATS[currency]
-      } else if (col.format === 'date') {
+      } else if (col.format === 'date' || col.format === 'isodate') {
         cell.numFmt = DATE_FORMAT
       } else if (col.format === 'datetime') {
         cell.numFmt = DATETIME_FORMAT
@@ -176,6 +201,7 @@ export async function exportTableToExcel(input: ExportTableInput): Promise<strin
 
   const outputPath = join(outputDir, finalFilename)
   await workbook.xlsx.writeFile(outputPath)
+  shell.showItemInFolder(outputPath)
 
   logger.info(`Excel exported: ${outputPath} (${rows.length} rows)`)
 

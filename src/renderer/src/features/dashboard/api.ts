@@ -19,7 +19,13 @@ function mapPaymentDue(row: PaymentDueOutput): PaymentDue {
     plan: row.plan,
     purchasedAt: row.purchasedAt,
     amountDueMinor: row.amountDueMinor,
-    totalMinor: row.totalMinor
+    totalMinor: row.totalMinor,
+    invoiceNumber: row.invoiceNumber,
+    planStartDate: row.planStartDate,
+    planEndDate: row.planEndDate,
+    joiningDate: row.joiningDate,
+    membershipAmountMinor: row.membershipAmountMinor,
+    membershipPurchasedAt: row.membershipPurchasedAt
   }
 }
 

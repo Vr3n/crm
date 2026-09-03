@@ -1,12 +1,6 @@
 import { asc, eq, and, sql } from 'drizzle-orm'
 import { getDrizzle } from '../db/connection'
-import {
-  payments,
-  paymentAllocations,
-  invoices,
-  customers,
-  people
-} from '../db/schema'
+import { payments, paymentAllocations, invoices, customers, people, users } from '../db/schema'
 import { currentOrganizationId } from '../auth/session'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
@@ -46,6 +40,11 @@ interface PersonRow {
   email: string | null
 }
 
+interface UserRow {
+  id: number
+  full_name: string
+}
+
 export function registerCollectionsIpc(): void {
   handle(IPC_CHANNELS.COLLECTIONS_PAYMENTS, () => {
     const organizationId = currentOrganizationId()
@@ -67,7 +66,10 @@ export function registerCollectionsIpc(): void {
       .where(
         and(
           eq(paymentAllocations.organization_id, organizationId),
-          sql`${paymentAllocations.payment_id} IN (${sql.join(paymentIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${paymentAllocations.payment_id} IN (${sql.join(
+            paymentIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as AllocationRow[]
@@ -80,18 +82,22 @@ export function registerCollectionsIpc(): void {
 
     // Fetch invoices for allocation display
     const invoiceIds = [...new Set(allocRows.map((a) => a.invoice_id))]
-    const invoiceRows = invoiceIds.length > 0
-      ? getDrizzle()
-          .select()
-          .from(invoices)
-          .where(
-            and(
-              eq(invoices.organization_id, organizationId),
-              sql`${invoices.id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+    const invoiceRows =
+      invoiceIds.length > 0
+        ? (getDrizzle()
+            .select()
+            .from(invoices)
+            .where(
+              and(
+                eq(invoices.organization_id, organizationId),
+                sql`${invoices.id} IN (${sql.join(
+                  invoiceIds.map((id) => sql`${id}`),
+                  sql`, `
+                )})`
+              )
             )
-          )
-          .all() as InvoiceRow[]
-      : []
+            .all() as InvoiceRow[])
+        : []
     const invoiceMap = new Map(invoiceRows.map((i) => [i.id, i.number]))
 
     // Fetch customers and people
@@ -102,25 +108,49 @@ export function registerCollectionsIpc(): void {
       .where(
         and(
           eq(customers.organization_id, organizationId),
-          sql`${customers.id} IN (${sql.join(customerIds.map((id) => sql`${id}`), sql`, `)})`
+          sql`${customers.id} IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
         )
       )
       .all() as Array<{ id: number; person_id: number }>
     const personIds = customerRows.map((c) => c.person_id)
-    const personRows = personIds.length > 0
-      ? getDrizzle()
-          .select()
-          .from(people)
-          .where(
-            and(
-              eq(people.organization_id, organizationId),
-              sql`${people.id} IN (${sql.join(personIds.map((id) => sql`${id}`), sql`, `)})`
+    const personRows =
+      personIds.length > 0
+        ? (getDrizzle()
+            .select()
+            .from(people)
+            .where(
+              and(
+                eq(people.organization_id, organizationId),
+                sql`${people.id} IN (${sql.join(
+                  personIds.map((id) => sql`${id}`),
+                  sql`, `
+                )})`
+              )
             )
-          )
-          .all() as PersonRow[]
-      : []
+            .all() as PersonRow[])
+        : []
     const personMap = new Map(personRows.map((p) => [p.id, p]))
     const personByCustomer = new Map(customerRows.map((c) => [c.id, personMap.get(c.person_id)]))
+
+    // Fetch users for recordedBy names
+    const userIds = [...new Set(paymentRows.map((p) => p.created_by))]
+    const userRows =
+      userIds.length > 0
+        ? (getDrizzle()
+            .select()
+            .from(users)
+            .where(
+              sql`${users.id} IN (${sql.join(
+                userIds.map((id) => sql`${id}`),
+                sql`, `
+              )})`
+            )
+            .all() as UserRow[])
+        : []
+    const userMap = new Map(userRows.map((u) => [u.id, u.full_name]))
 
     return paymentRows.map((p) => {
       const person = personByCustomer.get(p.customer_id)
@@ -137,7 +167,7 @@ export function registerCollectionsIpc(): void {
         amountMinor: p.amount_minor,
         method: p.payment_method,
         receivedAt: p.payment_date,
-        receivedBy: String(p.created_by),
+        receivedBy: userMap.get(p.created_by) ?? 'Unknown',
         allocations: allocs.map((a) => ({
           invoiceNo: invoiceMap.get(a.invoice_id) ?? `INV-${a.invoice_id}`,
           amountMinor: a.amount_minor
@@ -170,33 +200,42 @@ export function registerCollectionsIpc(): void {
       .all() as AllocationRow[]
 
     const invoiceIds = allocRows.map((a) => a.invoice_id)
-    const invoiceRows = invoiceIds.length > 0
-      ? getDrizzle()
-          .select()
-          .from(invoices)
-          .where(
-            and(
-              eq(invoices.organization_id, organizationId),
-              sql`${invoices.id} IN (${sql.join(invoiceIds.map((id) => sql`${id}`), sql`, `)})`
+    const invoiceRows =
+      invoiceIds.length > 0
+        ? (getDrizzle()
+            .select()
+            .from(invoices)
+            .where(
+              and(
+                eq(invoices.organization_id, organizationId),
+                sql`${invoices.id} IN (${sql.join(
+                  invoiceIds.map((id) => sql`${id}`),
+                  sql`, `
+                )})`
+              )
             )
-          )
-          .all() as InvoiceRow[]
-      : []
+            .all() as InvoiceRow[])
+        : []
     const invoiceMap = new Map(invoiceRows.map((i) => [i.id, i.number]))
 
     const customer = getDrizzle()
       .select()
       .from(customers)
-      .where(and(eq(customers.organization_id, organizationId), eq(customers.id, payment.customer_id)))
+      .where(
+        and(eq(customers.organization_id, organizationId), eq(customers.id, payment.customer_id))
+      )
       .get() as { person_id: number } | undefined
 
     const person = customer
-      ? getDrizzle()
+      ? (getDrizzle()
           .select()
           .from(people)
           .where(and(eq(people.organization_id, organizationId), eq(people.id, customer.person_id)))
-          .get() as PersonRow | undefined
+          .get() as PersonRow | undefined)
       : undefined
+
+    const user = getDrizzle().select().from(users).where(eq(users.id, payment.created_by)).get() as
+      UserRow | undefined
 
     return {
       id: String(payment.id),
@@ -210,7 +249,7 @@ export function registerCollectionsIpc(): void {
       amountMinor: payment.amount_minor,
       method: payment.payment_method,
       receivedAt: payment.payment_date,
-      receivedBy: String(payment.created_by),
+      receivedBy: user?.full_name ?? 'Unknown',
       allocations: allocRows.map((a) => ({
         invoiceNo: invoiceMap.get(a.invoice_id) ?? `INV-${a.invoice_id}`,
         amountMinor: a.amount_minor

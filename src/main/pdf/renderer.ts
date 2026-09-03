@@ -80,6 +80,7 @@ export async function renderPdf(
 
     if (open) {
       await shell.openPath(outputPath)
+      shell.showItemInFolder(outputPath)
     }
 
     return outputPath

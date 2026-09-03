@@ -51,8 +51,16 @@ export function InvoiceOverviewCard({
   return (
     <>
       <div
-        className={cn('crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm', className)}
-        style={{ '--gradient-start': 'var(--warning)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+        className={cn(
+          'crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm',
+          className
+        )}
+        style={
+          {
+            '--gradient-start': 'var(--warning)',
+            '--gradient-end': 'var(--primary)'
+          } as React.CSSProperties
+        }
       >
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 font-mono text-sm font-semibold">
@@ -68,7 +76,9 @@ export function InvoiceOverviewCard({
         <div className="mt-3 flex flex-col gap-1.5 border-t pt-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Subtotal</span>
-            <span className="font-mono tabular-nums">{formatMinor(inv.subtotalMinor, currency)}</span>
+            <span className="font-mono tabular-nums">
+              {formatMinor(inv.subtotalMinor, currency)}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Tax</span>
@@ -91,7 +101,9 @@ export function InvoiceOverviewCard({
           )}
         >
           <span className="text-xs font-medium">
-            {settled ? 'Paid in full ✓' : `Outstanding ${formatMinor(inv.outstandingMinor, currency)}`}
+            {settled
+              ? 'Paid in full ✓'
+              : `Outstanding ${formatMinor(inv.outstandingMinor, currency)}`}
           </span>
           <span className="font-mono text-xs font-semibold tabular-nums">
             {formatMinor(inv.paidMinor, currency)} paid

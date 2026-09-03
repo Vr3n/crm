@@ -55,7 +55,8 @@ export function useOffers(): UseQueryResult<Offer[], Error> {
 export function usePlanVersions(planId: number | null): UseQueryResult<PlanVersion[], Error> {
   return useQuery({
     queryKey: catalogKeys.planVersions(planId ?? 0),
-    queryFn: async () => (await versionsApi.listPlanVersions(planId as number)).map(mapPlanVersionRow),
+    queryFn: async () =>
+      (await versionsApi.listPlanVersions(planId as number)).map(mapPlanVersionRow),
     enabled: planId !== null
   })
 }
@@ -98,7 +99,9 @@ export function useUpdatePlan(): UseMutationResult<Plan, Error, { id: number; in
     onSuccess: (_data, { id }) => {
       void qc.invalidateQueries({ queryKey: catalogKeys.plans })
       void qc.invalidateQueries({ queryKey: catalogKeys.planVersions(id) })
-      toast.success('Plan updated', { description: 'Existing memberships keep their snapshot price.' })
+      toast.success('Plan updated', {
+        description: 'Existing memberships keep their snapshot price.'
+      })
     },
     onError: () => {
       toast.error('Could not update plan')
@@ -127,7 +130,9 @@ export function useCreateOffer(): UseMutationResult<Offer, Error, OfferInput> {
     mutationFn: async (input: OfferInput) => mapOfferRow(await offersApi.createOffer(input)),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: catalogKeys.offers })
-      toast.success('Offer created', { description: 'The offer is ready to be applied at sale time.' })
+      toast.success('Offer created', {
+        description: 'The offer is ready to be applied at sale time.'
+      })
     },
     onError: () => {
       toast.error('Could not create offer')
@@ -135,7 +140,11 @@ export function useCreateOffer(): UseMutationResult<Offer, Error, OfferInput> {
   })
 }
 
-export function useUpdateOffer(): UseMutationResult<Offer, Error, { id: number; input: OfferInput }> {
+export function useUpdateOffer(): UseMutationResult<
+  Offer,
+  Error,
+  { id: number; input: OfferInput }
+> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, input }: { id: number; input: OfferInput }) =>

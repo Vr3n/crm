@@ -6,7 +6,7 @@ import {
 } from '../../src/renderer/src/features/dashboard/follow-up-timeline'
 import type { FollowUpRow } from '../../src/renderer/src/features/followups/types'
 
-const NOW = new Date('2026-08-31T12:00:00Z')
+const NOW = new Date()
 const TODAY = startOfDay(NOW).toISOString()
 const TOMORROW = addDays(NOW, 1).toISOString()
 const YESTERDAY = new Date(NOW.getTime() - 86_400_000).toISOString()

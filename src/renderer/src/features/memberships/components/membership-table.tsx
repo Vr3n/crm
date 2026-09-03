@@ -16,14 +16,12 @@ import type { CurrencyCode } from '@/lib/money'
 
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Member', key: 'customerName', format: 'text' },
-  { header: 'Customer ID', key: 'customerId', format: 'text' },
   { header: 'Plan', key: 'plan', format: 'text' },
   { header: 'Status', key: 'status', format: 'text' },
   { header: 'Start', key: 'startDate', format: 'date' },
   { header: 'End', key: 'endDate', format: 'date' },
   { header: 'Amount', key: 'priceMinor', format: 'money' },
   { header: 'Discount', key: 'discountMinor', format: 'money' },
-  { header: 'Billing', key: 'billingFrequency', format: 'text' },
   { header: 'Freezes', key: 'freezeCount', format: 'number' },
   { header: 'Days Left', key: 'daysLeft', format: 'number' }
 ]
@@ -201,11 +199,7 @@ export function MembershipTable({
       emptyDescription="Try widening the filters to see more entitlement periods."
       headerTone="primary"
       toolbar={
-        <ExportExcelButton
-          columns={EXPORT_COLUMNS}
-          rows={exportData}
-          sheetName="Memberships"
-        />
+        <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Memberships" />
       }
     />
   )

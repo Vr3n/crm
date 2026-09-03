@@ -75,6 +75,7 @@ export interface LeadFollowup {
   completedBy: number | null
   cancelledAt: string | null
   cancelledBy: number | null
+  cancelledReason: string | null
   createdBy: number
   createdAt: string
 }

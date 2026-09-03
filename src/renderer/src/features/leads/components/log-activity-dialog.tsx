@@ -45,8 +45,7 @@ export function LogActivityDialog({
   const log = useLogActivity()
   const { data: ref } = useReferenceData()
   const types = useMemo(
-    () =>
-      ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
+    () => ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
     [ref]
   )
   const [picked, setPicked] = useState<Lead | null>(lead ?? null)
@@ -194,11 +193,7 @@ export function LogActivityDialog({
           </FieldGroup>
 
           <DialogFooter className="mt-6">
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <LoadingButton type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </LoadingButton>
             <LoadingButton

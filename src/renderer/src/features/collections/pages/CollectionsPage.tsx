@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { Plus } from 'lucide-react'
-import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/page-header'
+import { RecordPaymentDialog } from '@/features/finance/components/record-payment-dialog'
 import { usePayments } from '../queries'
 import { buildDayCollection } from '../build'
 import { CollectionDatePicker } from '../components/collection-date-picker'
@@ -19,6 +19,7 @@ import { CollectionsTable } from '../components/collections-table'
  */
 export function CollectionsPage(): React.JSX.Element {
   const { data, isLoading } = usePayments()
+  const [recordOpen, setRecordOpen] = useState(false)
   const [day, setDay] = useState<Date>(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
@@ -51,13 +52,7 @@ export function CollectionsPage(): React.JSX.Element {
               Module 05 · Finance
             </Badge>
             <CollectionDatePicker value={day} onValueChange={setDay} />
-            <Button
-              onClick={() =>
-                toast('Record payment', {
-                  description: 'Payment recording arrives with the Finance module command layer.'
-                })
-              }
-            >
+            <Button onClick={() => setRecordOpen(true)}>
               <Plus />
               Record payment
             </Button>
@@ -68,6 +63,8 @@ export function CollectionsPage(): React.JSX.Element {
       <CollectionSummary collection={collection} isToday={isToday} />
 
       <CollectionsTable payments={dayPayments} isLoading={isLoading} />
+
+      {recordOpen && <RecordPaymentDialog open={recordOpen} onOpenChange={setRecordOpen} />}
     </div>
   )
 }

@@ -68,7 +68,11 @@ interface AuthGateProps {
   onAuthenticated: (session: SessionContext) => void
 }
 
-export function AuthGate({ status, statusPending, onAuthenticated }: AuthGateProps): React.JSX.Element {
+export function AuthGate({
+  status,
+  statusPending,
+  onAuthenticated
+}: AuthGateProps): React.JSX.Element {
   const [manualPhase, setManualPhase] = useState<'setup' | 'login' | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)

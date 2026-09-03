@@ -137,7 +137,8 @@ export function createLead(input: CreateLeadInput): CreatedLead {
     // Follow-up: use provided or auto-create "Post enquiry followup" after 2 days
     if (input.followup) {
       const due = new Date(input.followup.dueAt)
-      if (Number.isNaN(due.getTime())) throw new ValidationError('followup.dueAt must be a valid date')
+      if (Number.isNaN(due.getTime()))
+        throw new ValidationError('followup.dueAt must be a valid date')
       if (due.getTime() <= Date.now()) {
         throw new ValidationError('Follow-up due date must be in the future')
       }
@@ -615,7 +616,7 @@ export function cancelFollowUp(input: CancelFollowUpInput): void {
   if (followup.cancelledAt) return
 
   withTransaction(() => {
-    followupRepo.cancel(organizationId, followup.id, requireSession().userId)
+    followupRepo.cancel(organizationId, followup.id, requireSession().userId, input.reason)
   })
 }
 

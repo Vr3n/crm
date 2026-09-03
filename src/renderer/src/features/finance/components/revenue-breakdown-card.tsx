@@ -39,7 +39,12 @@ export function RevenueBreakdownCard({
   return (
     <Card
       className="crm-gradient-border"
-      style={{ '--gradient-start': gradient.start, '--gradient-end': gradient.end } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': gradient.start,
+          '--gradient-end': gradient.end
+        } as React.CSSProperties
+      }
     >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
@@ -50,13 +55,17 @@ export function RevenueBreakdownCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3.5">
-        <p className="font-mono text-2xl font-semibold tabular-nums">{formatMinor(total, currency)}</p>
+        <p className="font-mono text-2xl font-semibold tabular-nums">
+          {formatMinor(total, currency)}
+        </p>
         <div className="flex flex-col gap-3">
           {rows.map((row) => (
             <div key={row.key} className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="truncate text-xs font-medium">{row.label}</span>
-                <span className="font-mono text-xs tabular-nums">{formatMinor(row.amountMinor, currency)}</span>
+                <span className="font-mono text-xs tabular-nums">
+                  {formatMinor(row.amountMinor, currency)}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

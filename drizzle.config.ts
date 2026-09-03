@@ -11,6 +11,6 @@ export default defineConfig({
   schema: './src/main/db/schema/index.ts',
   out: './src/main/db/migrations',
   dbCredentials: {
-    url: 'gym-crm.db'
+    url: 'CrownCRM.db'
   }
 })

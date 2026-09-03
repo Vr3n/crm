@@ -134,7 +134,10 @@ export function MembershipExpirationsTable({
     [onFollowUp]
   )
 
-  const columns = useMemo(() => buildColumns(handleView, handleFollowUp), [handleView, handleFollowUp])
+  const columns = useMemo(
+    () => buildColumns(handleView, handleFollowUp),
+    [handleView, handleFollowUp]
+  )
 
   const presets = useMemo<DateRangePreset[]>(() => {
     const now = new Date()

@@ -28,9 +28,7 @@ function countOpenFollowUps(lead: Lead): number {
 }
 
 function firstOverdueFollowUp(lead: Lead): boolean {
-  return lead.followUps.some(
-    (f) => !f.completedAt && new Date(f.dueAt).getTime() < Date.now()
-  )
+  return lead.followUps.some((f) => !f.completedAt && new Date(f.dueAt).getTime() < Date.now())
 }
 
 export function computeQuality(lead: Lead, all: Lead[] = []): LeadQuality {

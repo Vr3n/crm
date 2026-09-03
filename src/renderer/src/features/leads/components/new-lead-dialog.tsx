@@ -539,8 +539,7 @@ export function NewLeadDialog({
                 <form.Field
                   name="activityTypeId"
                   validators={{
-                    onChange: ({ value }) =>
-                      activityOpen && !value ? 'Choose a type' : undefined
+                    onChange: ({ value }) => (activityOpen && !value ? 'Choose a type' : undefined)
                   }}
                 >
                   {(field) => (

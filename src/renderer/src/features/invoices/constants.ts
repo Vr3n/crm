@@ -23,9 +23,7 @@ export const INVOICE_STATUS_META: Record<InvoiceStatus, { label: string; tone: B
  * DRAFT is included: two-phase invoice creation leaves real draft rows that
  * staff must be able to find and finish.
  */
-export const INVOICE_STATUS_OPTIONS = Object.keys(
-  INVOICE_STATUS_META
-) as InvoiceStatus[]
+export const INVOICE_STATUS_OPTIONS = Object.keys(INVOICE_STATUS_META) as InvoiceStatus[]
 
 /** Rows-per-page options for the invoice register table. */
 export const INVOICE_PAGE_SIZES = [10, 20, 50]

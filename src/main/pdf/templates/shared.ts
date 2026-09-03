@@ -248,9 +248,7 @@ export const BASE_STYLES = `
 
 /** Builds the org header HTML (logo conditional on presence). */
 export function buildOrgHeader(org: OrgBranding): string {
-  const logoHtml = org.logo
-    ? `<img src="${org.logo}" alt="${org.name}" class="header-logo" />`
-    : ''
+  const logoHtml = org.logo ? `<img src="${org.logo}" alt="${org.name}" class="header-logo" />` : ''
 
   const detailLines = [
     org.address,

@@ -49,10 +49,12 @@ export function OrderSummary({
   leadName?: string | null
 }): React.JSX.Element {
   const currency = useCurrency()
-  const amountDue = finalPrice !== null && paidAmount !== null ? Math.max(0, finalPrice - paidAmount) : null
+  const amountDue =
+    finalPrice !== null && paidAmount !== null ? Math.max(0, finalPrice - paidAmount) : null
   const exceedsMax = maxPayment !== null && paidAmount !== null && paidAmount > maxPayment
 
-  const discountTypeLabel = !discountType || discountType === 'NONE' ? 'None' : discountType.replace('_', ' ')
+  const discountTypeLabel =
+    !discountType || discountType === 'NONE' ? 'None' : discountType.replace('_', ' ')
   const discountValueLabel =
     discountValue !== '' && discountType
       ? discountType === 'PERCENTAGE'
@@ -76,7 +78,15 @@ export function OrderSummary({
             <>
               <p className="truncate text-sm font-medium">{plan.name}</p>
               <p className="text-[11px] text-muted-foreground">
-                {plan.duration} ({plan.duration === 'MONTHLY' ? 30 : plan.duration === 'QUARTERLY' ? 90 : plan.duration === 'HALF_YEARLY' ? 180 : 365} days)
+                {plan.duration} (
+                {plan.duration === 'MONTHLY'
+                  ? 30
+                  : plan.duration === 'QUARTERLY'
+                    ? 90
+                    : plan.duration === 'HALF_YEARLY'
+                      ? 180
+                      : 365}{' '}
+                days)
                 {leadName ? ` · ${leadName}` : ''}
                 {isDirty && basePrice !== null ? ` · Edited` : ''}
               </p>
@@ -93,7 +103,10 @@ export function OrderSummary({
 
         {/* Totals */}
         <div className="flex flex-col gap-2 px-5 py-3 text-sm">
-          <Row label="Base Price" value={basePrice !== null ? formatMinor(basePrice, currency) : '—'} />
+          <Row
+            label="Base Price"
+            value={basePrice !== null ? formatMinor(basePrice, currency) : '—'}
+          />
           <Row label="Discount type" value={discountTypeLabel} muted />
           <Row label="Discount value" value={discountValueLabel} muted />
           <Row
@@ -103,15 +116,29 @@ export function OrderSummary({
             valueClass={discountAmount > 0 ? 'text-success font-medium' : undefined}
           />
           <Row label="Tax" value={plan ? formatRate(plan.taxRateBps) : '—'} muted dim />
-          <Row label="Registration fee" value={plan && plan.registrationFeeMinor > 0 ? formatMinor(plan.registrationFeeMinor, currency) : '—'} muted dim />
+          <Row
+            label="Registration fee"
+            value={
+              plan && plan.registrationFeeMinor > 0
+                ? formatMinor(plan.registrationFeeMinor, currency)
+                : '—'
+            }
+            muted
+            dim
+          />
         </div>
 
         <Separator />
 
         {/* Final */}
         <div className="flex items-center justify-between bg-emerald-50 px-5 py-3 dark:bg-emerald-950/20">
-          <span className="text-sm font-semibold tracking-tight text-emerald-700 dark:text-emerald-300">Final Price</span>
-          <span aria-live="polite" className="font-mono text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+          <span className="text-sm font-semibold tracking-tight text-emerald-700 dark:text-emerald-300">
+            Final Price
+          </span>
+          <span
+            aria-live="polite"
+            className="font-mono text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300"
+          >
             {finalPrice !== null ? formatMinor(finalPrice, currency) : '—'}
           </span>
         </div>
@@ -123,7 +150,12 @@ export function OrderSummary({
           <div className="grid gap-1.5">
             <Label htmlFor="summary-paid" className="text-xs">
               Paid Amount <span className="text-destructive">*</span>
-              {maxPayment !== null ? <span className="font-normal text-muted-foreground"> · max {formatMinor(maxPayment, currency)}</span> : null}
+              {maxPayment !== null ? (
+                <span className="font-normal text-muted-foreground">
+                  {' '}
+                  · max {formatMinor(maxPayment, currency)}
+                </span>
+              ) : null}
             </Label>
             <InputGroup>
               <InputGroupAddon align="start" className="pointer-events-none">
@@ -192,7 +224,8 @@ export function OrderSummary({
 
         {/* Live region for screen readers */}
         <p className="sr-only" aria-live="polite" aria-atomic="true">
-          Order summary — {finalPrice !== null ? `final ${finalPrice}` : 'no final'} {paidAmount !== null ? `paid ${paidAmount}` : ''}
+          Order summary — {finalPrice !== null ? `final ${finalPrice}` : 'no final'}{' '}
+          {paidAmount !== null ? `paid ${paidAmount}` : ''}
         </p>
       </CardContent>
     </Card>
@@ -214,10 +247,16 @@ function Row({
 }): React.JSX.Element {
   return (
     <div className="flex items-center justify-between">
-      <span className={muted ? (dim ? 'text-xs text-muted-foreground/60' : 'text-muted-foreground') : ''}>
+      <span
+        className={
+          muted ? (dim ? 'text-xs text-muted-foreground/60' : 'text-muted-foreground') : ''
+        }
+      >
         {label}
       </span>
-      <span className={['font-mono tabular-nums', valueClass ?? ''].filter(Boolean).join(' ')}>{value}</span>
+      <span className={['font-mono tabular-nums', valueClass ?? ''].filter(Boolean).join(' ')}>
+        {value}
+      </span>
     </div>
   )
 }

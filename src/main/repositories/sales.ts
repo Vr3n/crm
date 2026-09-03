@@ -94,6 +94,7 @@ interface FollowupRow {
   completed_by: number | null
   cancelled_at: string | null
   cancelled_by: number | null
+  cancelled_reason: string | null
   created_by: number
   created_at: string
 }
@@ -181,6 +182,7 @@ function mapFollowup(row: FollowupRow): LeadFollowup {
     completedBy: row.completed_by,
     cancelledAt: row.cancelled_at,
     cancelledBy: row.cancelled_by,
+    cancelledReason: row.cancelled_reason,
     createdBy: row.created_by,
     createdAt: row.created_at
   }
@@ -625,10 +627,7 @@ export const leadRepo = {
     getDrizzle()
       .delete(leadFollowups)
       .where(
-        and(
-          eq(leadFollowups.organization_id, organizationId),
-          inArray(leadFollowups.lead_id, ids)
-        )
+        and(eq(leadFollowups.organization_id, organizationId), inArray(leadFollowups.lead_id, ids))
       )
       .run()
     getDrizzle()
@@ -669,33 +668,33 @@ export const leadRepo = {
     createdAfter?: string
     page: number
     limit: number
-    }): {
-      items: Array<{
-        id: number
-        personId: number
-        personName: string
-        phone: string
-        email: string | null
-        sourceId: number
-        sourceName: string
-        stageId: number
-        stageName: string
-        isWon: boolean
-        isLost: boolean
-        ownerUserId: number | null
-        ownerName: string | null
-        customerId: number | null
-        planId: number | null
-        planName: string | null
-        goal: string | null
-        notes: string | null
-        createdAt: string
-        lostReasonId: number | null
-        lostReasonName: string | null
-        lostAt: string | null
-      }>
-      total: number
-    } {
+  }): {
+    items: Array<{
+      id: number
+      personId: number
+      personName: string
+      phone: string
+      email: string | null
+      sourceId: number
+      sourceName: string | null
+      stageId: number
+      stageName: string | null
+      isWon: boolean
+      isLost: boolean
+      ownerUserId: number | null
+      ownerName: string | null
+      customerId: number | null
+      planId: number | null
+      planName: string | null
+      goal: string | null
+      notes: string | null
+      createdAt: string
+      lostReasonId: number | null
+      lostReasonName: string | null
+      lostAt: string | null
+    }>
+    total: number
+  } {
     const { organizationId, search, stageId, sourceId, ownerUserId, createdAfter } = input
     const where = and(
       eq(leads.organization_id, organizationId),
@@ -719,8 +718,8 @@ export const leadRepo = {
         sourceName: leadSources.name,
         stageId: leads.current_stage_id,
         stageName: leadStages.name,
-        isWon: leadStages.is_won,
-        isLost: leadStages.is_lost,
+        isWon: sql<boolean>`coalesce(${leadStages.is_won}, 0)`,
+        isLost: sql<boolean>`coalesce(${leadStages.is_lost}, 0)`,
         ownerUserId: leads.owner_user_id,
         ownerName: users.full_name,
         customerId: leads.customer_id,
@@ -735,8 +734,8 @@ export const leadRepo = {
       })
       .from(leads)
       .innerJoin(people, eq(people.id, leads.person_id))
-      .innerJoin(leadSources, eq(leadSources.id, leads.source_id))
-      .innerJoin(leadStages, eq(leadStages.id, leads.current_stage_id))
+      .leftJoin(leadSources, eq(leadSources.id, leads.source_id))
+      .leftJoin(leadStages, eq(leadStages.id, leads.current_stage_id))
       .leftJoin(users, eq(users.id, leads.owner_user_id))
       .leftJoin(leadLostReasons, eq(leadLostReasons.id, leads.lost_reason_id))
       .leftJoin(membershipPlans, eq(membershipPlans.id, leads.plan_id))
@@ -745,6 +744,11 @@ export const leadRepo = {
       .limit(input.limit)
       .offset((input.page - 1) * input.limit)
       .all()
+      .map((row) => ({
+        ...row,
+        isWon: !!row.isWon,
+        isLost: !!row.isLost
+      }))
 
     const totalRow = getDrizzle()
       .select({ value: count() })
@@ -771,9 +775,7 @@ export const leadRepo = {
     const row = getDrizzle()
       .select({ value: count() })
       .from(leads)
-      .where(
-        and(eq(leads.organization_id, organizationId), eq(leads.plan_id, planId))
-      )
+      .where(and(eq(leads.organization_id, organizationId), eq(leads.plan_id, planId)))
       .get()
     return row?.value ?? 0
   },
@@ -1030,10 +1032,14 @@ export const followupRepo = {
       .run()
   },
 
-  cancel(organizationId: number, id: number, by: number): void {
+  cancel(organizationId: number, id: number, by: number, reason?: string): void {
     getDrizzle()
       .update(leadFollowups)
-      .set({ cancelled_at: sql`(datetime('now'))`, cancelled_by: by })
+      .set({
+        cancelled_at: sql`(datetime('now'))`,
+        cancelled_by: by,
+        cancelled_reason: reason ?? null
+      })
       .where(and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.id, id)))
       .run()
   },

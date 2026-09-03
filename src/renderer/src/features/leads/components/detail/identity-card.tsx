@@ -48,7 +48,12 @@ export function IdentityCard({
   return (
     <Card
       className="crm-gradient-border"
-      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--primary)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">

@@ -132,8 +132,8 @@ export function LeadSelectionToolbar({
                 Delete {count} {count === 1 ? 'lead' : 'leads'}?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This permanently removes the selected leads, their activities,
-                follow-ups, and stage history. It can&apos;t be undone.
+                This permanently removes the selected leads, their activities, follow-ups, and stage
+                history. It can&apos;t be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

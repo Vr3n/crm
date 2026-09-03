@@ -102,7 +102,5 @@ export const invoiceSequence = sqliteTable(
     prefix: text('prefix').notNull(),
     last_value: integer('last_value').notNull().default(0)
   },
-  (table) => [
-    unique().on(table.organization_id, table.year, table.prefix)
-  ]
+  (table) => [unique().on(table.organization_id, table.year, table.prefix)]
 )

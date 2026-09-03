@@ -15,10 +15,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  useMarkUncollectible,
-  useVoidInvoice
-} from '../queries'
+import { useMarkUncollectible, useVoidInvoice } from '../queries'
 
 /**
  * Lifecycle reason dialogs (Module 04 §13). Void and mark-uncollectible are
@@ -92,7 +89,9 @@ function ReasonField({
         <div className="grid gap-1.5">
           <Label htmlFor="reason">
             {label} <span className="text-destructive">*</span>
-            <span className="ml-2 font-normal text-muted-foreground">{500 - field.state.value.length} left</span>
+            <span className="ml-2 font-normal text-muted-foreground">
+              {500 - field.state.value.length} left
+            </span>
           </Label>
           <Textarea
             id="reason"
@@ -162,7 +161,12 @@ function ReasonDialogLayout({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <LoadingButton type="submit" disabled={!canSubmit} loading={loading} loadingLabel="Working…">
+            <LoadingButton
+              type="submit"
+              disabled={!canSubmit}
+              loading={loading}
+              loadingLabel="Working…"
+            >
               {confirmLabel}
             </LoadingButton>
           </DialogFooter>

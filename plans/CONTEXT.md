@@ -172,3 +172,37 @@ _Avoid_: Due amount (as a stored counter), balance column (as source of truth)
 **Money**:
 A value object of integer minor units plus a currency. Never a floating-point number.
 _Avoid_: Amount, price (untyped), "₹19,200.00" (formatted string)
+
+## Licensing
+
+**License**:
+The signed artifact (`license.dat`) granting an Organization the right to run the product on
+exactly one Device. Immutable — the signed payload is never modified at runtime.
+_Avoid_: License key (as the file), serial, activation file
+
+**License ID**:
+A unique identifier per License instance, used to track issues and Reissues in the vendor ledger.
+_Avoid_: Serial, activation code
+
+**Device**:
+The physical PC running the product. A License authorizes exactly one Device.
+_Avoid_: Machine (ambiguous with the app), computer, host
+
+**Device Fingerprint**:
+The four hashed hardware components (machine GUID, motherboard, system disk, CPU) identifying a
+Device. Only the hashes ship in the License; raw hardware identifiers never leave the machine.
+_Avoid_: Hardware ID, device_id, fingerprint hash
+
+**Reactivation**:
+Re-issuing a License for an Organization after its Device changes. A vendor-ledger concept, never a
+runtime branch. Consumes the Organization's Reactivation Allowance.
+_Avoid_: Re-bind, re-authorize, activation
+
+**Reissue**:
+The mechanical act of producing a new signed License — the fulfillment of a Reactivation. Performed
+by the vendor, not the app.
+_Avoid_: Regenerate, re-issue (when the mechanical act is meant)
+
+**Reactivation Allowance**:
+The per-Organization count of Reactivations the vendor will grant. Tracked in the vendor ledger only.
+_Avoid_: Activations remaining, activation budget, "free activations"

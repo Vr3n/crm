@@ -86,7 +86,10 @@ function formatNow(): string {
 
 /** Builds a safe filename from customer name + ID + timestamp. */
 function buildFilename(customerName: string, docId: string, timestamp: Date): string {
-  const safe = customerName.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').toLowerCase()
+  const safe = customerName
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .toLowerCase()
   const ts = timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)
   return `${safe}_${docId}_${ts}.pdf`
 }
@@ -144,8 +147,7 @@ export function exportInvoicePdf(input: {
     )
     .orderBy(desc(memberships.created_at))
     .get() as
-    | { planName: string; joiningDate: string; startDate: string; endDate: string }
-    | undefined
+    { planName: string; joiningDate: string; startDate: string; endDate: string } | undefined
 
   // Calculate paid amount from allocations
   const paidAmount = allocations.reduce((sum, a) => sum + a.amountMinor, 0)

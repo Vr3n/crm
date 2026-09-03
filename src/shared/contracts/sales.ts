@@ -94,7 +94,8 @@ export const updateFollowUpInputSchema = z.object({
 export type UpdateFollowUpInput = z.infer<typeof updateFollowUpInputSchema>
 
 export const cancelFollowUpInputSchema = z.object({
-  followupId: z.number().int().positive()
+  followupId: z.number().int().positive(),
+  reason: z.string().max(500).optional()
 })
 export type CancelFollowUpInput = z.infer<typeof cancelFollowUpInputSchema>
 
@@ -340,9 +341,9 @@ export const leadListRowSchema = z.object({
   phone: z.string(),
   email: z.string().nullable(),
   sourceId: z.number().int().positive(),
-  sourceName: z.string(),
+  sourceName: z.string().nullable(),
   stageId: z.number().int().positive(),
-  stageName: z.string(),
+  stageName: z.string().nullable(),
   isWon: z.boolean(),
   isLost: z.boolean(),
   ownerUserId: z.number().int().positive().nullable(),

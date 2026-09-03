@@ -66,9 +66,7 @@ export const customerRepo = {
     const row = getDrizzle()
       .select()
       .from(customers)
-      .where(
-        and(eq(customers.organization_id, organizationId), eq(customers.person_id, personId))
-      )
+      .where(and(eq(customers.organization_id, organizationId), eq(customers.person_id, personId)))
       .get() as CustomerRow | undefined
     return row ? mapCustomer(row) : null
   },
@@ -197,7 +195,10 @@ export const membershipRepo = {
       .select()
       .from(memberships)
       .where(
-        and(eq(memberships.organization_id, organizationId), eq(memberships.customer_id, customerId))
+        and(
+          eq(memberships.organization_id, organizationId),
+          eq(memberships.customer_id, customerId)
+        )
       )
       .orderBy(asc(memberships.created_at))
       .all() as MembershipRow[]
@@ -335,7 +336,11 @@ export const freezeRepo = {
     return rows.map(mapFreeze)
   },
 
-  getActiveFreeze(organizationId: number, membershipId: number, today: string): MembershipFreeze | null {
+  getActiveFreeze(
+    organizationId: number,
+    membershipId: number,
+    today: string
+  ): MembershipFreeze | null {
     const row = getDrizzle()
       .select()
       .from(membershipFreezes)

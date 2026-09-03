@@ -25,7 +25,12 @@ export function OrgProfileCard({
   return (
     <div
       className="crm-gradient-border flex flex-col gap-4 rounded-lg border border-border bg-card p-5"
-      style={{ '--gradient-start': 'var(--primary)', '--gradient-end': 'var(--primary)' } as React.CSSProperties}
+      style={
+        {
+          '--gradient-start': 'var(--primary)',
+          '--gradient-end': 'var(--primary)'
+        } as React.CSSProperties
+      }
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">

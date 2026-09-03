@@ -32,7 +32,7 @@ interface Draft {
   enabled: boolean
 }
 
-function renderCard(invoices: FinanceInvoice[], drafts: Draft[], paymentAmountMinor: number) {
+function renderCard(invoices: FinanceInvoice[], drafts: Draft[], paymentAmountMinor: number): void {
   const client = new QueryClient()
   render(
     <QueryClientProvider client={client}>
@@ -116,18 +116,30 @@ describe('AllocationSection — edge cases', () => {
   })
 
   it('shows partial allocation against the full outstanding', () => {
-    renderCard([mkInvoice({ totalMinor: 118000, paidMinor: 0 })], [{ invoiceId: '1', amountMinor: 50000, enabled: true }], 50000)
+    renderCard(
+      [mkInvoice({ totalMinor: 118000, paidMinor: 0 })],
+      [{ invoiceId: '1', amountMinor: 50000, enabled: true }],
+      50000
+    )
     expect(screen.getByText(/₹500\.00 of ₹1,180\.00/)).toBeInTheDocument()
   })
 
   it('shows full coverage as fully-allocated (allocated equals outstanding)', () => {
-    renderCard([mkInvoice({ totalMinor: 118000, paidMinor: 0 })], [{ invoiceId: '1', amountMinor: 118000, enabled: true }], 118000)
+    renderCard(
+      [mkInvoice({ totalMinor: 118000, paidMinor: 0 })],
+      [{ invoiceId: '1', amountMinor: 118000, enabled: true }],
+      118000
+    )
     expect(screen.getByText(/₹1,180\.00 of ₹1,180\.00/)).toBeInTheDocument()
     expect(screen.getByText('100%')).toBeInTheDocument()
   })
 
   it('caps the progress bar at 100% when the allocated amount exceeds the outstanding', () => {
-    renderCard([mkInvoice({ totalMinor: 118000, paidMinor: 0 })], [{ invoiceId: '1', amountMinor: 118000, enabled: true }], 200000)
+    renderCard(
+      [mkInvoice({ totalMinor: 118000, paidMinor: 0 })],
+      [{ invoiceId: '1', amountMinor: 118000, enabled: true }],
+      200000
+    )
     const bar = document.querySelector('.h-full.rounded-full') as HTMLElement | null
     expect(bar?.style.width).toBe('100%')
   })
@@ -202,12 +214,20 @@ describe('AllocationSection — edge cases', () => {
   })
 
   it('marks a fully-covered invoice with 100% progress', () => {
-    renderCard([mkInvoice({ totalMinor: 118000, paidMinor: 0 })], [{ invoiceId: '1', amountMinor: 118000, enabled: true }], 118000)
+    renderCard(
+      [mkInvoice({ totalMinor: 118000, paidMinor: 0 })],
+      [{ invoiceId: '1', amountMinor: 118000, enabled: true }],
+      118000
+    )
     expect(screen.getByText('100%')).toBeInTheDocument()
   })
 
   it('shows partial progress percentage for a partially allocated invoice', () => {
-    renderCard([mkInvoice({ totalMinor: 100000, paidMinor: 0 })], [{ invoiceId: '1', amountMinor: 25000, enabled: true }], 25000)
+    renderCard(
+      [mkInvoice({ totalMinor: 100000, paidMinor: 0 })],
+      [{ invoiceId: '1', amountMinor: 25000, enabled: true }],
+      25000
+    )
     expect(screen.getByText('25%')).toBeInTheDocument()
   })
 

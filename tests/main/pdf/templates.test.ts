@@ -118,9 +118,7 @@ describe('Invoice Document Template', () => {
   it('shows discount amount when present', () => {
     const ctx = {
       ...baseCtx,
-      lines: [
-        { ...baseCtx.lines[0], discountAmount: 200000 }
-      ]
+      lines: [{ ...baseCtx.lines[0], discountAmount: 200000 }]
     }
     const html = renderInvoiceDocument(ctx)
     expect(html).toContain('₹2,000.00')
@@ -237,9 +235,7 @@ describe('Invoice Document Template', () => {
   it('shows discount in totals when discount > 0', () => {
     const ctx = {
       ...baseCtx,
-      lines: [
-        { ...baseCtx.lines[0], discountAmount: 200000 }
-      ],
+      lines: [{ ...baseCtx.lines[0], discountAmount: 200000 }],
       subtotal: 2000000,
       total: 2160000
     }
@@ -269,9 +265,7 @@ describe('Payment Receipt Template', () => {
       email: null
     },
     membershipName: 'Gold Plan',
-    allocations: [
-      { invoiceNo: 'GYM-290826-01', amount: 1500000 }
-    ],
+    allocations: [{ invoiceNo: 'GYM-290826-01', amount: 1500000 }],
     outstanding: 860000,
     receivedBy: 'John',
     generatedAt: '29 Aug 2026, 12:00 PM'
