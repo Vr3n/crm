@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type Dispatch, type SetStateAction } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatMinor } from '@/lib/money'
@@ -16,7 +16,7 @@ interface AllocationSectionProps {
   invoices: FinanceInvoice[]
   paymentAmountMinor: number
   allocations: AllocationDraft[]
-  onAllocationsChange: (allocs: AllocationDraft[]) => void
+  onAllocationsChange: Dispatch<SetStateAction<AllocationDraft[]>>
   isLoading: boolean
 }
 

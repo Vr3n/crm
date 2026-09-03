@@ -85,6 +85,7 @@ import type {
   StaffMemberOutput,
   RoleOutput
 } from '../shared/contracts/identity-read'
+import type { LicenseStatus } from '../shared/contracts/license'
 import type {
   AssignLeadInput,
   BulkMoveLeadStageInput,
@@ -379,6 +380,9 @@ const api = {
   },
   export: {
     excel: (input: ExportTableInput): Promise<string> => call(IPC_CHANNELS.EXPORT_EXCEL, input)
+  },
+  license: {
+    status: (): Promise<LicenseStatus> => call(IPC_CHANNELS.LICENSE_STATUS)
   }
 }
 

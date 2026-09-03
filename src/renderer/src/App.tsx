@@ -1,6 +1,7 @@
 import { HashRouter } from 'react-router-dom'
 import { AppRoutes } from './AppRoutes'
 import { AuthGate } from './components/auth/AuthGate'
+import { LicenseGate } from './features/license/components/license-gate'
 import { SessionProvider } from './context/session-context'
 import {
   useIdentityStatus,
@@ -20,20 +21,24 @@ function App(): React.JSX.Element {
 
   if (session) {
     return (
-      <SessionProvider value={session} onSignOut={() => void logout.mutate()}>
-        <HashRouter>
-          <AppRoutes />
-        </HashRouter>
-      </SessionProvider>
+      <LicenseGate>
+        <SessionProvider value={session} onSignOut={() => void logout.mutate()}>
+          <HashRouter>
+            <AppRoutes />
+          </HashRouter>
+        </SessionProvider>
+      </LicenseGate>
     )
   }
 
   return (
-    <AuthGate
-      status={statusQuery.data}
-      statusPending={statusQuery.isPending}
-      onAuthenticated={commitSession}
-    />
+    <LicenseGate>
+      <AuthGate
+        status={statusQuery.data}
+        statusPending={statusQuery.isPending}
+        onAuthenticated={commitSession}
+      />
+    </LicenseGate>
   )
 }
 

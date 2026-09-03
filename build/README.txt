@@ -6,44 +6,36 @@ Generated icons for your Electron application.
 Directory Structure:
 --------------------
 /
-├── icon.png          # Original source image (1024x1024 recommended)
-├── icon.ico          # Windows icon file (contains multiple sizes)
-├── icon.icns         # macOS icon file (contains multiple sizes)
-├── icons/            # Linux PNG icons
-│   ├── 16x16.png
-│   ├── 32x32.png
-│   ├── 48x48.png
-│   ├── 64x64.png
-│   ├── 128x128.png
-│   ├── 256x256.png
-│   └── 512x512.png
-└── README.txt        # This file
+├── icon.png          # Original source image
+├── windows/
+│   ├── icon.ico      # Windows icon file (contains multiple sizes)
+│   └── *.png         # Individual PNG files
+├── macos/
+│   ├── icon.icns     # macOS icon file (contains multiple sizes)
+│   └── *.png         # Individual PNG files
+└── linux/
+    └── icons/
+        └── *.png     # PNG files for Linux
 
-Runtime Icons (resources/):
----------------------------
-For runtime access (BrowserWindow icons), copies are stored in resources/:
-├── icon.ico          # Windows runtime icon
-├── icon.linux.png    # Linux runtime icon (512x512)
-└── icon.png          # Source image
+Usage in Electron:
+------------------
+In your main process file:
 
-electron-builder Configuration:
--------------------------------
-Icons are configured in electron-builder.yml:
-- win.icon: build/icon.ico
-- mac.icon: build/icon.icns
-- linux.icon: build/icons
+const path = require('path');
 
-Usage in Electron (src/main/index.ts):
----------------------------------------
-import iconWin from '../../resources/icon.ico?asset'
-import iconLinux from '../../resources/icon.linux.png?asset'
+// Windows
+if (process.platform === 'win32') {
+  mainWindow.setIcon(path.join(__dirname, 'assets/windows/icon.ico'));
+}
 
-const mainWindow = new BrowserWindow({
-  ...(process.platform === 'win32' ? { icon: iconWin } : {}),
-  ...(process.platform === 'linux' ? { icon: iconLinux } : {}),
-  // ...
-})
+// Linux
+if (process.platform === 'linux') {
+  mainWindow.setIcon(path.join(__dirname, 'assets/linux/icons/512x512.png'));
+}
 
-// macOS icon is set automatically via electron-builder (build/icon.icns)
+// macOS - set in package.json or electron-builder config
+// "mac": {
+//   "icon": "assets/macos/icon.icns"
+// }
 
 Generated with WebUtils - https://webutils.io

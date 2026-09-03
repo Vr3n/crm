@@ -1,28 +1,38 @@
 appId: com.crowncrm.app
 productName: CrownCRM
+afterPack: scripts/after-pack.ts
 directories:
   buildResources: build
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!tools/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{docs,tests,plans,coverage,.agents,.opencode}/**'
+  - '!AGENTS.md'
+  - '!components.json'
+  - '!*.tsbuildinfo'
+  - '!**/*.{map,ts,tsx,mts,cts,md}'
 asarUnpack:
   - 'resources/**'
+npmRebuild: false
 win:
-  icon: build/icon.ico
-  verifyUpdateCodeSignature: false
-  electronLanguages: ["en-US"]
-compression: maximum
+  executableName: CrownCRM
 nsis:
-  artifactName: CrownCRM-setup.${ext}
+  artifactName: ${name}-${version}-setup.${ext}
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  license: build/license.txt
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
-  oneClick: true
-  perMachine: false
+  runAfterFinish: true
+  include: scripts/install-binding.nsh
 mac:
   icon: build/icon.icns
   entitlementsInherit: build/entitlements.mac.plist
@@ -44,7 +54,6 @@ linux:
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
-npmRebuild: false
 publish:
   provider: github
   owner: Vr3n

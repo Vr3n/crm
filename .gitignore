@@ -6,3 +6,8 @@ coverage
 .eslintcache
 *.log*
 *.tsbuildinfo
+
+# Vendor licensing (private key + ledger — never ship or commit)
+tools/license/keys/
+tools/license/ledger.json
+tools/license/issued/

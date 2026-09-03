@@ -117,6 +117,7 @@ import type {
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
+import type { LicenseStatus } from '../shared/contracts/license'
 
 declare global {
   interface Window {
@@ -277,6 +278,9 @@ declare global {
           columns: { header: string; key: string; width?: number; format?: string }[]
           rows: Record<string, unknown>[]
         }) => Promise<string>
+      }
+      license: {
+        status: () => Promise<LicenseStatus>
       }
     }
   }

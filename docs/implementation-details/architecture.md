@@ -29,7 +29,7 @@ SQLite (node:sqlite, node:sqlite node:sqlite)
 ```
 
 - **Main process = trust boundary.** `src/main/index.ts:48` opens the DB at
-  `app.getPath('userData')/gym-crm.db`, runs migrations, seeds permissions, then
+  `app.getPath('userData')/CrownCRM.db`, runs migrations, seeds permissions, then
   `registerIdentityIpc()` (`index.ts:55`) is the only door the renderer has to the database.
 - **IPC handlers are deliberately thin.** `src/main/ipc/identity.ts` does no business logic;
   it forwards to the application functions. This keeps the authorization and transaction
