@@ -61,6 +61,8 @@ export function PlanFormDialog({
   const [endTime, setEndTime] = useState(plan?.endTime ?? '23:00')
   const [isActive, setIsActive] = useState(plan?.isActive ?? true)
   const [description, setDescription] = useState(plan?.description ?? '')
+  const [availableFrom, setAvailableFrom] = useState(plan?.availableFrom ?? new Date().toISOString().slice(0, 10))
+  const [availableTo, setAvailableTo] = useState(plan?.availableTo ?? '')
 
   const priceValue = Number(price)
   const canSubmit = name.trim().length > 0 && Number.isFinite(priceValue) && priceValue > 0
@@ -78,7 +80,9 @@ export function PlanFormDialog({
       startTime,
       endTime,
       isActive,
-      description: description.trim()
+      description: description.trim(),
+      availableFrom: availableFrom || null,
+      availableTo: availableTo || null
     }
     if (isEdit && plan) {
       update.mutate({ id: plan.id, input }, { onSuccess: () => onOpenChange(false) })
@@ -271,6 +275,31 @@ export function PlanFormDialog({
               </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="pl-available-from">Available from</Label>
+              <Input
+                id="pl-available-from"
+                type="date"
+                value={availableFrom}
+                onChange={(e) => setAvailableFrom(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="pl-available-to">Available until</Label>
+              <Input
+                id="pl-available-to"
+                type="date"
+                value={availableTo}
+                onChange={(e) => setAvailableTo(e.target.value)}
+                placeholder="Open-ended"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Leave empty for open-ended availability.
+              </p>
+            </div>
           </div>
         </div>
 

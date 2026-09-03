@@ -183,6 +183,7 @@ declare global {
       }
       catalog: {
         listPlans: () => Promise<PlanRow[]>
+        listAvailablePlans: () => Promise<PlanRow[]>
         createPlan: (input: CreatePlanInput) => Promise<PlanRow>
         updatePlan: (input: UpdatePlanInput) => Promise<PlanRow>
         deletePlan: (input: PlanIdRequest) => Promise<void>

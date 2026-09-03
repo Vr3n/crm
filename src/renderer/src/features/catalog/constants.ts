@@ -1,4 +1,5 @@
-import type { BillingFrequency, DiscountType, OfferLifecycle, PlanDuration } from './types'
+import type { BillingFrequency, DiscountType, OfferLifecycle, PlanDuration, Plan } from './types'
+import { getPlanAvailability } from './components/catalog-status-badge'
 
 export const DURATIONS: { value: PlanDuration; label: string; months: number }[] = [
   { value: 'MONTHLY', label: 'Monthly', months: 1 },
@@ -39,7 +40,7 @@ export const ACCESS_OPTIONS: { value: string; label: string }[] = [
 export const FREE_PERIOD_MONTHS = [1, 3] as const
 
 export interface PlanStatus {
-  value: 'ACTIVE' | 'INACTIVE'
+  value: 'ALL' | 'ACTIVE' | 'INACTIVE'
   label: string
 }
 
@@ -49,6 +50,16 @@ export const filterPlansByStatus = <T extends { isActive: boolean }>(
 ): T[] => {
   if (status === 'ALL') return plans
   return plans.filter((plan) => (status === 'ACTIVE') === plan.isActive)
+}
+
+export type PlanAvailabilityFilter = 'ALL' | 'ACTIVE' | 'UPCOMING' | 'EXPIRED' | 'INACTIVE'
+
+export const filterPlansByAvailability = (
+  plans: Plan[],
+  filter: PlanAvailabilityFilter
+): Plan[] => {
+  if (filter === 'ALL') return plans
+  return plans.filter((plan) => getPlanAvailability(plan) === filter)
 }
 
 export const OFFER_LIFECYCLES: { value: OfferLifecycle; label: string }[] = [

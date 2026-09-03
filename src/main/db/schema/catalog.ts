@@ -45,6 +45,10 @@ export const membershipPlans = sqliteTable(
     cancellation_policy_id: integer('cancellation_policy_id').references(
       () => cancellationPolicies.id
     ),
+    /** ISO date (yyyy-mm-dd) when the plan becomes available for sale. Default = today. */
+    available_from: text('available_from'),
+    /** ISO date; null = open-ended (available until manually deactivated). */
+    available_to: text('available_to'),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
     created_at: text('created_at')
       .notNull()

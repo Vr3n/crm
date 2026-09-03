@@ -45,6 +45,7 @@ export const IPC_CHANNELS = {
   LEADS_SEARCH_GOALS: 'leads:searchGoals',
 
   CATALOG_LIST_PLANS: 'catalog:listPlans',
+  CATALOG_LIST_AVAILABLE_PLANS: 'catalog:listAvailablePlans',
   CATALOG_CREATE_PLAN: 'catalog:createPlan',
   CATALOG_UPDATE_PLAN: 'catalog:updatePlan',
   CATALOG_DELETE_PLAN: 'catalog:deletePlan',

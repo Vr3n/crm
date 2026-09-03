@@ -6,6 +6,7 @@ import {
   createPlan,
   deactivateOffer,
   deletePlan,
+  getAvailablePlans,
   listOfferVersions,
   listOffers,
   listPlanVersions,
@@ -452,5 +453,51 @@ describe('createCancellationPolicy', () => {
     expect(() =>
       createCancellationPolicy({ name: 'Manager Policy', effectiveRule: 'IMMEDIATE' })
     ).toThrow(ForbiddenError)
+  })
+})
+
+describe('getAvailablePlans', () => {
+  it('excludes plans with available_to in the past', () => {
+    seedOrgWithSession()
+    createPlan({ ...VALID_PLAN, name: 'Expired Plan', availableTo: '2020-01-01' })
+    const available = getAvailablePlans()
+    expect(available.every((p) => p.name !== 'Expired Plan')).toBe(true)
+  })
+
+  it('excludes plans with available_from in the future', () => {
+    seedOrgWithSession()
+    createPlan({ ...VALID_PLAN, name: 'Future Plan', availableFrom: '2099-01-01' })
+    const available = getAvailablePlans()
+    expect(available.every((p) => p.name !== 'Future Plan')).toBe(true)
+  })
+
+  it('includes plans with available_to = NULL (open-ended)', () => {
+    seedOrgWithSession()
+    createPlan({ ...VALID_PLAN, name: 'Open Plan', availableTo: null })
+    const available = getAvailablePlans()
+    expect(available.some((p) => p.name === 'Open Plan')).toBe(true)
+  })
+
+  it('defaults available_from to today when creating a plan', () => {
+    seedOrgWithSession()
+    const today = new Date().toISOString().slice(0, 10)
+    const created = createPlan(VALID_PLAN)
+    expect(created.availableFrom).toBe(today)
+  })
+
+  it('does not affect existing memberships when changing plan availability', () => {
+    seedOrgWithSession()
+    const plan = createPlan(VALID_PLAN)
+    const before = listPlans().find((p) => p.id === plan.id)
+    updatePlan({
+      planId: plan.id,
+      ...VALID_PLAN,
+      availableFrom: '2020-01-01',
+      availableTo: '2020-12-31'
+    })
+    const after = listPlans().find((p) => p.id === plan.id)
+    expect(after?.availableFrom).toBe('2020-01-01')
+    expect(after?.availableTo).toBe('2020-12-31')
+    expect(before?.basePriceMinor).toBe(after?.basePriceMinor)
   })
 })

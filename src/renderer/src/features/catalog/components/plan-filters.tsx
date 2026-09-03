@@ -8,14 +8,15 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import type { PlanAvailabilityFilter } from '../constants'
 
 export interface PlanFiltersState {
   search: string
-  status: 'ALL' | 'ACTIVE' | 'INACTIVE'
+  availability: PlanAvailabilityFilter
 }
 
 /**
- * Filter bar for the plans list: free-text search plus an active/inactive toggle.
+ * Filter bar for the plans list: free-text search plus an availability status toggle.
  */
 export function PlanFilters({
   filters,
@@ -24,7 +25,7 @@ export function PlanFilters({
   filters: PlanFiltersState
   onChange: (f: PlanFiltersState) => void
 }): React.JSX.Element {
-  const hasActive = !!filters.search || filters.status !== 'ALL'
+  const hasActive = !!filters.search || filters.availability !== 'ALL'
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -39,15 +40,17 @@ export function PlanFilters({
       </div>
 
       <Select
-        value={filters.status}
-        onValueChange={(v) => onChange({ ...filters, status: v as PlanFiltersState['status'] })}
+        value={filters.availability}
+        onValueChange={(v) => onChange({ ...filters, availability: v as PlanAvailabilityFilter })}
       >
-        <SelectTrigger className="w-36">
-          <SelectValue placeholder="Status" />
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Availability" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All plans</SelectItem>
-          <SelectItem value="ACTIVE">Active</SelectItem>
+          <SelectItem value="ACTIVE">Available</SelectItem>
+          <SelectItem value="UPCOMING">Upcoming</SelectItem>
+          <SelectItem value="EXPIRED">Expired</SelectItem>
           <SelectItem value="INACTIVE">Inactive</SelectItem>
         </SelectContent>
       </Select>
@@ -57,7 +60,7 @@ export function PlanFilters({
           variant="ghost"
           size="sm"
           className="h-9 text-muted-foreground"
-          onClick={() => onChange({ search: '', status: 'ALL' })}
+          onClick={() => onChange({ search: '', availability: 'ALL' })}
         >
           Clear
         </Button>

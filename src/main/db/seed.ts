@@ -382,7 +382,9 @@ export function seedPlansForOrganization(organizationId: number): void {
           access_window: plan.accessWindow,
           start_time: plan.startTime,
           end_time: plan.endTime,
-          active: plan.active
+          active: plan.active,
+          available_from: new Date().toISOString().slice(0, 10),
+          available_to: null
         })
         .run()
     }

@@ -11,6 +11,10 @@ export const plansApi = {
     return window.api.catalog.listPlans()
   },
 
+  listAvailablePlans(): Promise<PlanRow[]> {
+    return window.api.catalog.listAvailablePlans()
+  },
+
   createPlan(input: PlanInput): Promise<PlanRow> {
     return window.api.catalog.createPlan(mapPlanInput(input))
   },

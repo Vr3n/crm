@@ -233,6 +233,8 @@ const api = {
   },
   catalog: {
     listPlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_PLANS),
+    listAvailablePlans: (): Promise<PlanRow[]> =>
+      call(IPC_CHANNELS.CATALOG_LIST_AVAILABLE_PLANS),
     createPlan: (input: CreatePlanInput): Promise<PlanRow> =>
       call(IPC_CHANNELS.CATALOG_CREATE_PLAN, input),
     updatePlan: (input: UpdatePlanInput): Promise<PlanRow> =>
