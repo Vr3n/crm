@@ -40,6 +40,7 @@ interface PersonRow {
   blacklisted_reason: string | null
   blacklisted_at: string | null
   blacklisted_by: number | null
+  photo_filename: string | null
   created_at: string
   updated_at: string
 }
@@ -127,6 +128,7 @@ function mapPerson(row: PersonRow): Person {
     blacklistedReason: row.blacklisted_reason,
     blacklistedAt: row.blacklisted_at,
     blacklistedBy: row.blacklisted_by,
+    photoFilename: row.photo_filename,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -238,7 +240,7 @@ export const personRepo = {
     query: string,
     limit: number,
     offset: number
-  ): { id: number; fullName: string; phone: string; email: string | null; isBlacklisted: boolean }[] {
+  ): { id: number; fullName: string; phone: string; email: string | null; isBlacklisted: boolean; photoFilename: string | null }[] {
     const term = `%${query}%`
     return getDrizzle()
       .select({
@@ -246,7 +248,8 @@ export const personRepo = {
         fullName: people.full_name,
         phone: people.phone,
         email: people.email,
-        isBlacklisted: people.is_blacklisted
+        isBlacklisted: people.is_blacklisted,
+        photoFilename: people.photo_filename
       })
       .from(people)
       .where(
@@ -329,6 +332,20 @@ export const personRepo = {
         blacklisted_reason: null,
         blacklisted_at: null,
         blacklisted_by: null,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  /** Updates only the photo_filename field on a person. */
+  updatePhoto(organizationId: number, id: number, photoFilename: string | null): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        photo_filename: photoFilename,
         updated_at: sql`(datetime('now'))`
       })
       .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
@@ -723,6 +740,7 @@ export const leadRepo = {
       personName: string
       phone: string
       email: string | null
+      photoFilename: string | null
       sourceId: number
       sourceName: string | null
       stageId: number
@@ -762,6 +780,7 @@ export const leadRepo = {
         personName: people.full_name,
         phone: people.phone,
         email: people.email,
+        photoFilename: people.photo_filename,
         sourceId: leads.source_id,
         sourceName: leadSources.name,
         stageId: leads.current_stage_id,

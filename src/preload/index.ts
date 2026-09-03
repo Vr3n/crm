@@ -118,6 +118,12 @@ import type {
   ScheduleFollowUpInput,
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
+import type {
+  UpdatePersonPhotoInput,
+  DeletePersonPhotoInput,
+  GetPersonPhotoInput,
+  PersonPhotoOutput
+} from '../shared/contracts/person-photo'
 import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 
 /* -------------------------------------------------------------------------- */
@@ -393,6 +399,14 @@ const api = {
   },
   license: {
     status: (): Promise<LicenseStatus> => call(IPC_CHANNELS.LICENSE_STATUS)
+  },
+  person: {
+    updatePhoto: (input: UpdatePersonPhotoInput): Promise<PersonPhotoOutput> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_UPDATE, input),
+    deletePhoto: (input: DeletePersonPhotoInput): Promise<void> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_DELETE, input),
+    getPhoto: (input: GetPersonPhotoInput): Promise<PersonPhotoOutput> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_GET, input)
   }
 }
 

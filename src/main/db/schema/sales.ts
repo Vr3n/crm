@@ -25,6 +25,7 @@ export const people = sqliteTable(
     blacklisted_reason: text('blacklisted_reason'),
     blacklisted_at: text('blacklisted_at'),
     blacklisted_by: integer('blacklisted_by').references(() => users.id),
+    photo_filename: text('photo_filename'),
     created_at: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),

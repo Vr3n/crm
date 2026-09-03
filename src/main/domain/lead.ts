@@ -34,6 +34,7 @@ export interface Person {
   blacklistedReason: string | null
   blacklistedAt: string | null
   blacklistedBy: number | null
+  photoFilename: string | null
   createdAt: string
   updatedAt: string
 }
