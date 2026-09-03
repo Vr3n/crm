@@ -67,6 +67,7 @@ interface LeadStageRow {
   is_initial: boolean
   is_won: boolean
   is_lost: boolean
+  suppress_followups: boolean
   active: boolean
   created_at: string
 }
@@ -152,6 +153,7 @@ function mapStage(row: LeadStageRow): LeadStage {
     isInitial: row.is_initial,
     isWon: row.is_won,
     isLost: row.is_lost,
+    suppressFollowups: row.suppress_followups,
     active: row.active
   }
 }
@@ -1085,6 +1087,24 @@ export const followupRepo = {
       .from(leadFollowups)
       .where(
         and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.lead_id, leadId))
+      )
+      .orderBy(leadFollowups.due_at)
+      .all() as unknown as FollowupRow[]
+    return rows.map(mapFollowup)
+  },
+
+  /** Pending (not completed, not cancelled) follow-ups for a lead. */
+  listPendingForLead(organizationId: number, leadId: number): LeadFollowup[] {
+    const rows = getDrizzle()
+      .select()
+      .from(leadFollowups)
+      .where(
+        and(
+          eq(leadFollowups.organization_id, organizationId),
+          eq(leadFollowups.lead_id, leadId),
+          isNull(leadFollowups.completed_at),
+          isNull(leadFollowups.cancelled_at)
+        )
       )
       .orderBy(leadFollowups.due_at)
       .all() as unknown as FollowupRow[]

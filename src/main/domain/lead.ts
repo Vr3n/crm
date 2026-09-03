@@ -20,6 +20,7 @@ export interface LeadStage {
   isInitial: boolean
   isWon: boolean
   isLost: boolean
+  suppressFollowups: boolean
   active: boolean
 }
 

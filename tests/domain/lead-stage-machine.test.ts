@@ -21,6 +21,7 @@ function stage(partial: Partial<LeadStage>): LeadStage {
     isInitial: false,
     isWon: false,
     isLost: false,
+    suppressFollowups: false,
     active: true,
     ...partial
   }
@@ -135,6 +136,50 @@ describe('deriveLeadStatus', () => {
     expect(deriveLeadStatus(LOST)).toBe('LOST')
     expect(deriveLeadStatus(NEW)).toBe('OPEN')
     expect(deriveLeadStatus(CONTACTED)).toBe('OPEN')
+  })
+})
+
+describe('suppressFollowups flag', () => {
+  const DND = stage({ id: 10, name: 'DO_NOT_DISTURB', suppressFollowups: true })
+  const NOT_INTERESTED = stage({ id: 11, name: 'NOT_INTERESTED', suppressFollowups: true })
+
+  it('DND and Not Interested stages are not terminal', () => {
+    expect(DND.isWon).toBe(false)
+    expect(DND.isLost).toBe(false)
+    expect(NOT_INTERESTED.isWon).toBe(false)
+    expect(NOT_INTERESTED.isLost).toBe(false)
+  })
+
+  it('DND stage has suppressFollowups=true', () => {
+    expect(DND.suppressFollowups).toBe(true)
+  })
+
+  it('Not Interested stage has suppressFollowups=true', () => {
+    expect(NOT_INTERESTED.suppressFollowups).toBe(true)
+  })
+
+  it('allows moving TO DND from an intermediate stage', () => {
+    expect(() => machine(NEW, DND).assertMoveAllowed(NEW, DND, true)).not.toThrow()
+  })
+
+  it('allows moving FROM DND back to an intermediate stage', () => {
+    expect(() => machine(DND, CONTACTED).assertMoveAllowed(DND, CONTACTED, true)).not.toThrow()
+  })
+
+  it('allows moving TO Not Interested from an intermediate stage', () => {
+    expect(() => machine(NEW, NOT_INTERESTED).assertMoveAllowed(NEW, NOT_INTERESTED, true)).not.toThrow()
+  })
+
+  it('allows moving FROM Not Interested back to an intermediate stage', () => {
+    expect(() => machine(NOT_INTERESTED, CONTACTED).assertMoveAllowed(NOT_INTERESTED, CONTACTED, true)).not.toThrow()
+  })
+
+  it('rejects moving from a terminal stage to DND', () => {
+    expect(() => machine(WON, DND).assertMoveAllowed(WON, DND, true)).toThrow(InvalidStateTransitionError)
+  })
+
+  it('rejects moving from a terminal stage to Not Interested', () => {
+    expect(() => machine(LOST, NOT_INTERESTED).assertMoveAllowed(LOST, NOT_INTERESTED, true)).toThrow(InvalidStateTransitionError)
   })
 })
 

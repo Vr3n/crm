@@ -213,6 +213,7 @@ export const SEED_STAGES: Array<{
   isInitial?: boolean
   isWon?: boolean
   isLost?: boolean
+  suppressFollowups?: boolean
 }> = [
   { name: 'NEW', isInitial: true },
   { name: 'CONTACTED' },
@@ -222,7 +223,9 @@ export const SEED_STAGES: Array<{
   { name: 'TRIAL' },
   { name: 'NEGOTIATION' },
   { name: 'WON', isWon: true },
-  { name: 'LOST', isLost: true }
+  { name: 'LOST', isLost: true },
+  { name: 'DO_NOT_DISTURB', suppressFollowups: true },
+  { name: 'NOT_INTERESTED', suppressFollowups: true }
 ]
 
 /** Recommended enquiry sources (Module 01 §Lead Source). */
@@ -337,7 +340,8 @@ export function seedSalesReferenceData(organizationId: number): void {
           sort_order: i,
           is_initial: Boolean(s.isInitial),
           is_won: Boolean(s.isWon),
-          is_lost: Boolean(s.isLost)
+          is_lost: Boolean(s.isLost),
+          suppress_followups: Boolean(s.suppressFollowups)
         })
         .run()
     })

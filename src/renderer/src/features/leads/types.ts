@@ -21,6 +21,8 @@ export type StageKey =
   | 'NEGOTIATION'
   | 'WON'
   | 'LOST'
+  | 'DO_NOT_DISTURB'
+  | 'NOT_INTERESTED'
 
 export interface StageConfig {
   key: StageKey

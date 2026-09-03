@@ -6,6 +6,8 @@ import {
   Handshake,
   Heart,
   PhoneCall,
+  ShieldOff,
+  ShieldOffIcon,
   Sparkles,
   Trophy,
   XCircle,
@@ -25,7 +27,9 @@ const STAGE_ICONS: Record<StageKey, LucideIcon> = {
   TRIAL: Dumbbell,
   NEGOTIATION: Handshake,
   WON: Trophy,
-  LOST: XCircle
+  LOST: XCircle,
+  DO_NOT_DISTURB: ShieldOff,
+  NOT_INTERESTED: ShieldOffIcon
 }
 
 /** Stage tone → tinted icon chip, mirroring the stage badges. */

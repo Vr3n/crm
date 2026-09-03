@@ -23,7 +23,9 @@ export const STAGES: StageConfig[] = [
   { key: 'TRIAL', label: 'Trial', short: 'Trial', tone: 'primary' },
   { key: 'NEGOTIATION', label: 'Negotiation', short: 'Negotiation', tone: 'primary' },
   { key: 'WON', label: 'Won', short: 'Won', isWon: true, tone: 'success' },
-  { key: 'LOST', label: 'Lost', short: 'Lost', isLost: true, tone: 'destructive' }
+  { key: 'LOST', label: 'Lost', short: 'Lost', isLost: true, tone: 'destructive' },
+  { key: 'DO_NOT_DISTURB', label: 'Do Not Disturb', short: 'DND', tone: 'default' },
+  { key: 'NOT_INTERESTED', label: 'Not Interested', short: 'Not interested', tone: 'default' }
 ]
 
 const STAGE_MAP = new Map<StageKey, StageConfig>(STAGES.map((s) => [s.key, s]))

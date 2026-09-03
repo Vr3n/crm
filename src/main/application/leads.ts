@@ -242,6 +242,9 @@ export function editLead(input: EditLeadInput): void {
  * Moves a lead to any active non-terminal stage, guarded by the stage machine.
  * The caller must pass the stage it believes the lead is on (`expectedStageId`);
  * a mismatch means a concurrent change happened (D17).
+ *
+ * When moving TO a stage with `suppressFollowups=true`, all pending follow-ups
+ * for the lead are cancelled (reason: "Stage changed to [stage name]").
  */
 export function moveLeadStage(input: MoveLeadStageInput): void {
   requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
@@ -279,6 +282,14 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
       reason: null,
       changedBy: userId
     })
+
+    // Cancel pending follow-ups when moving to a stage that suppresses them
+    if (target.suppressFollowups) {
+      const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+      for (const fu of pendingFollowups) {
+        followupRepo.cancel(organizationId, fu.id, userId, `Stage changed to ${target.name}`)
+      }
+    }
   })
 }
 
@@ -288,6 +299,9 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
  * one transaction. The strict-move rule demands a real activity per lead, so a
  * NOTE activity is recorded for each — the note names the bulk action and its
  * target. Leads already at the target stage are skipped (a move is a no-op).
+ *
+ * When moving TO a stage with `suppressFollowups=true`, all pending follow-ups
+ * for each lead are cancelled (reason: "Stage changed to [stage name]").
  */
 export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadStageResult {
   requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
@@ -338,6 +352,15 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
         reason: null,
         changedBy: userId
       })
+
+      // Cancel pending follow-ups when moving to a stage that suppresses them
+      if (target.suppressFollowups) {
+        const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+        for (const fu of pendingFollowups) {
+          followupRepo.cancel(organizationId, fu.id, userId, `Stage changed to ${target.name}`)
+        }
+      }
+
       moved++
     }
     return { moved }
@@ -391,6 +414,8 @@ export function recordLeadActivity(input: RecordLeadActivityInput): RecordedActi
  * Bulk follow-up scheduling for the selection toolbar. Every lead is validated
  * up front (all-or-nothing), then one follow-up is created per lead inside a
  * single transaction. The due date must be in the future, as in the single flow.
+ *
+ * Leads in stages with `suppressFollowups=true` are skipped (no follow-up created).
  */
 export function bulkScheduleFollowUp(input: BulkScheduleFollowUpInput): BulkScheduleFollowUpResult {
   requirePermission(PERMISSIONS.FOLLOWUP_CREATE)
@@ -403,16 +428,21 @@ export function bulkScheduleFollowUp(input: BulkScheduleFollowUpInput): BulkSche
     throw new ValidationError('Follow-up due date must be in the future')
   }
 
-  for (const id of input.leadIds) {
-    if (!leadRepo.getById(organizationId, id)) throw new NotFoundError('Lead not found')
-  }
+  const leads = input.leadIds.map((id) => {
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) throw new NotFoundError('Lead not found')
+    return lead
+  })
 
   return withTransaction(() => {
     let scheduled = 0
-    for (const id of input.leadIds) {
+    for (const lead of leads) {
+      const stage = stageRepo.findById(organizationId, lead.currentStageId)
+      if (stage?.suppressFollowups) continue
+
       followupRepo.create({
         organizationId,
-        leadId: id,
+        leadId: lead.id,
         title: input.title.trim(),
         dueAt: due.toISOString(),
         createdBy: userId
@@ -525,7 +555,10 @@ export function markLeadLost(input: MarkLeadLostInput): void {
   })
 }
 
-/** Schedules a follow-up. The due date must be in the future. */
+/**
+ * Schedules a follow-up. The due date must be in the future.
+ * Refuses to create a follow-up if the lead is in a stage with suppressFollowups=true.
+ */
 export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: number } {
   requirePermission(PERMISSIONS.FOLLOWUP_CREATE)
   const organizationId = currentOrganizationId()
@@ -533,6 +566,15 @@ export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: nu
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+
+  const currentStage = stageRepo.findById(organizationId, lead.currentStageId)
+  if (!currentStage) throw new NotFoundError('Lead stage not found')
+
+  if (currentStage.suppressFollowups) {
+    throw new ValidationError(
+      `Cannot schedule follow-up for a lead in "${currentStage.name}" stage`
+    )
+  }
 
   const due = new Date(input.dueAt)
   if (Number.isNaN(due.getTime())) throw new ValidationError('dueAt must be a valid date')
