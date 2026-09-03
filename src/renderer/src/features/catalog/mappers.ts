@@ -55,6 +55,8 @@ export function mapPlanRow(row: PlanRow): Plan {
     freezePolicyId: row.freezePolicyId,
     prorationPolicyId: row.prorationPolicyId,
     cancellationPolicyId: row.cancellationPolicyId,
+    availableFrom: row.availableFrom,
+    availableTo: row.availableTo,
     isActive: row.isActive,
     description: row.description ?? '',
     createdAt: row.createdAt
@@ -77,6 +79,8 @@ export function mapPlanInput(input: PlanInput): CreatePlanInput {
     freezePolicyId: input.freezePolicyId,
     prorationPolicyId: input.prorationPolicyId,
     cancellationPolicyId: input.cancellationPolicyId,
+    availableFrom: input.availableFrom,
+    availableTo: input.availableTo,
     isActive: input.isActive
   }
 }

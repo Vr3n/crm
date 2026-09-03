@@ -72,6 +72,8 @@ function mapPlanToRow(plan: MembershipPlan): PlanRow {
     freezePolicyId: plan.freezePolicyId,
     prorationPolicyId: plan.prorationPolicyId,
     cancellationPolicyId: plan.cancellationPolicyId,
+    availableFrom: plan.availableFrom,
+    availableTo: plan.availableTo,
     isActive: plan.active,
     createdAt: plan.createdAt
   }
@@ -82,6 +84,14 @@ export function listPlans(): PlanRow[] {
   requirePermission(PERMISSIONS.PLAN_VIEW)
   const organizationId = currentOrganizationId()
   return planRepo.list(organizationId).map(mapPlanToRow)
+}
+
+/** Plans available for sale right now — the sales form reads this. */
+export function getAvailablePlans(): PlanRow[] {
+  requirePermission(PERMISSIONS.PLAN_VIEW)
+  const organizationId = currentOrganizationId()
+  const today = new Date().toISOString().slice(0, 10)
+  return planRepo.listAvailableForSale(organizationId, today).map(mapPlanToRow)
 }
 
 /** Adds a reusable commercial definition to the catalog. */
@@ -111,6 +121,8 @@ export function createPlan(input: CreatePlanInput): PlanRow {
       freezePolicyId: input.freezePolicyId ?? null,
       prorationPolicyId: input.prorationPolicyId ?? null,
       cancellationPolicyId: input.cancellationPolicyId ?? null,
+      availableFrom: input.availableFrom ?? new Date().toISOString().slice(0, 10),
+      availableTo: input.availableTo ?? null,
       active: input.isActive
     })
     return mapPlanToRow(plan)
@@ -159,6 +171,8 @@ export function updatePlan(input: UpdatePlanInput): PlanRow {
       freezePolicyId: input.freezePolicyId ?? existing.freezePolicyId,
       prorationPolicyId: input.prorationPolicyId ?? existing.prorationPolicyId,
       cancellationPolicyId: input.cancellationPolicyId ?? existing.cancellationPolicyId,
+      availableFrom: input.availableFrom ?? existing.availableFrom,
+      availableTo: input.availableTo ?? existing.availableTo,
       active: input.isActive
     })
     const updated = planRepo.getById(organizationId, existing.id)

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
 import { useSession } from '@/context/session-context'
-import { filterPlansByStatus } from '../constants'
+import { filterPlansByAvailability } from '../constants'
 import { useDeletePlan, usePlans } from '../queries'
 import type { Plan } from '../types'
 import { ConfirmDeleteDialog } from '../components/confirm-delete-dialog'
@@ -14,7 +14,7 @@ import { PlanMetrics } from '../components/plan-metrics'
 import { PlanTable } from '../components/plan-table'
 import { PlanVersionsDialog } from '../components/plan-versions-dialog'
 
-const DEFAULT_FILTERS: PlanFiltersState = { search: '', status: 'ALL' }
+const DEFAULT_FILTERS: PlanFiltersState = { search: '', availability: 'ALL' }
 
 type DialogState = { mode: 'new' } | { mode: 'edit'; plan: Plan } | null
 
@@ -34,7 +34,7 @@ export function PlansPage(): React.JSX.Element {
 
   const rows = useMemo(() => {
     const needle = filters.search.trim().toLowerCase()
-    return filterPlansByStatus(plans, filters.status).filter(
+    return filterPlansByAvailability(plans, filters.availability).filter(
       (plan) =>
         needle.length === 0 ||
         plan.name.toLowerCase().includes(needle) ||

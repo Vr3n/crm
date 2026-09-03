@@ -27,6 +27,10 @@ export interface MembershipPlan {
   freezePolicyId: number | null
   prorationPolicyId: number | null
   cancellationPolicyId: number | null
+  /** ISO date (yyyy-mm-dd) when the plan becomes available for sale. */
+  availableFrom: string | null
+  /** ISO date; null = open-ended (available until manually deactivated). */
+  availableTo: string | null
   active: boolean
   createdAt: string
   updatedAt: string

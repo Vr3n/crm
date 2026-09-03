@@ -105,7 +105,8 @@ describe('runMigrations', () => {
       { version: 18, name: 'membership_joining_date' },
       { version: 19, name: 'org_branding' },
       { version: 20, name: 'followup_notes' },
-      { version: 21, name: 'followup_cancel_reason' }
+      { version: 21, name: 'followup_cancel_reason' },
+      { version: 22, name: 'plan_availability' }
     ])
   })
 
@@ -115,7 +116,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(20)
+    expect(row.n).toBe(21)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -162,7 +163,7 @@ describe('runMigrations', () => {
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
     expect(appliedVersions()).toEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22
     ])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
@@ -183,7 +184,7 @@ describe('runMigrations', () => {
     runMigrations()
 
     expect(appliedVersions()).toEqual([
-      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22
     ])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)

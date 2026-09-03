@@ -47,6 +47,8 @@ interface MembershipPlanRow {
   freeze_policy_id: number | null
   proration_policy_id: number | null
   cancellation_policy_id: number | null
+  available_from: string | null
+  available_to: string | null
   active: boolean
   created_at: string
   updated_at: string
@@ -70,6 +72,8 @@ function mapPlan(row: MembershipPlanRow): MembershipPlan {
     freezePolicyId: row.freeze_policy_id,
     prorationPolicyId: row.proration_policy_id,
     cancellationPolicyId: row.cancellation_policy_id,
+    availableFrom: row.available_from,
+    availableTo: row.available_to,
     active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -126,6 +130,8 @@ export const planRepo = {
     freezePolicyId: number | null
     prorationPolicyId: number | null
     cancellationPolicyId: number | null
+    availableFrom: string | null
+    availableTo: string | null
     active: boolean
   }): MembershipPlan {
     const row = getDrizzle()
@@ -146,6 +152,8 @@ export const planRepo = {
         freeze_policy_id: input.freezePolicyId,
         proration_policy_id: input.prorationPolicyId,
         cancellation_policy_id: input.cancellationPolicyId,
+        available_from: input.availableFrom,
+        available_to: input.availableTo,
         active: input.active
       })
       .returning()
@@ -171,6 +179,8 @@ export const planRepo = {
       freezePolicyId: number | null
       prorationPolicyId: number | null
       cancellationPolicyId: number | null
+      availableFrom: string | null
+      availableTo: string | null
       active: boolean
     }
   ): void {
@@ -191,6 +201,8 @@ export const planRepo = {
         freeze_policy_id: input.freezePolicyId,
         proration_policy_id: input.prorationPolicyId,
         cancellation_policy_id: input.cancellationPolicyId,
+        available_from: input.availableFrom,
+        available_to: input.availableTo,
         active: input.active,
         updated_at: sql`(datetime('now'))`
       })
@@ -224,6 +236,28 @@ export const planRepo = {
       .orderBy(membershipPlans.name)
       .limit(limit)
       .all()
+  },
+
+  /**
+   * Plans available for sale right now: active, within the availability window
+   * (available_from <= today, available_to IS NULL OR available_to >= today).
+   * Used by the sales form's plan picker.
+   */
+  listAvailableForSale(organizationId: number, today: string): MembershipPlan[] {
+    const rows = getDrizzle()
+      .select()
+      .from(membershipPlans)
+      .where(
+        and(
+          eq(membershipPlans.organization_id, organizationId),
+          eq(membershipPlans.active, true),
+          sql`(${membershipPlans.available_from} IS NULL OR ${membershipPlans.available_from} <= ${today})`,
+          sql`(${membershipPlans.available_to} IS NULL OR ${membershipPlans.available_to} >= ${today})`
+        )
+      )
+      .orderBy(membershipPlans.name)
+      .all() as MembershipPlanRow[]
+    return rows.map(mapPlan)
   }
 }
 

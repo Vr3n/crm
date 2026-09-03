@@ -32,6 +32,10 @@ export interface Plan {
   freezePolicyId: number | null
   prorationPolicyId: number | null
   cancellationPolicyId: number | null
+  /** ISO date (yyyy-mm-dd) when the plan becomes available for sale. */
+  availableFrom: string | null
+  /** ISO date; null = open-ended. */
+  availableTo: string | null
   isActive: boolean
   description: string
   createdAt: string
@@ -44,6 +48,8 @@ export type PlanInput = Omit<
   freezePolicyId?: number | null
   prorationPolicyId?: number | null
   cancellationPolicyId?: number | null
+  availableFrom?: string | null
+  availableTo?: string | null
 }
 
 /** A historical price state of a plan, captured on every plan edit. */
