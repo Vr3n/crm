@@ -4,7 +4,7 @@ import { setupSalesDb, seedOrgWithSession } from '../../helpers/sales-db'
 import { createLead } from '../../../src/main/application/leads'
 import { sellMembership } from '../../../src/main/application/memberships'
 import { getDrizzle } from '../../../src/main/db/connection'
-import { invoices, memberships, payments, idempotencyKeys } from '../../../src/main/db/schema'
+import { invoices, memberships, payments, idempotencyKeys, membershipPlans } from '../../../src/main/db/schema'
 import { OverpaymentNotAllowedError, ValidationError } from '../../../src/main/domain/errors'
 import type { SellMembershipInput } from '../../../src/shared/contracts/membership-sale'
 
@@ -23,9 +23,14 @@ function createLeadForSale(): { organizationId: number; leadId: number } {
 const saleDates = { startDate: '2026-08-25', endDate: '2026-11-22' }
 
 function saleInput(leadId: number, transactionId: string): SellMembershipInput {
+  const monthlyPlan = getDrizzle()
+    .select({ id: membershipPlans.id })
+    .from(membershipPlans)
+    .where(eq(membershipPlans.name, 'Monthly'))
+    .get()!
   return {
     leadId,
-    planId: 1,
+    planId: monthlyPlan.id,
     offerId: null,
     joiningDate: '2026-08-25',
     ...saleDates,

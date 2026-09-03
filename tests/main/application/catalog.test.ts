@@ -96,7 +96,7 @@ describe('listPlans', () => {
     const { organizationId: orgB } = seedOrgWithSession() // session now on org B
 
     const plans = listPlans()
-    expect(plans).toHaveLength(7)
+    expect(plans).toHaveLength(3)
     expect(plans.every((p) => p.name && p.basePriceMinor > 0)).toBe(true)
     expect(plans.map((p) => p.id)).toEqual(planRepo.list(orgB).map((p) => p.id))
   })
@@ -125,7 +125,7 @@ describe('createPlan', () => {
 
   it('rejects a duplicate name case-insensitively with ConflictError', () => {
     seedOrgWithSession()
-    expect(() => createPlan({ ...VALID_PLAN, name: 'annual premium' })).toThrow(ConflictError)
+    expect(() => createPlan({ ...VALID_PLAN, name: 'annual' })).toThrow(ConflictError)
   })
 
   it('rejects a whitespace-only name with ValidationError', () => {

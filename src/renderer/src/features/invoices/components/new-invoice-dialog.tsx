@@ -855,7 +855,7 @@ export function NewInvoiceDialog({
                   <Loader2 className="size-5 animate-spin" />
                 </div>
               ) : (
-                <div className="flex max-h-[65vh] flex-col gap-6 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-6">
                   <SnapshotSection
                     draftId={draftId}
                     canEdit={canCreate}

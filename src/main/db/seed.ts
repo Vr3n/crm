@@ -9,6 +9,7 @@ import {
   leadSources,
   leadStages,
   membershipPlans,
+  offers,
   paymentMethods,
   permissions,
   prorationPolicies,
@@ -283,81 +284,37 @@ export interface SeedPlan {
  */
 export const SEED_PLANS: SeedPlan[] = [
   {
-    name: 'Basic Monthly',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePriceMinor: 150000,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    active: true,
-    description: 'Gym-floor access across all equipment zones.'
-  },
-  {
-    name: 'Student Monthly',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePriceMinor: 120000,
-    accessWindow: 'TIMED',
-    startTime: '07:00',
-    endTime: '17:00',
-    active: true,
-    description: 'Off-peak floor access for students with a valid college ID.'
-  },
-  {
-    name: 'Yoga Studio',
-    duration: 'MONTHLY',
-    billing: 'ONE_TIME',
-    basePriceMinor: 180000,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    active: true,
-    description: 'Yoga floor, mat sessions and the meditation hall.'
-  },
-  {
-    name: 'Premium Quarterly',
-    duration: 'QUARTERLY',
-    billing: 'ONE_TIME',
-    basePriceMinor: 390000,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    active: true,
-    description: 'Full facility for 3 months at a better per-month rate.'
-  },
-  {
-    name: 'Premium Half Yearly',
-    duration: 'HALF_YEARLY',
-    billing: 'ONE_TIME',
-    basePriceMinor: 740000,
-    accessWindow: 'ALL_HOURS',
-    startTime: '06:00',
-    endTime: '23:00',
-    active: true,
-    description: 'Six months of full-facility access.'
-  },
-  {
-    name: 'Annual Premium',
+    name: 'Annual',
     duration: 'YEARLY',
-    billing: 'ONE_TIME',
-    basePriceMinor: 2400000,
+    billing: 'YEARLY',
+    basePriceMinor: 800000,
     accessWindow: 'ALL_HOURS',
     startTime: '06:00',
     endTime: '23:00',
     active: true,
-    description: 'The flagship year-long membership at the best per-month rate.'
+    description: 'Full-facility access for a year, billed yearly.'
   },
   {
-    name: 'Weekend Access',
+    name: 'Quarterly',
+    duration: 'QUARTERLY',
+    billing: 'QUARTERLY',
+    basePriceMinor: 400000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'Full-facility access for a quarter, billed quarterly.'
+  },
+  {
+    name: 'Monthly',
     duration: 'MONTHLY',
     billing: 'ONE_TIME',
-    basePriceMinor: 90000,
-    accessWindow: 'TIMED',
-    startTime: '08:00',
-    endTime: '20:00',
-    active: false,
-    description: 'Weekend-only floor access. Paused while the weekend bootcamps run.'
+    basePriceMinor: 500000,
+    accessWindow: 'ALL_HOURS',
+    startTime: '06:00',
+    endTime: '23:00',
+    active: true,
+    description: 'Full-facility access for one month, paid upfront.'
   }
 ]
 
@@ -422,6 +379,68 @@ export function seedPlansForOrganization(organizationId: number): void {
           start_time: plan.startTime,
           end_time: plan.endTime,
           active: plan.active
+        })
+        .run()
+    }
+  })
+}
+
+export interface SeedOffer {
+  name: string
+  description: string
+  discountType: string
+  valueMinor: number
+  applicablePlanIds: number[]
+  validFrom: string
+  validTo: string | null
+  maxUsage: number | null
+  minPurchaseMinor: number | null
+  eligibility: string | null
+  active: boolean
+}
+
+/** Starter discount rules (Module 03 §Offers). Seeded per org so a fresh install
+ * has usable discounts at sale time. The (organization_id, name) unique
+ * constraint guards against double-seeding. */
+export const SEED_OFFERS: SeedOffer[] = [
+  {
+    name: 'BARGAINING_DISCOUNT',
+    description: 'Use this when customer is bargaining while creating invoice.',
+    discountType: 'PERCENTAGE',
+    valueMinor: 10,
+    applicablePlanIds: [],
+    validFrom: new Date().toISOString().slice(0, 10),
+    validTo: null,
+    maxUsage: null,
+    minPurchaseMinor: null,
+    eligibility: null,
+    active: true
+  }
+]
+
+/**
+ * Provisions the org's starter discount offers. Runs inside its own transaction
+ * and is called from the org-setup flow right after `seedPlansForOrganization`.
+ * The (organization_id, name) unique constraint guards against double-seeding.
+ */
+export function seedOffersForOrganization(organizationId: number): void {
+  withTransaction(() => {
+    const db = getDrizzle()
+    for (const offer of SEED_OFFERS) {
+      db.insert(offers)
+        .values({
+          organization_id: organizationId,
+          name: offer.name,
+          description: offer.description,
+          discount_type: offer.discountType,
+          value_minor: offer.valueMinor,
+          applicable_plan_ids: JSON.stringify(offer.applicablePlanIds),
+          valid_from: offer.validFrom,
+          valid_to: offer.validTo,
+          max_usage: offer.maxUsage,
+          min_purchase_minor: offer.minPurchaseMinor,
+          eligibility: offer.eligibility,
+          active: offer.active
         })
         .run()
     }

@@ -59,8 +59,8 @@ describe('registerCatalogIpc', () => {
       data: Array<{ name: string }>
     }
     expect(result.ok).toBe(true)
-    expect(result.data).toHaveLength(7)
-    expect(result.data.map((p) => p.name)).toContain('Annual Premium')
+    expect(result.data).toHaveLength(3)
+    expect(result.data.map((p) => p.name)).toContain('Annual')
   })
 
   it('creates a plan over IPC', async () => {
