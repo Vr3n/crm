@@ -4,9 +4,11 @@ import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
+import { can, useSession } from '@/context/session-context'
 import { useNow } from '@/lib/use-now'
 import { buildCustomerRow } from '../build'
 import { useCustomer } from '../queries'
+import { BlacklistBanner } from '@/features/people/components/blacklist-banner'
 import { CurrentMembershipCard } from '../components/detail/current-membership-card'
 import { IdentityCard } from '../components/detail/identity-card'
 import { InvoiceOverviewCard } from '../components/detail/invoice-overview-card'
@@ -26,6 +28,7 @@ export function CustomerDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
+  const session = useSession()
   const now = useNow()
   const { data: customer, isLoading } = useCustomer(id)
 
@@ -85,6 +88,16 @@ export function CustomerDetailPage(): React.JSX.Element {
           </Button>
         </Link>
       </div>
+
+      {customer ? (
+        <BlacklistBanner
+          personId={Number(customer.personId)}
+          personName={customer.name}
+          isBlacklisted={customer.isBlacklisted}
+          reason={customer.blacklistedReason ?? undefined}
+          canManage={can(session.permissions, session.isSuper, 'person.blacklist')}
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-12">
         {/* Row 1: Identity anchor (7) + QuickStats (5) */}

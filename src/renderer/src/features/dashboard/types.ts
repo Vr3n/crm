@@ -16,6 +16,7 @@
 export interface PersonRef {
   id: string
   name: string
+  personId?: string
   phone?: string
   email?: string
 }

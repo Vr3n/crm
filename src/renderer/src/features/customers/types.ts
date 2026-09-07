@@ -65,6 +65,12 @@ export interface Customer {
   source?: string
   ownerId?: string
   ownerName?: string
+  /** Person ID — used for photo and blacklist operations. */
+  personId?: string
+  /** Person-level flag — blacklisted customers cannot renew/buy. */
+  isBlacklisted: boolean
+  /** Optional reason recorded when the person was blacklisted. */
+  blacklistedReason?: string
   /** First membership purchase - the day the commercial relationship started. */
   joinedAt: string
   createdAt: string

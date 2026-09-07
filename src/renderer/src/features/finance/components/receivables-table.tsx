@@ -3,6 +3,7 @@ import { ReceiptText } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PersonCell } from '@/components/person/person-cell'
 import { formatDate } from '@/features/leads/format'
 import { formatMinor } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
@@ -55,12 +56,15 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
       header: () => 'Customer',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{row.original.customer.name}</p>
-          <p className="truncate font-mono text-[11px] text-muted-foreground">
-            {row.original.customer.phone}
-          </p>
-        </div>
+        <PersonCell
+          personId={row.original.customer.personId}
+          name={row.original.customer.name}
+          subtext={
+            <p className="truncate font-mono text-[11px] text-muted-foreground">
+              {row.original.customer.phone}
+            </p>
+          }
+        />
       )
     }),
     helper.accessor('issuedAt', {

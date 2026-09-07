@@ -940,6 +940,7 @@ export function getAllPayments(): Array<{
       customer: {
         id: String(p.customerId),
         name: person?.name ?? 'Unknown',
+        personId: personId ? String(personId) : undefined,
         phone: person?.phone,
         email: person?.email
       },
@@ -1037,6 +1038,7 @@ export function getAllRefunds(): Array<{
       customer: {
         id: String(payment?.customer_id ?? 0),
         name: person?.name ?? 'Unknown',
+        personId: personId ? String(personId) : undefined,
         phone: person?.phone,
         email: person?.email
       },
@@ -1120,6 +1122,7 @@ export function getAllCredits(): Array<{
       customer: {
         id: String(c.customerId),
         name: person?.name ?? 'Unknown',
+        personId: personId ? String(personId) : undefined,
         phone: person?.phone,
         email: person?.email
       },

@@ -23,6 +23,7 @@ export type InvoiceStatus = 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID
 export interface CustomerRef {
   id: string
   name: string
+  personId?: string
   phone?: string
   email?: string
 }

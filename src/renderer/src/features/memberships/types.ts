@@ -9,6 +9,7 @@ export interface MembershipRow {
   id: string
   customerId: string
   customerName: string
+  personId?: string
   plan: string
   priceMinor: number
   discountMinor: number

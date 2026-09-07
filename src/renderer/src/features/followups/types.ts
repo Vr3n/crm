@@ -12,6 +12,7 @@ export interface FollowUpRow {
   id: number
   leadId: number
   leadName: string
+  personId: number
   stage: StageKey
   title: string
   dueAt: string

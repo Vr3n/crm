@@ -12,6 +12,7 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       id: f.id,
       leadId: lead.id,
       leadName: lead.name,
+      personId: lead.personId,
       stage: lead.stage,
       title: f.title,
       dueAt: f.dueAt,

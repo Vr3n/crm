@@ -121,6 +121,7 @@ export function registerDashboardIpc(): void {
         member: {
           id: String(m.customer_id),
           name: person?.full_name ?? 'Unknown',
+          personId: person ? String(person.id) : undefined,
           phone: person?.phone ?? undefined,
           email: person?.email ?? undefined
         },
@@ -259,6 +260,7 @@ export function registerDashboardIpc(): void {
         member: {
           id: String(inv.customer_id),
           name: person?.full_name ?? 'Unknown',
+          personId: person ? String(person.id) : undefined,
           phone: person?.phone ?? undefined,
           email: person?.email ?? undefined
         },

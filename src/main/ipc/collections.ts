@@ -161,6 +161,7 @@ export function registerCollectionsIpc(): void {
         customer: {
           id: String(p.customer_id),
           name: person?.full_name ?? 'Unknown',
+          personId: person ? String(person.id) : undefined,
           phone: person?.phone ?? undefined,
           email: person?.email ?? undefined
         },
@@ -243,6 +244,7 @@ export function registerCollectionsIpc(): void {
       customer: {
         id: String(payment.customer_id),
         name: person?.full_name ?? 'Unknown',
+        personId: customer ? String(customer.person_id) : undefined,
         phone: person?.phone ?? undefined,
         email: person?.email ?? undefined
       },

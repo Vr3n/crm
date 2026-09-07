@@ -4,6 +4,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { PersonCell } from '@/components/person/person-cell'
 import { useCompleteFollowUp } from '@/features/leads/queries'
 import { EditFollowUpDialog } from '@/features/leads/components/edit-follow-up-dialog'
 import { CancelFollowUpDialog } from './cancel-follow-up-dialog'
@@ -222,10 +223,11 @@ function buildColumns(
           </SortButton>
         ),
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{row.original.leadName}</p>
-            <StageBadge stage={row.original.stage} className="mt-0.5" />
-          </div>
+          <PersonCell
+            personId={row.original.personId}
+            name={row.original.leadName}
+            subtext={<StageBadge stage={row.original.stage} className="mt-0.5" />}
+          />
         ),
         sortFn: 'alphanumeric'
       }),

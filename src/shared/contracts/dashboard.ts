@@ -12,6 +12,7 @@ import { z } from 'zod'
 export const dashboardPersonRefSchema = z.object({
   id: z.string(),
   name: z.string(),
+  personId: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional()
 })

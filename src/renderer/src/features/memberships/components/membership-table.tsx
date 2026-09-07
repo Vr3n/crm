@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { CreditCard, Snowflake } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
+import { PersonCell } from '@/components/person/person-cell'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { EXPIRING_SOON_DAYS } from '@/features/customers/constants'
@@ -61,12 +62,15 @@ function buildColumns(now: number, currency: CurrencyCode): ReturnType<typeof he
         </SortButton>
       ),
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{row.original.customerName}</p>
-          <p className="font-mono text-xs text-muted-foreground tabular-nums">
-            {row.original.id} · {row.original.customerId}
-          </p>
-        </div>
+        <PersonCell
+          personId={row.original.personId}
+          name={row.original.customerName}
+          subtext={
+            <span className="font-mono text-xs text-muted-foreground tabular-nums">
+              {row.original.id} · {row.original.customerId}
+            </span>
+          }
+        />
       ),
       sortFn: 'alphanumeric'
     }),

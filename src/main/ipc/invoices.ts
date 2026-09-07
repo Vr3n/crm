@@ -88,6 +88,7 @@ function buildInvoiceOutput(
     customer: {
       id: String(invoice.customer_id),
       name: person?.full_name ?? invoice.billing_name ?? 'Unknown',
+      personId: person ? String(person.id) : undefined,
       phone: person?.phone ?? invoice.billing_phone ?? undefined,
       email: person?.email ?? invoice.billing_email ?? undefined
     },

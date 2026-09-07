@@ -15,6 +15,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { PersonCell } from '@/components/person/person-cell'
 import { formatDate } from '@/features/leads/format'
 import { formatMinor, type CurrencyCode } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
@@ -72,14 +73,17 @@ function buildColumns(
       id: 'customer',
       header: () => 'Customer / Lead',
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{row.original.customer.name}</p>
-          {row.original.customer.phone && (
-            <p className="truncate font-mono text-[11px] text-muted-foreground">
-              {row.original.customer.phone}
-            </p>
-          )}
-        </div>
+        <PersonCell
+          personId={row.original.customer.personId}
+          name={row.original.customer.name}
+          subtext={
+            row.original.customer.phone ? (
+              <p className="truncate font-mono text-[11px] text-muted-foreground">
+                {row.original.customer.phone}
+              </p>
+            ) : undefined
+          }
+        />
       ),
       sortFn: 'alphanumeric'
     }),

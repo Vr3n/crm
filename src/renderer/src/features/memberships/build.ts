@@ -13,6 +13,7 @@ export function buildMembershipRows(customers: Customer[], now: number): Members
       id: m.id,
       customerId: c.id,
       customerName: c.name,
+      personId: c.personId,
       plan: m.plan,
       priceMinor: m.priceMinor,
       discountMinor: m.discountMinor,

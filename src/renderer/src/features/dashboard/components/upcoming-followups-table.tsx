@@ -28,7 +28,7 @@ function buildColumns(onComplete: (row: FollowUpRow) => void): ReturnType<typeof
           Lead
         </SortButton>
       ),
-      cell: ({ row }) => <NameCell name={row.original.leadName} />,
+      cell: ({ row }) => <NameCell name={row.original.leadName} personId={row.original.personId} />,
       sortFn: 'alphanumeric'
     }),
     helper.accessor((row) => row.title, {

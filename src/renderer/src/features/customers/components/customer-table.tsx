@@ -1,7 +1,10 @@
 import { useMemo } from 'react'
-import { Users } from 'lucide-react'
+import { Ban, ShieldCheck, Users } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { displayPhone } from '@/features/leads/format'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { PersonCell } from '@/components/person/person-cell'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { cn } from '@/lib/utils'
@@ -35,7 +38,11 @@ function ExpiresCell({ row, now }: { row: CustomerRow; now: number }): React.JSX
   )
 }
 
-function buildColumns(now: number): ReturnType<typeof helper.columns> {
+function buildColumns(
+  now: number,
+  canBlacklist: boolean,
+  onBlacklist: (row: CustomerRow) => void
+): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.customer.name, {
       id: 'name',
@@ -49,12 +56,23 @@ function buildColumns(now: number): ReturnType<typeof helper.columns> {
         </SortButton>
       ),
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{row.original.customer.name}</p>
-          <p className="font-mono text-xs text-muted-foreground tabular-nums">
-            {row.original.customer.id}
-          </p>
-        </div>
+        <PersonCell
+          personId={row.original.customer.personId}
+          name={row.original.customer.name}
+          subtext={
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                {row.original.customer.id}
+              </span>
+              {row.original.customer.isBlacklisted ? (
+                <Badge variant="destructive" className="gap-1 px-1.5 py-0 text-[10px]">
+                  <Ban className="size-2.5" />
+                  Blacklisted
+                </Badge>
+              ) : null}
+            </div>
+          }
+        />
       ),
       sortFn: 'alphanumeric'
     }),
@@ -130,7 +148,43 @@ function buildColumns(now: number): ReturnType<typeof helper.columns> {
           {row.original.customer.ownerName ?? 'Unassigned'}
         </span>
       )
-    })
+    }),
+    ...(canBlacklist
+      ? [
+          helper.display({
+            id: 'actions',
+            header: () => null,
+            cell: ({ row }) => {
+              const c = row.original.customer
+              return (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={
+                    c.isBlacklisted ? `Lift blacklist for ${c.name}` : `Blacklist ${c.name}`
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onBlacklist(row.original)
+                  }}
+                  className={
+                    c.isBlacklisted
+                      ? 'text-primary hover:text-primary'
+                      : 'text-muted-foreground hover:text-destructive'
+                  }
+                >
+                  {c.isBlacklisted ? (
+                    <ShieldCheck className="size-4" />
+                  ) : (
+                    <Ban className="size-4" />
+                  )}
+                </Button>
+              )
+            }
+          })
+        ]
+      : [])
   ])
 }
 
@@ -143,14 +197,26 @@ export function CustomerTable({
   rows,
   now,
   isLoading,
-  onOpen
+  onOpen,
+  onBlacklist,
+  canBlacklist
 }: {
   rows: CustomerRow[]
   now: number
   isLoading: boolean
   onOpen: (customerId: string) => void
+  onBlacklist: (row: CustomerRow) => void
+  canBlacklist: boolean
 }): React.JSX.Element {
-  const columns = useMemo(() => buildColumns(now), [now])
+  const columns = useMemo(
+    () => buildColumns(now, canBlacklist, onBlacklist),
+    [now, canBlacklist, onBlacklist]
+  )
+
+  const getRowClassName = (row: CustomerRow): string =>
+    row.customer.isBlacklisted
+      ? 'bg-destructive/5 hover:bg-destructive/10 data-[state=selected]:!bg-destructive/15'
+      : ''
 
   return (
     <DataTable
@@ -162,6 +228,7 @@ export function CustomerTable({
       pageSizeOptions={[8, 16, 32]}
       initialSorting={[{ id: 'status', desc: false }]}
       onRowClick={(row) => onOpen(row.customer.id)}
+      getRowClassName={getRowClassName}
       showSearch={false}
       emptyIcon={Users}
       emptyTitle="No customers match"
