@@ -155,6 +155,14 @@ export async function getPhotoPath(
   return join(dir, filename)
 }
 
+/**
+ * Synchronous version of getPhotoPath for use in sync contexts.
+ */
+export function getPhotoPathSync(organizationId: number, filename: string): string {
+  const dir = getPhotoDirectorySync(organizationId)
+  return join(dir, filename)
+}
+
 export const PHOTO_CONFIG = {
   ALLOWED_EXTENSIONS: Array.from(ALLOWED_EXTENSIONS),
   MAX_SIZE_BYTES,

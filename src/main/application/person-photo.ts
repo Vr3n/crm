@@ -2,15 +2,19 @@ import { requirePermission, currentOrganizationId } from '../auth/session'
 import { personRepo } from '../repositories/sales'
 import {
   savePhotoSync,
-  deletePhotoFile
+  deletePhotoFile,
+  getPhotoPathSync
 } from '../lib/photo-storage'
+import { readFileSync } from 'node:fs'
 import { NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import type {
   UpdatePersonPhotoInput,
   DeletePersonPhotoInput,
   GetPersonPhotoInput,
-  PersonPhotoOutput
+  PersonPhotoOutput,
+  GetManyPersonPhotosInput,
+  GetManyPersonPhotosOutput
 } from '../../shared/contracts/person-photo'
 
 /**
@@ -90,16 +94,61 @@ export function getPersonPhoto(input: GetPersonPhotoInput): PersonPhotoOutput {
     return {
       personId: person.id,
       photoFilename: null,
-      photoPath: null
+      photoPath: null,
+      photoData: null
     }
   }
 
-  // Return relative path — the IPC layer or UI resolves to absolute
-  const path = `${organizationId}/${person.photoFilename}`
+  const absolutePath = getPhotoPathSync(organizationId, person.photoFilename)
+
+  // Read the file and return as base64 for renderer display
+  let photoData: string | null = null
+  try {
+    const buffer = readFileSync(absolutePath)
+    photoData = buffer.toString('base64')
+  } catch {
+    // File may have been deleted from disk — treat as no photo
+    return {
+      personId: person.id,
+      photoFilename: null,
+      photoPath: null,
+      photoData: null
+    }
+  }
 
   return {
     personId: person.id,
     photoFilename: person.photoFilename,
-    photoPath: path
+    photoPath: absolutePath,
+    photoData
   }
+}
+
+/**
+ * Batch-fetches photo data for multiple persons in one call. Used by the
+ * windowed batcher in the renderer to coalesce many per-row `usePersonPhoto`
+ * hooks into a single IPC round-trip.
+ */
+export function getManyPersonPhotos(input: GetManyPersonPhotosInput): GetManyPersonPhotosOutput {
+  requirePermission(PERMISSIONS.LEAD_VIEW)
+  const organizationId = currentOrganizationId()
+
+  const photos: Record<number, string | null> = {}
+  for (const personId of input.personIds) {
+    const person = personRepo.findById(organizationId, personId)
+    if (!person || !person.photoFilename) {
+      photos[personId] = null
+      continue
+    }
+
+    const absolutePath = getPhotoPathSync(organizationId, person.photoFilename)
+    try {
+      const buffer = readFileSync(absolutePath)
+      photos[personId] = buffer.toString('base64')
+    } catch {
+      photos[personId] = null
+    }
+  }
+
+  return { photos }
 }

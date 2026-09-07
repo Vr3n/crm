@@ -1,12 +1,14 @@
 import {
   updatePersonPhoto,
   deletePersonPhoto,
-  getPersonPhoto
+  getPersonPhoto,
+  getManyPersonPhotos
 } from '../application/person-photo'
 import {
   updatePersonPhotoInputSchema,
   deletePersonPhotoInputSchema,
-  getPersonPhotoInputSchema
+  getPersonPhotoInputSchema,
+  getManyPersonPhotosInputSchema
 } from '../../shared/contracts/person-photo'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
 import { handle } from './handle'
@@ -20,5 +22,8 @@ export function registerPersonPhotoIpc(): void {
   )
   handle(IPC_CHANNELS.PERSON_PHOTO_GET, getPersonPhotoInputSchema, (input) =>
     getPersonPhoto(input)
+  )
+  handle(IPC_CHANNELS.PERSON_PHOTO_GET_MANY, getManyPersonPhotosInputSchema, (input) =>
+    getManyPersonPhotos(input)
   )
 }

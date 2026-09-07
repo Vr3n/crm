@@ -142,7 +142,8 @@ export const IPC_CHANNELS = {
   // Person Photo (Issue #106)
   PERSON_PHOTO_UPDATE: 'person.photo:update',
   PERSON_PHOTO_DELETE: 'person.photo:delete',
-  PERSON_PHOTO_GET: 'person.photo:get'
+  PERSON_PHOTO_GET: 'person.photo:get',
+  PERSON_PHOTO_GET_MANY: 'person.photo:getMany'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

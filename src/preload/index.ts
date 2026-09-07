@@ -122,7 +122,9 @@ import type {
   UpdatePersonPhotoInput,
   DeletePersonPhotoInput,
   GetPersonPhotoInput,
-  PersonPhotoOutput
+  PersonPhotoOutput,
+  GetManyPersonPhotosInput,
+  GetManyPersonPhotosOutput
 } from '../shared/contracts/person-photo'
 import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 
@@ -406,7 +408,9 @@ const api = {
     deletePhoto: (input: DeletePersonPhotoInput): Promise<void> =>
       call(IPC_CHANNELS.PERSON_PHOTO_DELETE, input),
     getPhoto: (input: GetPersonPhotoInput): Promise<PersonPhotoOutput> =>
-      call(IPC_CHANNELS.PERSON_PHOTO_GET, input)
+      call(IPC_CHANNELS.PERSON_PHOTO_GET, input),
+    getPhotos: (input: GetManyPersonPhotosInput): Promise<GetManyPersonPhotosOutput> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_GET_MANY, input)
   }
 }
 

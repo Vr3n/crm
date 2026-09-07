@@ -28,4 +28,15 @@ export interface PersonPhotoOutput {
   photoFilename: string | null
   /** Absolute path to the photo file, or null if no photo exists. */
   photoPath: string | null
+  /** Base64-encoded photo data (no data-URL prefix), or null if no photo exists. */
+  photoData: string | null
+}
+
+export const getManyPersonPhotosInputSchema = z.object({
+  personIds: z.array(z.number().int().positive())
+})
+export type GetManyPersonPhotosInput = z.infer<typeof getManyPersonPhotosInputSchema>
+
+export interface GetManyPersonPhotosOutput {
+  photos: Record<number, string | null>
 }
