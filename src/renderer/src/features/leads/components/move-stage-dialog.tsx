@@ -55,11 +55,6 @@ export function MoveStageDialog({
 
   const options = useMemo(() => moveableStages(lead.stage), [lead.stage])
 
-  /**
-   * The dropdown/board pass the stage the user picked; when opened from the
-   * detail page without one, default to the next pipeline stage instead of the
-   * first list item (which with backward moves enabled is the earliest stage).
-   */
   const defaultTarget = useMemo(() => {
     if (initialStage && options.some((o) => o.key === initialStage)) return initialStage
     const next = nextStage(lead.stage)

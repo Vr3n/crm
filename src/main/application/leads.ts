@@ -65,6 +65,12 @@ import type {
 
 const OWNER_CHANGE_TYPE = 'OWNER_CHANGE'
 
+/** Human-readable cancellation reasons for stages that suppress follow-ups. */
+const SUPPRESS_FOLLOWUP_REASONS: Record<string, string> = {
+  DO_NOT_DISTURB: 'Follow-up cancelled — lead moved to Do Not Disturb',
+  NOT_INTERESTED: 'Follow-up cancelled — lead moved to Not Interested'
+}
+
 function orgTimezone(organizationId: number): string {
   return organizationRepo.findById(organizationId)?.timezone ?? DEFAULT_TIMEZONE
 }
@@ -286,8 +292,11 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
     // Cancel pending follow-ups when moving to a stage that suppresses them
     if (target.suppressFollowups) {
       const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+      const reason =
+        SUPPRESS_FOLLOWUP_REASONS[target.name] ??
+        `Follow-up cancelled — lead moved to ${target.name}`
       for (const fu of pendingFollowups) {
-        followupRepo.cancel(organizationId, fu.id, userId, `Stage changed to ${target.name}`)
+        followupRepo.cancel(organizationId, fu.id, userId, reason)
       }
     }
   })
@@ -356,8 +365,11 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
       // Cancel pending follow-ups when moving to a stage that suppresses them
       if (target.suppressFollowups) {
         const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+        const reason =
+          SUPPRESS_FOLLOWUP_REASONS[target.name] ??
+          `Follow-up cancelled — lead moved to ${target.name}`
         for (const fu of pendingFollowups) {
-          followupRepo.cancel(organizationId, fu.id, userId, `Stage changed to ${target.name}`)
+          followupRepo.cancel(organizationId, fu.id, userId, reason)
         }
       }
 
@@ -719,6 +731,8 @@ export function listLeads(input: LeadListRequest): LeadListResponse {
     phone: row.phone,
     email: row.email,
     photoFilename: row.photoFilename,
+    isBlacklisted: row.isBlacklisted,
+    blacklistedReason: row.blacklistedReason,
     sourceId: row.sourceId,
     sourceName: row.sourceName,
     stageId: row.stageId,

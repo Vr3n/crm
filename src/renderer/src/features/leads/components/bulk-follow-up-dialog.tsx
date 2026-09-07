@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { BellPlus } from 'lucide-react'
@@ -14,7 +14,17 @@ import {
 import { FieldGroup } from '@/components/ui/field'
 import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
-import { useBulkScheduleFollowUp } from '../queries'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { useBulkMoveStage, useBulkScheduleFollowUp } from '../queries'
+import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
+import { StageBadge } from './stage-badge'
+import type { StageConfig, StageKey } from '../types'
 
 /**
  * Bulk follow-up for the selection toolbar: one follow-up per selected lead,
@@ -26,19 +36,24 @@ export function BulkFollowUpDialog({
   onOpenChange,
   count,
   leadIds,
+  moveOptions,
   onSuccess
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   count: number
   leadIds: number[]
+  moveOptions: StageConfig[]
   onSuccess: () => void
 }): React.JSX.Element {
   const schedule = useBulkScheduleFollowUp()
+  const bulkMove = useBulkMoveStage()
+  const { data: ref } = useReferenceData()
+  const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
   const form = useForm({
-    defaultValues: { title: '', due: '' },
+    defaultValues: { title: '', due: '', targetStage: '' },
     onSubmit: async ({ value }) => {
       try {
         await schedule.mutateAsync({
@@ -46,6 +61,12 @@ export function BulkFollowUpDialog({
           title: value.title.trim(),
           dueAt: new Date(value.due).toISOString()
         })
+        if (value.targetStage && maps) {
+          const targetStageId = stageIdOf(maps, value.targetStage as StageKey)
+          if (targetStageId !== undefined) {
+            await bulkMove.mutateAsync({ leadIds, targetStageId })
+          }
+        }
         onSuccess()
         setSubmitSuccess(true)
         window.setTimeout(() => onOpenChange(false), 700)
@@ -139,6 +160,45 @@ export function BulkFollowUpDialog({
                 </FormField>
               )}
             </form.Field>
+
+            {moveOptions.length > 0 && (
+              <form.Field name="targetStage">
+                {(field) => (
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label="Change Status?"
+                    hint="Optional — change the pipeline stage for all selected leads"
+                    validate={() => undefined}
+                    completeWhen={() => false}
+                  >
+                    {({ id, describedBy }) => (
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(v) => field.handleChange(v)}
+                      >
+                        <SelectTrigger id={id} aria-describedby={describedBy}>
+                          <SelectValue placeholder="No change" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {moveOptions.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              <span className="flex items-center gap-2">
+                                <StageBadge stage={s.key} />
+                                {s.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
+                )}
+              </form.Field>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">
@@ -151,7 +211,7 @@ export function BulkFollowUpDialog({
               success={submitSuccess}
               disabled={!canSubmit}
               loadingLabel="Scheduling…"
-              successLabel="Scheduled!"
+              successLabel="Done!"
             >
               Schedule
             </LoadingButton>

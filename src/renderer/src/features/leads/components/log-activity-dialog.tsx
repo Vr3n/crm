@@ -21,10 +21,12 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useLogActivity } from '../queries'
-import { useReferenceData } from '../reference-data'
+import { moveableStages } from '../constants'
+import { useLogActivity, useMoveStage } from '../queries'
+import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
 import { LeadPicker } from './lead-picker'
-import type { Lead } from '../types'
+import { StageBadge } from './stage-badge'
+import type { Lead, StageKey } from '../types'
 
 /**
  * Log an activity (Module 01 §24). Activities are history — immutable,
@@ -43,7 +45,9 @@ export function LogActivityDialog({
   lead?: Lead
 }): React.JSX.Element {
   const log = useLogActivity()
+  const move = useMoveStage()
   const { data: ref } = useReferenceData()
+  const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const types = useMemo(
     () => ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
     [ref]
@@ -52,17 +56,33 @@ export function LogActivityDialog({
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const target = picked ?? lead ?? null
 
+  const stageOptions = useMemo(
+    () => (target ? moveableStages(target.stage) : []),
+    [target]
+  )
+
   const form = useForm({
-    defaultValues: { typeId: types[0]?.id ?? 0, note: '' },
+    defaultValues: { typeId: types[0]?.id ?? 0, note: '', targetStage: '' },
     onSubmit: async ({ value }) => {
-      if (!target) return
+      if (!target || !maps) return
       try {
-        await log.mutateAsync({
+        const { activityId } = await log.mutateAsync({
           leadId: target.id,
           typeId: value.typeId,
           note: value.note.trim(),
           occurredAt: new Date().toISOString()
         })
+        if (value.targetStage && value.targetStage !== target.stage) {
+          const targetStageId = stageIdOf(maps, value.targetStage as StageKey)
+          if (targetStageId !== undefined) {
+            await move.mutateAsync({
+              leadId: target.id,
+              targetStageId,
+              expectedStageId: target.stageId,
+              activityId
+            })
+          }
+        }
         setSubmitSuccess(true)
         window.setTimeout(() => onOpenChange(false), 700)
       } catch {
@@ -190,6 +210,45 @@ export function LogActivityDialog({
                 </FormField>
               )}
             </form.Field>
+
+            {target && stageOptions.length > 0 && (
+              <form.Field name="targetStage">
+                {(field) => (
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label="Change Status?"
+                    hint="Optional — change the pipeline stage at the same time"
+                    validate={() => undefined}
+                    completeWhen={() => false}
+                  >
+                    {({ id, describedBy }) => (
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(v) => field.handleChange(v)}
+                      >
+                        <SelectTrigger id={id} aria-describedby={describedBy}>
+                          <SelectValue placeholder="No change" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stageOptions.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              <span className="flex items-center gap-2">
+                                <StageBadge stage={s.key} />
+                                {s.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
+                )}
+              </form.Field>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">
@@ -202,7 +261,7 @@ export function LogActivityDialog({
               success={submitSuccess}
               disabled={!canSubmit || !target}
               loadingLabel="Saving…"
-              successLabel="Logged!"
+              successLabel="Done!"
             >
               Log activity
             </LoadingButton>
