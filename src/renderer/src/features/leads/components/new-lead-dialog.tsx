@@ -26,6 +26,8 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { PersonAvatar } from '@/components/person/person-avatar'
+import type { PendingPhoto } from '@/components/person/photo-constants'
 import { can, useSession } from '@/context/session-context'
 import { logger } from '@/lib/logger'
 import { emailError, isValidEmail, leadNameError, mobileError } from '@/lib/validation'
@@ -33,6 +35,7 @@ import { cn } from '@/lib/utils'
 import { isApiError } from '../../../../../shared/contracts/errors'
 import { api } from '../api'
 import { useCreateLead } from '../queries'
+import { useUpdatePersonPhoto } from '@/features/people/person-photo'
 import { referenceKeys, useReferenceData } from '../reference-data'
 
 const PHONE_MAX = 10
@@ -73,6 +76,10 @@ export function NewLeadDialog({
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
+
+  // Photo state (transient — uploaded after lead is created)
+  const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null)
+  const uploadPhoto = useUpdatePersonPhoto()
 
   // Collapsible section states
   const [followupOpen, setFollowupOpen] = useState(false)
@@ -122,6 +129,16 @@ export function NewLeadDialog({
               : undefined
         })
         onCreated?.(created)
+
+        // Upload photo if one was captured/imported
+        if (pendingPhoto) {
+          uploadPhoto.mutate({
+            personId: created.personId,
+            filename: pendingPhoto.filename,
+            data: pendingPhoto.data
+          })
+        }
+
         setSubmitSuccess(true)
         successTimer.current = window.setTimeout(() => onOpenChange(false), 700)
       } catch {
@@ -223,6 +240,13 @@ export function NewLeadDialog({
           ) : null}
 
           <FieldGroup className="gap-3">
+            <PersonAvatar
+              name={useStore(form.store, (s) => s.values.name) || ''}
+              size="lg"
+              editable
+              onPendingChange={setPendingPhoto}
+            />
+
             <form.Field name="name" validators={{ onChange: ({ value }) => leadNameError(value) }}>
               {(field) => (
                 <FormField

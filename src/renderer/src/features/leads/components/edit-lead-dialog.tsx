@@ -17,6 +17,7 @@ import { FieldGroup } from '@/components/ui/field'
 import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { Textarea } from '@/components/ui/textarea'
+import { PersonAvatar } from '@/components/person/person-avatar'
 import { can, useSession } from '@/context/session-context'
 import { logger } from '@/lib/logger'
 import { emailError, isValidEmail, leadNameError, mobileError } from '@/lib/validation'
@@ -180,6 +181,13 @@ export function EditLeadDialog({
           ) : null}
 
           <FieldGroup className="gap-3">
+            <PersonAvatar
+              personId={lead.personId}
+              name={lead.name}
+              size="lg"
+              editable
+            />
+
             <form.Field name="name" validators={{ onChange: ({ value }) => leadNameError(value) }}>
               {(field) => (
                 <FormField

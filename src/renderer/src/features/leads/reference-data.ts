@@ -54,8 +54,7 @@ export function getLeadMaps(ref: ReferenceData): LeadMaps {
   const stageIdByKey = new Map<StageKey, number>()
   const stageNameById = new Map<number, string>()
   for (const s of ref.stages) {
-    // Backend seeds stages under their canonical StageKey names (NEW, TRIAL, …).
-    if (isStageKey(s.name)) stageIdByKey.set(s.name, s.id)
+    stageIdByKey.set(s.name as StageKey, s.id)
     stageNameById.set(s.id, s.name)
   }
 
@@ -94,7 +93,9 @@ const STAGE_KEYS = new Set<StageKey>([
   'TRIAL',
   'NEGOTIATION',
   'WON',
-  'LOST'
+  'LOST',
+  'DO_NOT_DISTURB',
+  'NOT_INTERESTED'
 ])
 
 function isStageKey(name: string): name is StageKey {
