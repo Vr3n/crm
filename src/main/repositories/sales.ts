@@ -240,7 +240,15 @@ export const personRepo = {
     query: string,
     limit: number,
     offset: number
-  ): { id: number; fullName: string; phone: string; email: string | null; isBlacklisted: boolean; photoFilename: string | null }[] {
+  ): {
+    id: number
+    fullName: string
+    phone: string
+    email: string | null
+    isBlacklisted: boolean
+    blacklistedReason: string | null
+    photoFilename: string | null
+  }[] {
     const term = `%${query}%`
     return getDrizzle()
       .select({
@@ -249,6 +257,7 @@ export const personRepo = {
         phone: people.phone,
         email: people.email,
         isBlacklisted: people.is_blacklisted,
+        blacklistedReason: people.blacklisted_reason,
         photoFilename: people.photo_filename
       })
       .from(people)
@@ -303,12 +312,7 @@ export const personRepo = {
     return mapPerson(row as unknown as PersonRow)
   },
 
-  blacklist(
-    organizationId: number,
-    id: number,
-    reason: string | null,
-    byUserId: number
-  ): Person {
+  blacklist(organizationId: number, id: number, reason: string | null, byUserId: number): Person {
     const row = getDrizzle()
       .update(people)
       .set({
@@ -740,7 +744,9 @@ export const leadRepo = {
       personName: string
       phone: string
       email: string | null
+      isBlacklisted: boolean
       photoFilename: string | null
+      blacklistedReason: string | null
       sourceId: number
       sourceName: string | null
       stageId: number
@@ -780,7 +786,9 @@ export const leadRepo = {
         personName: people.full_name,
         phone: people.phone,
         email: people.email,
+        isBlacklisted: people.is_blacklisted,
         photoFilename: people.photo_filename,
+        blacklistedReason: people.blacklisted_reason,
         sourceId: leads.source_id,
         sourceName: leadSources.name,
         stageId: leads.current_stage_id,
@@ -1167,6 +1175,25 @@ export const followupRepo = {
         and(
           eq(leadFollowups.organization_id, organizationId),
           eq(leadFollowups.lead_id, leadId),
+          isNull(leadFollowups.completed_at),
+          isNull(leadFollowups.cancelled_at)
+        )
+      )
+      .orderBy(leadFollowups.due_at)
+      .all() as unknown as FollowupRow[]
+    return rows.map(mapFollowup)
+  },
+
+  /** Pending follow-ups across all leads for a person (used by blacklist). */
+  listPendingForPerson(organizationId: number, personId: number): LeadFollowup[] {
+    const rows = getDrizzle()
+      .select()
+      .from(leadFollowups)
+      .innerJoin(leads, eq(leads.id, leadFollowups.lead_id))
+      .where(
+        and(
+          eq(leadFollowups.organization_id, organizationId),
+          eq(leads.person_id, personId),
           isNull(leadFollowups.completed_at),
           isNull(leadFollowups.cancelled_at)
         )

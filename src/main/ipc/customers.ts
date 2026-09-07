@@ -24,6 +24,8 @@ interface PersonRow {
   full_name: string
   phone: string | null
   email: string | null
+  is_blacklisted: number
+  blacklisted_reason: string | null
 }
 
 interface CustomerRow {
@@ -175,6 +177,9 @@ function buildCustomerOutput(
     source: undefined,
     ownerId: undefined,
     ownerName: undefined,
+    personId: String(customer.person_id),
+    isBlacklisted: person?.is_blacklisted === 1,
+    blacklistedReason: person?.blacklisted_reason ?? null,
     joinedAt: memberShips[0]?.created_at ?? customer.created_at,
     createdAt: customer.created_at,
     updatedAt: customer.updated_at ?? undefined,

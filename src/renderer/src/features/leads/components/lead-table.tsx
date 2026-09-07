@@ -1,4 +1,6 @@
-import { Pencil, PhoneCall, Mail } from 'lucide-react'
+import { Pencil, PhoneCall, Mail, Ban, ShieldCheck } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -16,6 +18,7 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
+import { PersonCell } from '@/components/person/person-cell'
 import { SOURCES, STAGES, isTerminal } from '../constants'
 import { computeQuality, qualityMessage, qualityTier } from '../data-quality'
 import { displayPhone, timeAgo } from '../format'
@@ -39,7 +42,9 @@ export function LeadTable({
   onOpen,
   onStageChange,
   onEdit,
-  canEditLead
+  onBlacklist,
+  canEditLead,
+  canBlacklist
 }: {
   leads: Lead[]
   selected: Set<number>
@@ -47,12 +52,15 @@ export function LeadTable({
   onOpen: (lead: Lead) => void
   onStageChange: (lead: Lead, to: StageKey) => void
   onEdit: (lead: Lead) => void
+  onBlacklist: (lead: Lead) => void
   canEditLead: (lead: Lead) => boolean
+  canBlacklist: boolean
 }): React.JSX.Element {
   const all = leads
   // The Actions column renders only when at least one row is editable, so a
   // read-only role (e.g. Front Desk) never sees empty column chrome.
   const anyEditable = all.some(canEditLead)
+  const showActions = anyEditable || canBlacklist
 
   const toggleRow = (id: number): void =>
     onSelectionChange(
@@ -103,8 +111,8 @@ export function LeadTable({
             <TableHead className="text-primary">Owner</TableHead>
             <TableHead className="text-primary">Next follow-up</TableHead>
             <TableHead className="text-right text-primary">Last activity</TableHead>
-            {anyEditable ? (
-              <TableHead className="w-12 text-right text-primary">Actions</TableHead>
+            {showActions ? (
+              <TableHead className="w-16 text-right text-primary">Actions</TableHead>
             ) : null}
           </TableRow>
         </TableHeader>
@@ -116,7 +124,12 @@ export function LeadTable({
               <TableRow
                 key={lead.id}
                 data-state={selected.has(lead.id) ? 'selected' : undefined}
-                className="group cursor-pointer data-[state=selected]:bg-primary/5"
+                className={cn(
+                  'group cursor-pointer',
+                  lead.isBlacklisted
+                    ? 'bg-destructive/5 hover:bg-destructive/10 data-[state=selected]:!bg-destructive/15'
+                    : 'data-[state=selected]:bg-primary/5'
+                )}
                 onClick={() => onOpen(lead)}
               >
                 <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
@@ -128,23 +141,31 @@ export function LeadTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate font-medium">{lead.name}</span>
-                      <QualityDot quality={q} />
-                    </div>
-                    {qualityTier(q) !== 'clean' ? (
-                      <span
-                        className={
-                          qualityTier(q) === 'bad'
-                            ? 'truncate text-[11px] font-medium text-destructive'
-                            : 'truncate text-[11px] font-medium text-warning'
-                        }
-                      >
-                        {qualityMessage(q)}
-                      </span>
-                    ) : null}
-                  </div>
+                  <PersonCell
+                    personId={lead.personId}
+                    name={lead.name}
+                    subtext={
+                      <>
+                        {lead.isBlacklisted ? (
+                          <Badge variant="destructive" className="gap-1 px-1.5 py-0 text-[10px]">
+                            <Ban className="size-2.5" />
+                            Blacklisted
+                          </Badge>
+                        ) : null}
+                        {qualityTier(q) !== 'clean' ? (
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1 text-[11px] font-medium',
+                              qualityTier(q) === 'bad' ? 'text-destructive' : 'text-warning'
+                            )}
+                          >
+                            <QualityDot quality={q} />
+                            {qualityMessage(q)}
+                          </span>
+                        ) : null}
+                      </>
+                    }
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-0.5 text-xs">
@@ -192,20 +213,46 @@ export function LeadTable({
                 <TableCell className="text-right">
                   <span className="text-sm text-muted-foreground">{lastActivity(lead)}</span>
                 </TableCell>
-                {anyEditable ? (
-                  <TableCell className="w-12 text-right" onClick={(e) => e.stopPropagation()}>
-                    {canEditLead(lead) ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Edit ${lead.name}`}
-                        onClick={() => onEdit(lead)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                    ) : null}
+                {showActions ? (
+                  <TableCell className="w-16 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      {canBlacklist ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={
+                            lead.isBlacklisted
+                              ? `Lift blacklist for ${lead.name}`
+                              : `Blacklist ${lead.name}`
+                          }
+                          onClick={() => onBlacklist(lead)}
+                          className={
+                            lead.isBlacklisted
+                              ? 'text-primary hover:text-primary'
+                              : 'text-muted-foreground hover:text-destructive'
+                          }
+                        >
+                          {lead.isBlacklisted ? (
+                            <ShieldCheck className="size-4" />
+                          ) : (
+                            <Ban className="size-4" />
+                          )}
+                        </Button>
+                      ) : null}
+                      {canEditLead(lead) ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Edit ${lead.name}`}
+                          onClick={() => onEdit(lead)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                 ) : null}
               </TableRow>

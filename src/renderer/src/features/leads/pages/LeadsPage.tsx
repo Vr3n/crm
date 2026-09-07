@@ -60,6 +60,11 @@ const BulkMoveStageDialog = lazy(() =>
 const EditLeadDialog = lazy(() =>
   import('../components/edit-lead-dialog').then((m) => ({ default: m.EditLeadDialog }))
 )
+const BlacklistDialog = lazy(() =>
+  import('@/features/people/components/blacklist-dialog').then((m) => ({
+    default: m.BlacklistDialog
+  }))
+)
 
 type Action =
   | { type: 'move'; lead: Lead; to?: StageKey }
@@ -92,6 +97,7 @@ export function LeadsPage(): React.JSX.Element {
   const [action, setAction] = useState<Action>(null)
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
   const [editing, setEditing] = useState<Lead | null>(null)
+  const [blacklisting, setBlacklisting] = useState<Lead | null>(null)
 
   const filtered = useMemo(
     () => (data ? sortLeads(filterLeads(data, filters)) : []),
@@ -273,7 +279,9 @@ export function LeadsPage(): React.JSX.Element {
               onOpen={openLead}
               onStageChange={onStageChange}
               onEdit={setEditing}
+              onBlacklist={setBlacklisting}
               canEditLead={canEditLead}
+              canBlacklist={can(session.permissions, session.isSuper, 'person.blacklist')}
             />
           </CardContent>
         </Card>
@@ -334,6 +342,7 @@ export function LeadsPage(): React.JSX.Element {
             onOpenChange={() => setBulkAction(null)}
             count={selected.size}
             leadIds={[...selected]}
+            moveOptions={moveOptions}
             onSuccess={clearSelection}
           />
         </Suspense>
@@ -345,6 +354,7 @@ export function LeadsPage(): React.JSX.Element {
             onOpenChange={() => setBulkAction(null)}
             count={selected.size}
             leadIds={[...selected]}
+            moveOptions={moveOptions}
             onSuccess={clearSelection}
           />
         </Suspense>
@@ -369,6 +379,19 @@ export function LeadsPage(): React.JSX.Element {
             open
             onOpenChange={() => setEditing(null)}
             lead={editing}
+          />
+        </Suspense>
+      )}
+
+      {blacklisting && (
+        <Suspense fallback={null}>
+          <BlacklistDialog
+            key={blacklisting.id}
+            open
+            onOpenChange={() => setBlacklisting(null)}
+            personId={blacklisting.personId}
+            personName={blacklisting.name}
+            isBlacklisted={blacklisting.isBlacklisted}
           />
         </Suspense>
       )}

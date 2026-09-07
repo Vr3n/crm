@@ -6,8 +6,6 @@ ALTER TABLE "people" ADD COLUMN "blacklisted_at" text;
 --> statement-breakpoint
 ALTER TABLE "people" ADD COLUMN "blacklisted_by" integer;
 --> statement-breakpoint
-ALTER TABLE "people" ADD CONSTRAINT "people_blacklisted_by_users_id_fk" FOREIGN KEY ("blacklisted_by") REFERENCES "users"("id");
---> statement-breakpoint
 INSERT INTO "permissions" ("code", "description") VALUES ('person.blacklist', NULL) ON CONFLICT DO NOTHING;
 --> statement-breakpoint
 INSERT INTO "role_permissions" ("role_id", "permission_id")

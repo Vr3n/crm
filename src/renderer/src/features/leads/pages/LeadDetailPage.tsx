@@ -4,8 +4,10 @@ import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
+import { cn } from '@/lib/utils'
 import { useLead } from '../queries'
 import { computeQuality } from '../data-quality'
+import { can, useSession } from '@/context/session-context'
 import { IdentityCard } from '../components/detail/identity-card'
 import { LeadCommerceCard } from '../components/detail/lead-commerce-card'
 import { NextActionCard } from '../components/detail/next-action-card'
@@ -18,6 +20,7 @@ import { MoveStageDialog } from '../components/move-stage-dialog'
 import { MarkLostDialog } from '../components/mark-lost-dialog'
 import { LogActivityDialog } from '../components/log-activity-dialog'
 import { FollowUpDialog } from '../components/follow-up-dialog'
+import { BlacklistBanner } from '@/features/people/components/blacklist-banner'
 
 /**
  * Lead detail (bento layout, Module 01 §24). Identity + actions up top, then a
@@ -29,6 +32,7 @@ export function LeadDetailPage(): React.JSX.Element {
   const leadId = id === undefined || Number.isNaN(Number(id)) ? undefined : Number(id)
   const navigate = useNavigate()
   const location = useLocation()
+  const session = useSession()
   const { data: lead, isLoading } = useLead(leadId)
   const [action, setAction] = useState<QuickActionType | null>(null)
 
@@ -73,7 +77,12 @@ export function LeadDetailPage(): React.JSX.Element {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 p-6">
+    <div
+      className={cn(
+        'flex w-full flex-col gap-6 p-6',
+        lead.isBlacklisted && 'bg-destructive/[0.03]'
+      )}
+    >
       <div className="flex items-center gap-2">
         <Link to={from}>
           <Button variant="ghost" size="sm">
@@ -83,11 +92,26 @@ export function LeadDetailPage(): React.JSX.Element {
         </Link>
       </div>
 
+      {lead.isBlacklisted && (
+        <BlacklistBanner
+          personId={lead.personId}
+          personName={lead.name}
+          isBlacklisted={lead.isBlacklisted}
+          reason={lead.blacklistedReason}
+          canManage={can(session.permissions, session.isSuper, 'person.blacklist')}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <IdentityCard lead={lead} quality={quality!} />
         </div>
-        <QuickActions lead={lead} onAction={setAction} />
+        <QuickActions
+          lead={lead}
+          onAction={setAction}
+          isBlacklisted={lead.isBlacklisted}
+          canManageBlacklist={can(session.permissions, session.isSuper, 'person.blacklist')}
+        />
 
         <NextActionCard lead={lead} />
         <div className="xl:col-span-2">

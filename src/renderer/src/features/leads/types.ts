@@ -32,7 +32,7 @@ export interface StageConfig {
   isWon?: boolean
   isLost?: boolean
   /** Tint used for the stage pill / board column accent. */
-  tone: 'default' | 'primary' | 'success' | 'destructive'
+  tone: 'default' | 'engaged' | 'hot' | 'success' | 'danger'
 }
 
 export type SourceKey =
@@ -113,6 +113,9 @@ export interface Lead {
   name: string
   phone?: string
   email?: string
+  /** Person-level flag — blacklisted people cannot be sold/renewed. */
+  isBlacklisted: boolean
+  blacklistedReason?: string
   /** Canonical source key. */
   source: SourceKey
   sourceId: number

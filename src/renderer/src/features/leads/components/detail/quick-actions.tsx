@@ -1,6 +1,8 @@
-import { PhoneCall, BellPlus, ArrowRight, XCircle } from 'lucide-react'
+import { useState } from 'react'
+import { PhoneCall, BellPlus, ArrowRight, XCircle, Ban } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { BlacklistDialog } from '@/features/people/components/blacklist-dialog'
 import { isTerminal } from '../../constants'
 import type { Lead } from '../../types'
 
@@ -14,12 +16,18 @@ export type QuickActionType = 'activity' | 'followup' | 'move' | 'lost'
  */
 export function QuickActions({
   lead,
-  onAction
+  onAction,
+  isBlacklisted,
+  canManageBlacklist
 }: {
   lead: Lead
   onAction: (a: QuickActionType) => void
+  isBlacklisted: boolean
+  canManageBlacklist: boolean
 }): React.JSX.Element {
   const terminal = isTerminal(lead.stage)
+  const [blacklistOpen, setBlacklistOpen] = useState(false)
+
   return (
     <Card>
       <CardHeader>
@@ -50,7 +58,25 @@ export function QuickActions({
             Mark as lost
           </Button>
         )}
+        {canManageBlacklist && (
+          <Button
+            variant="outline"
+            className="justify-start text-destructive hover:bg-destructive/10"
+            onClick={() => setBlacklistOpen(true)}
+          >
+            <Ban className="text-destructive" />
+            {isBlacklisted ? 'Lift blacklist' : 'Blacklist person'}
+          </Button>
+        )}
       </CardContent>
+
+      <BlacklistDialog
+        open={blacklistOpen}
+        onOpenChange={setBlacklistOpen}
+        personId={lead.personId}
+        personName={lead.name}
+        isBlacklisted={isBlacklisted}
+      />
     </Card>
   )
 }

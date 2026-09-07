@@ -340,6 +340,8 @@ export const leadListRowSchema = z.object({
   personName: z.string(),
   phone: z.string(),
   email: z.string().nullable(),
+  isBlacklisted: z.boolean(),
+  blacklistedReason: z.string().nullable(),
   photoFilename: z.string().nullable(),
   sourceId: z.number().int().positive(),
   sourceName: z.string().nullable(),
@@ -380,6 +382,7 @@ export const peopleListSchema = z.array(
     phone: z.string(),
     email: z.string().nullable(),
     isBlacklisted: z.boolean(),
+    blacklistedReason: z.string().nullable(),
     photoFilename: z.string().nullable()
   })
 )

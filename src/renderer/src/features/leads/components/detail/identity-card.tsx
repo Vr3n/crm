@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { PersonAvatar } from '@/components/person/person-avatar'
+import { can, useSession } from '@/context/session-context'
 import { SOURCES, LOST_REASONS } from '../../constants'
 import type { LeadQuality } from '../../data-quality'
 import { qualityMessage, qualityTier } from '../../data-quality'
@@ -45,6 +47,9 @@ export function IdentityCard({
   quality: LeadQuality
 }): React.JSX.Element {
   const tier = qualityTier(quality)
+  const session = useSession()
+  const canEdit = can(session.permissions, session.isSuper, 'lead.edit')
+
   return (
     <Card
       className="crm-gradient-border"
@@ -56,23 +61,33 @@ export function IdentityCard({
       }
     >
       <CardContent className="flex flex-col gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-heading text-xl font-semibold tracking-tight">{lead.name}</h2>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <StageBadge stage={lead.stage} />
-              <Badge variant="outline">{SOURCES[lead.source]}</Badge>
-              {lead.lostReason ? (
-                <Badge variant="destructive">{LOST_REASONS[lead.lostReason]}</Badge>
+        <div className="flex items-start gap-4">
+          <PersonAvatar
+            personId={lead.personId}
+            name={lead.name}
+            size="lg"
+            editable={canEdit}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-heading text-xl font-semibold tracking-tight">{lead.name}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <StageBadge stage={lead.stage} />
+                  <Badge variant="outline">{SOURCES[lead.source]}</Badge>
+                  {lead.lostReason ? (
+                    <Badge variant="destructive">{LOST_REASONS[lead.lostReason]}</Badge>
+                  ) : null}
+                </div>
+              </div>
+              {tier !== 'clean' ? (
+                <Badge variant={tier === 'bad' ? 'destructive' : 'warning'} className="shrink-0 gap-1">
+                  <AlertTriangle className="size-3" />
+                  Needs attention
+                </Badge>
               ) : null}
             </div>
           </div>
-          {tier !== 'clean' ? (
-            <Badge variant={tier === 'bad' ? 'destructive' : 'warning'} className="shrink-0 gap-1">
-              <AlertTriangle className="size-3" />
-              Needs attention
-            </Badge>
-          ) : null}
         </div>
 
         {tier !== 'clean' ? (
