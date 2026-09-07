@@ -143,7 +143,7 @@ export function LeadFilters({
             >
               {r.label}
               {filters.range === r.key ? (
-                <span className="size-1.5 rounded-full bg-primary" />
+                <span className="size-1.5 rounded-full bg-cyan-500" />
               ) : null}
             </button>
           ))}

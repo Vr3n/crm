@@ -17,15 +17,15 @@ import type {
 export const STAGES: StageConfig[] = [
   { key: 'NEW', label: 'New', short: 'New', tone: 'default' },
   { key: 'CONTACTED', label: 'Contacted', short: 'Contacted', tone: 'default' },
-  { key: 'INTERESTED', label: 'Interested', short: 'Interested', tone: 'primary' },
-  { key: 'VISIT_SCHEDULED', label: 'Visit scheduled', short: 'Visit sched.', tone: 'primary' },
-  { key: 'VISITED', label: 'Visited', short: 'Visited', tone: 'primary' },
-  { key: 'TRIAL', label: 'Trial', short: 'Trial', tone: 'primary' },
-  { key: 'NEGOTIATION', label: 'Negotiation', short: 'Negotiation', tone: 'primary' },
+  { key: 'INTERESTED', label: 'Interested', short: 'Interested', tone: 'engaged' },
+  { key: 'VISIT_SCHEDULED', label: 'Visit scheduled', short: 'Visit sched.', tone: 'engaged' },
+  { key: 'VISITED', label: 'Visited', short: 'Visited', tone: 'engaged' },
+  { key: 'TRIAL', label: 'Trial', short: 'Trial', tone: 'hot' },
+  { key: 'NEGOTIATION', label: 'Negotiation', short: 'Negotiation', tone: 'hot' },
   { key: 'WON', label: 'Won', short: 'Won', isWon: true, tone: 'success' },
-  { key: 'LOST', label: 'Lost', short: 'Lost', isLost: true, tone: 'destructive' },
-  { key: 'DO_NOT_DISTURB', label: 'Do Not Disturb', short: 'DND', tone: 'default' },
-  { key: 'NOT_INTERESTED', label: 'Not Interested', short: 'Not interested', tone: 'default' }
+  { key: 'LOST', label: 'Lost', short: 'Lost', isLost: true, tone: 'danger' },
+  { key: 'DO_NOT_DISTURB', label: 'Do Not Disturb', short: 'DND', tone: 'danger' },
+  { key: 'NOT_INTERESTED', label: 'Not Interested', short: 'Not interested', tone: 'danger' }
 ]
 
 const STAGE_MAP = new Map<StageKey, StageConfig>(STAGES.map((s) => [s.key, s]))

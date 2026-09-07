@@ -4,9 +4,10 @@ import type { StageKey } from '../types'
 
 const toneClass: Record<string, string> = {
   default: 'bg-muted text-muted-foreground',
-  primary: 'bg-primary/10 text-primary',
+  engaged: 'bg-cyan-500/10 text-cyan-600',
+  hot: 'bg-yellow-500/10 text-yellow-600',
   success: 'bg-success/15 text-success',
-  destructive: 'bg-destructive/10 text-destructive'
+  danger: 'bg-red-800/15 text-red-800'
 }
 
 export function StageBadge({

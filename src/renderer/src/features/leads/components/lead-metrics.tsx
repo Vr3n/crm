@@ -35,21 +35,23 @@ const STAGE_ICONS: Record<StageKey, LucideIcon> = {
 /** Stage tone → tinted icon chip, mirroring the stage badges. */
 const TONE_CHIP: Record<string, string> = {
   default: 'bg-muted text-muted-foreground',
-  primary: 'bg-primary/10 text-primary',
+  engaged: 'bg-cyan-500/10 text-cyan-600',
+  hot: 'bg-yellow-500/10 text-yellow-600',
   success: 'bg-success/15 text-success',
-  destructive: 'bg-destructive/10 text-destructive'
+  danger: 'bg-red-800/15 text-red-800'
 }
 
 const TONE_GRADIENT: Record<string, { start: string; end: string } | null> = {
   default: null,
-  primary: { start: 'var(--primary)', end: 'var(--primary)' },
+  engaged: { start: 'cyan', end: 'cyan' },
+  hot: { start: 'yellow', end: 'yellow' },
   success: { start: 'var(--success)', end: 'var(--primary)' },
-  destructive: { start: 'var(--destructive)', end: 'var(--warning)' }
+  danger: { start: 'var(--destructive)', end: 'var(--destructive)' }
 }
 
 /**
  * Pipeline metrics, ordered by stage so the strip maps 1:1 to the funnel:
- * neutral early stages → cyan engaged → green won → red lost. Each card carries
+ * neutral early stages → cyan engaged → yellow hot → green won → dark red lost. Each card carries
  * its own icon + tone. Counts reflect the active filters above; nothing is
  * fabricated.
  */
