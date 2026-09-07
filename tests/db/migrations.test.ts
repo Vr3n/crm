@@ -106,9 +106,10 @@ describe('runMigrations', () => {
       { version: 19, name: 'org_branding' },
       { version: 20, name: 'followup_notes' },
       { version: 21, name: 'followup_cancel_reason' },
-      { version: 22, name: 'plan_availability' },
-      { version: 23, name: 'person_blacklist' },
-      { version: 24, name: 'person_photo' }
+      { version: 22, name: 'lead_stage_suppress_followups' },
+      { version: 23, name: 'plan_availability' },
+      { version: 24, name: 'person_blacklist' },
+      { version: 25, name: 'person_photo' }
     ])
   })
 
@@ -118,7 +119,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(21)
+    expect(row.n).toBe(24)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -165,7 +166,7 @@ describe('runMigrations', () => {
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
     expect(appliedVersions()).toEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
     ])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
@@ -186,7 +187,7 @@ describe('runMigrations', () => {
     runMigrations()
 
     expect(appliedVersions()).toEqual([
-      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
     ])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)
@@ -353,6 +354,18 @@ describe('runMigrations', () => {
       CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
       CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
       CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -440,6 +453,18 @@ describe('runMigrations', () => {
         role_id INTEGER NOT NULL,
         permission_id INTEGER NOT NULL,
         PRIMARY KEY (role_id, permission_id)
+      );
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
       );
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -542,6 +567,18 @@ describe('runMigrations', () => {
         permission_id INTEGER NOT NULL,
         PRIMARY KEY (role_id, permission_id)
       );
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -630,6 +667,18 @@ describe('runMigrations', () => {
       CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
       CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
       CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
