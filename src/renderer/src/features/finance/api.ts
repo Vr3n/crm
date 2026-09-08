@@ -34,6 +34,9 @@ export const api = {
     window.api.finance.listPayments() as unknown as Promise<Payment[]>,
   refunds: (): Promise<Refund[]> =>
     window.api.finance.listRefunds() as unknown as Promise<Refund[]>,
+  /** Issues any scheduled refunds whose date has arrived; returns count issued. */
+  processScheduledRefunds: (): Promise<{ issued: number }> =>
+    window.api.finance.processScheduledRefunds(),
   credits: (): Promise<Credit[]> =>
     window.api.finance.listAllCredits() as unknown as Promise<Credit[]>,
   invoices: (): Promise<FinanceInvoice[]> => Promise.resolve([]),

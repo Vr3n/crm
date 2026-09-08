@@ -93,11 +93,16 @@ export const IPC_CHANNELS = {
   FINANCE_LIST_ALL_CREDITS: 'finance:listAllCredits',
   FINANCE_LIST_PAYMENTS: 'finance:listPayments',
   FINANCE_LIST_REFUNDS: 'finance:listRefunds',
+  FINANCE_PROCESS_SCHEDULED_REFUNDS: 'finance:processScheduledRefunds',
   FINANCE_LIST_PAYMENT_METHODS: 'finance:listPaymentMethods',
   FINANCE_OUTSTANDING_INVOICES: 'finance:outstandingInvoices',
 
   // Membership Sale (Module 02+03+04+05 — atomic)
   MEMBERSHIPS_SELL: 'memberships:sell',
+  MEMBERSHIPS_CANCEL: 'memberships:cancel',
+  MEMBERSHIPS_UNDO_CANCELLATION: 'memberships:undo-cancellation',
+  MEMBERSHIPS_RENEW: 'memberships:renew',
+  MEMBERSHIPS_REFUND_STATE: 'memberships:refund-state',
 
   // Customers (Module 02)
   CUSTOMERS_LIST: 'customers:list',
@@ -124,6 +129,7 @@ export const IPC_CHANNELS = {
   // PDF Generation
   PDF_EXPORT_INVOICE: 'pdf:exportInvoice',
   PDF_EXPORT_RECEIPT: 'pdf:exportReceipt',
+  PDF_EXPORT_REFUND: 'pdf:exportRefund',
 
   // Excel Export
   EXPORT_EXCEL: 'export:excel',

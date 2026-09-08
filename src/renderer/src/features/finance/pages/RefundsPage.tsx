@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PiggyBank, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,7 +12,7 @@ import { CreditDetailSheet } from '../components/credit-detail-sheet'
 import { IssueRefundDialog } from '../components/issue-refund-dialog'
 import { AddCreditDialog } from '../components/add-credit-dialog'
 import { filterCredits, filterRefunds } from '../filters'
-import { useCredits, useRefunds } from '../queries'
+import { useCredits, useProcessScheduledRefunds, useRefunds } from '../queries'
 import type { Credit, CreditStatus, PaymentMethod, Refund } from '../types'
 
 /**
@@ -23,6 +23,7 @@ import type { Credit, CreditStatus, PaymentMethod, Refund } from '../types'
 export function RefundsPage(): React.JSX.Element {
   const { data: refunds, isLoading: loadingRefunds } = useRefunds()
   const { data: credits, isLoading: loadingCredits } = useCredits()
+  const processScheduled = useProcessScheduledRefunds()
   const [tab, setTab] = useState('refunds')
   const [refundMethod, setRefundMethod] = useState<PaymentMethod | 'ALL'>('ALL')
   const [creditStatus, setCreditStatus] = useState<CreditStatus | 'ALL'>('ALL')
@@ -32,6 +33,12 @@ export function RefundsPage(): React.JSX.Element {
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null)
   const [refundSheetOpen, setRefundSheetOpen] = useState(false)
   const [creditSheetOpen, setCreditSheetOpen] = useState(false)
+
+  // Issue any scheduled refunds whose cancellation date has arrived.
+  useEffect(() => {
+    processScheduled.mutate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const visibleRefunds = useMemo(
     () => filterRefunds(refunds ?? [], { method: refundMethod, search: '' }),

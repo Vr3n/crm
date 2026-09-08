@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
-import { Undo2 } from 'lucide-react'
+import { Download, Undo2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { createColumnHelper } from '@tanstack/react-table'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PersonCell } from '@/components/person/person-cell'
 import {
   Select,
@@ -17,6 +21,7 @@ import { SortButton } from '@/features/dashboard/components/sort-button'
 import { PAYMENT_METHODS } from '../constants'
 import { PaymentMethodBadge } from './payment-method-badge'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
+import { pdfApi } from '@/features/pdf/api'
 import type { ExportColumn } from '@/features/export/api'
 import type { PaymentMethod, Refund } from '../types'
 import type { CurrencyCode } from '@/lib/money'
@@ -50,7 +55,18 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
       ),
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="font-mono text-sm font-semibold tabular-nums">{row.original.refundNo}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-mono text-sm font-semibold tabular-nums">{row.original.refundNo}</p>
+            {row.original.status === 'SCHEDULED' ? (
+              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                Scheduled
+              </Badge>
+            ) : row.original.status === 'VOIDED' ? (
+              <Badge variant="outline" className="border-border text-muted-foreground">
+                Voided
+              </Badge>
+            ) : null}
+          </div>
           <p className="truncate text-xs text-muted-foreground">{row.original.createdBy}</p>
         </div>
       ),
@@ -130,6 +146,41 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
       header: () => 'Method',
       enableSorting: false,
       cell: ({ row }) => <PaymentMethodBadge method={row.original.method} />
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label={`Export refund receipt for ${row.original.refundNo}`}
+                disabled={row.original.status !== 'ISSUED'}
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  try {
+                    const filePath = await pdfApi.exportRefund(row.original.id, 'preview')
+                    toast.success('Refund receipt exported', {
+                      description: `Saved to ${filePath}`
+                    })
+                  } catch (err) {
+                    toast.error('Export failed', {
+                      description: err instanceof Error ? err.message : 'Could not generate receipt'
+                    })
+                  }
+                }}
+              >
+                <Download className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Export refund receipt as PDF</TooltipContent>
+          </Tooltip>
+        </div>
+      )
     })
   ])
 }

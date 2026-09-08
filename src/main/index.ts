@@ -24,6 +24,7 @@ import { registerBlacklistIpc } from './ipc/blacklist'
 import { registerPersonPhotoIpc } from './ipc/person'
 import { configurePhotoStorage } from './lib/photo-storage'
 import { restoreRememberedLogin } from './application/identity'
+import { processScheduledRefunds } from './application/finance'
 import { ensureInstallLock } from './licensing/ensure'
 import { generateInstallLock, getInstallDir } from './licensing/install-lock'
 
@@ -92,6 +93,10 @@ app.whenReady().then(async () => {
   openDatabase(join(app.getPath('userData'), 'CrownCRM.db'))
   runMigrations()
   seedPermissions()
+
+  // Issue any scheduled refunds whose cancellation date has arrived
+  // (offline app — runs on every launch; also triggered from the Refunds page).
+  processScheduledRefunds()
 
   // Configure photo storage with the app's userData directory
   configurePhotoStorage(app.getPath('userData'))

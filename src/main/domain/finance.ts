@@ -36,12 +36,19 @@ export interface PaymentAllocation {
   createdBy: number
 }
 
+export type RefundStatus = 'ISSUED' | 'SCHEDULED' | 'VOIDED'
+
 export interface Refund {
   id: number
   organizationId: number
   paymentId: number
   amountMinor: number
   reason: string
+  status: RefundStatus
+  /** The cancellation effective date this refund is/was scheduled for (SCHEDULED). */
+  scheduledDate: string | null
+  /** The date money actually left; NULL until issued. */
+  issuedAt: string | null
   createdAt: string
   createdBy: number
 }

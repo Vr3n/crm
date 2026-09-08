@@ -19,7 +19,9 @@ export function RefundsMetrics({
 }): React.JSX.Element {
   const now = new Date()
   const currency = useCurrency()
-  const monthRefunds = refunds.filter((r) => isSameMonth(r.refundDate, now))
+  // Scheduled (future) and voided refunds never moved money — metrics count ISSUED only.
+  const issued = refunds.filter((r) => r.status === 'ISSUED')
+  const monthRefunds = issued.filter((r) => isSameMonth(r.refundDate, now))
   const available = credits.reduce((s, c) => s + creditRemaining(c), 0)
   const applied = credits.reduce((s, c) => s + creditApplied(c), 0)
 
@@ -35,8 +37,8 @@ export function RefundsMetrics({
       <FinanceMetric
         icon={Undo2}
         label="Refunds · all time"
-        value={`-${formatMinor(sum(refunds), currency)}`}
-        hint={`${refunds.length} refunds`}
+        value={`-${formatMinor(sum(issued), currency)}`}
+        hint={`${issued.length} refunds`}
         tone="muted"
       />
       <FinanceMetric

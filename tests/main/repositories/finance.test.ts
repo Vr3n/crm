@@ -229,6 +229,128 @@ describe('refundRepo', () => {
     const refunds = refundRepo.getByPayment(org.id, payment.id)
     expect(refunds).toHaveLength(1)
   })
+
+  it('fetches a refund by id', () => {
+    const { org, user } = createOrgAndUser()
+    const customer = createCustomer(org.id)
+
+    const payment = paymentRepo.create({
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 100000,
+      paymentMethod: 'UPI',
+      reference: null,
+      notes: null,
+      createdBy: user.id
+    })
+    const refund = refundRepo.create({
+      organizationId: org.id,
+      paymentId: payment.id,
+      amountMinor: 20000,
+      reason: 'Overpayment',
+      createdBy: user.id
+    })
+
+    const found = refundRepo.getById(org.id, refund.id)
+    expect(found).not.toBeNull()
+    expect(found?.amountMinor).toBe(20000)
+
+    expect(refundRepo.getById(org.id, 99999)).toBeNull()
+  })
+
+  it('lists refunds for an invoice across its allocated payments', () => {
+    const { org, user } = createOrgAndUser()
+    const customer = createCustomer(org.id)
+
+    const invoice = invoiceRepo.create({
+      organizationId: org.id,
+      number: 'INV-001',
+      customerId: customer.id,
+      status: 'OPEN',
+      billingName: null,
+      billingPhone: null,
+      billingEmail: null,
+      billingAddress: null,
+      subtotalMinor: 100000,
+      taxMinor: 18000,
+      totalMinor: 118000,
+      createdBy: user.id
+    })
+
+    const paymentA = paymentRepo.create({
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-21',
+      amountMinor: 60000,
+      paymentMethod: 'UPI',
+      reference: null,
+      notes: null,
+      createdBy: user.id
+    })
+    const paymentB = paymentRepo.create({
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-22',
+      amountMinor: 40000,
+      paymentMethod: 'CASH',
+      reference: null,
+      notes: null,
+      createdBy: user.id
+    })
+    allocationRepo.create({
+      organizationId: org.id,
+      paymentId: paymentA.id,
+      invoiceId: invoice.id,
+      amountMinor: 60000,
+      createdBy: user.id
+    })
+    allocationRepo.create({
+      organizationId: org.id,
+      paymentId: paymentB.id,
+      invoiceId: invoice.id,
+      amountMinor: 40000,
+      createdBy: user.id
+    })
+
+    const refundA = refundRepo.create({
+      organizationId: org.id,
+      paymentId: paymentA.id,
+      amountMinor: 10000,
+      reason: 'Partial refund A',
+      createdBy: user.id
+    })
+    const refundB = refundRepo.create({
+      organizationId: org.id,
+      paymentId: paymentB.id,
+      amountMinor: 5000,
+      reason: 'Partial refund B',
+      createdBy: user.id
+    })
+
+    // Unrelated refund on a payment NOT allocated to the invoice must be excluded.
+    const paymentC = paymentRepo.create({
+      organizationId: org.id,
+      customerId: customer.id,
+      paymentDate: '2026-08-23',
+      amountMinor: 50000,
+      paymentMethod: 'UPI',
+      reference: null,
+      notes: null,
+      createdBy: user.id
+    })
+    refundRepo.create({
+      organizationId: org.id,
+      paymentId: paymentC.id,
+      amountMinor: 50000,
+      reason: 'Unrelated',
+      createdBy: user.id
+    })
+
+    const refunds = refundRepo.listByInvoice(org.id, invoice.id)
+    expect(refunds.map((r) => r.id)).toEqual([refundA.id, refundB.id])
+    expect(refunds.reduce((sum, r) => sum + r.amountMinor, 0)).toBe(15000)
+  })
 })
 
 describe('creditRepo', () => {

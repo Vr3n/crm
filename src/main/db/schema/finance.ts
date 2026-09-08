@@ -123,6 +123,14 @@ export const refunds = sqliteTable(
       .references(() => payments.id),
     amount_minor: integer('amount_minor').notNull(),
     reason: text('reason').notNull(),
+    /**
+     * ISSUED — money left; affects refundable + invoice status.
+     * SCHEDULED — pending until `scheduled_date` (cancellation effective date).
+     * VOIDED — scheduled then cancelled (reverted cancellation); audit trail only.
+     */
+    status: text('status').notNull().default('ISSUED'),
+    scheduled_date: text('scheduled_date'),
+    issued_at: text('issued_at'),
     created_at: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),
@@ -132,7 +140,8 @@ export const refunds = sqliteTable(
   },
   (table) => [
     index('idx_refunds_payment').on(table.payment_id),
-    index('idx_refunds_org').on(table.organization_id)
+    index('idx_refunds_org').on(table.organization_id),
+    index('idx_refunds_status').on(table.status)
   ]
 )
 

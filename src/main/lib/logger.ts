@@ -28,6 +28,11 @@ export function short(value: unknown, maxChars = 200): string {
   return text.length > maxChars ? `${text.slice(0, maxChars)}…` : text
 }
 
+/** Full-length formatting for error messages where truncation hides the cause. */
+export function full(value: unknown): string {
+  return formatValue(value)
+}
+
 function write(level: LogLevel, args: unknown[]): void {
   if (!shouldLog(level)) return
   const timestamp = new Date().toISOString()

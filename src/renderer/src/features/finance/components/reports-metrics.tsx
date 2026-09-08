@@ -22,7 +22,9 @@ export function ReportsMetrics({
   const currency = useCurrency()
   const today = payments.filter((p) => isSameDay(p.paymentDate, now))
   const month = payments.filter((p) => isSameMonth(p.paymentDate, now))
-  const monthRefunds = refunds.filter((r) => isSameMonth(r.refundDate, now))
+  const monthRefunds = refunds.filter(
+    (r) => r.status === 'ISSUED' && isSameMonth(r.refundDate, now)
+  )
   const dues = invoices.reduce((s, i) => s + i.totalMinor - i.paidMinor, 0)
 
   return (

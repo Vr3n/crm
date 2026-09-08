@@ -60,7 +60,7 @@ export function IssueRefundDialog({
         (payments ?? []).map((p) => {
           const pid = String(p.id)
           const used = refunds
-            .filter((r) => r.sourcePaymentId === pid)
+            .filter((r) => r.status === 'ISSUED' && r.sourcePaymentId === pid)
             .reduce((s, r) => s + r.amountMinor, 0)
           return [pid, { remaining: p.amountMinor - used, total: p.amountMinor }]
         })

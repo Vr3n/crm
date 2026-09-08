@@ -14,7 +14,8 @@ import {
   getOutstandingInvoices,
   getAllPayments,
   getAllRefunds,
-  getAllCredits
+  getAllCredits,
+  processScheduledRefunds
 } from '../application/finance'
 import {
   recordPaymentInputSchema,
@@ -70,4 +71,5 @@ export function registerFinanceIpc(): void {
   handle(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, listPaymentsInputSchema, () => getAllPayments())
   handle(IPC_CHANNELS.FINANCE_LIST_REFUNDS, listRefundsInputSchema, () => getAllRefunds())
   handle(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, listCreditsInputSchema, () => getAllCredits())
+  handle(IPC_CHANNELS.FINANCE_PROCESS_SCHEDULED_REFUNDS, () => processScheduledRefunds())
 }
