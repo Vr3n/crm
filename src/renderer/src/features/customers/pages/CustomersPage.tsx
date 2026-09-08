@@ -34,6 +34,7 @@ const CUSTOMER_EXPORT_COLUMNS: ExportColumn[] = [
 const DEFAULT_FILTERS: CustomerFilterState = {
   search: '',
   status: 'ALL',
+  personStatus: 'ALL',
   plan: 'ALL',
   ownerId: 'ALL'
 }

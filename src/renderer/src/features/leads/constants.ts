@@ -125,6 +125,10 @@ export function filterLeads(leads: Lead[], filters: LeadFilters): Lead[] {
       return false
     if (filters.ownerId && filters.ownerId !== 'ALL' && l.owner?.id !== filters.ownerId)
       return false
+    if (filters.personStatus && filters.personStatus !== 'ALL') {
+      const isBlacklisted = filters.personStatus === 'BLACKLISTED'
+      if (l.isBlacklisted !== isBlacklisted) return false
+    }
     if (q) {
       const hay = [l.name, l.phone, l.email].join(' ').toLowerCase()
       if (!hay.includes(q)) return false

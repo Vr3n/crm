@@ -14,6 +14,7 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       leadName: lead.name,
       personId: lead.personId,
       stage: lead.stage,
+      isBlacklisted: lead.isBlacklisted,
       title: f.title,
       dueAt: f.dueAt,
       extensionReason: f.extensionReason,

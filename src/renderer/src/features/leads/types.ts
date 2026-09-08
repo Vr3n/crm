@@ -10,6 +10,7 @@
  * IPC rows plus the org's reference data (ids ↔ keys resolved via
  * `getLeadMaps`). All ids are the real SQLite integer ids.
  */
+import type { PersonStatus } from '../people/person-status'
 
 export type StageKey =
   | 'NEW'
@@ -153,5 +154,6 @@ export type LeadFilters = {
   stage?: StageKey | 'ALL'
   sourceId?: number | 'ALL'
   ownerId?: number | 'ALL'
+  personStatus?: 'ALL' | PersonStatus
   range: 'today' | 'week' | 'month' | 'all'
 }

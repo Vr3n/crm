@@ -1,4 +1,5 @@
 import type { BillingFrequency, MembershipStatus } from '@/features/customers/types'
+import type { PersonStatus } from '@/features/people/person-status'
 
 /**
  * Memberships page (Module 02 §6) — a flat, queryable view of every entitlement
@@ -20,13 +21,18 @@ export interface MembershipRow {
   billingFrequency: BillingFrequency
   startDate: string
   endDate: string
-  /** Effective state — derived from dates + open freezes (docs/02 §7). */
+  /** Effective state — derived from dates + open freezes + cancellation (docs/02 §7). */
   status: MembershipStatus
+  /** Whether a cancellation has been requested but not yet effective. */
+  pendingCancellation: boolean
+  /** The effective date of a pending cancellation, if any. */
+  cancellationEffectiveDate?: string | null
   freezeCount: number
 }
 
 export interface MembershipFilters {
   search: string
   status: MembershipStatus | 'ALL'
+  personStatus: 'ALL' | PersonStatus
   plan: string
 }

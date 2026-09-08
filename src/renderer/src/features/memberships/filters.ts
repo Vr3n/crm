@@ -12,6 +12,10 @@ export function filterMemberships(
   const q = filters.search.trim().toLowerCase()
   return rows.filter((row) => {
     if (filters.status !== 'ALL' && row.status !== filters.status) return false
+    if (filters.personStatus !== 'ALL') {
+      const isBlacklisted = filters.personStatus === 'BLACKLISTED'
+      if (row.isBlacklisted !== isBlacklisted) return false
+    }
     if (filters.plan !== 'ALL' && row.plan !== filters.plan) return false
     if (q) {
       const hay = `${row.id} ${row.customerName} ${row.customerId} ${row.plan}`.toLowerCase()

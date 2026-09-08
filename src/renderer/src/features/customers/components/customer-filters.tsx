@@ -9,6 +9,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { CUSTOMER_STATUS, OWNERS, PLAN_NAMES } from '../constants'
+import { PERSON_STATUS_OPTIONS } from '@/features/people/person-status'
 import type { CustomerFilters, CustomerStatus } from '../types'
 
 const STATUS_KEYS = Object.keys(CUSTOMER_STATUS) as CustomerStatus[]
@@ -28,6 +29,7 @@ export function CustomerFilters({
   const hasActive =
     !!filters.search ||
     filters.status !== 'ALL' ||
+    filters.personStatus !== 'ALL' ||
     filters.plan !== 'ALL' ||
     filters.ownerId !== 'ALL'
 
@@ -55,6 +57,24 @@ export function CustomerFilters({
           {STATUS_KEYS.map((s) => (
             <SelectItem key={s} value={s}>
               {CUSTOMER_STATUS[s].label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.personStatus}
+        onValueChange={(v) =>
+          onChange({ ...filters, personStatus: v as CustomerFilters['personStatus'] })
+        }
+      >
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Person state" />
+        </SelectTrigger>
+        <SelectContent>
+          {PERSON_STATUS_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -93,7 +113,9 @@ export function CustomerFilters({
           variant="ghost"
           size="sm"
           className="h-9 text-muted-foreground"
-          onClick={() => onChange({ search: '', status: 'ALL', plan: 'ALL', ownerId: 'ALL' })}
+          onClick={() =>
+            onChange({ search: '', status: 'ALL', personStatus: 'ALL', plan: 'ALL', ownerId: 'ALL' })
+          }
         >
           Clear
         </Button>

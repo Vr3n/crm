@@ -20,7 +20,12 @@ const BlacklistDialog = lazy(() =>
   }))
 )
 
-const DEFAULT_FILTERS: MembershipFilterState = { search: '', status: 'ALL', plan: 'ALL' }
+const DEFAULT_FILTERS: MembershipFilterState = {
+  search: '',
+  status: 'ALL',
+  personStatus: 'ALL',
+  plan: 'ALL'
+}
 
 /**
  * Memberships (Module 02 §6) — every purchased entitlement period across all

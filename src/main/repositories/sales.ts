@@ -1186,14 +1186,21 @@ export const followupRepo = {
 
   /** Pending follow-ups across all leads for a person (used by blacklist). */
   listPendingForPerson(organizationId: number, personId: number): LeadFollowup[] {
+    // Subquery, not a join: a star-select across a join collides `lead_followups`
+    // and `leads` columns (both have `id`/`organization_id`), which silently
+    // corrupts the mapped row's id. Filtering the lead set via IN keeps the
+    // result to lead_followups columns only.
+    const leadIds = getDrizzle()
+      .select({ id: leads.id })
+      .from(leads)
+      .where(eq(leads.person_id, personId))
     const rows = getDrizzle()
       .select()
       .from(leadFollowups)
-      .innerJoin(leads, eq(leads.id, leadFollowups.lead_id))
       .where(
         and(
           eq(leadFollowups.organization_id, organizationId),
-          eq(leads.person_id, personId),
+          inArray(leadFollowups.lead_id, leadIds),
           isNull(leadFollowups.completed_at),
           isNull(leadFollowups.cancelled_at)
         )

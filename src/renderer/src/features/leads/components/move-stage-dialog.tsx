@@ -141,7 +141,7 @@ export function MoveStageDialog({
           }}
         >
           <div className="flex items-center gap-2 text-sm">
-            <StageBadge stage={lead.stage} />
+            <StageBadge stage={lead.stage} isBlacklisted={lead.isBlacklisted} />
             <ArrowRight className="size-4 text-muted-foreground" />
             <form.Field name="to">
               {(field) =>

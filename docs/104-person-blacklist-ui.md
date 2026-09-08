@@ -123,6 +123,69 @@ The `useBlacklistToggle` hook now uses `refetchType: 'all'` when invalidating qu
 - **Membership renewal blocking** — no renewal command exists yet.
 - **Standalone Person page** — no `PeopleDetailPage` exists; person search (`peopleListSchema`) already includes `isBlacklisted`.
 
+## Person Status: State Filtering + Stage Markers
+
+Extends the blacklist UI into a first-class **person state** the lists and pipeline can be filtered and read by.
+
+### Person status as a renderer-derived concept
+
+`PersonStatus` (`src/renderer/src/features/people/person-status.ts`) follows the `CustomerStatus` precedent: it is **derived client-side**, not a stored column.
+
+```ts
+export type PersonStatus = 'ACTIVE' | 'BLACKLISTED'
+export function personStatusOf(isBlacklisted: boolean): PersonStatus
+export const PERSON_STATUS_OPTIONS // All states / Active / Blacklisted
+```
+
+Today `isBlacklisted` is the only person-level flag, so it is the sole input; the union is the extension point if more person states appear. Zero backend / IPC / contract / schema changes — every read model already carries `isBlacklisted`.
+
+### Filtering by person state (all three lists)
+
+The Leads, Customers, and Memberships filter bars each gained a **"Person state"** tri-state select (`ALL / Active / Blacklisted`) driven by `PERSON_STATUS_OPTIONS`, mirroring the existing Status select idiom. Each page's `DEFAULT_FILTERS` gains `personStatus: 'ALL'` (no behavior change by default), and `Clear` resets it.
+
+| Surface | Filter field | Pure predicate |
+|---|---|---|
+| Leads | `LeadFilters.personStatus` | `filterLeads` checks `l.isBlacklisted` |
+| Customers | `CustomerFilters.personStatus` | `filterCustomers` checks `row.customer.isBlacklisted` |
+| Memberships | `MembershipFilters.personStatus` | `filterMemberships` checks `row.isBlacklisted` |
+
+The filter predicate is a pure `isBlacklisted !== (personStatus === 'BLACKLISTED')` comparison, so `ACTIVE` returns non-blacklisted rows and `BLACKLISTED` returns only blacklisted rows.
+
+### Stage markers (display-only)
+
+Because blacklist is a **person-state** orthogonal to pipeline **stage**, it is surfaced as a layered marker rather than a new stage or an override of the stage color:
+
+- **`StageBadge`** gains an optional `isBlacklisted?: boolean` prop that appends a `Ban` icon inside the pill, preserving the stage tone. Wired at lead-context call sites only: `lead-table.tsx`, `identity-card.tsx`, `move-stage-dialog.tsx` (current-stage display).
+- **`LeadBoard` cards**: red row tint (`border-destructive/30 bg-destructive/5`) + `Ban` icon beside the name — the board previously showed zero blacklist signal, unlike the table.
+- **`LeadMetrics`**: a single "Blacklisted" summary chip appended to the funnel strip (count derived from the same filtered `leads`, so it respects active filters). Per-stage cards stay 1:1 with the funnel.
+
+**Convention:** stage **tone** = pipeline position; **marker** = person state. They read as two dimensions, never one overriding the other. Stage-key-only `StageBadge` usages (filter options, target displays, bulk dialogs) leave the marker unset.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/renderer/src/features/people/person-status.ts` | **New** — `PersonStatus`, `personStatusOf`, `PERSON_STATUS_OPTIONS` |
+| `src/renderer/src/features/leads/types.ts` | Add `personStatus` to `LeadFilters` |
+| `src/renderer/src/features/leads/constants.ts` | `filterLeads` person-state predicate |
+| `src/renderer/src/features/leads/components/lead-filters.tsx` | Person-state select + `hasActive` + Clear |
+| `src/renderer/src/features/leads/pages/LeadsPage.tsx` | `DEFAULT_FILTERS.personStatus` |
+| `src/renderer/src/features/customers/types.ts` + `filters.ts` | `CustomerFilters.personStatus` + predicate |
+| `src/renderer/src/features/customers/components/customer-filters.tsx` | Person-state select + Clear |
+| `src/renderer/src/features/customers/pages/CustomersPage.tsx` | `DEFAULT_FILTERS.personStatus` |
+| `src/renderer/src/features/memberships/types.ts` + `filters.ts` | `MembershipFilters.personStatus` + predicate |
+| `src/renderer/src/features/memberships/components/membership-filters.tsx` | Person-state select + Clear |
+| `src/renderer/src/features/memberships/pages/MembershipsPage.tsx` | `DEFAULT_FILTERS.personStatus` |
+| `src/renderer/src/features/leads/components/stage-badge.tsx` | Optional `isBlacklisted` `Ban` marker |
+| `src/renderer/src/features/leads/components/lead-board.tsx` | Blacklist card tint + `Ban` icon |
+| `src/renderer/src/features/leads/components/lead-metrics.tsx` | Blacklisted summary chip |
+| `src/renderer/src/features/leads/components/detail/identity-card.tsx`, `move-stage-dialog.tsx`, `lead-table.tsx` | Pass `isBlacklisted` to `StageBadge` |
+
+### Testing
+
+- `tests/renderer/person-status.test.ts` — `personStatusOf` truth table + person-state predicate on all three `filter*` fns (ALL / ACTIVE / BLACKLISTED).
+- `tests/renderer/stage-badge.test.tsx` — marker renders only when `isBlacklisted`.
+
 ## Testing
 
 - All 707 existing tests pass.

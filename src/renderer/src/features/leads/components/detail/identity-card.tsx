@@ -73,7 +73,7 @@ export function IdentityCard({
               <div>
                 <h2 className="font-heading text-xl font-semibold tracking-tight">{lead.name}</h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <StageBadge stage={lead.stage} />
+                  <StageBadge stage={lead.stage} isBlacklisted={lead.isBlacklisted} />
                   <Badge variant="outline">{SOURCES[lead.source]}</Badge>
                   {lead.lostReason ? (
                     <Badge variant="destructive">{LOST_REASONS[lead.lostReason]}</Badge>

@@ -9,6 +9,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { MEMBERSHIP_STATUS, PLAN_NAMES } from '@/features/customers/constants'
+import { PERSON_STATUS_OPTIONS } from '@/features/people/person-status'
 import type { MembershipStatus } from '@/features/customers/types'
 import type { MembershipFilters } from '../types'
 
@@ -25,7 +26,8 @@ export function MembershipFilters({
   filters: MembershipFilters
   onChange: (f: MembershipFilters) => void
 }): React.JSX.Element {
-  const hasActive = !!filters.search || filters.status !== 'ALL' || filters.plan !== 'ALL'
+  const hasActive =
+    !!filters.search || filters.status !== 'ALL' || filters.personStatus !== 'ALL' || filters.plan !== 'ALL'
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -56,6 +58,24 @@ export function MembershipFilters({
         </SelectContent>
       </Select>
 
+      <Select
+        value={filters.personStatus}
+        onValueChange={(v) =>
+          onChange({ ...filters, personStatus: v as MembershipFilters['personStatus'] })
+        }
+      >
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="Person state" />
+        </SelectTrigger>
+        <SelectContent>
+          {PERSON_STATUS_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Select value={filters.plan} onValueChange={(v) => onChange({ ...filters, plan: v })}>
         <SelectTrigger className="w-44">
           <SelectValue placeholder="Plan" />
@@ -75,7 +95,7 @@ export function MembershipFilters({
           variant="ghost"
           size="sm"
           className="h-9 text-muted-foreground"
-          onClick={() => onChange({ search: '', status: 'ALL', plan: 'ALL' })}
+          onClick={() => onChange({ search: '', status: 'ALL', personStatus: 'ALL', plan: 'ALL' })}
         >
           Clear
         </Button>

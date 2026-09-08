@@ -2,6 +2,7 @@ import { Pencil, PhoneCall, Mail, Ban, ShieldCheck } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
@@ -190,7 +191,7 @@ export function LeadTable({
                   >
                     <SelectTrigger className="h-8 w-36 border-transparent bg-transparent text-left hover:bg-accent">
                       <SelectValue>
-                        <StageBadge stage={lead.stage} />
+                        <StageBadge stage={lead.stage} isBlacklisted={lead.isBlacklisted} />
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent align="start">
@@ -217,40 +218,52 @@ export function LeadTable({
                   <TableCell className="w-16 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {canBlacklist ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={
-                            lead.isBlacklisted
-                              ? `Lift blacklist for ${lead.name}`
-                              : `Blacklist ${lead.name}`
-                          }
-                          onClick={() => onBlacklist(lead)}
-                          className={
-                            lead.isBlacklisted
-                              ? 'text-primary hover:text-primary'
-                              : 'text-muted-foreground hover:text-destructive'
-                          }
-                        >
-                          {lead.isBlacklisted ? (
-                            <ShieldCheck className="size-4" />
-                          ) : (
-                            <Ban className="size-4" />
-                          )}
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={
+                                lead.isBlacklisted
+                                  ? `Lift blacklist for ${lead.name}`
+                                  : `Blacklist ${lead.name}`
+                              }
+                              onClick={() => onBlacklist(lead)}
+                              className={
+                                lead.isBlacklisted
+                                  ? 'text-primary hover:text-primary'
+                                  : 'text-muted-foreground hover:text-destructive'
+                              }
+                            >
+                              {lead.isBlacklisted ? (
+                                <ShieldCheck className="size-4" />
+                              ) : (
+                                <Ban className="size-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {lead.isBlacklisted ? 'Lift blacklist' : 'Blacklist'}
+                          </TooltipContent>
+                        </Tooltip>
                       ) : null}
                       {canEditLead(lead) ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Edit ${lead.name}`}
-                          onClick={() => onEdit(lead)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Edit ${lead.name}`}
+                              onClick={() => onEdit(lead)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">Edit</TooltipContent>
+                        </Tooltip>
                       ) : null}
                     </div>
                   </TableCell>

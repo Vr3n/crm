@@ -4,6 +4,7 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { PersonCell } from '@/components/person/person-cell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { EXPIRING_SOON_DAYS } from '@/features/customers/constants'
@@ -171,31 +172,38 @@ function buildColumns(
             cell: ({ row }) => {
               const m = row.original
               return (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={
-                    m.isBlacklisted
-                      ? `Lift blacklist for ${m.customerName}`
-                      : `Blacklist ${m.customerName}`
-                  }
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onBlacklist(m)
-                  }}
-                  className={
-                    m.isBlacklisted
-                      ? 'text-primary hover:text-primary'
-                      : 'text-muted-foreground hover:text-destructive'
-                  }
-                >
-                  {m.isBlacklisted ? (
-                    <ShieldCheck className="size-4" />
-                  ) : (
-                    <Ban className="size-4" />
-                  )}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={
+                        m.isBlacklisted
+                          ? `Lift blacklist for ${m.customerName}`
+                          : `Blacklist ${m.customerName}`
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onBlacklist(m)
+                      }}
+                      className={
+                        m.isBlacklisted
+                          ? 'text-primary hover:text-primary'
+                          : 'text-muted-foreground hover:text-destructive'
+                      }
+                    >
+                      {m.isBlacklisted ? (
+                        <ShieldCheck className="size-4" />
+                      ) : (
+                        <Ban className="size-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    {m.isBlacklisted ? 'Lift blacklist' : 'Blacklist'}
+                  </TooltipContent>
+                </Tooltip>
               )
             }
           })

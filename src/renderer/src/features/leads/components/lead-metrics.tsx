@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import {
+  Ban,
   CalendarClock,
   DoorOpen,
   Dumbbell,
@@ -63,6 +64,11 @@ export function LeadMetrics({ leads }: { leads: Lead[] }): React.JSX.Element {
     return map
   }, [leads])
 
+  const blacklistedCount = useMemo(
+    () => leads.filter((l) => l.isBlacklisted).length,
+    [leads]
+  )
+
   return (
     <div className="flex flex-wrap items-stretch gap-2">
       {STAGES.map((stage) => {
@@ -99,6 +105,18 @@ export function LeadMetrics({ leads }: { leads: Lead[] }): React.JSX.Element {
           </div>
         )
       })}
+
+      <div className="crm-gradient-border flex min-w-36 flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-red-800/15 text-red-800">
+          <Ban className="size-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-mono text-xl leading-none font-semibold tabular-nums">
+            {blacklistedCount}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">Blacklisted</p>
+        </div>
+      </div>
     </div>
   )
 }

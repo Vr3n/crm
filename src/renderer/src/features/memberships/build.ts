@@ -1,4 +1,4 @@
-import { effectiveStatus } from '@/features/customers/build'
+import { effectiveStatus, isPendingCancellation } from '@/features/customers/build'
 import type { Customer } from '@/features/customers/types'
 import type { MembershipRow } from './types'
 
@@ -24,6 +24,8 @@ export function buildMembershipRows(customers: Customer[], now: number): Members
       startDate: m.startDate,
       endDate: m.endDate,
       status: effectiveStatus(m, now),
+      pendingCancellation: isPendingCancellation(m, now),
+      cancellationEffectiveDate: m.cancellationEffectiveDate,
       freezeCount: m.freezes.length
     }))
   )

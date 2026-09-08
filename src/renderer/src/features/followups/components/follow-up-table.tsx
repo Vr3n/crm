@@ -226,7 +226,13 @@ function buildColumns(
           <PersonCell
             personId={row.original.personId}
             name={row.original.leadName}
-            subtext={<StageBadge stage={row.original.stage} className="mt-0.5" />}
+            subtext={
+              <StageBadge
+                stage={row.original.stage}
+                isBlacklisted={row.original.isBlacklisted}
+                className="mt-0.5"
+              />
+            }
           />
         ),
         sortFn: 'alphanumeric'

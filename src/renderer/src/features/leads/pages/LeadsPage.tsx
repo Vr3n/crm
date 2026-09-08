@@ -81,6 +81,7 @@ const DEFAULT_FILTERS: LeadFilters = {
   stage: 'ALL',
   sourceId: 'ALL',
   ownerId: 'ALL',
+  personStatus: 'ALL',
   range: 'all'
 }
 
