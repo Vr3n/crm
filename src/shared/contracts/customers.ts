@@ -32,24 +32,6 @@ export const membershipFreezeSchema = z.object({
 })
 export type MembershipFreezeOutput = z.infer<typeof membershipFreezeSchema>
 
-export const membershipOutputSchema = z.object({
-  id: z.string(),
-  customerId: z.string(),
-  plan: z.string(),
-  planId: z.string().optional(),
-  priceMinor: z.number().int(),
-  discountMinor: z.number().int(),
-  billingFrequency: z.enum(['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ANNUAL']),
-  registrationFeeMinor: z.number().int(),
-  startDate: z.string(),
-  endDate: z.string(),
-  status: z.enum(['PENDING', 'ACTIVE', 'FROZEN', 'EXPIRED', 'CANCELLED', 'TERMINATED']),
-  freezes: z.array(membershipFreezeSchema),
-  createdAt: z.string(),
-  createdBy: z.string().optional()
-})
-export type MembershipOutput = z.infer<typeof membershipOutputSchema>
-
 export const customerInvoiceSchema = z.object({
   id: z.string(),
   invoiceNo: z.string(),
@@ -62,6 +44,30 @@ export const customerInvoiceSchema = z.object({
   outstandingMinor: z.number().int()
 })
 export type CustomerInvoiceOutput = z.infer<typeof customerInvoiceSchema>
+
+export const membershipOutputSchema = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  plan: z.string(),
+  planId: z.string().optional(),
+  priceMinor: z.number().int(),
+  discountMinor: z.number().int(),
+  billingFrequency: z.enum(['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ANNUAL']),
+  registrationFeeMinor: z.number().int(),
+  joiningDate: z.string().nullable().optional(),
+  startDate: z.string(),
+  endDate: z.string(),
+  status: z.enum(['PENDING', 'ACTIVE', 'FROZEN', 'EXPIRED', 'CANCELLED', 'TERMINATED']),
+  cancellationRequestedAt: z.string().nullable().optional(),
+  cancellationEffectiveDate: z.string().nullable().optional(),
+  cancellationReason: z.string().nullable().optional(),
+  cancellationReasonCode: z.string().nullable().optional(),
+  freezes: z.array(membershipFreezeSchema),
+  invoices: z.array(customerInvoiceSchema).optional(),
+  createdAt: z.string(),
+  createdBy: z.string().optional()
+})
+export type MembershipOutput = z.infer<typeof membershipOutputSchema>
 
 export const customerOutputSchema = z.object({
   id: z.string(),

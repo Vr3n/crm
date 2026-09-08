@@ -1,12 +1,13 @@
-import { CircleDashed, CreditCard, Receipt, Snowflake } from 'lucide-react'
+import { CircleDashed, CreditCard, Receipt, Snowflake, Ban, RefreshCw, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { effectiveStatus } from '../../build'
+import { effectiveStatus, isPendingCancellation } from '../../build'
 import { formatShortDate } from '../../format'
 import { formatMinor } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import type { Membership } from '../../types'
 import { MembershipStatusBadge } from '../status-badge'
 import { GradientBorder } from './gradient-border'
+import { Button } from '@/components/ui/button'
 
 /**
  * The current entitlement card. Effective state comes from effectiveStatus()
@@ -18,10 +19,16 @@ import { GradientBorder } from './gradient-border'
  */
 export function CurrentMembershipCard({
   currentMembership,
-  now
+  now,
+  onCancel,
+  onRenew,
+  onRevert
 }: {
   currentMembership: Membership | undefined
   now: number
+  onCancel?: (membershipId: string) => void
+  onRenew?: (membershipId: string) => void
+  onRevert?: (membershipId: string) => void
 }): React.JSX.Element {
   const currency = useCurrency()
 
@@ -41,6 +48,7 @@ export function CurrentMembershipCard({
 
   const m = currentMembership
   const eff = effectiveStatus(m, now)
+  const pending = isPendingCancellation(m, now)
   const startMs = new Date(m.startDate).getTime()
   const endMs = new Date(m.endDate).getTime()
   const elapsed = Math.max(0, Math.min(1, (now - startMs) / (endMs - startMs)))
@@ -77,6 +85,30 @@ export function CurrentMembershipCard({
           </div>
         </div>
 
+        {/* Pending cancellation banner */}
+        {pending && (
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-destructive/10 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <Ban className="size-4" />
+              <span>
+                Cancellation effective{' '}
+                <strong>{formatShortDate(m.cancellationEffectiveDate!)}</strong>
+              </span>
+            </div>
+            {onRevert && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-destructive hover:text-destructive"
+                onClick={() => onRevert(m.id)}
+              >
+                <Undo2 className="mr-1 size-3" />
+                Undo
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatShortDate(m.startDate)} → {formatShortDate(m.endDate)}
@@ -105,7 +137,33 @@ export function CurrentMembershipCard({
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap gap-4 border-t pt-3 text-xs text-muted-foreground">
+        {/* Action buttons */}
+        <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+          {onRenew && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => onRenew(m.id)}
+            >
+              <RefreshCw className="mr-1 size-3" />
+              Renew
+            </Button>
+          )}
+          {onCancel && !pending && (eff === 'ACTIVE' || eff === 'FROZEN') && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => onCancel(m.id)}
+            >
+              <Ban className="mr-1 size-3" />
+              Cancel
+            </Button>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <CreditCard className="size-3.5" /> #{m.id}
           </span>

@@ -1,25 +1,45 @@
-import { History } from 'lucide-react'
+import { History, Sparkles, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Timeline, type TimelineEntry } from '@/components/timeline'
 import { formatDate } from '@/lib/format'
+import { formatMinor, type CurrencyCode } from '@/lib/money'
+import { useCurrency } from '@/hooks/use-currency'
 import type { Membership } from '../../types'
 import { effectiveStatus } from '../../build'
+import { membershipBillingTotals } from '../../membership-billing'
 
 /**
  * Maps Membership[] into generic TimelineEntry[] for the universal
- * Timeline component. Each membership period becomes a timeline entry.
+ * Timeline component. Each membership period becomes a timeline entry, labelled
+ * "Bought" for the first and "Renewed" for later periods, with a status badge
+ * (incl. CANCELLED/TERMINATED) and the billed total / paid in the meta line.
  */
-function mapMembershipsToEntries(memberships: Membership[], now: number): TimelineEntry[] {
+function mapMembershipsToEntries(
+  memberships: Membership[],
+  now: number,
+  currency: CurrencyCode
+): TimelineEntry[] {
   return [...memberships]
-    .sort((a, b) => b.startDate.localeCompare(a.startDate))
-    .map((m) => {
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .map((m, index) => {
       const status = effectiveStatus(m, now)
+      const billing = membershipBillingTotals(m)
+      const isBought = index === 0
+      const billingText =
+        (m.invoices ?? []).length > 0
+          ? `${formatMinor(billing.totalMinor, currency)} total · ${formatMinor(
+              billing.paidMinor,
+              currency
+            )} paid`
+          : undefined
       return {
         id: m.id,
-        label: m.plan,
+        label: isBought ? 'Bought' : 'Renewed',
         date: m.startDate,
-        description: `${m.billingFrequency.toLowerCase()} billing · ends ${formatDate(m.endDate)}`,
-        icon: History,
+        description: `${m.plan} · ${formatDate(m.startDate)} → ${formatDate(m.endDate)}${
+          m.joiningDate ? ` · joined ${formatDate(m.joiningDate)}` : ''
+        }`,
+        icon: isBought ? Sparkles : RotateCcw,
         iconTone:
           status === 'ACTIVE'
             ? 'bg-success/15 text-success'
@@ -36,18 +56,19 @@ function mapMembershipsToEntries(memberships: Membership[], now: number): Timeli
                 : ('secondary' as const)
         },
         meta:
-          m.freezes.length > 0
+          billingText ??
+          (m.freezes.length > 0
             ? `${m.freezes.length} freeze${m.freezes.length === 1 ? '' : 's'}`
-            : undefined
+            : undefined)
       }
     })
 }
 
 /**
  * Membership history as a timeline — every entitlement period rendered
- * chronologically using the universal Timeline component. This is a
- * placeholder that becomes fully functional when Module 02 (Customer &
- * Membership) database tables are implemented.
+ * chronologically using the universal Timeline component: the first purchase
+ * shows "Bought", subsequent periods "Renewed", with a status badge for
+ * cancelled/terminated and the billed total / paid per period.
  */
 export function MembershipTimeline({
   memberships,
@@ -56,7 +77,8 @@ export function MembershipTimeline({
   memberships: Membership[]
   now: number
 }): React.JSX.Element {
-  const entries = mapMembershipsToEntries(memberships, now)
+  const currency = useCurrency()
+  const entries = mapMembershipsToEntries(memberships, now, currency)
 
   return (
     <Card>

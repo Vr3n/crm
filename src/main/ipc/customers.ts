@@ -50,9 +50,14 @@ interface MembershipRow {
   discount_minor: number
   final_price_minor: number
   billing_frequency: string
+  joining_date: string | null
   start_date: string
   end_date: string
   status: string
+  cancellation_requested_at: string | null
+  cancellation_effective_date: string | null
+  cancellation_reason: string | null
+  cancellation_reason_code: string | null
   created_at: string
   created_by: number
 }
@@ -75,6 +80,7 @@ interface InvoiceRow {
   id: number
   number: string
   status: string
+  membership_id: number | null
   subtotal_minor: number
   tax_minor: number
   total_minor: number
@@ -88,10 +94,7 @@ interface AllocationRow {
 }
 
 /** Invoice read model in minor units — paid/outstanding derived from allocations. */
-function buildInvoiceOutputs(
-  organizationId: number,
-  customerId: number
-): Array<{
+type InvoiceOutput = {
   id: string
   invoiceNo: string
   status: 'DRAFT' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'UNCOLLECTIBLE'
@@ -101,45 +104,14 @@ function buildInvoiceOutputs(
   totalMinor: number
   paidMinor: number
   outstandingMinor: number
-}> {
-  const invoiceRows = getDrizzle()
-    .select()
-    .from(invoices)
-    .where(
-      and(
-        eq(invoices.organization_id, organizationId),
-        eq(invoices.customer_id, customerId),
-        sql`${invoices.status} != 'DRAFT'`
-      )
-    )
-    .orderBy(asc(invoices.created_at))
-    .all() as InvoiceRow[]
+}
 
-  if (invoiceRows.length === 0) return []
-
-  const invoiceIds = invoiceRows.map((i) => i.id)
-  const allocRows = getDrizzle()
-    .select({
-      invoice_id: paymentAllocations.invoice_id,
-      amount_minor: paymentAllocations.amount_minor
-    })
-    .from(paymentAllocations)
-    .where(
-      and(
-        eq(paymentAllocations.organization_id, organizationId),
-        sql`${paymentAllocations.invoice_id} IN (${sql.join(
-          invoiceIds.map((id) => sql`${id}`),
-          sql`, `
-        )})`
-      )
-    )
-    .all() as AllocationRow[]
-
+/** Maps invoice + allocation rows to the minor-unit output shape. */
+function mapInvoicesToOutputs(invoiceRows: InvoiceRow[], allocRows: AllocationRow[]): InvoiceOutput[] {
   const paidByInvoice = new Map<number, number>()
   for (const a of allocRows) {
     paidByInvoice.set(a.invoice_id, (paidByInvoice.get(a.invoice_id) ?? 0) + a.amount_minor)
   }
-
   return invoiceRows.map((inv) => {
     const totalMinor = inv.total_minor
     const paidMinor = paidByInvoice.get(inv.id) ?? 0
@@ -157,11 +129,122 @@ function buildInvoiceOutputs(
   })
 }
 
+/** Allocations for a set of invoice ids (org-scoped), as a lookup. */
+function allocationsByInvoice(
+  organizationId: number,
+  invoiceIds: number[]
+): Map<number, AllocationRow[]> {
+  const map = new Map<number, AllocationRow[]>()
+  if (invoiceIds.length === 0) return map
+  const allocRows = getDrizzle()
+    .select({
+      invoice_id: paymentAllocations.invoice_id,
+      amount_minor: paymentAllocations.amount_minor
+    })
+    .from(paymentAllocations)
+    .where(
+      and(
+        eq(paymentAllocations.organization_id, organizationId),
+        sql`${paymentAllocations.invoice_id} IN (${sql.join(
+          invoiceIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      )
+    )
+    .all() as AllocationRow[]
+  for (const a of allocRows) {
+    const list = map.get(a.invoice_id) ?? []
+    list.push(a)
+    map.set(a.invoice_id, list)
+  }
+  return map
+}
+
+function buildInvoiceOutputs(
+  organizationId: number,
+  customerId: number
+): InvoiceOutput[] {
+  const invoiceRows = getDrizzle()
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.organization_id, organizationId),
+        eq(invoices.customer_id, customerId),
+        sql`${invoices.status} != 'DRAFT'`
+      )
+    )
+    .orderBy(asc(invoices.created_at))
+    .all() as InvoiceRow[]
+
+  if (invoiceRows.length === 0) return []
+  const allocations = allocationsByInvoice(
+    organizationId,
+    invoiceRows.map((i) => i.id)
+  )
+  return mapInvoicesToOutputs(
+    invoiceRows,
+    invoiceRows.flatMap((i) => allocations.get(i.id) ?? [])
+  )
+}
+
+/**
+ * Per-membership invoice read models, keyed by membership id. Used to attach
+ * each membership's billed total / paid / outstanding on the detail read model.
+ */
+function buildInvoicesByMembership(
+  organizationId: number,
+  membershipIds: number[]
+): Map<number, InvoiceOutput[]> {
+  const map = new Map<number, InvoiceOutput[]>()
+  if (membershipIds.length === 0) return map
+
+  const invoiceRows = getDrizzle()
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.organization_id, organizationId),
+        sql`${invoices.membership_id} IN (${sql.join(
+          membershipIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`,
+        sql`${invoices.status} != 'DRAFT'`
+      )
+    )
+    .orderBy(asc(invoices.created_at))
+    .all() as InvoiceRow[]
+
+  if (invoiceRows.length === 0) return map
+  const allocations = allocationsByInvoice(
+    organizationId,
+    invoiceRows.map((i) => i.id)
+  )
+  for (const inv of invoiceRows) {
+    if (inv.membership_id === null) continue
+    const outputs = map.get(inv.membership_id) ?? []
+    outputs.push(
+      ...mapInvoicesToOutputs([inv], allocations.get(inv.id) ?? [])
+    )
+    map.set(inv.membership_id, outputs)
+  }
+  return map
+}
+
 function buildCustomerOutput(
   customer: CustomerRow,
   person: PersonRow | undefined,
   memberShips: MembershipRow[],
-  freezesByMembership: Map<number, FreezeRow[]>
+  freezesByMembership: Map<number, FreezeRow[]>,
+  invoicesByMembership: Map<number, Array<{
+    id: string
+    invoiceNo: string
+    status: string
+    issuedAt: string
+    totalMinor: number
+    paidMinor: number
+    outstandingMinor: number
+  }>>
 ): Record<string, unknown> & { memberships: Array<Record<string, unknown>> } {
   return {
     id: String(customer.id),
@@ -192,9 +275,14 @@ function buildCustomerOutput(
       discountMinor: m.discount_minor,
       billingFrequency: m.billing_frequency as 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ANNUAL',
       registrationFeeMinor: 0,
+      joiningDate: m.joining_date,
       startDate: m.start_date,
       endDate: m.end_date,
       status: m.status as 'PENDING' | 'ACTIVE' | 'FROZEN' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED',
+      cancellationRequestedAt: m.cancellation_requested_at,
+      cancellationEffectiveDate: m.cancellation_effective_date,
+      cancellationReason: m.cancellation_reason,
+      cancellationReasonCode: m.cancellation_reason_code,
       freezes: (freezesByMembership.get(m.id) ?? []).map((f) => ({
         id: String(f.id),
         membershipId: String(f.membership_id),
@@ -208,6 +296,7 @@ function buildCustomerOutput(
         createdAt: f.created_at,
         createdBy: f.created_by ? String(f.created_by) : undefined
       })),
+      invoices: invoicesByMembership.get(m.id) ?? [],
       createdAt: m.created_at,
       createdBy: m.created_by ? String(m.created_by) : undefined
     }))
@@ -292,11 +381,21 @@ export function registerCustomersIpc(): void {
 
     // Build output
     const today = new Date().toISOString().slice(0, 10)
+    const invoicesByMembership = buildInvoicesByMembership(
+      organizationId,
+      membershipRows.map((m) => m.id)
+    )
     return customerRows.map((c) => {
       const person = personMap.get(c.person_id)
       const memberShips = membershipsByCustomer.get(c.id) ?? []
       const allFreezes = memberShips.flatMap((m) => freezesByMembership.get(m.id) ?? [])
-      const output = buildCustomerOutput(c, person, memberShips, freezesByMembership)
+      const output = buildCustomerOutput(
+        c,
+        person,
+        memberShips,
+        freezesByMembership,
+        invoicesByMembership
+      )
       const status = deriveCustomerStatus(memberShips, allFreezes)
       const currentMembership = memberShips.find(
         (m) =>
@@ -363,7 +462,18 @@ export function registerCustomersIpc(): void {
       freezesByMembership.set(m.id, freezes)
     }
 
-    const output = buildCustomerOutput(customerRow, person, memberShips, freezesByMembership)
+    const invoicesByMembership = buildInvoicesByMembership(
+      organizationId,
+      memberShips.map((m) => m.id)
+    )
+
+    const output = buildCustomerOutput(
+      customerRow,
+      person,
+      memberShips,
+      freezesByMembership,
+      invoicesByMembership
+    )
     const allFreezes = memberShips.flatMap((m) => freezesByMembership.get(m.id) ?? [])
     const status = deriveCustomerStatus(memberShips, allFreezes)
     const today = new Date().toISOString().slice(0, 10)

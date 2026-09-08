@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,12 @@ import { IdentityCard } from '../components/detail/identity-card'
 import { InvoiceOverviewCard } from '../components/detail/invoice-overview-card'
 import { LifetimeCard } from '../components/detail/lifetime-card'
 import { MembershipOverviewCard } from '../components/detail/membership-overview-card'
+import { MembershipTimeline } from '../components/detail/membership-timeline'
 import { QuickStatsCard } from '../components/detail/quick-stats-card'
+import { CancelMembershipDialog } from '@/features/memberships/components/cancel-membership-dialog'
+import { RenewMembershipDialog } from '@/features/memberships/components/renew-membership-dialog'
+import { useRevertCancellation } from '@/features/memberships/mutations'
+import type { Membership } from '../types'
 
 /**
  * Customer 360 (Module 02) — the operational view of one person. Bento grid
@@ -36,6 +41,27 @@ export function CustomerDetailPage(): React.JSX.Element {
   const backLabel = from === '/memberships' ? 'Memberships' : 'Customers'
 
   const row = useMemo(() => (customer ? buildCustomerRow(customer, now) : null), [customer, now])
+
+  // Cancel / revert / renew state
+  const [cancelTarget, setCancelTarget] = useState<Membership | null>(null)
+  const [renewTarget, setRenewTarget] = useState<Membership | null>(null)
+  const revertCancellation = useRevertCancellation()
+  const canCancel = can(session.permissions, session.isSuper, 'membership.cancel')
+  const canRenew = can(session.permissions, session.isSuper, 'membership.renew')
+
+  const handleCancel = (membershipId: string): void => {
+    const m = customer?.memberships.find((mem) => mem.id === membershipId)
+    if (m) setCancelTarget(m)
+  }
+
+  const handleRenew = (membershipId: string): void => {
+    const m = customer?.memberships.find((mem) => mem.id === membershipId)
+    if (m) setRenewTarget(m)
+  }
+
+  const handleRevert = (membershipId: string): void => {
+    revertCancellation.mutate({ membershipId: parseInt(membershipId) })
+  }
 
   if (isLoading) {
     return (
@@ -110,7 +136,12 @@ export function CustomerDetailPage(): React.JSX.Element {
 
         {/* Row 2: CurrentMembership anchor (7) + Lifetime accent (5) */}
         <div className="md:col-span-7">
-          <CurrentMembershipCard currentMembership={row.currentMembership} now={now} />
+          <CurrentMembershipCard
+            currentMembership={row.currentMembership}
+            now={now}
+            onCancel={handleCancel}
+            onRevert={handleRevert}
+          />
         </div>
         <div className="md:col-span-5">
           <LifetimeCard customer={customer} now={now} />
@@ -136,6 +167,10 @@ export function CustomerDetailPage(): React.JSX.Element {
                       membership={m}
                       now={now}
                       variant={i === 0 ? 'hero' : 'default'}
+                      canCancel={canCancel}
+                      canRenew={canRenew}
+                      onCancel={() => handleCancel(m.id)}
+                      onRenew={() => handleRenew(m.id)}
                     />
                   ))}
                 </div>
@@ -161,7 +196,34 @@ export function CustomerDetailPage(): React.JSX.Element {
             </div>
           </div>
         </div>
+
+        {/* Row 4: Membership lifecycle timeline */}
+        <div className="md:col-span-12">
+          <MembershipTimeline memberships={customer.memberships} now={now} />
+        </div>
       </div>
+
+      {/* Cancel membership dialog */}
+      {cancelTarget && (
+        <CancelMembershipDialog
+          open={!!cancelTarget}
+          onOpenChange={(o) => {
+            if (!o) setCancelTarget(null)
+          }}
+          membership={cancelTarget}
+        />
+      )}
+
+      {/* Renew membership dialog */}
+      {renewTarget && (
+        <RenewMembershipDialog
+          open={!!renewTarget}
+          onOpenChange={(o) => {
+            if (!o) setRenewTarget(null)
+          }}
+          membership={renewTarget}
+        />
+      )}
     </div>
   )
 }

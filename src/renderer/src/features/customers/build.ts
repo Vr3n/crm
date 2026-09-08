@@ -7,12 +7,16 @@ import type { Customer, CustomerRow, CustomerStatus, Membership, MembershipStatu
  */
 
 /**
- * Effective membership state = status + dates + open freeze records. The cached
- * status column alone is not the source of truth (a stale ACTIVE past its end
- * date, or an ACTIVE during an open freeze).
+ * Effective membership state = status + dates + open freeze records + cancellation.
+ * The cached status column alone is not the source of truth (a stale ACTIVE past its end
+ * date, or an ACTIVE during an open freeze, or a scheduled cancellation).
  */
 export function effectiveStatus(m: Membership, now: number): MembershipStatus {
   if (m.status === 'ACTIVE' || m.status === 'PENDING') {
+    // Pending cancellation that has taken effect → CANCELLED
+    if (m.cancellationEffectiveDate && new Date(m.cancellationEffectiveDate).getTime() <= now) {
+      return 'CANCELLED'
+    }
     const openFreeze = m.freezes.some(
       (f) => new Date(f.startDate).getTime() <= now && new Date(f.endDate).getTime() > now
     )
@@ -20,6 +24,15 @@ export function effectiveStatus(m: Membership, now: number): MembershipStatus {
     if (new Date(m.endDate).getTime() < now) return 'EXPIRED'
   }
   return m.status
+}
+
+/** Whether a cancellation has been requested but not yet taken effect. */
+export function isPendingCancellation(m: Membership, now: number): boolean {
+  return !!(
+    m.cancellationRequestedAt &&
+    m.cancellationEffectiveDate &&
+    new Date(m.cancellationEffectiveDate).getTime() > now
+  )
 }
 
 function latestFirst(a: Membership, b: Membership): number {

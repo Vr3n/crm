@@ -7,6 +7,8 @@
  * ones, so history is never erased. `status` is a cached index; the effective
  * state is derived from dates + open freezes.
  */
+import type { PersonStatus } from '../people/person-status'
+
 export type MembershipStatus =
   'PENDING' | 'ACTIVE' | 'FROZEN' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED'
 
@@ -41,11 +43,20 @@ export interface Membership {
   discountMinor: number
   billingFrequency: BillingFrequency
   registrationFeeMinor: number
+  /** Joining date (memberships.joining_date) — the day the person joined. */
+  joiningDate?: string | null
   startDate: string
   endDate: string
   /** Cached index; the UI derives the effective state via effectiveStatus(). */
   status: MembershipStatus
+  /** Cancellation fields */
+  cancellationRequestedAt?: string | null
+  cancellationEffectiveDate?: string | null
+  cancellationReason?: string | null
+  cancellationReasonCode?: string | null
   freezes: MembershipFreeze[]
+  /** This membership's billed invoices — total/paid/outstanding (minor units). */
+  invoices?: { id: string; invoiceNo: string; status: string; issuedAt: string; totalMinor: number; paidMinor: number; outstandingMinor: number }[]
   createdAt: string
   createdBy?: string
 }
@@ -112,6 +123,7 @@ export interface CustomerRow {
 export interface CustomerFilters {
   search: string
   status: CustomerStatus | 'ALL'
+  personStatus: 'ALL' | PersonStatus
   plan: string
   ownerId: string
 }

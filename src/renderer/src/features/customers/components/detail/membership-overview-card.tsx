@@ -1,9 +1,11 @@
-import { CreditCard, Receipt } from 'lucide-react'
+import { CreditCard, Receipt, Ban, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { effectiveStatus } from '../../build'
 import { formatShortDate } from '../../format'
 import { formatMinor } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
+import { Button } from '@/components/ui/button'
+import { membershipBillingTotals } from '../../membership-billing'
 import type { Membership } from '../../types'
 import { MembershipStatusBadge } from '../status-badge'
 
@@ -13,6 +15,10 @@ import { MembershipStatusBadge } from '../status-badge'
  * "what did this member buy?" without opening another screen. Values are the
  * sale-time snapshot in finished rupees; never recomputed from the plan.
  *
+ * Shows the joining date, the billed Total (from the membership's invoice) and
+ * Paid / Outstanding, plus optional Cancel and Renew actions (gated by the
+ * caller via `canCancel` / `canRenew`).
+ *
  * `variant="hero"` renders the anchor cell of the bento grid: larger type,
  * bigger price, more internal padding. The default variant is the compact
  * supporting cell.
@@ -21,11 +27,19 @@ export function MembershipOverviewCard({
   membership,
   now,
   variant = 'default',
+  canCancel = false,
+  canRenew = false,
+  onCancel,
+  onRenew,
   className
 }: {
   membership: Membership
   now: number
   variant?: 'default' | 'hero'
+  canCancel?: boolean
+  canRenew?: boolean
+  onCancel?: () => void
+  onRenew?: () => void
   className?: string
 }): React.JSX.Element {
   const m = membership
@@ -39,8 +53,11 @@ export function MembershipOverviewCard({
   const openFreezes = m.freezes.filter(
     (f) => new Date(f.startDate).getTime() <= now && new Date(f.endDate).getTime() > now
   )
+  const billing = membershipBillingTotals(m)
+  const hasBilling = (m.invoices ?? []).length > 0
 
   const hero = variant === 'hero'
+  const canAct = canCancel || canRenew
 
   return (
     <div
@@ -73,6 +90,12 @@ export function MembershipOverviewCard({
       </p>
       <p className="text-xs text-muted-foreground">
         {m.billingFrequency.charAt(0) + m.billingFrequency.slice(1).toLowerCase()} billing
+        {m.joiningDate ? (
+          <>
+            {' '}
+            · joined {formatShortDate(m.joiningDate)}
+          </>
+        ) : null}
       </p>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t pt-3">
@@ -106,6 +129,38 @@ export function MembershipOverviewCard({
         </div>
       </div>
 
+      {hasBilling ? (
+        <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border bg-muted/30 p-2.5 text-center">
+          <div>
+            <p className="font-mono text-sm font-semibold tabular-nums">
+              {formatMinor(billing.totalMinor, currency)}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Total</p>
+          </div>
+          <div>
+            <p className="font-mono text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+              {formatMinor(billing.paidMinor, currency)}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Paid</p>
+          </div>
+          <div>
+            <p
+              className={cn(
+                'font-mono text-sm font-semibold tabular-nums',
+                billing.outstandingMinor > 0 ? 'text-destructive' : 'text-muted-foreground'
+              )}
+            >
+              {formatMinor(billing.outstandingMinor, currency)}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Outstanding</p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 rounded-lg border border-dashed bg-muted/20 p-2.5 text-center text-xs text-muted-foreground">
+          No linked invoice yet
+        </div>
+      )}
+
       <div className="mt-4 flex items-center justify-between text-sm">
         <span className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
           <span className="text-blue-600 dark:text-blue-400">{formatShortDate(m.startDate)}</span>
@@ -135,6 +190,29 @@ export function MembershipOverviewCard({
       <div className="mt-auto flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
         <Receipt className="size-3.5" /> sold {formatShortDate(m.createdAt)}
       </div>
+
+      {canAct ? (
+        <div className="mt-3 flex gap-2">
+          {canRenew ? (
+            <Button type="button" variant="outline" size="sm" className="flex-1" onClick={onRenew}>
+              <RotateCcw className="size-3.5" />
+              Renew
+            </Button>
+          ) : null}
+          {canCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 text-destructive hover:bg-destructive/10"
+              onClick={onCancel}
+            >
+              <Ban className="size-3.5" />
+              Cancel
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

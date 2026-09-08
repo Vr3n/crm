@@ -59,6 +59,13 @@ describe('sellMembership', () => {
       'PARTIALLY_PAID'
     )
     expect(
+      db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.id, result.invoiceId))
+        .get()?.membership_id
+    ).toBe(result.membershipId)
+    expect(
       db.select().from(payments).where(eq(payments.id, result.paymentId)).get()?.payment_method
     ).toBe('UPI')
     expect(
