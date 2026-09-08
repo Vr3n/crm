@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellPlus, Check } from 'lucide-react'
+import { BellPlus, CalendarClock, Check, XCircle } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,11 @@ import { cn } from '@/lib/utils'
 
 const helper = createColumnHelper<DashboardFeatures, FollowUpRow>()
 
-function buildColumns(onComplete: (row: FollowUpRow) => void): ReturnType<typeof helper.columns> {
+function buildColumns(
+  onComplete: (row: FollowUpRow) => void,
+  onEdit: (row: FollowUpRow) => void,
+  onCancel: (row: FollowUpRow) => void
+): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.leadName, {
       id: 'leadName',
@@ -90,7 +94,24 @@ function buildColumns(onComplete: (row: FollowUpRow) => void): ReturnType<typeof
       id: 'actions',
       header: () => null,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`Extend due date for ${row.original.title}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(row.original)
+                }}
+              >
+                <CalendarClock className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Extend due date</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -108,6 +129,23 @@ function buildColumns(onComplete: (row: FollowUpRow) => void): ReturnType<typeof
             </TooltipTrigger>
             <TooltipContent side="left">Mark done</TooltipContent>
           </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Cancel ${row.original.title}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCancel(row.original)
+                }}
+              >
+                <XCircle className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Cancel</TooltipContent>
+          </Tooltip>
         </div>
       )
     })
@@ -120,9 +158,13 @@ function buildColumns(onComplete: (row: FollowUpRow) => void): ReturnType<typeof
  * clicking a row navigates to the lead detail.
  */
 export function UpcomingFollowupsTable({
-  onComplete
+  onComplete,
+  onEdit,
+  onCancel
 }: {
   onComplete: (row: FollowUpRow) => void
+  onEdit: (row: FollowUpRow) => void
+  onCancel: (row: FollowUpRow) => void
 }): React.JSX.Element {
   const { rows: allRows, isLoading } = useFollowUpRows()
   const navigate = useNavigate()
@@ -140,7 +182,10 @@ export function UpcomingFollowupsTable({
       .slice(0, MAX_ROWS)
   }, [allRows, now])
 
-  const columns = useMemo(() => buildColumns(onComplete), [onComplete])
+  const columns = useMemo(
+    () => buildColumns(onComplete, onEdit, onCancel),
+    [onComplete, onEdit, onCancel]
+  )
 
   const handleRowClick = useCallback(
     (row: FollowUpRow) => {

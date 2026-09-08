@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BellPlus, CalendarClock, Check, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Timeline } from '@/components/timeline'
 import { useCompleteFollowUp } from '../../queries'
@@ -33,32 +34,47 @@ function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }): React.JSX.Ele
           </p>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            onClick={() => setEditing(true)}
-            title="Extend due date"
-          >
-            <CalendarClock className="size-3.5" />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="outline"
-            onClick={() => complete.mutate({ followupId: followUp.id })}
-            disabled={complete.isPending}
-            title="Mark done"
-          >
-            <Check />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            className="text-destructive hover:bg-destructive/10"
-            onClick={() => setCancelling(true)}
-            title="Cancel follow-up"
-          >
-            <XCircle className="size-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => setEditing(true)}
+                aria-label={`Extend due date for ${followUp.title}`}
+              >
+                <CalendarClock className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Extend due date</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="outline"
+                onClick={() => complete.mutate({ followupId: followUp.id })}
+                disabled={complete.isPending}
+                aria-label={`Mark ${followUp.title} done`}
+              >
+                <Check />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Mark done</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/10"
+                onClick={() => setCancelling(true)}
+                aria-label={`Cancel ${followUp.title}`}
+              >
+                <XCircle className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Cancel follow-up</TooltipContent>
+          </Tooltip>
         </div>
       </div>
       <EditFollowUpDialog
@@ -69,6 +85,8 @@ function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }): React.JSX.Ele
           leadId: followUp.leadId,
           leadName: '',
           stage: 'NEW' as const,
+          personId: 0,
+          isBlacklisted: false,
           title: followUp.title,
           dueAt: followUp.dueAt,
           extensionReason: followUp.extensionReason,
@@ -84,6 +102,8 @@ function CurrentFollowUpRow({ followUp }: { followUp: FollowUp }): React.JSX.Ele
           leadId: followUp.leadId,
           leadName: '',
           stage: 'NEW' as const,
+          personId: 0,
+          isBlacklisted: false,
           title: followUp.title,
           dueAt: followUp.dueAt
         }}

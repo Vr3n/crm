@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, UserPlus } from 'lucide-react'
+import { AlertTriangle, Ban, Pencil, ShieldCheck, UserPlus } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { timeAgo } from '@/lib/format'
 import { SOURCES } from '@/features/leads/constants'
 import { useLeads } from '@/features/leads/queries'
@@ -16,7 +18,12 @@ import { SortButton } from './sort-button'
 
 const helper = createColumnHelper<DashboardFeatures, Lead>()
 
-function buildColumns(): ReturnType<typeof helper.columns> {
+function buildColumns(
+  onEdit: (lead: Lead) => void,
+  onBlacklist: (lead: Lead) => void,
+  canEditLead: (lead: Lead) => boolean,
+  canBlacklist: boolean
+): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.name, {
       id: 'name',
@@ -63,6 +70,71 @@ function buildColumns(): ReturnType<typeof helper.columns> {
       ),
       meta: { align: 'right' } as DataTableColumnMeta,
       sortFn: 'datetime'
+    }),
+    helper.display({
+      id: 'actions',
+      header: () => null,
+      cell: ({ row }) => {
+        const lead = row.original
+        return (
+          <div className="flex items-center justify-end gap-1">
+            {canBlacklist ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      lead.isBlacklisted
+                        ? `Lift blacklist for ${lead.name}`
+                        : `Blacklist ${lead.name}`
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onBlacklist(lead)
+                    }}
+                    className={
+                      lead.isBlacklisted
+                        ? 'text-primary hover:text-primary'
+                        : 'text-muted-foreground hover:text-destructive'
+                    }
+                  >
+                    {lead.isBlacklisted ? (
+                      <ShieldCheck className="size-4" />
+                    ) : (
+                      <Ban className="size-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  {lead.isBlacklisted ? 'Lift blacklist' : 'Blacklist'}
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+            {canEditLead(lead) ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Edit ${lead.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit(lead)
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">Edit</TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
+        )
+      }
     })
   ])
 }
@@ -72,7 +144,17 @@ function buildColumns(): ReturnType<typeof helper.columns> {
  * createdAt descending so the newest leads surface first. Clicking a row
  * navigates to the lead detail.
  */
-export function RecentLeadsTable(): React.JSX.Element {
+export function RecentLeadsTable({
+  onEdit,
+  onBlacklist,
+  canEditLead,
+  canBlacklist
+}: {
+  onEdit: (lead: Lead) => void
+  onBlacklist: (lead: Lead) => void
+  canEditLead: (lead: Lead) => boolean
+  canBlacklist: boolean
+}): React.JSX.Element {
   const { data, isLoading, isError } = useLeads()
   const navigate = useNavigate()
 
@@ -81,7 +163,10 @@ export function RecentLeadsTable(): React.JSX.Element {
     return data.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, MAX_ROWS)
   }, [data])
 
-  const columns = useMemo(() => buildColumns(), [])
+  const columns = useMemo(
+    () => buildColumns(onEdit, onBlacklist, canEditLead, canBlacklist),
+    [onEdit, onBlacklist, canEditLead, canBlacklist]
+  )
 
   const handleRowClick = useCallback(
     (lead: Lead) => {

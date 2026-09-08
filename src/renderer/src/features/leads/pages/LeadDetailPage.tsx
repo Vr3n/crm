@@ -14,7 +14,6 @@ import { NextActionCard } from '../components/detail/next-action-card'
 import { StageHistory } from '../components/detail/stage-history'
 import { FollowUpPanel } from '../components/detail/follow-up-panel'
 import { Timeline } from '../components/detail/timeline'
-import { PlanPriceTimeline } from '@/features/catalog/components/plan-price-timeline'
 import { QuickActions, type QuickActionType } from '../components/detail/quick-actions'
 import { MoveStageDialog } from '../components/move-stage-dialog'
 import { MarkLostDialog } from '../components/mark-lost-dialog'
@@ -25,7 +24,7 @@ import { BlacklistBanner } from '@/features/people/components/blacklist-banner'
 /**
  * Lead detail (bento layout, Module 01 §24). Identity + actions up top, then a
  * bento of Next action / Follow-ups, Stage history + Activity timeline, and
- * optionally Plan price history. Every verb routes through its strict dialog.
+ * optionally a commercial-history card for converted leads.
  */
 export function LeadDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -122,12 +121,6 @@ export function LeadDetailPage(): React.JSX.Element {
         <div className="xl:col-span-2">
           <Timeline lead={lead} />
         </div>
-
-        {lead.planId && (
-          <div className="xl:col-span-3">
-            <PlanPriceTimeline planId={lead.planId} planName={lead.planName} />
-          </div>
-        )}
 
         {lead.customerId && (
           <div className="xl:col-span-3">
