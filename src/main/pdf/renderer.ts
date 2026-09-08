@@ -43,7 +43,7 @@ async function ensureDir(dirPath: string): Promise<void> {
 export async function renderPdf(
   html: string,
   filename: string,
-  subfolder: 'Invoices' | 'Receipts',
+  subfolder: 'Invoices' | 'Receipts' | 'Refunds',
   open = false
 ): Promise<string> {
   const win = new BrowserWindow({

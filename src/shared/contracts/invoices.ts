@@ -49,6 +49,17 @@ export const invoiceAllocationOutputSchema = z.object({
 })
 export type InvoiceAllocationOutput = z.infer<typeof invoiceAllocationOutputSchema>
 
+export const invoiceRefundOutputSchema = z.object({
+  id: z.string(),
+  refundNo: z.string(),
+  refundDate: z.string(),
+  amountMinor: z.number().int(),
+  method: z.string(),
+  reason: z.string(),
+  sourcePaymentNo: z.string()
+})
+export type InvoiceRefundOutput = z.infer<typeof invoiceRefundOutputSchema>
+
 export const invoiceOutputSchema = z.object({
   id: z.string(),
   invoiceNo: z.string(),
@@ -63,6 +74,7 @@ export const invoiceOutputSchema = z.object({
   status: z.enum(['DRAFT', 'OPEN', 'PARTIALLY_PAID', 'PAID', 'VOID', 'UNCOLLECTIBLE']),
   lines: z.array(invoiceLineOutputSchema),
   allocations: z.array(invoiceAllocationOutputSchema),
+  refunds: z.array(invoiceRefundOutputSchema),
   createdBy: z.string(),
   subtotalMinor: z.number().int(),
   taxTotal: z.number(),

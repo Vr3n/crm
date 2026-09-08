@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { renderInvoiceDocument } from '../../../src/main/pdf/templates/invoice-document'
 import { renderPaymentReceipt } from '../../../src/main/pdf/templates/payment-receipt'
-import type { InvoicePrintContext, ReceiptPrintContext } from '../../../src/main/pdf/types'
+import { renderRefundReceipt } from '../../../src/main/pdf/templates/refund-receipt'
+import type {
+  InvoicePrintContext,
+  ReceiptPrintContext,
+  RefundPrintContext
+} from '../../../src/main/pdf/types'
 
 describe('Invoice Document Template', () => {
   const baseCtx: InvoicePrintContext = {
@@ -57,6 +62,8 @@ describe('Invoice Document Template', () => {
       }
     ],
     paidAmount: 2360000,
+    refundedAmount: 0,
+    refunds: [],
     outstanding: 0,
     generatedAt: '29 Aug 2026, 12:00 PM'
   }
@@ -242,6 +249,93 @@ describe('Invoice Document Template', () => {
     const html = renderInvoiceDocument(ctx)
     expect(html).toContain('Discount')
     expect(html).toContain('− ₹2,000.00')
+  })
+
+  it('renders refunds section and Net Paid when refunds present', () => {
+    const ctx = {
+      ...baseCtx,
+      refunds: [
+        {
+          refundNo: 'REF-0001',
+          refundDate: '2026-08-30T10:00:00Z',
+          method: 'UPI',
+          reason: 'Membership cancellation',
+          amount: 500000
+        }
+      ],
+      refundedAmount: 500000
+    }
+    const html = renderInvoiceDocument(ctx)
+    expect(html).toContain('Refunds Issued')
+    expect(html).toContain('REF-0001')
+    expect(html).toContain('Membership cancellation')
+    expect(html).toContain('Net Paid')
+    expect(html).toContain('₹18,600.00')
+  })
+
+  it('hides refunds section when no refunds', () => {
+    const html = renderInvoiceDocument(baseCtx)
+    expect(html).not.toContain('Refunds Issued')
+  })
+})
+
+describe('Refund Receipt Template', () => {
+  const baseCtx: RefundPrintContext = {
+    org: {
+      name: 'Test Gym',
+      logo: null,
+      address: '123 Main St, Mumbai',
+      gstin: null,
+      mobileNumber: '9876543210'
+    },
+    refundNo: 'REF-0001',
+    refundDate: '2026-09-08',
+    amount: 500000,
+    method: 'UPI',
+    sourcePaymentNo: 'PAY-0001',
+    invoiceNumbers: ['GYM-290826-01'],
+    customer: {
+      name: 'Viren',
+      phone: '9876543210',
+      email: null
+    },
+    membershipName: 'Gold Plan',
+    reason: 'Membership cancellation',
+    recordedBy: 'John',
+    generatedAt: '08 Sep 2026, 12:00 PM'
+  }
+
+  it('renders valid HTML document', () => {
+    const html = renderRefundReceipt(baseCtx)
+    expect(html).toContain('<!DOCTYPE html>')
+    expect(html).toContain('<html>')
+    expect(html).toContain('</html>')
+  })
+
+  it('includes refund number and refunded amount', () => {
+    const html = renderRefundReceipt(baseCtx)
+    expect(html).toContain('REF-0001')
+    expect(html).toContain('Refund Issued')
+    expect(html).toContain('− ₹5,000.00')
+  })
+
+  it('includes customer name and covered invoice', () => {
+    const html = renderRefundReceipt(baseCtx)
+    expect(html).toContain('Viren')
+    expect(html).toContain('GYM-290826-01')
+    expect(html).toContain('PAY-0001')
+  })
+
+  it('includes reason and recorded by', () => {
+    const html = renderRefundReceipt(baseCtx)
+    expect(html).toContain('Membership cancellation')
+    expect(html).toContain('John')
+  })
+
+  it('shows no-invoice note when no invoices covered', () => {
+    const ctx = { ...baseCtx, invoiceNumbers: [] }
+    const html = renderRefundReceipt(ctx)
+    expect(html).toContain('not allocated')
   })
 })
 

@@ -8,6 +8,7 @@ import {
   people,
   customers
 } from '../db/schema'
+import { refundRepo, paymentRepo } from '../repositories/finance'
 import { currentOrganizationId } from '../auth/session'
 import {
   invoiceIdRequestSchema,
@@ -75,7 +76,19 @@ interface PersonRow {
   email: string | null
 }
 
+/** Refund read model surfaced on an invoice (via the source payment). */
+interface InvoiceRefundOutput {
+  id: string
+  refundNo: string
+  refundDate: string
+  amountMinor: number
+  method: string
+  reason: string
+  sourcePaymentNo: string
+}
+
 function buildInvoiceOutput(
+  organizationId: number,
   invoice: InvoiceRow,
   lines: InvoiceLineRow[],
   allocations: Array<AllocationRow & { payment: PaymentRow | undefined }>,
@@ -118,6 +131,7 @@ function buildInvoiceOutput(
       receivedAt: a.created_at,
       receivedBy: a.payment ? String(a.payment.created_by) : ''
     })),
+    refunds: buildInvoiceRefunds(organizationId, invoice.id),
     createdBy: String(invoice.created_by),
     subtotalMinor: invoice.subtotal_minor,
     taxTotalMinor: invoice.tax_minor,
@@ -125,6 +139,22 @@ function buildInvoiceOutput(
     paidMinor,
     outstandingMinor: Math.max(0, invoice.total_minor - paidMinor)
   }
+}
+
+/** Refunds for an invoice = refunds on every payment allocated to it. */
+function buildInvoiceRefunds(organizationId: number, invoiceId: number): InvoiceRefundOutput[] {
+  return refundRepo.listByInvoice(organizationId, invoiceId).map((r) => {
+    const payment = paymentRepo.getById(organizationId, r.paymentId)
+    return {
+      id: String(r.id),
+      refundNo: `REF-${String(r.id).padStart(4, '0')}`,
+      refundDate: r.issuedAt ?? r.createdAt,
+      amountMinor: r.amountMinor,
+      method: payment?.paymentMethod ?? 'UNKNOWN',
+      reason: r.reason,
+      sourcePaymentNo: `PAY-${String(r.paymentId).padStart(4, '0')}`
+    }
+  })
 }
 
 export function registerInvoicesIpc(): void {
@@ -245,6 +275,7 @@ export function registerInvoicesIpc(): void {
 
     return invoiceRows.map((inv) =>
       buildInvoiceOutput(
+        organizationId,
         inv,
         linesByInvoice.get(inv.id) ?? [],
         allocsByInvoice.get(inv.id) ?? [],
@@ -323,6 +354,7 @@ export function registerInvoicesIpc(): void {
       : undefined
 
     return buildInvoiceOutput(
+      organizationId,
       invoice,
       lines,
       allocRows.map((a) => ({ ...a, payment: paymentMap.get(a.payment_id) })),
@@ -454,6 +486,7 @@ export function registerInvoicesIpc(): void {
 
     return invoiceRows.map((inv) =>
       buildInvoiceOutput(
+        organizationId,
         inv,
         linesByInvoice.get(inv.id) ?? [],
         allocsByInvoice.get(inv.id) ?? [],

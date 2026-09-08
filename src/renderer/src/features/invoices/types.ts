@@ -50,6 +50,17 @@ export interface InvoiceAllocation {
   receivedBy: string
 }
 
+/** Money returned against a payment allocated to this invoice (Module 05 §17). */
+export interface InvoiceRefund {
+  id: string
+  refundNo: string
+  refundDate: string
+  amountMinor: number
+  method: PaymentMethod
+  reason: string
+  sourcePaymentNo: string
+}
+
 export interface Invoice {
   id: string
   invoiceNo: string
@@ -64,6 +75,7 @@ export interface Invoice {
   status: InvoiceStatus
   lines: InvoiceLine[]
   allocations: InvoiceAllocation[]
+  refunds: InvoiceRefund[]
   createdBy: string
   /** Derived, never stored: sum of line amounts before tax. */
   subtotalMinor: number

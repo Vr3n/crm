@@ -25,6 +25,7 @@ function stripDuration(description: string): string {
 export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
   const statusBadge = STATUS_BADGES[ctx.status] ?? 'badge-draft'
   const hasAllocations = ctx.allocations.length > 0
+  const hasRefunds = ctx.refunds.length > 0
   const totalDiscount = ctx.lines.reduce((sum, l) => sum + l.discountAmount, 0)
   // Derive tax rate from first line (all lines share the same rate in membership invoices)
   const taxRate = ctx.lines.length > 0 ? ctx.lines[0].taxRate : '0%'
@@ -198,6 +199,22 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
           <span class="label">Paid</span>
           <span class="value" style="color: #065F46;">${formatRupees(ctx.paidAmount)}</span>
         </div>
+        ${
+          hasRefunds
+            ? `
+        <div class="totals-row">
+          <span class="label">Refunded</span>
+          <span class="value" style="color: #991B1B;">− ${formatRupees(ctx.refundedAmount)}</span>
+        </div>
+        <div class="totals-row">
+          <span class="label">Net Paid</span>
+          <span class="value" style="font-weight: 600;">${formatRupees(
+            ctx.paidAmount - ctx.refundedAmount
+          )}</span>
+        </div>
+        `
+            : ''
+        }
         <div class="totals-row">
           <span class="label">Outstanding</span>
           <span class="value" style="color: ${ctx.outstanding > 0 ? '#991B1B' : '#6B7280'};">
@@ -206,6 +223,45 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
         </div>
       </div>
     </div>
+
+    ${
+      hasRefunds
+        ? `
+    <hr class="divider" />
+
+    <!-- Refunds Issued -->
+    <div class="section">
+      <div class="section-title" style="color: #991B1B;">Refunds Issued</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 22%;">Refund</th>
+            <th style="width: 18%;">Date</th>
+            <th style="width: 16%;">Method</th>
+            <th style="width: 30%;">Reason</th>
+            <th class="num" style="width: 14%;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ctx.refunds
+            .map(
+              (r) => `
+          <tr>
+            <td style="font-variant-numeric: tabular-nums; font-size: 9pt; font-weight: 500;">${escapeHtml(r.refundNo)}</td>
+            <td style="font-size: 9pt; color: #6B7280;">${escapeHtml(formatDate(r.refundDate))}</td>
+            <td>${escapeHtml(r.method)}</td>
+            <td style="font-size: 9pt; color: #6B7280;">${escapeHtml(r.reason)}</td>
+            <td class="amount-col" style="font-weight: 600; color: #991B1B;">− ${formatRupees(r.amount)}</td>
+          </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </div>
+    `
+        : ''
+    }
 
     <!-- Footer -->
     ${buildFooter(ctx.generatedAt)}

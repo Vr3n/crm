@@ -90,6 +90,22 @@ export const invoiceRepo = {
     return rows.map(mapInvoice)
   },
 
+  /** Invoices billing a specific membership (set at sale/renew via membership_id). */
+  getByMembership(organizationId: number, membershipId: number): Invoice[] {
+    const rows = getDrizzle()
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.organization_id, organizationId),
+          eq(invoices.membership_id, membershipId)
+        )
+      )
+      .orderBy(asc(invoices.created_at))
+      .all() as InvoiceRow[]
+    return rows.map(mapInvoice)
+  },
+
   listOpen(organizationId: number): Invoice[] {
     const rows = getDrizzle()
       .select()
