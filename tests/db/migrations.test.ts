@@ -79,7 +79,7 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records versions 0, 3-26 including membership sale idempotency, permission, joining-date, org branding, followup notes, and person photo migrations', () => {
+  it('records versions 0, 3-26 plus 28-30 including membership sale idempotency, permission, joining-date, org branding, followup notes, person photo, membership cancel/renew, refund scheduling, and invoice-membership migrations', () => {
     runMigrations()
     const rows = getDb().prepare('SELECT version, name FROM schema_migrations').all() as {
       version: number
@@ -110,7 +110,10 @@ describe('runMigrations', () => {
       { version: 23, name: 'plan_availability' },
       { version: 24, name: 'person_blacklist' },
       { version: 25, name: 'person_photo' },
-      { version: 26, name: 'seed_dnd_not_interested' }
+      { version: 26, name: 'seed_dnd_not_interested' },
+      { version: 28, name: 'membership_cancel_renew' },
+      { version: 29, name: 'refund_scheduling' },
+      { version: 30, name: 'invoice_membership' }
     ])
   })
 
@@ -120,7 +123,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(25)
+    expect(row.n).toBe(28)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -168,7 +171,7 @@ describe('runMigrations', () => {
     // database if they reused a legacy version number.
     expect(appliedVersions()).toEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-      26
+      26, 28, 29, 30
     ])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
@@ -189,8 +192,8 @@ describe('runMigrations', () => {
     runMigrations()
 
     expect(appliedVersions()).toEqual([
-      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-      26
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+      28, 29, 30
     ])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)

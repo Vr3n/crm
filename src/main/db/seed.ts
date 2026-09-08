@@ -546,10 +546,10 @@ export const SEED_CANCELLATION_POLICIES: SeedCancellationPolicy[] = [
     description: 'Cancellation takes effect at the end of the current billing period.'
   },
   {
-    name: '30 Days Notice',
+    name: '14 Days Notice',
     effectiveRule: 'NOTICE_DAYS',
-    noticeDays: 30,
-    description: 'A 30-day notice is required before cancellation takes effect.'
+    noticeDays: 14,
+    description: 'A 14-day notice is required before cancellation takes effect.'
   }
 ]
 

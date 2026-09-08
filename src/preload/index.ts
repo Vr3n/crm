@@ -69,6 +69,15 @@ import type {
 import type { CustomerIdRequest, CustomerRowOutput } from '../shared/contracts/customers'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type {
+  CancelMembershipInput,
+  CancelMembershipResult,
+  RevertCancellationInput,
+  RenewMembershipInput,
+  RenewMembershipResult,
+  MembershipRefundStateRequest,
+  MembershipRefundState
+} from '../shared/contracts/membership-cancel-renew'
+import type {
   InvoiceIdRequest as InvoiceReadIdRequest,
   InvoicesByStatusRequest,
   InvoiceOutput
@@ -241,8 +250,7 @@ const api = {
   },
   catalog: {
     listPlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_PLANS),
-    listAvailablePlans: (): Promise<PlanRow[]> =>
-      call(IPC_CHANNELS.CATALOG_LIST_AVAILABLE_PLANS),
+    listAvailablePlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_AVAILABLE_PLANS),
     createPlan: (input: CreatePlanInput): Promise<PlanRow> =>
       call(IPC_CHANNELS.CATALOG_CREATE_PLAN, input),
     updatePlan: (input: UpdatePlanInput): Promise<PlanRow> =>
@@ -344,13 +352,17 @@ const api = {
       call(IPC_CHANNELS.FINANCE_OUTSTANDING_INVOICES, input),
     listPayments: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, {}),
     listRefunds: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_REFUNDS, {}),
-    listAllCredits: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
+    listAllCredits: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {}),
+    processScheduledRefunds: (): Promise<{ issued: number }> =>
+      call(IPC_CHANNELS.FINANCE_PROCESS_SCHEDULED_REFUNDS, {})
   },
   pdf: {
     exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }): Promise<string> =>
       call(IPC_CHANNELS.PDF_EXPORT_INVOICE, input),
     exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }): Promise<string> =>
-      call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input)
+      call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input),
+    exportRefund: (input: { refundId: number; mode?: 'save' | 'preview' }): Promise<string> =>
+      call(IPC_CHANNELS.PDF_EXPORT_REFUND, input)
   },
   customers: {
     list: (): Promise<CustomerRowOutput[]> => call(IPC_CHANNELS.CUSTOMERS_LIST),
@@ -359,7 +371,15 @@ const api = {
   },
   memberships: {
     sell: (input: SellMembershipInput): Promise<SellMembershipResult> =>
-      call(IPC_CHANNELS.MEMBERSHIPS_SELL, input)
+      call(IPC_CHANNELS.MEMBERSHIPS_SELL, input),
+    cancel: (input: CancelMembershipInput): Promise<CancelMembershipResult> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_CANCEL, input),
+    undoCancellation: (input: RevertCancellationInput): Promise<void> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_UNDO_CANCELLATION, input),
+    renew: (input: RenewMembershipInput): Promise<RenewMembershipResult> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_RENEW, input),
+    refundState: (input: MembershipRefundStateRequest): Promise<MembershipRefundState> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_REFUND_STATE, input)
   },
   blacklist: {
     toggle: (input: {

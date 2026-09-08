@@ -120,9 +120,20 @@ import type {
   UpdatePersonPhotoInput,
   DeletePersonPhotoInput,
   GetPersonPhotoInput,
-  PersonPhotoOutput
+  PersonPhotoOutput,
+  GetManyPersonPhotosInput,
+  GetManyPersonPhotosOutput
 } from '../shared/contracts/person-photo'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
+import type {
+  CancelMembershipInput,
+  CancelMembershipResult,
+  RevertCancellationInput,
+  RenewMembershipInput,
+  RenewMembershipResult,
+  MembershipRefundStateRequest,
+  MembershipRefundState
+} from '../shared/contracts/membership-cancel-renew'
 import type { LicenseStatus } from '../shared/contracts/license'
 
 declare global {
@@ -246,10 +257,12 @@ declare global {
         listPayments: () => Promise<unknown[]>
         listRefunds: () => Promise<unknown[]>
         listAllCredits: () => Promise<unknown[]>
+        processScheduledRefunds: () => Promise<{ issued: number }>
       }
       pdf: {
         exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }) => Promise<string>
         exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }) => Promise<string>
+        exportRefund: (input: { refundId: number; mode?: 'save' | 'preview' }) => Promise<string>
       }
       customers: {
         list: () => Promise<CustomerRowOutput[]>
@@ -277,6 +290,10 @@ declare global {
       }
       memberships: {
         sell: (input: SellMembershipInput) => Promise<SellMembershipResult>
+        cancel: (input: CancelMembershipInput) => Promise<CancelMembershipResult>
+        undoCancellation: (input: RevertCancellationInput) => Promise<void>
+        renew: (input: RenewMembershipInput) => Promise<RenewMembershipResult>
+        refundState: (input: MembershipRefundStateRequest) => Promise<MembershipRefundState>
       }
       export: {
         excel: (input: {
@@ -289,10 +306,18 @@ declare global {
       license: {
         status: () => Promise<LicenseStatus>
       }
+      blacklist: {
+        toggle: (input: {
+          personId: number
+          action: 'blacklist' | 'unblacklist'
+          reason: string | null
+        }) => Promise<{ personId: number; isBlacklisted: boolean }>
+      }
       person: {
         updatePhoto: (input: UpdatePersonPhotoInput) => Promise<PersonPhotoOutput>
         deletePhoto: (input: DeletePersonPhotoInput) => Promise<void>
         getPhoto: (input: GetPersonPhotoInput) => Promise<PersonPhotoOutput>
+        getPhotos: (input: GetManyPersonPhotosInput) => Promise<GetManyPersonPhotosOutput>
       }
     }
   }

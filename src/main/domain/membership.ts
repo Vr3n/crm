@@ -12,6 +12,19 @@ export type MembershipStatus =
 export type FreezeBillingBehavior = 'SUSPEND_BILLING' | 'CONTINUE_BILLING'
 export type FreezeAccessBehavior = 'NO_ACCESS' | 'LIMITED_ACCESS'
 
+export type CancellationReasonCode =
+  | 'COST'
+  | 'RELOCATION'
+  | 'HEALTH'
+  | 'FACILITIES'
+  | 'SERVICE'
+  | 'COMPETITOR'
+  | 'UNUSED'
+  | 'FAMILY'
+  | 'OTHER'
+
+export type CancellationTiming = 'IMMEDIATE' | 'END_OF_PERIOD' | 'NOTICE_DAYS'
+
 export type MembershipEventType =
   | 'CREATED'
   | 'ACTIVATED'
@@ -21,6 +34,7 @@ export type MembershipEventType =
   | 'PLAN_CHANGED'
   | 'CANCELLATION_REQUESTED'
   | 'CANCELLED'
+  | 'CANCELLATION_REVERTED'
   | 'EXPIRED'
   | 'TERMINATED'
 
@@ -58,6 +72,7 @@ export interface Membership {
   cancellationRequestedAt: string | null
   cancellationEffectiveDate: string | null
   cancellationReason: string | null
+  cancellationReasonCode: CancellationReasonCode | null
   createdAt: string
   createdBy: number
 }
@@ -121,10 +136,72 @@ export function deriveMembershipStatus(
   startDate: string,
   endDate: string,
   today: string,
-  hasActiveFreeze: boolean
+  hasActiveFreeze: boolean,
+  cancellationEffectiveDate?: string | null
 ): MembershipStatus {
   if (today < startDate) return 'PENDING'
+  if (cancellationEffectiveDate && cancellationEffectiveDate <= today) return 'CANCELLED'
   if (today > endDate) return 'EXPIRED'
   if (hasActiveFreeze) return 'FROZEN'
   return 'ACTIVE'
+}
+
+/** Whether a cancellation has been requested but not yet taken effect. */
+export function isPendingCancellation(
+  cancellationRequestedAt: string | null | undefined,
+  cancellationEffectiveDate: string | null | undefined
+): boolean {
+  return !!(
+    cancellationRequestedAt &&
+    cancellationEffectiveDate &&
+    cancellationEffectiveDate > new Date().toISOString().slice(0, 10)
+  )
+}
+
+/**
+ * Calculates a prorated refund for unused days.
+ * refund = paidMinor × (totalDays - usedDays) / totalDays
+ */
+export function calculateProratedRefund({
+  paidMinor,
+  usedDays,
+  totalDays
+}: {
+  paidMinor: number
+  usedDays: number
+  totalDays: number
+}): number {
+  if (totalDays <= 0 || usedDays >= totalDays) return 0
+  if (usedDays <= 0) return paidMinor
+  const unusedDays = totalDays - usedDays
+  return Math.max(0, Math.min(paidMinor, Math.round((paidMinor * unusedDays) / totalDays)))
+}
+
+/**
+ * Resolves the effective date from cancellation timing and policy.
+ * NOTICE_DAYS uses `noticeDays` (default 14) from today, unless `overrideDate`
+ * is provided (staff override); the result is always capped at `endDate` so a
+ * cancellation never takes effect after the membership period ends.
+ */
+export function resolveCancellationEffectiveDate(
+  timing: CancellationTiming,
+  noticeDays: number | null,
+  endDate: string,
+  today: string,
+  overrideDate?: string | null
+): string {
+  const cap = (date: string): string => (date > endDate ? endDate : date)
+  switch (timing) {
+    case 'IMMEDIATE':
+      return today
+    case 'END_OF_PERIOD':
+      return endDate
+    case 'NOTICE_DAYS': {
+      if (overrideDate) return cap(overrideDate)
+      const d = new Date(`${today}T00:00:00`)
+      d.setDate(d.getDate() + (noticeDays ?? 14))
+      const pad = (n: number): string => String(n).padStart(2, '0')
+      return cap(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)
+    }
+  }
 }
