@@ -9,7 +9,6 @@ import { join, extname } from 'node:path'
  */
 
 const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp'])
-const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 export interface PhotoStorageConfig {
   userDataPath: string
@@ -62,17 +61,6 @@ export function validateFileType(filename: string): string {
 }
 
 /**
- * Validates that the file size is within the allowed limit.
- */
-export function validateFileSize(sizeBytes: number): void {
-  if (sizeBytes > MAX_SIZE_BYTES) {
-    const maxMB = MAX_SIZE_BYTES / (1024 * 1024)
-    const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(1)
-    throw new Error(`File size ${sizeMB}MB exceeds maximum of ${maxMB}MB`)
-  }
-}
-
-/**
  * Saves a photo buffer to disk and returns the filename (UUID.ext).
  * The caller is responsible for updating the person's photo_filename in the DB.
  */
@@ -81,7 +69,6 @@ export async function savePhoto(
   originalFilename: string,
   buffer: Buffer
 ): Promise<string> {
-  validateFileSize(buffer.length)
   const ext = validateFileType(originalFilename)
 
   const filename = `${randomUUID()}.${ext}`
@@ -100,7 +87,6 @@ export function savePhotoSync(
   originalFilename: string,
   buffer: Buffer
 ): string {
-  validateFileSize(buffer.length)
   const ext = validateFileType(originalFilename)
 
   const filename = `${randomUUID()}.${ext}`
@@ -164,7 +150,5 @@ export function getPhotoPathSync(organizationId: number, filename: string): stri
 }
 
 export const PHOTO_CONFIG = {
-  ALLOWED_EXTENSIONS: Array.from(ALLOWED_EXTENSIONS),
-  MAX_SIZE_BYTES,
-  MAX_SIZE_MB: MAX_SIZE_BYTES / (1024 * 1024)
+  ALLOWED_EXTENSIONS: Array.from(ALLOWED_EXTENSIONS)
 } as const

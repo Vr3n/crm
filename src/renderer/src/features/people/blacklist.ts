@@ -39,8 +39,8 @@ export function useBlacklistToggle(): UseMutationResult<
       }),
     onSuccess: (_data, variables) => {
       const blacklisted = variables.action === 'blacklist'
-      qc.invalidateQueries({ queryKey: ['leads'] })
-      qc.invalidateQueries({ queryKey: ['customers'] })
+      qc.invalidateQueries({ queryKey: ['leads'], refetchType: 'all' })
+      qc.invalidateQueries({ queryKey: ['customers'], refetchType: 'all' })
       toast.success(blacklisted ? 'Person blacklisted' : 'Blacklist lifted')
     },
     onError: (e) => toast.error(errorMessage(e, 'Could not update blacklist status'))

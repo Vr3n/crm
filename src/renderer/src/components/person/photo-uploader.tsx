@@ -6,7 +6,7 @@ import { validatePhotoFile, readFileAsBase64, type PendingPhoto } from './photo-
 
 /**
  * File-picker based photo upload. Renders a hidden `<input type="file">` and a
- * trigger button. Validates file type (jpg/jpeg/png/webp) and max size (5 MB)
+ * trigger button. Validates file type (jpg/jpeg/png/webp)
  * before emitting a `PendingPhoto` to the parent.
  */
 export function PhotoUploader({
@@ -65,7 +65,7 @@ export function PhotoUploader({
         <Upload className="size-3.5" />
         Upload photo
       </Button>
-      <p className="text-[11px] text-muted-foreground">JPG, PNG, or WebP · max 5 MB</p>
+      <p className="text-[11px] text-muted-foreground">JPG, PNG, or WebP</p>
     </div>
   )
 }

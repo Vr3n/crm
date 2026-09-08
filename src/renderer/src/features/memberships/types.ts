@@ -10,6 +10,9 @@ export interface MembershipRow {
   customerId: string
   customerName: string
   personId?: string
+  /** Person-level flag — blacklisted people cannot be sold/renewed. */
+  isBlacklisted: boolean
+  blacklistedReason?: string
   plan: string
   priceMinor: number
   discountMinor: number

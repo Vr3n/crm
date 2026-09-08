@@ -79,7 +79,7 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records versions 0, 3-22 including membership sale idempotency, permission, joining-date, org branding, followup notes, and person photo migrations', () => {
+  it('records versions 0, 3-26 including membership sale idempotency, permission, joining-date, org branding, followup notes, and person photo migrations', () => {
     runMigrations()
     const rows = getDb().prepare('SELECT version, name FROM schema_migrations').all() as {
       version: number
@@ -109,7 +109,8 @@ describe('runMigrations', () => {
       { version: 22, name: 'lead_stage_suppress_followups' },
       { version: 23, name: 'plan_availability' },
       { version: 24, name: 'person_blacklist' },
-      { version: 25, name: 'person_photo' }
+      { version: 25, name: 'person_photo' },
+      { version: 26, name: 'seed_dnd_not_interested' }
     ])
   })
 
@@ -119,7 +120,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(24)
+    expect(row.n).toBe(25)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -166,7 +167,8 @@ describe('runMigrations', () => {
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
     expect(appliedVersions()).toEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      26
     ])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
@@ -187,7 +189,8 @@ describe('runMigrations', () => {
     runMigrations()
 
     expect(appliedVersions()).toEqual([
-      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      26
     ])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)
@@ -305,10 +308,23 @@ describe('runMigrations', () => {
     const stages = getDb()
       .prepare('SELECT name, is_initial, is_won, is_lost FROM lead_stages ORDER BY sort_order')
       .all() as { name: string; is_initial: number; is_won: number; is_lost: number }[]
-    expect(stages).toHaveLength(9)
+    expect(stages).toHaveLength(11)
     expect(stages[0]).toEqual({ name: 'NEW', is_initial: 1, is_won: 0, is_lost: 0 })
     expect(stages).toContainEqual({ name: 'WON', is_initial: 0, is_won: 1, is_lost: 0 })
     expect(stages).toContainEqual({ name: 'LOST', is_initial: 0, is_won: 0, is_lost: 1 })
+    // v26 seeds the DND / Not Interested stages for pre-existing orgs.
+    expect(stages).toContainEqual({
+      name: 'DO_NOT_DISTURB',
+      is_initial: 0,
+      is_won: 0,
+      is_lost: 0
+    })
+    expect(stages).toContainEqual({
+      name: 'NOT_INTERESTED',
+      is_initial: 0,
+      is_won: 0,
+      is_lost: 0
+    })
 
     const sourceCount = getDb().prepare('SELECT COUNT(*) AS n FROM lead_sources').get() as {
       n: number
@@ -328,7 +344,7 @@ describe('runMigrations', () => {
     const stageCountAfter = getDb().prepare('SELECT COUNT(*) AS n FROM lead_stages').get() as {
       n: number
     }
-    expect(stageCountAfter.n).toBe(9)
+    expect(stageCountAfter.n).toBe(11)
   })
 
   it('seeds the starter membership plans for an organization that predates the org-setup seeding', () => {

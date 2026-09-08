@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
-import { CreditCard, Snowflake } from 'lucide-react'
+import { CreditCard, Snowflake, Ban, ShieldCheck } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { PersonCell } from '@/components/person/person-cell'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { EXPIRING_SOON_DAYS } from '@/features/customers/constants'
@@ -48,7 +50,12 @@ function DaysLeftCell({ row, now }: { row: MembershipRow; now: number }): React.
   )
 }
 
-function buildColumns(now: number, currency: CurrencyCode): ReturnType<typeof helper.columns> {
+function buildColumns(
+  now: number,
+  currency: CurrencyCode,
+  canBlacklist: boolean,
+  onBlacklist: (row: MembershipRow) => void
+): ReturnType<typeof helper.columns> {
   return helper.columns([
     helper.accessor((row) => row.customerName, {
       id: 'customerName',
@@ -66,9 +73,17 @@ function buildColumns(now: number, currency: CurrencyCode): ReturnType<typeof he
           personId={row.original.personId}
           name={row.original.customerName}
           subtext={
-            <span className="font-mono text-xs text-muted-foreground tabular-nums">
-              {row.original.id} · {row.original.customerId}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                {row.original.id} · {row.original.customerId}
+              </span>
+              {row.original.isBlacklisted ? (
+                <Badge variant="destructive" className="gap-1 px-1.5 py-0 text-[10px]">
+                  <Ban className="size-2.5" />
+                  Blacklisted
+                </Badge>
+              ) : null}
+            </div>
           }
         />
       ),
@@ -147,7 +162,45 @@ function buildColumns(now: number, currency: CurrencyCode): ReturnType<typeof he
       header: () => 'Left',
       enableSorting: false,
       cell: ({ row }) => <DaysLeftCell row={row.original} now={now} />
-    })
+    }),
+    ...(canBlacklist
+      ? [
+          helper.display({
+            id: 'actions',
+            header: () => null,
+            cell: ({ row }) => {
+              const m = row.original
+              return (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={
+                    m.isBlacklisted
+                      ? `Lift blacklist for ${m.customerName}`
+                      : `Blacklist ${m.customerName}`
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onBlacklist(m)
+                  }}
+                  className={
+                    m.isBlacklisted
+                      ? 'text-primary hover:text-primary'
+                      : 'text-muted-foreground hover:text-destructive'
+                  }
+                >
+                  {m.isBlacklisted ? (
+                    <ShieldCheck className="size-4" />
+                  ) : (
+                    <Ban className="size-4" />
+                  )}
+                </Button>
+              )
+            }
+          })
+        ]
+      : [])
   ])
 }
 
@@ -159,15 +212,22 @@ export function MembershipTable({
   rows,
   now,
   isLoading,
-  onOpenCustomer
+  onOpenCustomer,
+  onBlacklist,
+  canBlacklist
 }: {
   rows: MembershipRow[]
   now: number
   isLoading: boolean
   onOpenCustomer: (customerId: string) => void
+  onBlacklist: (row: MembershipRow) => void
+  canBlacklist: boolean
 }): React.JSX.Element {
   const currency = useCurrency()
-  const columns = useMemo(() => buildColumns(now, currency), [now, currency])
+  const columns = useMemo(
+    () => buildColumns(now, currency, canBlacklist, onBlacklist),
+    [now, currency, canBlacklist, onBlacklist]
+  )
 
   const exportData = useMemo(
     () =>
@@ -187,6 +247,11 @@ export function MembershipTable({
     [rows, now]
   )
 
+  const getRowClassName = (row: MembershipRow): string =>
+    row.isBlacklisted
+      ? 'bg-destructive/5 hover:bg-destructive/10 data-[state=selected]:!bg-destructive/15'
+      : ''
+
   return (
     <DataTable
       columns={columns}
@@ -197,6 +262,7 @@ export function MembershipTable({
       pageSizeOptions={[8, 16, 32]}
       initialSorting={[{ id: 'period', desc: false }]}
       onRowClick={(row) => onOpenCustomer(row.customerId)}
+      getRowClassName={getRowClassName}
       showSearch={false}
       emptyIcon={CreditCard}
       emptyTitle="No memberships match"

@@ -14,6 +14,8 @@ export function buildMembershipRows(customers: Customer[], now: number): Members
       customerId: c.id,
       customerName: c.name,
       personId: c.personId,
+      isBlacklisted: c.isBlacklisted,
+      blacklistedReason: c.blacklistedReason,
       plan: m.plan,
       priceMinor: m.priceMinor,
       discountMinor: m.discountMinor,

@@ -61,6 +61,62 @@ The backend was implemented in commit `3c90f71` (migration v24). This change exp
 
 6. **Red row styling**: Applied via `cn()` conditional class on the row element — `bg-destructive/5` base, `bg-destructive/10` on hover, `bg-destructive/15` when selected. Works for both the manual `LeadTable` and the generic `DataTable` (via `getRowClassName`).
 
+## LeadPicker: Blacklist Exclusion & Avatar Rows
+
+The `LeadPicker` combobox (shared across membership sale forms, follow-up dialog, log-activity dialog) was updated:
+
+- **New prop**: `excludeBlacklisted?: boolean` (default `false`). When true, blacklisted leads are filtered out of the dropdown.
+- **Avatar + name + mobile rows**: Each dropdown item now shows `PersonAvatar` (sm), lead name, and phone via `displayPhone()`. Photos load through the batshit-batched `usePersonPhoto` hook (many rows coalesce into one IPC call within a 10ms window).
+- **Selected icon**: `UserRound` replaced with `Check` for clearer selection feedback.
+- **Enabled on**: `/memberships/sale` page and dashboard quick-sell `MembershipSaleDialog`. Follow-up and log-activity dialogs keep showing blacklisted leads (they may still need activity tracking).
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/renderer/src/features/leads/components/lead-picker.tsx` | New `excludeBlacklisted` prop; filter logic; PersonAvatar rows; `Check` icon |
+| `src/renderer/src/features/memberships/sale/page.tsx` | Pass `excludeBlacklisted` to `LeadPicker` |
+| `src/renderer/src/features/dashboard/components/membership-sale-dialog.tsx` | Pass `excludeBlacklisted` to `LeadPicker` |
+
+## Memberships: Blacklist Reflection
+
+The Memberships table (`/memberships`) now reflects person blacklist status, mirroring the Leads and Customers tables exactly:
+
+- **Badge**: `Blacklisted` badge (`<Badge variant="destructive">`) in the Member cell's `PersonCell` subtext, alongside the membership/customer id.
+- **Row tint**: Red row highlight via `getRowClassName` — `bg-destructive/5` base, `bg-destructive/10` on hover, `bg-destructive/15` when selected.
+- **Toggle**: `Ban`/`ShieldCheck` action column gated by `person.blacklist` permission. The same shared `BlacklistDialog` is used, ensuring cross-surface invalidation.
+- **Data flow**: `MembershipRow` carries `isBlacklisted` + `blacklistedReason` from the parent `Customer` (which in turn reads from `people.is_blacklisted`). No backend changes needed — the customers list query already includes the person's blacklist status.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/renderer/src/features/memberships/types.ts` | Add `isBlacklisted: boolean` and `blacklistedReason?: string` to `MembershipRow` |
+| `src/renderer/src/features/memberships/build.ts` | Propagate `isBlacklisted` and `blacklistedReason` from each customer |
+| `src/renderer/src/features/memberships/components/membership-table.tsx` | Blacklisted badge in Member cell; `Ban`/`ShieldCheck` actions column; red row tint via `getRowClassName` |
+| `src/renderer/src/features/memberships/pages/MembershipsPage.tsx` | Lazy-load `BlacklistDialog`, manage `blacklisting` state, pass `canBlacklist` + `onBlacklist` to table |
+
+## Fix: Stale Customers/Leads After Blacklist Toggle
+
+Two issues were causing the Customers and Memberships tables to never reflect the blacklisted state:
+
+### 1. Root cause: `is_blacklisted` type mismatch (`ipc/customers.ts`)
+
+The `people` table schema uses `integer('is_blacklisted', { mode: 'boolean' })`, which makes Drizzle return a JavaScript `boolean` (`true`/`false`). However, the `PersonRow` interface in `ipc/customers.ts` declared `is_blacklisted: number`, and the `buildCustomerOutput` function compared `person?.is_blacklisted === 1`. Since `true === 1` is `false` in JavaScript, `isBlacklisted` was **always `false`** in the customers output — no matter what the database held.
+
+**Fix:** Changed `PersonRow.is_blacklisted` from `number` to `boolean`, and the comparison from `=== 1` to `=== true`.
+
+### 2. Cache refresh: `refetchType: 'all'`
+
+The `useBlacklistToggle` hook now uses `refetchType: 'all'` when invalidating queries. Previously, `invalidateQueries` defaulted to `refetchType: 'active'`, which only refreshed currently-mounted queries. This caused stale data when blacklisting from the Leads page while the Customers query was inactive.
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/main/ipc/customers.ts` | Fix `PersonRow.is_blacklisted` type from `number` to `boolean`; fix comparison `=== 1` → `=== true` |
+| `src/renderer/src/features/people/blacklist.ts` | `refetchType: 'all'` on both `['leads']` and `['customers']` invalidation calls |
+
 ## Out of Scope
 
 - **Membership cancellation on blacklist** — no cancel-membership command exists yet.

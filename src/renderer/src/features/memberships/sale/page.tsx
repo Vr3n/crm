@@ -264,6 +264,7 @@ export function MembershipSalePage(): React.JSX.Element {
                   <LeadPicker
                     value={field.state.value ?? 0}
                     onChange={(lead) => field.handleChange(lead.id)}
+                    excludeBlacklisted
                     invalid={false}
                   />
                 )}

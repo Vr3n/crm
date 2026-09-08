@@ -1,5 +1,4 @@
 const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp'])
-const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 export interface PendingPhoto {
   filename: string
@@ -7,7 +6,7 @@ export interface PendingPhoto {
 }
 
 export interface PhotoValidationError {
-  type: 'type' | 'size'
+  type: 'type'
   message: string
 }
 
@@ -17,13 +16,6 @@ export function validatePhotoFile(file: File): PhotoValidationError | null {
     return {
       type: 'type',
       message: `Invalid file type: .${ext}. Allowed types: jpg, jpeg, png, webp`
-    }
-  }
-  if (file.size > MAX_SIZE_BYTES) {
-    const sizeMB = (file.size / (1024 * 1024)).toFixed(1)
-    return {
-      type: 'size',
-      message: `File size ${sizeMB}MB exceeds maximum of 5MB`
     }
   }
   return null
