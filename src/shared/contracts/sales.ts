@@ -82,9 +82,43 @@ export const completeFollowUpInputSchema = z.object({
       typeId: z.number().int().positive(),
       note: z.string().max(2000).optional()
     })
+    .optional(),
+  /**
+   * Optional stage move completed in the same atomic transaction as the
+   * completion. `expectedStageId` is the stage the renderer believes the lead
+   * is on — a mismatch (concurrent change) aborts with a ConflictError (D17).
+   */
+  stageChange: z
+    .object({
+      targetStageId: z.number().int().positive(),
+      expectedStageId: z.number().int().positive()
+    })
     .optional()
 })
 export type CompleteFollowUpInput = z.infer<typeof completeFollowUpInputSchema>
+
+/**
+ * Bulk "mark done" for the follow-ups queue's selection toolbar. Completes every
+ * follow-up in one atomic transaction; when `stageChange` is given, each lead
+ * (whose stage allows it) is moved too, with a NOTE activity auto-recorded per
+ * lead. Already-completed follow-ups are skipped silently (idempotent). There is
+ * no `expectedStageId` — the backend validates each lead's live current stage
+ * inside the transaction, mirroring `bulkMoveLeadStage`.
+ */
+export const bulkCompleteFollowUpsInputSchema = z.object({
+  followUpIds: z.array(z.number().int().positive()).min(1).max(100),
+  stageChange: z
+    .object({
+      targetStageId: z.number().int().positive()
+    })
+    .optional()
+})
+export type BulkCompleteFollowUpsInput = z.infer<typeof bulkCompleteFollowUpsInputSchema>
+
+export const bulkCompleteFollowUpsResultSchema = z.object({
+  completed: z.number().int().nonnegative()
+})
+export type BulkCompleteFollowUpsResult = z.infer<typeof bulkCompleteFollowUpsResultSchema>
 
 export const updateFollowUpInputSchema = z.object({
   followupId: z.number().int().positive(),
@@ -340,6 +374,9 @@ export const leadListRowSchema = z.object({
   personName: z.string(),
   phone: z.string(),
   email: z.string().nullable(),
+  isBlacklisted: z.boolean(),
+  blacklistedReason: z.string().nullable(),
+  photoFilename: z.string().nullable(),
   sourceId: z.number().int().positive(),
   sourceName: z.string().nullable(),
   stageId: z.number().int().positive(),
@@ -377,7 +414,10 @@ export const peopleListSchema = z.array(
     id: z.number().int().positive(),
     fullName: z.string(),
     phone: z.string(),
-    email: z.string().nullable()
+    email: z.string().nullable(),
+    isBlacklisted: z.boolean(),
+    blacklistedReason: z.string().nullable(),
+    photoFilename: z.string().nullable()
   })
 )
 export type PeopleList = z.infer<typeof peopleListSchema>
@@ -386,3 +426,38 @@ export const peopleSearchSchema = pageRequestSchema.extend({
   query: z.string().max(120)
 })
 export type PeopleSearch = z.infer<typeof peopleSearchSchema>
+
+/**
+ * Reactive duplicate probe for the lead forms. The renderer calls this while
+ * the user types (debounced) so "this person already exists" is caught client
+ * side instead of on submit. `excludePersonId` is used by the edit dialog so a
+ * person's own record never flags itself.
+ */
+export const checkLeadPersonInputSchema = z.object({
+  fullName: z.string().min(1).max(120),
+  phone: z.string().min(1).max(24),
+  email: z.string().max(254).optional(),
+  excludePersonId: z.number().int().positive().optional()
+})
+export type CheckLeadPersonInput = z.infer<typeof checkLeadPersonInputSchema>
+
+export const personBriefSchema = z.object({
+  id: z.number().int().positive(),
+  fullName: z.string(),
+  phone: z.string(),
+  isBlacklisted: z.boolean(),
+  blacklistedReason: z.string().nullable()
+})
+export type PersonBrief = z.infer<typeof personBriefSchema>
+
+export const leadPersonAvailabilitySchema = z.object({
+  /* True when an org person already owns this phone (excluding `excludePersonId`). */
+  phoneTaken: z.boolean(),
+  /* True when that person's name matches the entered name (the unique-together key). */
+  sameNamedPerson: z.boolean(),
+  matchedPerson: personBriefSchema.nullable(),
+  /* Advisory only: another person (excluding the matched/excluded one) holds this email. */
+  emailTaken: z.boolean(),
+  emailOwnerName: z.string().nullable()
+})
+export type LeadPersonAvailability = z.infer<typeof leadPersonAvailabilitySchema>

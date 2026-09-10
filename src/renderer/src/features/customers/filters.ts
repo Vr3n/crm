@@ -10,6 +10,10 @@ export function filterCustomers(rows: CustomerRow[], filters: CustomerFilters): 
   return rows.filter((row) => {
     const c = row.customer
     if (filters.status !== 'ALL' && row.status !== filters.status) return false
+    if (filters.personStatus !== 'ALL') {
+      const isBlacklisted = filters.personStatus === 'BLACKLISTED'
+      if (c.isBlacklisted !== isBlacklisted) return false
+    }
     if (filters.plan !== 'ALL' && !c.memberships.some((m) => m.plan === filters.plan)) return false
     if (filters.ownerId !== 'ALL' && c.ownerId !== filters.ownerId) return false
     if (q) {

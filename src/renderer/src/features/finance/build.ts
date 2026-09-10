@@ -96,13 +96,13 @@ export function collectionsByMethod(payments: Payment[], from?: Date, to?: Date)
   })).filter((m) => m.amountMinor > 0)
 }
 
-/** Refunds per payment method for the range, zero rows omitted. */
+/** Refunds per payment method for the range, zero rows omitted (ISSUED only). */
 export function refundsByMethod(refunds: Refund[], from?: Date, to?: Date): MethodTotal[] {
   return PAYMENT_METHODS.map((m) => ({
     key: m.key,
     label: m.label,
     amountMinor: refunds
-      .filter((r) => r.method === m.key && within(r.refundDate, from, to))
+      .filter((r) => r.status === 'ISSUED' && r.method === m.key && within(r.refundDate, from, to))
       .reduce((s, r) => s + r.amountMinor, 0)
   })).filter((m) => m.amountMinor > 0)
 }

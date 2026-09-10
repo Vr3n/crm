@@ -77,7 +77,12 @@ export function MembershipSaleDialog({
         >
           <FieldGroup className="gap-4">
             <Field label="For whom">
-              <LeadPicker value={picked?.id ?? 0} onChange={setPicked} invalid={!picked} />
+              <LeadPicker
+                value={picked?.id ?? 0}
+                onChange={setPicked}
+                excludeBlacklisted
+                invalid={!picked}
+              />
             </Field>
 
             <form.Field

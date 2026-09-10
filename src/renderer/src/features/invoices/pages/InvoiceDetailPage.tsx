@@ -7,6 +7,7 @@ import {
   Mail,
   Phone,
   ReceiptText,
+  Undo2,
   UserRound,
   UserRoundPen,
   Wallet
@@ -213,6 +214,70 @@ function AllocationRows({ invoice }: { invoice: Invoice }): React.JSX.Element {
               </span>
               <span className="text-xs text-muted-foreground">{formatDateTime(a.receivedAt)}</span>
             </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Refund rows                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function RefundRows({ invoice }: { invoice: Invoice }): React.JSX.Element {
+  const currency = useCurrency()
+  if (invoice.refunds.length === 0) {
+    return <p className="text-sm text-muted-foreground">No refunds issued against this invoice.</p>
+  }
+  return (
+    <div>
+      {invoice.refunds.map((r) => {
+        const meta = PAYMENT_METHOD_META[r.method as PaymentMethod] ?? PAYMENT_METHOD_META.OTHER
+        const Icon = meta.icon
+        return (
+          <div
+            key={r.id}
+            className="flex items-center gap-3 border-b border-border/60 py-2.5 last:border-0"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive">
+              <Icon className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-sm font-semibold tabular-nums">{r.refundNo}</p>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  against {r.sourcePaymentNo}
+                </span>
+              </div>
+              <p className="truncate text-[11px] text-muted-foreground">{r.reason}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-sm font-semibold text-destructive tabular-nums">
+                −{formatMinor(r.amountMinor, currency)}
+              </span>
+              <span className="text-xs text-muted-foreground">{formatDateTime(r.refundDate)}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={`Export refund receipt for ${r.refundNo}`}
+              onClick={async () => {
+                try {
+                  const filePath = await pdfApi.exportRefund(r.id, 'preview')
+                  toast.success('Refund receipt exported', {
+                    description: `Saved to ${filePath}`
+                  })
+                } catch (err) {
+                  toast.error('Export failed', {
+                    description: err instanceof Error ? err.message : 'Could not generate receipt'
+                  })
+                }
+              }}
+            >
+              <Download className="size-3.5" />
+            </Button>
           </div>
         )
       })}
@@ -590,6 +655,28 @@ export function InvoiceDetailPage(): React.JSX.Element {
             }
           />
           <AllocationRows invoice={invoice} />
+        </section>
+
+        {/* ── Refunds section ─────────────────────────────────────────── */}
+        <section
+          className="crm-gradient-border flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm md:col-span-7"
+          style={
+            {
+              '--gradient-start': 'var(--destructive)',
+              '--gradient-end': 'var(--destructive)'
+            } as React.CSSProperties
+          }
+        >
+          <SectionHeading
+            icon={Undo2}
+            title="Refunds issued"
+            hint={
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {invoice.refunds.length} {invoice.refunds.length === 1 ? 'refund' : 'refunds'}
+              </span>
+            }
+          />
+          <RefundRows invoice={invoice} />
         </section>
 
         {/* ── Side column: Invoice details (5) ────────────────────────── */}

@@ -38,6 +38,8 @@ export const planRowSchema = z.object({
   freezePolicyId: z.number().int().positive().nullable(),
   prorationPolicyId: z.number().int().positive().nullable(),
   cancellationPolicyId: z.number().int().positive().nullable(),
+  availableFrom: z.string().nullable(),
+  availableTo: z.string().nullable(),
   isActive: z.boolean(),
   createdAt: z.string()
 })
@@ -58,6 +60,8 @@ export const createPlanInputSchema = z.object({
   freezePolicyId: z.number().int().positive().nullable().optional(),
   prorationPolicyId: z.number().int().positive().nullable().optional(),
   cancellationPolicyId: z.number().int().positive().nullable().optional(),
+  availableFrom: z.string().nullable().optional(),
+  availableTo: z.string().nullable().optional(),
   isActive: z.boolean()
 })
 export type CreatePlanInput = z.infer<typeof createPlanInputSchema>

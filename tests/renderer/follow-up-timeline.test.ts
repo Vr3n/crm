@@ -18,6 +18,7 @@ function row(overrides: Partial<FollowUpRow>): FollowUpRow {
     leadId: 10,
     leadName: 'Alice',
     stage: 'NEW',
+    isBlacklisted: false,
     title: 'Call to confirm',
     dueAt: TOMORROW,
     ...overrides

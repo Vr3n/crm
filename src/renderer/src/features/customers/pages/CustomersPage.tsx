@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { PageHeader } from '@/components/page-header'
-import { useSession } from '@/context/session-context'
+import { can, useSession } from '@/context/session-context'
 import { useNow } from '@/lib/use-now'
 import { buildCustomerRow } from '../build'
 import { CustomerFilters } from '../components/customer-filters'
@@ -10,9 +10,15 @@ import { CustomerMetrics } from '../components/customer-metrics'
 import { CustomerTable } from '../components/customer-table'
 import { filterCustomers, sortCustomerRows } from '../filters'
 import { useCustomers } from '../queries'
-import type { CustomerFilters as CustomerFilterState } from '../types'
+import type { CustomerFilters as CustomerFilterState, CustomerRow } from '../types'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
+
+const BlacklistDialog = lazy(() =>
+  import('@/features/people/components/blacklist-dialog').then((m) => ({
+    default: m.BlacklistDialog
+  }))
+)
 
 const CUSTOMER_EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Name', key: 'name', format: 'text' },
@@ -28,6 +34,7 @@ const CUSTOMER_EXPORT_COLUMNS: ExportColumn[] = [
 const DEFAULT_FILTERS: CustomerFilterState = {
   search: '',
   status: 'ALL',
+  personStatus: 'ALL',
   plan: 'ALL',
   ownerId: 'ALL'
 }
@@ -44,6 +51,7 @@ export function CustomersPage(): React.JSX.Element {
   const now = useNow()
   const { data, isLoading } = useCustomers()
   const [filters, setFilters] = useState<CustomerFilterState>(DEFAULT_FILTERS)
+  const [blacklisting, setBlacklisting] = useState<CustomerRow | null>(null)
 
   const rows = useMemo(() => {
     if (!data) return []
@@ -95,9 +103,29 @@ export function CustomersPage(): React.JSX.Element {
               sheetName="Customers"
             />
           </div>
-          <CustomerTable rows={rows} now={now} isLoading={isLoading} onOpen={openCustomer} />
+          <CustomerTable
+            rows={rows}
+            now={now}
+            isLoading={isLoading}
+            onOpen={openCustomer}
+            onBlacklist={setBlacklisting}
+            canBlacklist={can(session.permissions, session.isSuper, 'person.blacklist')}
+          />
         </CardContent>
       </Card>
+
+      {blacklisting && (
+        <Suspense fallback={null}>
+          <BlacklistDialog
+            key={blacklisting.customer.personId}
+            open
+            onOpenChange={() => setBlacklisting(null)}
+            personId={Number(blacklisting.customer.personId)}
+            personName={blacklisting.customer.name}
+            isBlacklisted={blacklisting.customer.isBlacklisted}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

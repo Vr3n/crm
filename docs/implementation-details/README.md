@@ -16,8 +16,11 @@ were made, the trade-offs accepted, the test strategy, and the known gaps.
 - [`dashboard.md`](./dashboard.md) — the operational dashboard (masthead, quick actions, expirations / dues / cold-leads tables).
 - [`known-gaps.md`](./known-gaps.md) — deliberate limitations and next-sprint concerns.
 - [`leads-pipeline.md`](./leads-pipeline.md) — the SQLite-backed leads pipeline (list read model, stage machine, activities/follow-ups).
+- [`complete-followup-stage-change.md`](./complete-followup-stage-change.md) — optional pipeline move when marking a follow-up done (atomic completion + stage change, single + bulk).
+- [`winback-terminal-confirm-blacklist.md`](./winback-terminal-confirm-blacklist.md) — LOST win-back re-open, terminal-stage scheduling confirm, and the blacklist refund-only rule (backend guards + renderer).
 - [`catalog-plans-and-lead-fk.md`](./catalog-plans-and-lead-fk.md) — the `membership_plans` catalog (Module 03) and the `leads.plan_id` FK migration (v9/v10).
 - [`autocorrect-combobox.md`](./autocorrect-combobox.md) — the reusable TanStack Form/Query-backed autocomplete + create combobox (`src/renderer/src/components/autocorrect-combobox.tsx`).
+- [`follow-ups-table-ordering.md`](./follow-ups-table-ordering.md) — open-first / done-sunk ordering in the follow-ups queue (custom Due sort, `DataTable` empty-sort fix).
 
 ## Scope of this pass
 

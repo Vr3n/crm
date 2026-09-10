@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { setupSalesDb, seedOrgWithSession } from '../../helpers/sales-db'
 import {
   assignLead,
+  bulkCompleteFollowUps,
   bulkMoveLeadStage,
   bulkRecordActivity,
   bulkScheduleFollowUp,
@@ -23,7 +24,8 @@ import {
   scheduleFollowUp,
   searchLeadGoals,
   searchLeadPlans,
-  searchLeadSources
+  searchLeadSources,
+  checkLeadPersonAvailability
 } from '../../../src/main/application/leads'
 import { activityRepo, leadRepo } from '../../../src/main/repositories/sales'
 import {
@@ -499,6 +501,77 @@ describe('moveLeadStage', () => {
     ).toThrow(InvalidStateTransitionError)
   })
 
+  it('re-opens a LOST lead, clearing lost markers but keeping history', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const reason = getDb()
+      .prepare('SELECT id, name FROM lead_lost_reasons WHERE organization_id = ? LIMIT 1')
+      .get(organizationId) as { id: number; name: string }
+    markLeadLost({ leadId, lostReasonId: reason.id })
+
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    const activity = activityRepo.create({
+      organizationId,
+      leadId,
+      typeId,
+      note: 'win back',
+      occurredAt: new Date().toISOString(),
+      createdBy: userId
+    })
+    moveLeadStage({
+      leadId,
+      targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+      expectedStageId: stageIdByName(organizationId, 'LOST'),
+      activityId: activity.id
+    })
+
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(lead.lostReasonId).toBeNull()
+    expect(lead.lostAt).toBeNull()
+
+    // Audit trail preserved: the LOST entry (with reason) plus the re-open entry.
+    const history = getDb()
+      .prepare(
+        'SELECT from_stage_id, to_stage_id, reason FROM lead_stage_history WHERE lead_id = ? ORDER BY id'
+      )
+      .all(leadId) as { from_stage_id: number; to_stage_id: number; reason: string | null }[]
+    const lostId = stageIdByName(organizationId, 'LOST')
+    const contactedId = stageIdByName(organizationId, 'CONTACTED')
+    expect(history).toContainEqual(
+      expect.objectContaining({ to_stage_id: lostId, reason: reason.name })
+    )
+    expect(history[history.length - 1]).toMatchObject({
+      from_stage_id: lostId,
+      to_stage_id: contactedId
+    })
+  })
+
+  it('still rejects a move out of WON', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const wonId = stageIdByName(organizationId, 'WON')
+    leadRepo.updateCurrentStage(organizationId, leadId, wonId)
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    const activity = activityRepo.create({
+      organizationId,
+      leadId,
+      typeId,
+      note: 'x',
+      occurredAt: new Date().toISOString(),
+      createdBy: userId
+    })
+    expect(() =>
+      moveLeadStage({
+        leadId,
+        targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+        expectedStageId: wonId,
+        activityId: activity.id
+      })
+    ).toThrow(InvalidStateTransitionError)
+    expect(leadRepo.getById(organizationId, leadId)!.currentStageId).toBe(wonId)
+  })
+
   it('rejects a stale optimistic concurrency token', () => {
     const { organizationId, userId } = seedOrgWithSession()
     const { leadId } = createLeadFor(organizationId)
@@ -603,6 +676,26 @@ describe('bulkMoveLeadStage', () => {
     expect(leadRepo.getById(organizationId, leadId)!.currentStageId).toBe(
       stageIdByName(organizationId, 'NEW')
     )
+  })
+
+  it('re-opens LOST leads, clearing lost markers', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const reason = getDb()
+      .prepare('SELECT id FROM lead_lost_reasons WHERE organization_id = ? LIMIT 1')
+      .get(organizationId) as { id: number }
+    markLeadLost({ leadId, lostReasonId: reason.id })
+
+    const result = bulkMoveLeadStage({
+      leadIds: [leadId],
+      targetStageId: stageIdByName(organizationId, 'CONTACTED')
+    })
+
+    expect(result).toEqual({ moved: 1 })
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(lead.lostReasonId).toBeNull()
+    expect(lead.lostAt).toBeNull()
   })
 
   it('throws NotFoundError when any lead id is unknown', () => {
@@ -967,6 +1060,380 @@ describe('follow-ups', () => {
       })
     ).toThrow(ValidationError)
   })
+
+  it('moves the lead stage atomically when completing with a stageChange', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+
+    expect(() =>
+      completeFollowUp({
+        followupId,
+        notes: 'Will decide Friday',
+        activity: { typeId, note: 'Spoke with Rahul' },
+        stageChange: {
+          targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+          expectedStageId: stageIdByName(organizationId, 'NEW')
+        }
+      })
+    ).not.toThrow()
+
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+
+    // The move links the activity logged alongside the completion.
+    const history = getDb()
+      .prepare(
+        'SELECT from_stage_id, to_stage_id, activity_id FROM lead_stage_history WHERE lead_id = ? ORDER BY id DESC LIMIT 1'
+      )
+      .get(leadId) as { from_stage_id: number; to_stage_id: number; activity_id: number }
+    expect(history.from_stage_id).toBe(stageIdByName(organizationId, 'NEW'))
+    expect(history.to_stage_id).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(history.activity_id).toBeTruthy()
+
+    const activities = activityRepo.listForLead(organizationId, leadId)
+    expect(activities).toHaveLength(1) // the chosen activity only
+    expect(activities[0].typeId).toBe(typeId)
+  })
+
+  it('auto-records a NOTE activity when a stageChange has no logged activity', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+
+    completeFollowUp({
+      followupId,
+      notes: 'Interested in family plan',
+      stageChange: {
+        targetStageId: stageIdByName(organizationId, 'INTERESTED'),
+        expectedStageId: stageIdByName(organizationId, 'NEW')
+      }
+    })
+
+    const activities = activityRepo.listForLead(organizationId, leadId)
+    expect(activities).toHaveLength(1)
+    expect(activities[0].typeId).toBe(activityTypeId(organizationId, 'NOTE'))
+    expect(activities[0].note).toContain('Interested in family plan')
+  })
+
+  it('completes with a stageChange that re-opens a LOST lead', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Win back call',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+    const reason = getDb()
+      .prepare('SELECT id FROM lead_lost_reasons WHERE organization_id = ? LIMIT 1')
+      .get(organizationId) as { id: number }
+    markLeadLost({ leadId, lostReasonId: reason.id })
+
+    completeFollowUp({
+      followupId,
+      notes: 'Convinced to return',
+      stageChange: {
+        targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+        expectedStageId: stageIdByName(organizationId, 'LOST')
+      }
+    })
+
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(lead.lostReasonId).toBeNull()
+    expect(lead.lostAt).toBeNull()
+    const history = getDb()
+      .prepare(
+        'SELECT from_stage_id, to_stage_id FROM lead_stage_history WHERE lead_id = ? ORDER BY id DESC LIMIT 1'
+      )
+      .get(leadId) as { from_stage_id: number; to_stage_id: number }
+    expect(history.from_stage_id).toBe(stageIdByName(organizationId, 'LOST'))
+    expect(history.to_stage_id).toBe(stageIdByName(organizationId, 'CONTACTED'))
+  })
+
+  it('denies the stageChange without lead.update_stage', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+    signInAs(organizationId, 'Front Desk')
+
+    expect(() =>
+      completeFollowUp({
+        followupId,
+        stageChange: {
+          targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+          expectedStageId: stageIdByName(organizationId, 'NEW')
+        }
+      })
+    ).toThrow(ForbiddenError)
+  })
+
+  it('rejects a stale optimistic concurrency token on the stageChange', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+
+    expect(() =>
+      completeFollowUp({
+        followupId,
+        stageChange: {
+          targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+          expectedStageId: 99999
+        }
+      })
+    ).toThrow(ConflictError)
+
+    // The whole completion rolled back — the follow-up is still open.
+    const followup = getDb()
+      .prepare('SELECT completed_at FROM lead_followups WHERE id = ?')
+      .get(followupId) as { completed_at: string | null }
+    expect(followup.completed_at).toBeNull()
+  })
+
+  it('cancels other pending follow-ups when moving to a suppress-followups stage', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'First',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+    const { followupId: otherId } = scheduleFollowUp({
+      leadId,
+      title: 'Second',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+
+    completeFollowUp({
+      followupId,
+      stageChange: {
+        targetStageId: stageIdByName(organizationId, 'DO_NOT_DISTURB'),
+        expectedStageId: stageIdByName(organizationId, 'NEW')
+      }
+    })
+
+    const other = getDb()
+      .prepare('SELECT completed_at, cancelled_at, cancelled_reason FROM lead_followups WHERE id = ?')
+      .get(otherId) as {
+      completed_at: string | null
+      cancelled_at: string | null
+      cancelled_reason: string | null
+    }
+    expect(other.completed_at).toBeNull()
+    expect(other.cancelled_at).not.toBeNull()
+    expect(other.cancelled_reason).toBe(
+      'Follow-up cancelled — lead moved to Do Not Disturb'
+    )
+  })
+
+  it('ignores a second stageChange on an already-completed follow-up', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+
+    completeFollowUp({
+      followupId,
+      stageChange: {
+        targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+        expectedStageId: stageIdByName(organizationId, 'NEW')
+      }
+    })
+    expect(() =>
+      completeFollowUp({
+        followupId,
+        stageChange: {
+          targetStageId: stageIdByName(organizationId, 'INTERESTED'),
+          expectedStageId: stageIdByName(organizationId, 'NEW')
+        }
+      })
+    ).not.toThrow()
+
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+  })
+
+  it('bulk-completes open follow-ups and skips already-completed ones', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId: leadA } = createLeadFor(organizationId)
+    const { leadId: leadB } = createLeadFor(organizationId)
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+    const doneId = scheduleFollowUp({ leadId: leadA, title: 'Done', dueAt: future }).followupId
+    const fuA = scheduleFollowUp({ leadId: leadA, title: 'A', dueAt: future }).followupId
+    const fuB = scheduleFollowUp({ leadId: leadB, title: 'B', dueAt: future }).followupId
+    completeFollowUp({ followupId: doneId })
+
+    const result = bulkCompleteFollowUps({ followUpIds: [doneId, fuA, fuB] })
+
+    expect(result.completed).toBe(2)
+    for (const id of [fuA, fuB]) {
+      const followup = getDb()
+        .prepare('SELECT completed_at FROM lead_followups WHERE id = ?')
+        .get(id) as { completed_at: string | null }
+      expect(followup.completed_at).not.toBeNull()
+    }
+    // No stage change, no activity side effects.
+    expect(activityRepo.listForLead(organizationId, leadA)).toHaveLength(0)
+  })
+
+  it('moves each lead to the shared target atomically with an auto-NOTE', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId: leadA } = createLeadFor(organizationId)
+    const { leadId: leadB } = createLeadFor(organizationId)
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+    const fuA = scheduleFollowUp({ leadId: leadA, title: 'A', dueAt: future }).followupId
+    const fuB = scheduleFollowUp({ leadId: leadB, title: 'B', dueAt: future }).followupId
+
+    const result = bulkCompleteFollowUps({
+      followUpIds: [fuA, fuB],
+      stageChange: { targetStageId: stageIdByName(organizationId, 'CONTACTED') }
+    })
+
+    expect(result.completed).toBe(2)
+    for (const leadId of [leadA, leadB]) {
+      const lead = leadRepo.getById(organizationId, leadId)!
+      expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+
+      const activities = activityRepo.listForLead(organizationId, leadId)
+      expect(activities).toHaveLength(1)
+      expect(activities[0].typeId).toBe(activityTypeId(organizationId, 'NOTE'))
+      expect(activities[0].note).toBe('Followup completed — moved to CONTACTED')
+
+      const history = getDb()
+        .prepare(
+          'SELECT activity_id FROM lead_stage_history WHERE lead_id = ? AND from_stage_id = ? AND to_stage_id = ?'
+        )
+        .all(
+          leadId,
+          stageIdByName(organizationId, 'NEW'),
+          stageIdByName(organizationId, 'CONTACTED')
+        ) as { activity_id: number }[]
+      expect(history).toHaveLength(1)
+      expect(history[0].activity_id).toBeTruthy()
+    }
+  })
+
+  it('denies the bulk stage change without lead.update_stage', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+    signInAs(organizationId, 'Front Desk')
+
+    expect(() =>
+      bulkCompleteFollowUps({
+        followUpIds: [followupId],
+        stageChange: { targetStageId: stageIdByName(organizationId, 'CONTACTED') }
+      })
+    ).toThrow(ForbiddenError)
+  })
+
+  it('rolls back the whole batch when one lead cannot move', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId: ok } = createLeadFor(organizationId)
+    const { leadId: bad } = createLeadFor(organizationId)
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+    const fuOk = scheduleFollowUp({ leadId: ok, title: 'Ok', dueAt: future }).followupId
+    const fuBad = scheduleFollowUp({ leadId: bad, title: 'Bad', dueAt: future }).followupId
+    // WON stays absorbing, so a WON lead cannot move and aborts the batch.
+    leadRepo.updateCurrentStage(organizationId, bad, stageIdByName(organizationId, 'WON'))
+
+    expect(() =>
+      bulkCompleteFollowUps({
+        followUpIds: [fuOk, fuBad],
+        stageChange: { targetStageId: stageIdByName(organizationId, 'CONTACTED') }
+      })
+    ).toThrow(InvalidStateTransitionError)
+
+    // Nothing from the batch committed — both follow-ups are still open.
+    for (const id of [fuOk, fuBad]) {
+      const followup = getDb()
+        .prepare('SELECT completed_at FROM lead_followups WHERE id = ?')
+        .get(id) as { completed_at: string | null }
+      expect(followup.completed_at).toBeNull()
+    }
+    expect(leadRepo.getById(organizationId, ok)!.currentStageId).toBe(
+      stageIdByName(organizationId, 'NEW')
+    )
+  })
+
+  it('rejects a foreign target stage and rolls back', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Call back',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+
+    expect(() =>
+      bulkCompleteFollowUps({
+        followUpIds: [followupId],
+        stageChange: { targetStageId: 99999 }
+      })
+    ).toThrow(NotFoundError)
+
+    const followup = getDb()
+      .prepare('SELECT completed_at FROM lead_followups WHERE id = ?')
+      .get(followupId) as { completed_at: string | null }
+    expect(followup.completed_at).toBeNull()
+  })
+
+  it('cancels sibling follow-ups for leads moved to a suppress-followups stage', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId: leadA } = createLeadFor(organizationId)
+    const { leadId: leadB } = createLeadFor(organizationId)
+    const future = new Date(Date.now() + 86_400_000).toISOString()
+    const fuA = scheduleFollowUp({ leadId: leadA, title: 'First', dueAt: future }).followupId
+    const { followupId: siblingId } = scheduleFollowUp({
+      leadId: leadA,
+      title: 'Second',
+      dueAt: future
+    })
+    const fuB = scheduleFollowUp({ leadId: leadB, title: 'B', dueAt: future }).followupId
+
+    const result = bulkCompleteFollowUps({
+      followUpIds: [fuA, fuB],
+      stageChange: { targetStageId: stageIdByName(organizationId, 'DO_NOT_DISTURB') }
+    })
+
+    expect(result.completed).toBe(2)
+    const sibling = getDb()
+      .prepare('SELECT completed_at, cancelled_at, cancelled_reason FROM lead_followups WHERE id = ?')
+      .get(siblingId) as {
+      completed_at: string | null
+      cancelled_at: string | null
+      cancelled_reason: string | null
+    }
+    expect(sibling.completed_at).toBeNull()
+    expect(sibling.cancelled_at).not.toBeNull()
+    expect(sibling.cancelled_reason).toBe(
+      'Follow-up cancelled — lead moved to Do Not Disturb'
+    )
+  })
 })
 
 describe('queries', () => {
@@ -1315,5 +1782,135 @@ describe('createLeadSource', () => {
   it('denies creation without settings.manage even when lead.view is present', () => {
     seedOrgWithSession('Sales')
     expect(() => createLeadSource({ name: 'Podcast' })).toThrow(ForbiddenError)
+  })
+})
+
+describe('checkLeadPersonAvailability', () => {
+  it('reports no matches for a phone number not used by any person', () => {
+    seedOrgWithSession()
+    expect(checkLeadPersonAvailability({ fullName: 'New Person', phone: '9888777666' })).toEqual({
+      phoneTaken: false,
+      sameNamedPerson: false,
+      matchedPerson: null,
+      emailTaken: false,
+      emailOwnerName: null
+    })
+  })
+
+  it('finds an existing person whose phone matches, reports same name when names align', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Rahul Sharma', phone: '9876543210', sourceId })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210'
+    })
+
+    expect(result.phoneTaken).toBe(true)
+    expect(result.sameNamedPerson).toBe(true)
+    expect(result.matchedPerson).toMatchObject({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      isBlacklisted: false
+    })
+  })
+
+  it('detects a name mismatch on a taken phone', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Rahul Sharma', phone: '9876543210', sourceId })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Neha Kapoor',
+      phone: '9876543210'
+    })
+
+    expect(result.phoneTaken).toBe(true)
+    expect(result.sameNamedPerson).toBe(false)
+    expect(result.matchedPerson).toMatchObject({ fullName: 'Rahul Sharma' })
+  })
+
+  it('normalizes whitespace and case when comparing names', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Priya Verma', phone: '9876543211', sourceId })
+
+    const result = checkLeadPersonAvailability({
+      fullName: '  priya   VERMA ',
+      phone: '9876543211'
+    })
+
+    expect(result.phoneTaken).toBe(true)
+    expect(result.sameNamedPerson).toBe(true)
+  })
+
+  it('ignores the excluded person (edit dialog scenario)', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    const { personId } = createLead({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      sourceId
+    })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      excludePersonId: personId
+    })
+
+    expect(result.phoneTaken).toBe(false)
+    expect(result.sameNamedPerson).toBe(false)
+    expect(result.matchedPerson).toBeNull()
+  })
+
+  it('warns when email belongs to a different person', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      sourceId,
+      email: 'rahul@test.com'
+    })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Neha Kapoor',
+      phone: '9876543211',
+      email: 'rahul@test.com'
+    })
+
+    expect(result.phoneTaken).toBe(false)
+    expect(result.emailTaken).toBe(true)
+    expect(result.emailOwnerName).toBe('Rahul Sharma')
+  })
+
+  it('treats an invalid phone as all-clear (no block, no warning)', () => {
+    seedOrgWithSession()
+    const result = checkLeadPersonAvailability({
+      fullName: 'Test',
+      phone: 'not-a-phone'
+    })
+
+    expect(result).toEqual({
+      phoneTaken: false,
+      sameNamedPerson: false,
+      matchedPerson: null,
+      emailTaken: false,
+      emailOwnerName: null
+    })
+  })
+
+  it('denies access without lead.view permission', () => {
+    seedOrgWithSession('Finance')
+    expect(() =>
+      checkLeadPersonAvailability({ fullName: 'Test', phone: '9876543210' })
+    ).toThrow(ForbiddenError)
   })
 })

@@ -21,6 +21,11 @@ export const people = sqliteTable(
     full_name: text('full_name').notNull(),
     phone: text('phone').notNull(),
     email: text('email'),
+    is_blacklisted: integer('is_blacklisted', { mode: 'boolean' }).notNull().default(false),
+    blacklisted_reason: text('blacklisted_reason'),
+    blacklisted_at: text('blacklisted_at'),
+    blacklisted_by: integer('blacklisted_by').references(() => users.id),
+    photo_filename: text('photo_filename'),
     created_at: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),
@@ -44,6 +49,7 @@ export const leadStages = sqliteTable(
     is_initial: integer('is_initial', { mode: 'boolean' }).notNull().default(false),
     is_won: integer('is_won', { mode: 'boolean' }).notNull().default(false),
     is_lost: integer('is_lost', { mode: 'boolean' }).notNull().default(false),
+    suppress_followups: integer('suppress_followups', { mode: 'boolean' }).notNull().default(false),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
     created_at: text('created_at')
       .notNull()

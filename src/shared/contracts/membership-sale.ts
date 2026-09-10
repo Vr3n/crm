@@ -22,6 +22,8 @@ export const sellMembershipInputSchema = z
     discountValueMinor: z.number().int().min(0).nullable(),
     paidAmountMinor: z.number().int().min(0),
     paymentMethod: z.enum(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']),
+    /** Free-text payment reference (e.g. cheque no., UTR). Optional, informational. */
+    reference: z.string().max(200).nullable().optional(),
     transactionId: z.string().uuid()
   })
   .superRefine((val, ctx) => {

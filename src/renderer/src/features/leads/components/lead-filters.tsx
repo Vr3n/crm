@@ -12,6 +12,7 @@ import {
 import { useMemo } from 'react'
 import { STAGES } from '../constants'
 import { useReferenceData } from '../reference-data'
+import { PERSON_STATUS_OPTIONS } from '@/features/people/person-status'
 import type { Lead, LeadFilters, StageKey } from '../types'
 
 const RANGES: { key: LeadFilters['range']; label: string }[] = [
@@ -57,7 +58,8 @@ export function LeadFilters({
     !!filters.search ||
     filters.stage !== 'ALL' ||
     filters.sourceId !== 'ALL' ||
-    filters.ownerId !== 'ALL'
+    filters.ownerId !== 'ALL' ||
+    filters.personStatus !== 'ALL'
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -122,6 +124,22 @@ export function LeadFilters({
         </SelectContent>
       </Select>
 
+      <Select
+        value={filters.personStatus ?? 'ALL'}
+        onValueChange={(v) => onChange({ ...filters, personStatus: v as LeadFilters['personStatus'] })}
+      >
+        <SelectTrigger className="w-40" aria-label="Person state">
+          <SelectValue placeholder="Person state" />
+        </SelectTrigger>
+        <SelectContent>
+          {PERSON_STATUS_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="h-9">
@@ -143,7 +161,7 @@ export function LeadFilters({
             >
               {r.label}
               {filters.range === r.key ? (
-                <span className="size-1.5 rounded-full bg-primary" />
+                <span className="size-1.5 rounded-full bg-cyan-500" />
               ) : null}
             </button>
           ))}
@@ -156,7 +174,14 @@ export function LeadFilters({
           size="sm"
           className="h-9 text-muted-foreground"
           onClick={() =>
-            onChange({ search: '', stage: 'ALL', sourceId: 'ALL', ownerId: 'ALL', range: 'all' })
+            onChange({
+              search: '',
+              stage: 'ALL',
+              sourceId: 'ALL',
+              ownerId: 'ALL',
+              personStatus: 'ALL',
+              range: 'all'
+            })
           }
         >
           Clear

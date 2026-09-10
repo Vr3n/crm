@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 import { organizations, users } from './identity'
-import { customers } from './membership'
+import { customers, memberships } from './membership'
 import { membershipPlans, offers } from './catalog'
 
 /**
@@ -23,6 +23,13 @@ export const invoices = sqliteTable(
     customer_id: integer('customer_id')
       .notNull()
       .references(() => customers.id),
+    /**
+     * The membership this invoice bills. Set at sale/renew (membership ↔ one
+     * invoice, created in the same transaction). Null for legacy invoices and
+     * standalone/non-membership invoices — per-membership payment aggregation
+     * keys off this.
+     */
+    membership_id: integer('membership_id').references(() => memberships.id),
     /** DRAFT / OPEN / PARTIALLY_PAID / PAID / VOID / UNCOLLECTIBLE */
     status: text('status').notNull().default('DRAFT'),
     /** Customer snapshot for the document (Module 02 §21, §4). */
@@ -49,7 +56,8 @@ export const invoices = sqliteTable(
   (table) => [
     index('idx_invoices_org').on(table.organization_id),
     index('idx_invoices_org_status').on(table.organization_id, table.status),
-    index('idx_invoices_customer').on(table.customer_id)
+    index('idx_invoices_customer').on(table.customer_id),
+    index('idx_invoices_membership').on(table.organization_id, table.membership_id)
   ]
 )
 

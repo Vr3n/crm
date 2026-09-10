@@ -1,11 +1,14 @@
-import { ArrowRightLeft, Info, Undo2 } from 'lucide-react'
+import { ArrowRightLeft, Download, Info, Undo2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { formatDate, initials } from '@/features/leads/format'
 import { formatMinor } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
 import { PaymentMethodBadge } from './payment-method-badge'
+import { pdfApi } from '@/features/pdf/api'
 import type { Refund } from '../types'
 
 function KeyValue({
@@ -55,12 +58,47 @@ export function RefundDetailSheet({
                     <SheetTitle className="font-mono text-lg tabular-nums">
                       {refund.refundNo}
                     </SheetTitle>
-                    <Badge variant="destructive" className="shrink-0">
-                      Issued
-                    </Badge>
+                    {refund.status === 'SCHEDULED' ? (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-300 bg-amber-50 text-amber-700"
+                      >
+                        Scheduled
+                      </Badge>
+                    ) : refund.status === 'VOIDED' ? (
+                      <Badge variant="outline" className="border-border text-muted-foreground">
+                        Voided
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="shrink-0">
+                        Issued
+                      </Badge>
+                    )}
                   </div>
                   <p className="truncate text-sm font-medium">{refund.customer.name}</p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 text-muted-foreground"
+                  disabled={refund.status !== 'ISSUED'}
+                  onClick={async () => {
+                    try {
+                      const filePath = await pdfApi.exportRefund(refund.id, 'preview')
+                      toast.success('Refund receipt exported', {
+                        description: `Saved to ${filePath}`
+                      })
+                    } catch (err) {
+                      toast.error('Export failed', {
+                        description:
+                          err instanceof Error ? err.message : 'Could not generate receipt'
+                      })
+                    }
+                  }}
+                >
+                  <Download className="size-3.5" />
+                  Receipt
+                </Button>
               </div>
               <div className="flex items-baseline justify-between rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2.5">
                 <span className="text-xs text-muted-foreground">Amount returned</span>
@@ -81,6 +119,9 @@ export function RefundDetailSheet({
                   </div>
                   <div>
                     <KeyValue label="Date" value={formatDate(refund.refundDate)} />
+                    {refund.status === 'SCHEDULED' && refund.scheduledDate ? (
+                      <KeyValue label="Scheduled for" value={formatDate(refund.scheduledDate)} />
+                    ) : null}
                     <KeyValue
                       label="Method"
                       value={<PaymentMethodBadge method={refund.method} />}
@@ -106,8 +147,11 @@ export function RefundDetailSheet({
                 <section className="flex items-start gap-2.5 rounded-md border border-border bg-muted/30 px-3 py-2.5 pt-5">
                   <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">
-                    The original payment stays on record unchanged — this refund is layered on top
-                    as its own dated, reasoned event for auditing.
+                    {refund.status === 'SCHEDULED'
+                      ? `This refund is scheduled for ${formatDate(refund.scheduledDate ?? refund.refundDate)} and has not been issued yet.`
+                      : refund.status === 'VOIDED'
+                        ? 'This scheduled refund was cancelled (the membership cancellation was reverted). Money never left.'
+                        : 'The original payment stays on record unchanged — this refund is layered on top as its own dated, reasoned event for auditing.'}
                   </p>
                 </section>
               </div>

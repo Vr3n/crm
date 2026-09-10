@@ -20,7 +20,11 @@ import { registerIdentityReadIpc } from './ipc/identity-read'
 import { registerPdfIpc } from './ipc/pdf'
 import { registerExportIpc } from './ipc/export'
 import { registerLicenseIpc } from './ipc/license'
+import { registerBlacklistIpc } from './ipc/blacklist'
+import { registerPersonPhotoIpc } from './ipc/person'
+import { configurePhotoStorage } from './lib/photo-storage'
 import { restoreRememberedLogin } from './application/identity'
+import { processScheduledRefunds } from './application/finance'
 import { ensureInstallLock } from './licensing/ensure'
 import { generateInstallLock, getInstallDir } from './licensing/install-lock'
 
@@ -90,6 +94,13 @@ app.whenReady().then(async () => {
   runMigrations()
   seedPermissions()
 
+  // Issue any scheduled refunds whose cancellation date has arrived
+  // (offline app — runs on every launch; also triggered from the Refunds page).
+  processScheduledRefunds()
+
+  // Configure photo storage with the app's userData directory
+  configurePhotoStorage(app.getPath('userData'))
+
   // Restore any remembered login BEFORE the window loads, so the renderer's first
   // identity.status() already reports AUTHENTICATED (no login-screen flash).
   // Ordering matters: seedPermissions() must run first because the session context
@@ -111,6 +122,8 @@ app.whenReady().then(async () => {
   registerPdfIpc()
   registerExportIpc()
   registerLicenseIpc()
+  registerBlacklistIpc()
+  registerPersonPhotoIpc()
 
   createWindow()
 

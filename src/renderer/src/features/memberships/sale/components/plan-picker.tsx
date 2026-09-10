@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { ChevronsUpDown, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { usePlans } from '@/features/catalog/queries'
+import { useAvailablePlans } from '@/features/catalog/queries'
 import { formatMinor, formatRate } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import type { Plan } from '@/features/catalog/types'
@@ -25,12 +25,11 @@ export function PlanPicker({
   onChange: (plan: Plan | null) => void
   invalid?: boolean
 }): React.JSX.Element {
-  const { data: plans = [] } = usePlans()
+  const { data: plans = [] } = useAvailablePlans()
   const [open, setOpen] = useState(false)
   const currency = useCurrency()
 
-  const activePlans = useMemo(() => plans.filter((p) => p.isActive), [plans])
-  const selected = activePlans.find((p) => p.id === value) ?? null
+  const selected = plans.find((p) => p.id === value) ?? null
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,7 +59,7 @@ export function PlanPicker({
       >
         <Command
           filter={(val, search) => {
-            const p = activePlans.find((x) => String(x.id) === val)
+            const p = plans.find((x) => String(x.id) === val)
             if (!p) return 0
             return p.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
           }}
@@ -69,7 +68,7 @@ export function PlanPicker({
           <CommandList>
             <CommandEmpty>No plans found.</CommandEmpty>
             <CommandGroup>
-              {activePlans.map((plan) => (
+              {plans.map((plan) => (
                 <CommandItem
                   key={plan.id}
                   value={String(plan.id)}

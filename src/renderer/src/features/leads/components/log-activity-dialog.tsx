@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { PhoneCall } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -21,10 +22,12 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useLogActivity } from '../queries'
-import { useReferenceData } from '../reference-data'
+import { isTerminal, moveableStages, stageConfig } from '../constants'
+import { useLogActivity, useMoveStage } from '../queries'
+import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
 import { LeadPicker } from './lead-picker'
-import type { Lead } from '../types'
+import { StageBadge } from './stage-badge'
+import type { Lead, StageKey } from '../types'
 
 /**
  * Log an activity (Module 01 §24). Activities are history — immutable,
@@ -43,26 +46,53 @@ export function LogActivityDialog({
   lead?: Lead
 }): React.JSX.Element {
   const log = useLogActivity()
+  const move = useMoveStage()
   const { data: ref } = useReferenceData()
+  const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const types = useMemo(
     () => ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
     [ref]
   )
   const [picked, setPicked] = useState<Lead | null>(lead ?? null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
   const target = picked ?? lead ?? null
+  const targetTerminal = target !== null && isTerminal(target.stage)
+
+  const stageOptions = useMemo(
+    () => (target ? moveableStages(target.stage) : []),
+    [target]
+  )
 
   const form = useForm({
-    defaultValues: { typeId: types[0]?.id ?? 0, note: '' },
+    defaultValues: { typeId: types[0]?.id ?? 0, note: '', targetStage: '' },
     onSubmit: async ({ value }) => {
-      if (!target) return
+      if (!target || !maps) return
+      // Soft gate: terminal-stage leads can be won back, but logging for one
+      // asks for an explicit confirmation first.
+      if (targetTerminal && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
-        await log.mutateAsync({
+        const { activityId } = await log.mutateAsync({
           leadId: target.id,
           typeId: value.typeId,
           note: value.note.trim(),
           occurredAt: new Date().toISOString()
         })
+        if (value.targetStage && value.targetStage !== target.stage) {
+          const targetStageId = stageIdOf(maps, value.targetStage as StageKey)
+          if (targetStageId !== undefined) {
+            await move.mutateAsync({
+              leadId: target.id,
+              targetStageId,
+              expectedStageId: target.stageId,
+              activityId
+            })
+          }
+        }
         setSubmitSuccess(true)
         window.setTimeout(() => onOpenChange(false), 700)
       } catch {
@@ -100,7 +130,12 @@ export function LogActivityDialog({
           <FieldGroup className="gap-4">
             {!lead ? (
               <Field label="For whom">
-                <LeadPicker value={target?.id ?? 0} onChange={setPicked} invalid={!target} />
+                <LeadPicker
+                  value={target?.id ?? 0}
+                  onChange={setPicked}
+                  invalid={!target}
+                  excludeBlacklisted
+                />
               </Field>
             ) : null}
 
@@ -190,6 +225,45 @@ export function LogActivityDialog({
                 </FormField>
               )}
             </form.Field>
+
+            {target && stageOptions.length > 0 && (
+              <form.Field name="targetStage">
+                {(field) => (
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label="Change Status?"
+                    hint="Optional — change the pipeline stage at the same time"
+                    validate={() => undefined}
+                    completeWhen={() => false}
+                  >
+                    {({ id, describedBy }) => (
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(v) => field.handleChange(v)}
+                      >
+                        <SelectTrigger id={id} aria-describedby={describedBy}>
+                          <SelectValue placeholder="No change" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stageOptions.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              <span className="flex items-center gap-2">
+                                <StageBadge stage={s.key} />
+                                {s.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
+                )}
+              </form.Field>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">
@@ -202,13 +276,28 @@ export function LogActivityDialog({
               success={submitSuccess}
               disabled={!canSubmit || !target}
               loadingLabel="Saving…"
-              successLabel="Logged!"
+              successLabel="Done!"
             >
               Log activity
             </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {targetTerminal && target ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={`Log for a ${stageConfig(target.stage).label} lead?`}
+          description={`${target.name} is on the ${stageConfig(target.stage).label} stage. Your team can still win them back — log this activity anyway?`}
+          confirmLabel="Log anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { BellPlus } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
@@ -14,9 +15,19 @@ import {
 import { Field, FieldGroup } from '@/components/ui/field'
 import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
-import { useScheduleFollowUp } from '../queries'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { isTerminal, moveableStages, stageConfig } from '../constants'
+import { useLogActivity, useMoveStage, useScheduleFollowUp } from '../queries'
+import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
 import { LeadPicker } from './lead-picker'
-import type { Lead } from '../types'
+import { StageBadge } from './stage-badge'
+import type { Lead, StageKey } from '../types'
 
 /**
  * Schedule a follow-up (Module 01 §25). From the lead detail screen the lead is
@@ -34,20 +45,56 @@ export function FollowUpDialog({
   lead?: Lead
 }): React.JSX.Element {
   const schedule = useScheduleFollowUp()
+  const logActivity = useLogActivity()
+  const move = useMoveStage()
+  const { data: ref } = useReferenceData()
+  const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const [picked, setPicked] = useState<Lead | null>(lead ?? null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
   const target = picked ?? lead ?? null
+  const targetTerminal = target !== null && isTerminal(target.stage)
+
+  const stageOptions = useMemo(
+    () => (target ? moveableStages(target.stage) : []),
+    [target]
+  )
 
   const form = useForm({
-    defaultValues: { title: '', due: '' },
+    defaultValues: { title: '', due: '', targetStage: '' },
     onSubmit: async ({ value }) => {
       if (!target) return
+      // Soft gate: terminal-stage leads can be won back, but scheduling for
+      // one asks for an explicit confirmation first.
+      if (targetTerminal && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
         await schedule.mutateAsync({
           leadId: target.id,
           title: value.title.trim(),
           dueAt: new Date(value.due).toISOString()
         })
+        if (value.targetStage && value.targetStage !== target.stage && maps) {
+          const typeId = maps.activityTypeIdByName.get('note')
+          const targetStageId = stageIdOf(maps, value.targetStage as StageKey)
+          if (typeId !== undefined && targetStageId !== undefined) {
+            const { activityId } = await logActivity.mutateAsync({
+              leadId: target.id,
+              typeId,
+              note: `Stage changed to ${value.targetStage}`,
+              occurredAt: new Date().toISOString()
+            })
+            await move.mutateAsync({
+              leadId: target.id,
+              targetStageId,
+              expectedStageId: target.stageId,
+              activityId
+            })
+          }
+        }
         setSubmitSuccess(true)
         window.setTimeout(() => onOpenChange(false), 700)
       } catch {
@@ -85,7 +132,12 @@ export function FollowUpDialog({
           <FieldGroup className="gap-4">
             {!lead ? (
               <Field label="For whom">
-                <LeadPicker value={target?.id ?? 0} onChange={setPicked} invalid={!target} />
+                <LeadPicker
+                  value={target?.id ?? 0}
+                  onChange={setPicked}
+                  invalid={!target}
+                  excludeBlacklisted
+                />
               </Field>
             ) : null}
 
@@ -162,6 +214,45 @@ export function FollowUpDialog({
                 </FormField>
               )}
             </form.Field>
+
+            {target && stageOptions.length > 0 && (
+              <form.Field name="targetStage">
+                {(field) => (
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label="Change Status?"
+                    hint="Optional — change the pipeline stage at the same time"
+                    validate={() => undefined}
+                    completeWhen={() => false}
+                  >
+                    {({ id, describedBy }) => (
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(v) => field.handleChange(v)}
+                      >
+                        <SelectTrigger id={id} aria-describedby={describedBy}>
+                          <SelectValue placeholder="No change" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stageOptions.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              <span className="flex items-center gap-2">
+                                <StageBadge stage={s.key} />
+                                {s.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
+                )}
+              </form.Field>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">
@@ -174,13 +265,28 @@ export function FollowUpDialog({
               success={submitSuccess}
               disabled={!canSubmit || !target}
               loadingLabel="Scheduling…"
-              successLabel="Scheduled!"
+              successLabel="Done!"
             >
               Schedule
             </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {targetTerminal && target ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={`Schedule for a ${stageConfig(target.stage).label} lead?`}
+          description={`${target.name} is on the ${stageConfig(target.stage).label} stage. Your team can still win them back — schedule this follow-up anyway?`}
+          confirmLabel="Schedule anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }

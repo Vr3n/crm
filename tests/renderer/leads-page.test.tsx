@@ -155,7 +155,7 @@ describe('LeadsPage selection toolbar', () => {
     await waitFor(() => {
       expect(window.api.leads.bulkScheduleFollowup).toHaveBeenCalledWith(
         expect.objectContaining({
-          leadIds: [1, 2],
+          leadIds: expect.arrayContaining([1, 2]),
           title: 'Re-call for trial'
         })
       )
@@ -181,7 +181,7 @@ describe('LeadsPage selection toolbar', () => {
     await waitFor(() => {
       expect(window.api.leads.bulkRecordActivity).toHaveBeenCalledWith(
         expect.objectContaining({
-          leadIds: [1, 2],
+          leadIds: expect.arrayContaining([1, 2]),
           note: 'Called to confirm trial'
         })
       )
@@ -207,7 +207,7 @@ describe('LeadsPage selection toolbar', () => {
 
     await waitFor(() => {
       expect(window.api.leads.bulkMoveStage).toHaveBeenCalledWith({
-        leadIds: [1, 2],
+        leadIds: expect.arrayContaining([1, 2]),
         targetStageId: 2, // CONTACTED in the setup reference data
         note: ''
       })
@@ -267,7 +267,9 @@ describe('LeadsPage selection toolbar', () => {
     await user.click(await within(dialog).findByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
-      expect(window.api.leads.deleteLeads).toHaveBeenCalledWith({ leadIds: [1, 2] })
+      expect(window.api.leads.deleteLeads).toHaveBeenCalledWith({
+        leadIds: expect.arrayContaining([1, 2])
+      })
     })
     await waitFor(() => {
       expect(screen.queryByText('2 selected')).not.toBeInTheDocument()

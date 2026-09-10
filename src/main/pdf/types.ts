@@ -54,7 +54,11 @@ export interface InvoicePrintContext {
   taxTotal: number
   total: number
   allocations: PdfAllocation[]
+  /** Refunds issued against payments allocated to this invoice. */
+  refunds: PdfRefund[]
   paidAmount: number
+  /** Total refunded against this invoice (net = paid − refunded). */
+  refundedAmount: number
   outstanding: number
   generatedAt: string
 }
@@ -80,4 +84,31 @@ export interface ReceiptPrintContext {
   generatedAt: string
 }
 
-export type PdfDocumentType = 'invoice' | 'receipt'
+/** One refund row shown on an invoice PDF (linked via the source payment). */
+export interface PdfRefund {
+  refundNo: string
+  refundDate: string
+  method: string
+  reason: string
+  amount: number
+}
+
+/** Full print context for Refund Receipt PDF. */
+export interface RefundPrintContext {
+  org: OrgBranding
+  refundNo: string
+  refundDate: string
+  amount: number
+  method: string
+  sourcePaymentNo: string
+  /** Invoice numbers the source payment was allocated to. */
+  invoiceNumbers: string[]
+  customer: PdfCustomer
+  /** Active membership name for this customer. */
+  membershipName?: string | null
+  reason: string
+  recordedBy: string
+  generatedAt: string
+}
+
+export type PdfDocumentType = 'invoice' | 'receipt' | 'refund'

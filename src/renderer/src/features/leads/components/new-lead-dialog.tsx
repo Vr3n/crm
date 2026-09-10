@@ -26,13 +26,23 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { PersonAvatar } from '@/components/person/person-avatar'
+import type { PendingPhoto } from '@/components/person/photo-constants'
 import { can, useSession } from '@/context/session-context'
 import { logger } from '@/lib/logger'
-import { emailError, isValidEmail, leadNameError, mobileError } from '@/lib/validation'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
+import {
+  emailError,
+  isValidEmail,
+  isValidIndianMobile,
+  leadNameError,
+  mobileError
+} from '@/lib/validation'
 import { cn } from '@/lib/utils'
-import { isApiError } from '../../../../../shared/contracts/errors'
+import { errorMessage } from '../../../../../shared/contracts/errors'
 import { api } from '../api'
-import { useCreateLead } from '../queries'
+import { useCreateLead, useLeadPersonAvailability } from '../queries'
+import { useUpdatePersonPhoto } from '@/features/people/person-photo'
 import { referenceKeys, useReferenceData } from '../reference-data'
 
 const PHONE_MAX = 10
@@ -73,6 +83,10 @@ export function NewLeadDialog({
 
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
+
+  // Photo state (transient — uploaded after lead is created)
+  const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null)
+  const uploadPhoto = useUpdatePersonPhoto()
 
   // Collapsible section states
   const [followupOpen, setFollowupOpen] = useState(false)
@@ -122,6 +136,16 @@ export function NewLeadDialog({
               : undefined
         })
         onCreated?.(created)
+
+        // Upload photo if one was captured/imported
+        if (pendingPhoto) {
+          uploadPhoto.mutate({
+            personId: created.personId,
+            filename: pendingPhoto.filename,
+            data: pendingPhoto.data
+          })
+        }
+
         setSubmitSuccess(true)
         successTimer.current = window.setTimeout(() => onOpenChange(false), 700)
       } catch {
@@ -136,11 +160,31 @@ export function NewLeadDialog({
   // Before the user picks a source the onChange validator has not run yet, so
   // `canSubmit` can be spuriously true — keep submit gated on an actual value.
   const sourceValue = useStore(form.store, (s) => s.values.source)
-  const formError = create.error
-    ? isApiError(create.error)
-      ? create.error.message
-      : 'Could not create lead'
-    : null
+
+  // Reactive duplicate check (docs/107): once a complete phone and a name are
+  // present, probe the backend for an existing person while the user types. A
+  // same name+phone match blocks submission ("person already exists"); a phone
+  // match with a different name only warns (yellow) — the lead can still attach
+  // to the existing person. Email collisions are advisory only. (Selecting
+  // field primitives — never the whole `values` object — keeps the store
+  // subscription stable; `s.values` changes identity on every form update.)
+  const debouncedName = useDebouncedValue(useStore(form.store, (s) => s.values.name), 400)
+  const debouncedPhone = useDebouncedValue(useStore(form.store, (s) => s.values.phone), 400)
+  const debouncedEmail = useDebouncedValue(useStore(form.store, (s) => s.values.email), 400)
+  const availabilityInput =
+    isValidIndianMobile(debouncedPhone) && debouncedName.trim().length > 0
+      ? {
+          fullName: debouncedName.trim(),
+          phone: debouncedPhone.trim(),
+          email: isValidEmail(debouncedEmail) ? debouncedEmail.trim() : undefined
+        }
+      : undefined
+  const { data: availability, isFetching: availabilityChecking } =
+    useLeadPersonAvailability(availabilityInput)
+  const phoneTaken = availability?.phoneTaken ?? false
+  const personExists = Boolean(availability?.phoneTaken && availability.sameNamedPerson)
+
+  const formError = create.error ? errorMessage(create.error, 'Could not create lead') : null
 
   // Creating a source is a settings action; searching sources is visible to
   // anyone who can view leads (mirrors `requirePermission` in the backend).
@@ -223,6 +267,13 @@ export function NewLeadDialog({
           ) : null}
 
           <FieldGroup className="gap-3">
+            <PersonAvatar
+              name={useStore(form.store, (s) => s.values.name) || ''}
+              size="lg"
+              editable
+              onPendingChange={setPendingPhoto}
+            />
+
             <form.Field name="name" validators={{ onChange: ({ value }) => leadNameError(value) }}>
               {(field) => (
                 <FormField
@@ -277,6 +328,16 @@ export function NewLeadDialog({
                       }
                       hint="10-digit mobile or landline"
                       validate={mobileError}
+                      extraError={
+                        personExists
+                          ? `A lead for ${availability?.matchedPerson?.fullName} already exists — open their existing record instead`
+                          : undefined
+                      }
+                      warning={
+                        phoneTaken && !personExists && availability?.matchedPerson
+                          ? `This number is already on file for ${availability.matchedPerson.fullName} — you can still attach the lead to them`
+                          : undefined
+                      }
                       completeWhen={(v) => {
                         const digits = v.replace(/\D/g, '')
                         // Judge the field the moment the number is clearly
@@ -318,6 +379,11 @@ export function NewLeadDialog({
                     label="Email"
                     validate={(v) => (v.trim() ? emailError(v, 'Enter a valid email') : undefined)}
                     completeWhen={isValidEmail}
+                    warning={
+                      availability?.emailTaken && availability.emailOwnerName
+                        ? `This email already belongs to ${availability.emailOwnerName} — you can still use it`
+                        : undefined
+                    }
                     leading={<Mail className="pointer-events-none size-4" aria-hidden />}
                     type="email"
                     autoComplete="email"
@@ -632,7 +698,7 @@ export function NewLeadDialog({
               type="submit"
               loading={isSubmitting}
               success={submitSuccess}
-              disabled={!canSubmit || sourceValue === ''}
+              disabled={!canSubmit || sourceValue === '' || personExists || availabilityChecking}
               loadingLabel="Creating…"
               successLabel="Created!"
             >

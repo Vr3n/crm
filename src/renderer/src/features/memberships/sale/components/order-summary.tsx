@@ -13,9 +13,8 @@ import {
 } from '@/components/ui/select'
 import { formatMinor, formatRate, parseToMinor, sanitizeMoneyInput } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
+import { PAYMENT_METHODS } from '@/lib/payment-methods'
 import type { Plan } from '@/features/catalog/types'
-
-const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER'] as const
 
 export function OrderSummary({
   plan = null,
@@ -28,8 +27,10 @@ export function OrderSummary({
   paidInput = '',
   paidAmount = null,
   paymentMethod = '',
+  chequeNumber = '',
   onPaidChange,
   onPaymentMethodChange,
+  onChequeNumberChange,
   isDirty = false,
   leadName = null
 }: {
@@ -43,8 +44,10 @@ export function OrderSummary({
   paidInput?: string
   paidAmount?: number | null
   paymentMethod?: string | null
+  chequeNumber?: string
   onPaidChange?: (v: string) => void
   onPaymentMethodChange?: (v: string) => void
+  onChequeNumberChange?: (v: string) => void
   isDirty?: boolean
   leadName?: string | null
 }): React.JSX.Element {
@@ -192,6 +195,22 @@ export function OrderSummary({
               </SelectContent>
             </Select>
           </div>
+          {paymentMethod === 'CHEQUE' ? (
+            <div className="grid gap-1.5">
+              <Label htmlFor="summary-cheque" className="text-xs">
+                Cheque number <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="summary-cheque"
+                type="text"
+                maxLength={200}
+                placeholder="e.g. 123456"
+                value={chequeNumber}
+                onChange={(e) => onChequeNumberChange?.(e.target.value)}
+                className="font-mono tabular-nums"
+              />
+            </div>
+          ) : null}
         </div>
 
         <Separator />

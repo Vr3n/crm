@@ -19,12 +19,16 @@ import {
   DEFAULT_TIMEZONE,
   LeadStageMachine,
   localDayUtcRange,
-  deriveLeadStatus
+  deriveLeadStatus,
+  samePersonName
 } from '../domain/lead'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors'
+import { assertPersonAllowed } from './blacklist'
 import { PERMISSIONS } from '../db/permissions'
 import type {
   AssignLeadInput,
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
@@ -32,6 +36,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -42,6 +47,7 @@ import type {
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadSourceSearchRequest,
   LeadTextOptionRow,
@@ -64,6 +70,17 @@ import type {
  */
 
 const OWNER_CHANGE_TYPE = 'OWNER_CHANGE'
+
+/** Human-readable cancellation reasons for stages that suppress follow-ups. */
+const SUPPRESS_FOLLOWUP_REASONS: Record<string, string> = {
+  DO_NOT_DISTURB: 'Follow-up cancelled — lead moved to Do Not Disturb',
+  NOT_INTERESTED: 'Follow-up cancelled — lead moved to Not Interested'
+}
+
+/** Auto-NOTE text for a completion that also moves the lead (strict-move rule). */
+function completedFollowupNote(targetName: string): string {
+  return `Followup completed — moved to ${targetName}`
+}
 
 function orgTimezone(organizationId: number): string {
   return organizationRepo.findById(organizationId)?.timezone ?? DEFAULT_TIMEZONE
@@ -107,6 +124,8 @@ export function createLead(input: CreateLeadInput): CreatedLead {
         email: input.email?.trim().toLowerCase() || null
       })
     }
+
+    assertPersonAllowed(organizationId, person.id, 'create a lead')
 
     if (leadRepo.findActiveByPersonId(organizationId, person.id)) {
       throw new ConflictError('This person already has an active lead')
@@ -207,6 +226,7 @@ export function editLead(input: EditLeadInput): void {
 
   const person = personRepo.findById(organizationId, lead.personId)
   if (!person) throw new NotFoundError('Person not found')
+  assertPersonAllowed(organizationId, person.id, 'edit this lead')
 
   const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
   if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
@@ -242,6 +262,9 @@ export function editLead(input: EditLeadInput): void {
  * Moves a lead to any active non-terminal stage, guarded by the stage machine.
  * The caller must pass the stage it believes the lead is on (`expectedStageId`);
  * a mismatch means a concurrent change happened (D17).
+ *
+ * When moving TO a stage with `suppressFollowups=true`, all pending follow-ups
+ * for the lead are cancelled (reason: "Stage changed to [stage name]").
  */
 export function moveLeadStage(input: MoveLeadStageInput): void {
   requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
@@ -251,8 +274,10 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
   const machine = stageMachineFor(organizationId)
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'move this lead')
 
   const current = stageRepo.findById(organizationId, lead.currentStageId)
+  if (!current) throw new NotFoundError('Current stage not found')
   const target = stageRepo.findById(organizationId, input.targetStageId)
   if (!current) throw new NotFoundError('Current stage not found')
   if (!target) throw new NotFoundError('Target stage not found')
@@ -270,6 +295,7 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
 
   withTransaction(() => {
     leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+    if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
     stageHistoryRepo.record({
       organizationId,
       leadId: lead.id,
@@ -279,6 +305,17 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
       reason: null,
       changedBy: userId
     })
+
+    // Cancel pending follow-ups when moving to a stage that suppresses them
+    if (target.suppressFollowups) {
+      const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+      const reason =
+        SUPPRESS_FOLLOWUP_REASONS[target.name] ??
+        `Follow-up cancelled — lead moved to ${target.name}`
+      for (const fu of pendingFollowups) {
+        followupRepo.cancel(organizationId, fu.id, userId, reason)
+      }
+    }
   })
 }
 
@@ -288,6 +325,9 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
  * one transaction. The strict-move rule demands a real activity per lead, so a
  * NOTE activity is recorded for each — the note names the bulk action and its
  * target. Leads already at the target stage are skipped (a move is a no-op).
+ *
+ * When moving TO a stage with `suppressFollowups=true`, all pending follow-ups
+ * for each lead are cancelled (reason: "Stage changed to [stage name]").
  */
 export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadStageResult {
   requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
@@ -310,6 +350,7 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
   // Validate every move before mutating anything, so a bad lead aborts the batch.
   for (const lead of leads) {
     if (lead.currentStageId === target.id) continue
+    assertPersonAllowed(organizationId, lead.personId, 'move this lead')
     const current = stageRepo.findById(organizationId, lead.currentStageId)
     if (!current) throw new NotFoundError('Current stage not found')
     machine.assertMoveAllowed(current, target, true)
@@ -329,6 +370,7 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
         createdBy: userId
       })
       leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+      if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
       stageHistoryRepo.record({
         organizationId,
         leadId: lead.id,
@@ -338,6 +380,18 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
         reason: null,
         changedBy: userId
       })
+
+      // Cancel pending follow-ups when moving to a stage that suppresses them
+      if (target.suppressFollowups) {
+        const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+        const reason =
+          SUPPRESS_FOLLOWUP_REASONS[target.name] ??
+          `Follow-up cancelled — lead moved to ${target.name}`
+        for (const fu of pendingFollowups) {
+          followupRepo.cancel(organizationId, fu.id, userId, reason)
+        }
+      }
+
       moved++
     }
     return { moved }
@@ -354,9 +408,11 @@ export function deleteLeads(input: DeleteLeadsInput): void {
   const organizationId = currentOrganizationId()
 
   for (const id of input.leadIds) {
-    if (!leadRepo.getById(organizationId, id)) {
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) {
       throw new NotFoundError('Lead not found')
     }
+    assertPersonAllowed(organizationId, lead.personId, 'delete this lead')
   }
 
   withTransaction(() => {
@@ -372,6 +428,7 @@ export function recordLeadActivity(input: RecordLeadActivityInput): RecordedActi
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'log an activity')
 
   const type = activityTypeRepo.findById(organizationId, input.typeId)
   if (!type) throw new NotFoundError('Activity type not found')
@@ -391,6 +448,8 @@ export function recordLeadActivity(input: RecordLeadActivityInput): RecordedActi
  * Bulk follow-up scheduling for the selection toolbar. Every lead is validated
  * up front (all-or-nothing), then one follow-up is created per lead inside a
  * single transaction. The due date must be in the future, as in the single flow.
+ *
+ * Leads in stages with `suppressFollowups=true` are skipped (no follow-up created).
  */
 export function bulkScheduleFollowUp(input: BulkScheduleFollowUpInput): BulkScheduleFollowUpResult {
   requirePermission(PERMISSIONS.FOLLOWUP_CREATE)
@@ -403,16 +462,22 @@ export function bulkScheduleFollowUp(input: BulkScheduleFollowUpInput): BulkSche
     throw new ValidationError('Follow-up due date must be in the future')
   }
 
-  for (const id of input.leadIds) {
-    if (!leadRepo.getById(organizationId, id)) throw new NotFoundError('Lead not found')
-  }
+  const leads = input.leadIds.map((id) => {
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) throw new NotFoundError('Lead not found')
+    assertPersonAllowed(organizationId, lead.personId, 'schedule a follow-up')
+    return lead
+  })
 
   return withTransaction(() => {
     let scheduled = 0
-    for (const id of input.leadIds) {
+    for (const lead of leads) {
+      const stage = stageRepo.findById(organizationId, lead.currentStageId)
+      if (stage?.suppressFollowups) continue
+
       followupRepo.create({
         organizationId,
-        leadId: id,
+        leadId: lead.id,
         title: input.title.trim(),
         dueAt: due.toISOString(),
         createdBy: userId
@@ -437,7 +502,9 @@ export function bulkRecordActivity(input: BulkRecordActivityInput): BulkRecordAc
   if (!type) throw new NotFoundError('Activity type not found')
 
   for (const id of input.leadIds) {
-    if (!leadRepo.getById(organizationId, id)) throw new NotFoundError('Lead not found')
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) throw new NotFoundError('Lead not found')
+    assertPersonAllowed(organizationId, lead.personId, 'log an activity')
   }
 
   return withTransaction(() => {
@@ -465,6 +532,7 @@ export function assignLead(input: AssignLeadInput): void {
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'reassign this lead')
   if (lead.ownerUserId === input.ownerUserId) return
 
   const target = userRepo.findById(input.ownerUserId)
@@ -486,7 +554,8 @@ export function assignLead(input: AssignLeadInput): void {
   })
 }
 
-/** Marks a lead lost with a mandatory reason (D8). Terminal; no further moves. */
+/** Marks a lead lost with a mandatory reason (D8). LOST stays re-openable — a later
+ * stage move wins the lead back and clears the lost markers (history preserved). */
 export function markLeadLost(input: MarkLeadLostInput): void {
   requirePermission(PERMISSIONS.LEAD_MARK_LOST)
   const organizationId = currentOrganizationId()
@@ -495,6 +564,7 @@ export function markLeadLost(input: MarkLeadLostInput): void {
   const machine = stageMachineFor(organizationId)
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'mark this lead lost')
 
   const current = stageRepo.findById(organizationId, lead.currentStageId)
   if (!current) throw new NotFoundError('Current stage not found')
@@ -525,7 +595,10 @@ export function markLeadLost(input: MarkLeadLostInput): void {
   })
 }
 
-/** Schedules a follow-up. The due date must be in the future. */
+/**
+ * Schedules a follow-up. The due date must be in the future.
+ * Refuses to create a follow-up if the lead is in a stage with suppressFollowups=true.
+ */
 export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: number } {
   requirePermission(PERMISSIONS.FOLLOWUP_CREATE)
   const organizationId = currentOrganizationId()
@@ -533,6 +606,16 @@ export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: nu
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'schedule a follow-up')
+
+  const currentStage = stageRepo.findById(organizationId, lead.currentStageId)
+  if (!currentStage) throw new NotFoundError('Lead stage not found')
+
+  if (currentStage.suppressFollowups) {
+    throw new ValidationError(
+      `Cannot schedule follow-up for a lead in "${currentStage.name}" stage`
+    )
+  }
 
   const due = new Date(input.dueAt)
   if (Number.isNaN(due.getTime())) throw new ValidationError('dueAt must be a valid date')
@@ -552,9 +635,17 @@ export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: nu
   return { followupId: followup.id }
 }
 
-/** Completes a follow-up. Idempotent: completing an already-done one is a no-op. */
+/**
+ * Completes a follow-up. Idempotent: completing an already-done one is a no-op.
+ * Optionally moves the lead's stage in the SAME transaction — the strict-move
+ * rule (every stage change must link a real activity) is satisfied by the
+ * activity recorded alongside the completion; when none was supplied, a NOTE
+ * activity is recorded automatically so the move stays auditable. The stage
+ * change requires `lead.update_stage`, which is checked before any write.
+ */
 export function completeFollowUp(input: CompleteFollowUpInput): void {
   requirePermission(PERMISSIONS.FOLLOWUP_COMPLETE)
+  if (input.stageChange) requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
 
@@ -562,22 +653,199 @@ export function completeFollowUp(input: CompleteFollowUpInput): void {
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) return
 
+  const completedLead = leadRepo.getById(organizationId, followup.leadId)
+  if (!completedLead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, completedLead.personId, 'complete a follow-up')
+
+  const machine = stageMachineFor(organizationId)
+
+  const change = input.stageChange
+    ? (() => {
+        const lead = leadRepo.getById(organizationId, followup.leadId)
+        if (!lead) throw new NotFoundError('Lead not found')
+        const current = stageRepo.findById(organizationId, lead.currentStageId)
+        if (!current) throw new NotFoundError('Current stage not found')
+        const target = stageRepo.findById(organizationId, input.stageChange!.targetStageId)
+        if (!target) throw new NotFoundError('Target stage not found')
+        if (lead.currentStageId !== input.stageChange!.expectedStageId) {
+          throw new ConflictError('Lead changed concurrently; refresh and retry')
+        }
+        return { lead, current, target }
+      })()
+    : null
+
   withTransaction(() => {
     followupRepo.complete(organizationId, followup.id, userId, input.notes)
 
+    let activityId: number | null = null
     if (input.activity) {
       const type = activityTypeRepo.findById(organizationId, input.activity.typeId)
       if (!type) throw new NotFoundError('Activity type not found')
 
-      activityRepo.create({
+      activityId = activityRepo.create({
         organizationId,
         leadId: followup.leadId,
         typeId: type.id,
         note: input.activity.note?.trim() || null,
         occurredAt: new Date().toISOString(),
         createdBy: userId
-      })
+      }).id
     }
+
+    if (change) {
+      const { lead, current, target } = change
+
+      if (activityId === null) {
+        const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
+        if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
+        activityId = activityRepo.create({
+          organizationId,
+          leadId: lead.id,
+          typeId: noteType.id,
+          note: input.notes?.trim() ? input.notes : completedFollowupNote(target.name),
+          occurredAt: new Date().toISOString(),
+          createdBy: userId
+        }).id
+      }
+
+      machine.assertMoveAllowed(current, target, true)
+      leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+      if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
+      stageHistoryRepo.record({
+        organizationId,
+        leadId: lead.id,
+        fromStageId: current.id,
+        toStageId: target.id,
+        activityId,
+        reason: null,
+        changedBy: userId
+      })
+
+      // Cancel other pending follow-ups when moving to a stage that suppresses them
+      if (target.suppressFollowups) {
+        const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+        const reason =
+          SUPPRESS_FOLLOWUP_REASONS[target.name] ??
+          `Follow-up cancelled — lead moved to ${target.name}`
+        for (const fu of pendingFollowups) {
+          followupRepo.cancel(organizationId, fu.id, userId, reason)
+        }
+      }
+    }
+  })
+}
+
+/**
+ * Bulk "mark done" for the follow-ups queue selection toolbar. Completes every
+ * open follow-up in one transaction; when `stageChange` is given, each lead is
+ * validated by the stage machine up front (all-or-nothing) and moved with an
+ * auto-NOTE activity + stage history entry, mirroring `bulkMoveLeadStage`.
+ * Already-completed follow-ups are skipped silently (idempotent, matching the
+ * single `completeFollowUp`). A single IPC call + one SQLite transaction beats
+ * N per-follow-up round trips (fewer bridge crossings, one commit).
+ */
+export function bulkCompleteFollowUps(
+  input: BulkCompleteFollowUpsInput
+): BulkCompleteFollowUpsResult {
+  requirePermission(PERMISSIONS.FOLLOWUP_COMPLETE)
+  if (input.stageChange) requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
+  const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
+
+  const followups = input.followUpIds.map((id) => {
+    const followup = followupRepo.getById(organizationId, id)
+    if (!followup) throw new NotFoundError('Follow-up not found')
+    return followup
+  })
+  const pending = followups.filter((followup) => !followup.completedAt)
+  if (pending.length === 0) return { completed: 0 }
+
+  // Refund-only rule, fail-closed before anything completes — regardless of
+  // whether the batch also moves stages.
+  for (const followup of pending) {
+    const pendingLead = leadRepo.getById(organizationId, followup.leadId)
+    if (!pendingLead) throw new NotFoundError('Lead not found')
+    assertPersonAllowed(organizationId, pendingLead.personId, 'complete a follow-up')
+  }
+
+  const machine = stageMachineFor(organizationId)
+
+  const change = input.stageChange
+    ? (() => {
+        const target = stageRepo.findById(organizationId, input.stageChange!.targetStageId)
+        if (!target) throw new NotFoundError('Target stage not found')
+
+        // Validate every move before mutating anything, so a bad lead aborts
+        // the batch (all-or-nothing, same rule as `bulkMoveLeadStage`).
+        const leadIds = [...new Set(pending.map((followup) => followup.leadId))]
+        for (const leadId of leadIds) {
+          const lead = leadRepo.getById(organizationId, leadId)
+          if (!lead) throw new NotFoundError('Lead not found')
+          if (lead.currentStageId === target.id) continue
+          const current = stageRepo.findById(organizationId, lead.currentStageId)
+          if (!current) throw new NotFoundError('Current stage not found')
+          machine.assertMoveAllowed(current, target, true)
+        }
+        return target
+      })()
+    : null
+
+  return withTransaction(() => {
+    let completed = 0
+    for (const followup of pending) {
+      followupRepo.complete(organizationId, followup.id, userId)
+      completed += 1
+    }
+
+    if (change) {
+      const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
+      if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
+
+      const movedLeadIds = new Set<number>()
+      for (const followup of pending) {
+        if (movedLeadIds.has(followup.leadId)) continue
+        const lead = leadRepo.getById(organizationId, followup.leadId)
+        if (!lead) throw new NotFoundError('Lead not found')
+        if (lead.currentStageId === change.id) continue
+
+        const current = stageRepo.findById(organizationId, lead.currentStageId)
+        if (!current) throw new NotFoundError('Current stage not found')
+        const activity = activityRepo.create({
+          organizationId,
+          leadId: lead.id,
+          typeId: noteType.id,
+          note: completedFollowupNote(change.name),
+          occurredAt: new Date().toISOString(),
+          createdBy: userId
+        })
+        leadRepo.updateCurrentStage(organizationId, lead.id, change.id)
+        if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
+        stageHistoryRepo.record({
+          organizationId,
+          leadId: lead.id,
+          fromStageId: current.id,
+          toStageId: change.id,
+          activityId: activity.id,
+          reason: null,
+          changedBy: userId
+        })
+        movedLeadIds.add(lead.id)
+
+        // Cancel other pending follow-ups when moving to a suppressing stage,
+        // exactly like the single `completeFollowUp`.
+        if (change.suppressFollowups) {
+          const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+          const reason =
+            SUPPRESS_FOLLOWUP_REASONS[change.name] ??
+            `Follow-up cancelled — lead moved to ${change.name}`
+          for (const other of pendingFollowups) {
+            followupRepo.cancel(organizationId, other.id, userId, reason)
+          }
+        }
+      }
+    }
+
+    return { completed }
   })
 }
 
@@ -590,6 +858,10 @@ export function updateFollowUp(input: UpdateFollowUpInput): void {
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) throw new ValidationError('Cannot edit a completed follow-up')
   if (followup.cancelledAt) throw new ValidationError('Cannot edit a cancelled follow-up')
+
+  const editedLead = leadRepo.getById(organizationId, followup.leadId)
+  if (!editedLead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, editedLead.personId, 'extend a follow-up')
 
   const due = new Date(input.dueAt)
   if (Number.isNaN(due.getTime())) throw new ValidationError('dueAt must be a valid date')
@@ -614,6 +886,10 @@ export function cancelFollowUp(input: CancelFollowUpInput): void {
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) throw new ValidationError('Cannot cancel a completed follow-up')
   if (followup.cancelledAt) return
+
+  const cancelledLead = leadRepo.getById(organizationId, followup.leadId)
+  if (!cancelledLead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, cancelledLead.personId, 'cancel a follow-up')
 
   withTransaction(() => {
     followupRepo.cancel(organizationId, followup.id, requireSession().userId, input.reason)
@@ -676,6 +952,9 @@ export function listLeads(input: LeadListRequest): LeadListResponse {
     personName: row.personName,
     phone: row.phone,
     email: row.email,
+    photoFilename: row.photoFilename,
+    isBlacklisted: row.isBlacklisted,
+    blacklistedReason: row.blacklistedReason,
     sourceId: row.sourceId,
     sourceName: row.sourceName,
     stageId: row.stageId,
@@ -855,6 +1134,57 @@ export function searchPeople(query: string): PeopleList {
   requirePermission(PERMISSIONS.LEAD_VIEW)
   const organizationId = currentOrganizationId()
   return personRepo.search(organizationId, query.trim(), 50, 0)
+}
+
+/**
+ * Reactive duplicate probe for the lead forms (see docs/107). Given the
+ * name/phone/email currently typed, reports whether an org person already owns
+ * the phone, whether their name matches (the unique-together key that blocks a
+ * duplicate lead), and whether another person holds the same email (advisory).
+ * Pure read — no transaction, no writes. An unparseable phone is treated as "no
+ * match yet" so an in-progress number never throws from the form.
+ */
+export function checkLeadPersonAvailability(input: CheckLeadPersonInput): LeadPersonAvailability {
+  requirePermission(PERMISSIONS.LEAD_VIEW)
+  const organizationId = currentOrganizationId()
+
+  let normalizedPhone: string
+  try {
+    normalizedPhone = IndianMobileNumber.parse(input.phone).value
+  } catch {
+    return {
+      phoneTaken: false,
+      sameNamedPerson: false,
+      matchedPerson: null,
+      emailTaken: false,
+      emailOwnerName: null
+    }
+  }
+
+  const matched = personRepo.findByPhone(organizationId, normalizedPhone)
+  const matchedPerson = matched && matched.id !== input.excludePersonId ? matched : null
+
+  const email = input.email?.trim().toLowerCase()
+  const emailOwner = email
+    ? personRepo.findByEmail(organizationId, email, matchedPerson?.id ?? input.excludePersonId)
+    : null
+
+  return {
+    phoneTaken: matchedPerson != null,
+    sameNamedPerson:
+      matchedPerson != null && samePersonName(matchedPerson.fullName, input.fullName),
+    matchedPerson: matchedPerson
+      ? {
+          id: matchedPerson.id,
+          fullName: matchedPerson.fullName,
+          phone: matchedPerson.phone,
+          isBlacklisted: matchedPerson.isBlacklisted,
+          blacklistedReason: matchedPerson.blacklistedReason
+        }
+      : null,
+    emailTaken: emailOwner != null,
+    emailOwnerName: emailOwner?.fullName ?? null
+  }
 }
 
 export function getReferenceData(): ReferenceData {

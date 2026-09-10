@@ -85,6 +85,8 @@ export interface DataTableProps<TData extends RowData> {
   emptyDescription?: string
   /** Fired when a data row is clicked (navigation from list rows). */
   onRowClick?: (row: TData) => void
+  /** Optional class name function applied to each data row (e.g. red tint for blacklisted). */
+  getRowClassName?: (row: TData) => string
   /** Wrap the table in the standard card chrome (`rounded-lg border bg-card`). */
   card?: boolean
   /** Header tint: `muted` (dashboard cards) or `primary` (operational workbench tables). */
@@ -114,6 +116,7 @@ export function DataTable<TData extends RowData>({
   emptyTitle = 'No results',
   emptyDescription,
   onRowClick,
+  getRowClassName,
   card = false,
   headerTone = 'muted',
   onMarkSelectedDone,
@@ -166,7 +169,10 @@ export function DataTable<TData extends RowData>({
     getRowId,
     globalFilterFn: 'includesString',
     initialState: {
-      sorting: initialSorting,
+      // An omitted initialSorting must still seed an empty array: the sorting
+      // toggle updater reads the current state with `.findIndex`, which throws
+      // on `undefined` on the first header click.
+      sorting: initialSorting ?? [],
       pagination: { pageIndex: 0, pageSize: initialPageSize }
     },
     state: { globalFilter, rowSelection },
@@ -282,7 +288,10 @@ export function DataTable<TData extends RowData>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() ? 'selected' : undefined}
-                    className="group cursor-pointer even:bg-muted/40 hover:bg-muted/60 transition-colors data-[state=selected]:!bg-primary/5"
+                    className={cn(
+                      'group cursor-pointer even:bg-muted/40 hover:bg-muted/60 transition-colors data-[state=selected]:!bg-primary/5',
+                      getRowClassName?.(row.original)
+                    )}
                     onClick={() => onRowClick?.(row.original)}
                   >
                     {row.getAllCells().map((cell) => {

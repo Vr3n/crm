@@ -1,11 +1,12 @@
-import { BadgeCheck, Clock3, Crown, IndianRupee, type LucideIcon } from 'lucide-react'
+import { BadgeCheck, Clock3, Crown, IndianRupee, CalendarCheck, CalendarClock, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatMinor, type CurrencyCode } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import type { Plan } from '../types'
+import { getPlanAvailability } from './catalog-status-badge'
 
 interface Metric {
-  key: 'active' | 'timed' | 'entry' | 'flagship'
+  key: string
   label: string
   icon: LucideIcon
   chip: string
@@ -14,17 +15,31 @@ interface Metric {
 
 const METRICS: Metric[] = [
   {
-    key: 'active',
-    label: 'Active plans',
+    key: 'available',
+    label: 'Available now',
     icon: BadgeCheck,
     chip: 'bg-success/15 text-success',
-    value: (plans) => String(plans.filter((p) => p.isActive).length)
+    value: (plans) => String(plans.filter((p) => getPlanAvailability(p) === 'ACTIVE').length)
+  },
+  {
+    key: 'upcoming',
+    label: 'Upcoming',
+    icon: CalendarClock,
+    chip: 'bg-primary/10 text-primary',
+    value: (plans) => String(plans.filter((p) => getPlanAvailability(p) === 'UPCOMING').length)
+  },
+  {
+    key: 'expired',
+    label: 'Expired',
+    icon: CalendarCheck,
+    chip: 'bg-muted text-muted-foreground',
+    value: (plans) => String(plans.filter((p) => getPlanAvailability(p) === 'EXPIRED').length)
   },
   {
     key: 'timed',
     label: 'Timed window',
     icon: Clock3,
-    chip: 'bg-primary/10 text-primary',
+    chip: 'bg-warning/15 text-warning',
     value: (plans) => String(plans.filter((p) => p.accessWindow === 'TIMED').length)
   },
   {
@@ -33,9 +48,9 @@ const METRICS: Metric[] = [
     icon: IndianRupee,
     chip: 'bg-muted text-muted-foreground',
     value: (plans, currency) => {
-      const active = plans.filter((p) => p.isActive)
-      if (active.length === 0) return '—'
-      return formatMinor(Math.min(...active.map((p) => p.basePriceMinor)), currency)
+      const available = plans.filter((p) => getPlanAvailability(p) === 'ACTIVE')
+      if (available.length === 0) return '—'
+      return formatMinor(Math.min(...available.map((p) => p.basePriceMinor)), currency)
     }
   },
   {
@@ -44,16 +59,16 @@ const METRICS: Metric[] = [
     icon: Crown,
     chip: 'bg-warning/15 text-warning',
     value: (plans, currency) => {
-      const active = plans.filter((p) => p.isActive)
-      if (active.length === 0) return '—'
-      return formatMinor(Math.max(...active.map((p) => p.basePriceMinor)), currency)
+      const available = plans.filter((p) => getPlanAvailability(p) === 'ACTIVE')
+      if (available.length === 0) return '—'
+      return formatMinor(Math.max(...available.map((p) => p.basePriceMinor)), currency)
     }
   }
 ]
 
 /**
- * Catalog pricing headline: active plans, timed-window plans, and the price
- * range (cheapest entry → flagship). Every number is derived from the rows.
+ * Catalog pricing headline: available/upcoming/expired plans, timed-window plans,
+ * and the price range (cheapest entry → flagship). Every number is derived from the rows.
  */
 export function PlanMetrics({ plans }: { plans: Plan[] }): React.JSX.Element {
   const currency = useCurrency()

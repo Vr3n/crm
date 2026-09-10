@@ -24,7 +24,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useCompleteFollowUp } from '@/features/leads/queries'
-import { useReferenceData } from '@/features/leads/reference-data'
+import { moveableStages } from '@/features/leads/constants'
+import { getLeadMaps, stageIdOf, useReferenceData } from '@/features/leads/reference-data'
+import { StageBadge } from '@/features/leads/components/stage-badge'
+import type { StageKey } from '@/features/leads/types'
 import type { FollowUpRow } from '../types'
 
 /**
@@ -32,7 +35,9 @@ import type { FollowUpRow } from '../types'
  * logging. Notes are optional — the backend stores them against the follow-up
  * and the lead detail timeline surfaces them. The activity section lets staff
  * record what happened during this follow-up touchpoint, just like when
- * creating a new lead.
+ * creating a new lead. Like the "Record Activity" form, an optional stage
+ * change can be applied in the same submission — the backend completes the
+ * follow-up and moves the stage atomically.
  */
 export function CompleteFollowUpDialog({
   open,
@@ -45,10 +50,12 @@ export function CompleteFollowUpDialog({
 }): React.JSX.Element {
   const complete = useCompleteFollowUp()
   const { data: ref } = useReferenceData()
+  const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const activityTypes = useMemo(
     () => ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
     [ref]
   )
+  const stageOptions = useMemo(() => moveableStages(followUp.stage), [followUp.stage])
   const [activityOpen, setActivityOpen] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
@@ -56,10 +63,23 @@ export function CompleteFollowUpDialog({
     defaultValues: {
       notes: '',
       activityTypeId: String(activityTypes[0]?.id ?? ''),
-      activityNote: ''
+      activityNote: '',
+      targetStage: ''
     },
     onSubmit: async ({ value }) => {
       try {
+        let stageChange: { targetStageId: number; expectedStageId: number } | undefined
+        if (maps && value.targetStage) {
+          const targetStageId = stageIdOf(maps, value.targetStage as StageKey)
+          const expectedStageId = stageIdOf(maps, followUp.stage)
+          if (
+            value.targetStage !== followUp.stage &&
+            targetStageId !== undefined &&
+            expectedStageId !== undefined
+          ) {
+            stageChange = { targetStageId, expectedStageId }
+          }
+        }
         await complete.mutateAsync({
           followupId: followUp.id,
           notes: value.notes.trim() || undefined,
@@ -69,7 +89,8 @@ export function CompleteFollowUpDialog({
                   typeId: Number(value.activityTypeId),
                   note: value.activityNote.trim() || undefined
                 }
-              : undefined
+              : undefined,
+          stageChange
         })
         setSubmitSuccess(true)
         window.setTimeout(() => onOpenChange(false), 700)
@@ -239,6 +260,46 @@ export function CompleteFollowUpDialog({
                 </form.Field>
               </CollapsibleContent>
             </Collapsible>
+
+            {/* WON stays absorbing — every other stage, LOST included, can move. */}
+            {followUp.stage !== 'WON' && stageOptions.length > 0 && (
+              <form.Field name="targetStage">
+                {(field) => (
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label="Change Status?"
+                    hint="Optional — change the pipeline stage at the same time"
+                    validate={() => undefined}
+                    completeWhen={() => false}
+                  >
+                    {({ id, describedBy }) => (
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(v) => field.handleChange(v)}
+                      >
+                        <SelectTrigger id={id} aria-describedby={describedBy}>
+                          <SelectValue placeholder="No change" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stageOptions.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              <span className="flex items-center gap-2">
+                                <StageBadge stage={s.key} />
+                                {s.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
+                )}
+              </form.Field>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">

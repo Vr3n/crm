@@ -1,4 +1,6 @@
 import type {
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
@@ -6,6 +8,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -14,6 +17,7 @@ import type {
   EditLeadInput,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadTextOptionRow,
   MarkLeadLostInput,
@@ -51,6 +55,9 @@ export const api = {
     window.api.leads.scheduleFollowup(input),
   completeFollowUp: (input: CompleteFollowUpInput): Promise<void> =>
     window.api.leads.completeFollowup(input),
+  bulkCompleteFollowUps: (
+    input: BulkCompleteFollowUpsInput
+  ): Promise<BulkCompleteFollowUpsResult> => window.api.leads.bulkCompleteFollowups(input),
   updateFollowUp: (input: UpdateFollowUpInput): Promise<void> =>
     window.api.leads.updateFollowup(input),
   cancelFollowUp: (input: CancelFollowUpInput): Promise<void> =>
@@ -59,6 +66,8 @@ export const api = {
   searchSources: (query: string): Promise<LeadSourceRow[]> => window.api.leads.searchSources(query),
   createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
     window.api.leads.createSource(input),
+  checkPerson: (input: CheckLeadPersonInput): Promise<LeadPersonAvailability> =>
+    window.api.leads.checkPerson(input),
   searchPlanInterests: (query: string): Promise<PlanOptionRow[]> =>
     window.api.leads.searchPlanInterests(query),
   searchGoals: (query: string): Promise<LeadTextOptionRow[]> => window.api.leads.searchGoals(query)

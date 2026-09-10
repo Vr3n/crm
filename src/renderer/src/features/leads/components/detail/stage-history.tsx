@@ -37,9 +37,13 @@ export function StageHistory({ lead }: { lead: Lead }): React.JSX.Element {
                   className={`absolute top-1 -left-[21px] size-2 rounded-full ${
                     stageConfig(e.to).tone === 'success'
                       ? 'bg-success'
-                      : stageConfig(e.to).tone === 'destructive'
-                        ? 'bg-destructive'
-                        : 'bg-primary'
+                      : stageConfig(e.to).tone === 'danger'
+                        ? 'bg-red-800'
+                        : stageConfig(e.to).tone === 'engaged'
+                          ? 'bg-cyan-500'
+                          : stageConfig(e.to).tone === 'hot'
+                            ? 'bg-yellow-500'
+                            : 'bg-muted-foreground'
                   }`}
                 />
                 <div className="flex items-center justify-between gap-2">

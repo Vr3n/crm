@@ -42,6 +42,7 @@ export const SEED_ROLES: SeedRole[] = [
       'org.view',
       'user.view',
       'role.view',
+      'person.blacklist',
       'lead.view',
       'lead.create',
       'lead.assign',
@@ -94,6 +95,7 @@ export const SEED_ROLES: SeedRole[] = [
     is_system: false,
     is_super: false,
     permissions: [
+      'person.blacklist',
       'lead.view',
       'lead.create',
       'lead.record_activity',
@@ -119,6 +121,7 @@ export const SEED_ROLES: SeedRole[] = [
     is_system: false,
     is_super: false,
     permissions: [
+      'person.blacklist',
       'lead.view',
       'lead.record_activity',
       'followup.view',
@@ -213,6 +216,7 @@ export const SEED_STAGES: Array<{
   isInitial?: boolean
   isWon?: boolean
   isLost?: boolean
+  suppressFollowups?: boolean
 }> = [
   { name: 'NEW', isInitial: true },
   { name: 'CONTACTED' },
@@ -222,7 +226,9 @@ export const SEED_STAGES: Array<{
   { name: 'TRIAL' },
   { name: 'NEGOTIATION' },
   { name: 'WON', isWon: true },
-  { name: 'LOST', isLost: true }
+  { name: 'LOST', isLost: true },
+  { name: 'DO_NOT_DISTURB', suppressFollowups: true },
+  { name: 'NOT_INTERESTED', suppressFollowups: true }
 ]
 
 /** Recommended enquiry sources (Module 01 §Lead Source). */
@@ -337,7 +343,8 @@ export function seedSalesReferenceData(organizationId: number): void {
           sort_order: i,
           is_initial: Boolean(s.isInitial),
           is_won: Boolean(s.isWon),
-          is_lost: Boolean(s.isLost)
+          is_lost: Boolean(s.isLost),
+          suppress_followups: Boolean(s.suppressFollowups)
         })
         .run()
     })
@@ -378,7 +385,9 @@ export function seedPlansForOrganization(organizationId: number): void {
           access_window: plan.accessWindow,
           start_time: plan.startTime,
           end_time: plan.endTime,
-          active: plan.active
+          active: plan.active,
+          available_from: new Date().toISOString().slice(0, 10),
+          available_to: null
         })
         .run()
     }
@@ -537,10 +546,10 @@ export const SEED_CANCELLATION_POLICIES: SeedCancellationPolicy[] = [
     description: 'Cancellation takes effect at the end of the current billing period.'
   },
   {
-    name: '30 Days Notice',
+    name: '14 Days Notice',
     effectiveRule: 'NOTICE_DAYS',
-    noticeDays: 30,
-    description: 'A 30-day notice is required before cancellation takes effect.'
+    noticeDays: 14,
+    description: 'A 14-day notice is required before cancellation takes effect.'
   }
 ]
 

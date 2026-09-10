@@ -79,7 +79,7 @@ describe('runMigrations', () => {
     }
   })
 
-  it('records versions 0, 3-20 including membership sale idempotency, permission, joining-date, org branding and followup notes migrations', () => {
+  it('records versions 0, 3-26 plus 28-30 including membership sale idempotency, permission, joining-date, org branding, followup notes, person photo, membership cancel/renew, refund scheduling, and invoice-membership migrations', () => {
     runMigrations()
     const rows = getDb().prepare('SELECT version, name FROM schema_migrations').all() as {
       version: number
@@ -105,7 +105,15 @@ describe('runMigrations', () => {
       { version: 18, name: 'membership_joining_date' },
       { version: 19, name: 'org_branding' },
       { version: 20, name: 'followup_notes' },
-      { version: 21, name: 'followup_cancel_reason' }
+      { version: 21, name: 'followup_cancel_reason' },
+      { version: 22, name: 'lead_stage_suppress_followups' },
+      { version: 23, name: 'plan_availability' },
+      { version: 24, name: 'person_blacklist' },
+      { version: 25, name: 'person_photo' },
+      { version: 26, name: 'seed_dnd_not_interested' },
+      { version: 28, name: 'membership_cancel_renew' },
+      { version: 29, name: 'refund_scheduling' },
+      { version: 30, name: 'invoice_membership' }
     ])
   })
 
@@ -115,7 +123,7 @@ describe('runMigrations', () => {
     const row = getDb().prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as {
       n: number
     }
-    expect(row.n).toBe(20)
+    expect(row.n).toBe(28)
   })
 
   it('reconciles a legacy database and still applies the new sales migration', () => {
@@ -162,7 +170,8 @@ describe('runMigrations', () => {
     // the sales migrations (3, 4) must still run — they would be lost on a legacy
     // database if they reused a legacy version number.
     expect(appliedVersions()).toEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      26, 28, 29, 30
     ])
     expect(tableNames().has('organizations')).toBe(true)
     expect(tableNames().has('users')).toBe(false)
@@ -183,7 +192,8 @@ describe('runMigrations', () => {
     runMigrations()
 
     expect(appliedVersions()).toEqual([
-      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+      0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+      28, 29, 30
     ])
     expect(tableNames().has('users')).toBe(true)
     expect(tableNames().has('leads')).toBe(true)
@@ -267,6 +277,16 @@ describe('runMigrations', () => {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE (organization_id, name)
       );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -291,10 +311,23 @@ describe('runMigrations', () => {
     const stages = getDb()
       .prepare('SELECT name, is_initial, is_won, is_lost FROM lead_stages ORDER BY sort_order')
       .all() as { name: string; is_initial: number; is_won: number; is_lost: number }[]
-    expect(stages).toHaveLength(9)
+    expect(stages).toHaveLength(11)
     expect(stages[0]).toEqual({ name: 'NEW', is_initial: 1, is_won: 0, is_lost: 0 })
     expect(stages).toContainEqual({ name: 'WON', is_initial: 0, is_won: 1, is_lost: 0 })
     expect(stages).toContainEqual({ name: 'LOST', is_initial: 0, is_won: 0, is_lost: 1 })
+    // v26 seeds the DND / Not Interested stages for pre-existing orgs.
+    expect(stages).toContainEqual({
+      name: 'DO_NOT_DISTURB',
+      is_initial: 0,
+      is_won: 0,
+      is_lost: 0
+    })
+    expect(stages).toContainEqual({
+      name: 'NOT_INTERESTED',
+      is_initial: 0,
+      is_won: 0,
+      is_lost: 0
+    })
 
     const sourceCount = getDb().prepare('SELECT COUNT(*) AS n FROM lead_sources').get() as {
       n: number
@@ -314,7 +347,7 @@ describe('runMigrations', () => {
     const stageCountAfter = getDb().prepare('SELECT COUNT(*) AS n FROM lead_stages').get() as {
       n: number
     }
-    expect(stageCountAfter.n).toBe(9)
+    expect(stageCountAfter.n).toBe(11)
   })
 
   it('seeds the starter membership plans for an organization that predates the org-setup seeding', () => {
@@ -340,6 +373,28 @@ describe('runMigrations', () => {
       CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
       CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
       CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -417,6 +472,28 @@ describe('runMigrations', () => {
         role_id INTEGER NOT NULL,
         permission_id INTEGER NOT NULL,
         PRIMARY KEY (role_id, permission_id)
+      );
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
       );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -509,6 +586,28 @@ describe('runMigrations', () => {
         permission_id INTEGER NOT NULL,
         PRIMARY KEY (role_id, permission_id)
       );
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE leads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
@@ -587,6 +686,28 @@ describe('runMigrations', () => {
       CREATE TABLE permissions (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT);
       CREATE TABLE roles (id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id INTEGER NOT NULL, name TEXT NOT NULL, UNIQUE (organization_id, name));
       CREATE TABLE role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL, PRIMARY KEY (role_id, permission_id));
+      CREATE TABLE lead_stages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_initial INTEGER NOT NULL DEFAULT 0,
+        is_won INTEGER NOT NULL DEFAULT 0,
+        is_lost INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, name)
+      );
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE (organization_id, phone)
+      );
       CREATE TABLE membership_plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,

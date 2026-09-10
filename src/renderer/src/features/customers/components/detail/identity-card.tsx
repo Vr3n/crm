@@ -1,4 +1,6 @@
 import { FileText, Mail, MapPin, Phone, PhoneCall, UserRound } from 'lucide-react'
+import { PersonAvatar } from '@/components/person/person-avatar'
+import { can, useSession } from '@/context/session-context'
 import { displayPhone, formatDate } from '@/features/leads/format'
 import { formatMonthYear } from '../../format'
 import type { Customer } from '../../types'
@@ -20,6 +22,9 @@ export function IdentityCard({
   customer: Customer
   status: Parameters<typeof CustomerStatusBadge>[0]['status']
 }): React.JSX.Element {
+  const session = useSession()
+  const canEdit = can(session.permissions, session.isSuper, 'lead.edit')
+
   return (
     <section
       className="crm-gradient-border flex flex-col rounded-xl border bg-card p-5 shadow-sm"
@@ -30,8 +35,14 @@ export function IdentityCard({
         } as React.CSSProperties
       }
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex items-start gap-4">
+        <PersonAvatar
+          personId={customer.personId ? Number(customer.personId) : undefined}
+          name={customer.name}
+          size="lg"
+          editable={canEdit}
+        />
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="truncate font-heading text-lg font-semibold tracking-tight">
               {customer.name}

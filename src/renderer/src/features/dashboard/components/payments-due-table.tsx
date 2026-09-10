@@ -51,7 +51,7 @@ function buildColumns(
           Client
         </SortButton>
       ),
-      cell: ({ row }) => <NameCell name={row.original.member.name} />,
+      cell: ({ row }) => <NameCell name={row.original.member.name} personId={row.original.member.personId} />,
       sortFn: 'alphanumeric'
     }),
     helper.accessor((row) => row.member, {

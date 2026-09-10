@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { NotebookPen } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -21,8 +22,10 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useBulkRecordActivity } from '../queries'
-import { useReferenceData } from '../reference-data'
+import { useBulkMoveStage, useBulkRecordActivity } from '../queries'
+import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
+import { StageBadge } from './stage-badge'
+import type { StageConfig, StageKey } from '../types'
 
 /**
  * Bulk activity logging for the selection toolbar: one activity per selected
@@ -35,25 +38,39 @@ export function BulkActivityDialog({
   onOpenChange,
   count,
   leadIds,
+  moveOptions,
+  terminalCount,
   onSuccess
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   count: number
   leadIds: number[]
+  moveOptions: StageConfig[]
+  /** How many selected leads sit on a terminal stage — asks for confirmation. */
+  terminalCount: number
   onSuccess: () => void
 }): React.JSX.Element {
   const log = useBulkRecordActivity()
+  const bulkMove = useBulkMoveStage()
   const { data: ref } = useReferenceData()
+  const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const types = useMemo(
     () => ref?.activityTypes.filter((t) => t.active && t.name !== 'OWNER_CHANGE') ?? [],
     [ref]
   )
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
 
   const form = useForm({
-    defaultValues: { typeId: types[0]?.id ?? 0, note: '' },
+    defaultValues: { typeId: types[0]?.id ?? 0, note: '', targetStage: '' },
     onSubmit: async ({ value }) => {
+      // Soft gate: logging for terminal-stage leads asks for confirmation.
+      if (terminalCount > 0 && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
         await log.mutateAsync({
           leadIds,
@@ -61,6 +78,12 @@ export function BulkActivityDialog({
           note: value.note.trim(),
           occurredAt: new Date().toISOString()
         })
+        if (value.targetStage && maps) {
+          const targetStageId = stageIdOf(maps, value.targetStage as StageKey)
+          if (targetStageId !== undefined) {
+            await bulkMove.mutateAsync({ leadIds, targetStageId })
+          }
+        }
         onSuccess()
         setSubmitSuccess(true)
         window.setTimeout(() => onOpenChange(false), 700)
@@ -182,6 +205,45 @@ export function BulkActivityDialog({
                 </FormField>
               )}
             </form.Field>
+
+            {moveOptions.length > 0 && (
+              <form.Field name="targetStage">
+                {(field) => (
+                  <FormField
+                    name={field.name}
+                    state={field.state}
+                    handleChange={field.handleChange}
+                    handleBlur={field.handleBlur}
+                    submitted={submitted}
+                    label="Change Status?"
+                    hint="Optional — change the pipeline stage for all selected leads"
+                    validate={() => undefined}
+                    completeWhen={() => false}
+                  >
+                    {({ id, describedBy }) => (
+                      <Select
+                        value={field.state.value}
+                        onValueChange={(v) => field.handleChange(v)}
+                      >
+                        <SelectTrigger id={id} aria-describedby={describedBy}>
+                          <SelectValue placeholder="No change" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {moveOptions.map((s) => (
+                            <SelectItem key={s.key} value={s.key}>
+                              <span className="flex items-center gap-2">
+                                <StageBadge stage={s.key} />
+                                {s.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </FormField>
+                )}
+              </form.Field>
+            )}
           </FieldGroup>
 
           <DialogFooter className="mt-6">
@@ -194,13 +256,28 @@ export function BulkActivityDialog({
               success={submitSuccess}
               disabled={!canSubmit}
               loadingLabel="Saving…"
-              successLabel="Logged!"
+              successLabel="Done!"
             >
               Log activities
             </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {terminalCount > 0 ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Log for terminal-stage leads?"
+          description={`${terminalCount} of ${count} selected ${count === 1 ? 'lead is' : 'leads are'} on a terminal stage (Lost/Won). Your team can still win them back — log these activities anyway?`}
+          confirmLabel="Log anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }

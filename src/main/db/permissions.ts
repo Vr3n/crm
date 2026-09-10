@@ -17,6 +17,9 @@ export const PERMISSIONS = {
   ROLE_VIEW: 'role.view',
   ROLE_MANAGE: 'role.manage',
 
+  // People
+  PERSON_BLACKLIST: 'person.blacklist',
+
   // Leads & sales pipeline (Module 01)
   LEAD_VIEW: 'lead.view',
   LEAD_CREATE: 'lead.create',

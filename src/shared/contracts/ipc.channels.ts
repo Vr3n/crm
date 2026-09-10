@@ -26,6 +26,7 @@ export const IPC_CHANNELS = {
   LEADS_UPDATE_FOLLOWUP: 'leads:updateFollowup',
   LEADS_CANCEL_FOLLOWUP: 'leads:cancelFollowup',
   LEADS_COMPLETE_FOLLOWUP: 'leads:completeFollowup',
+  LEADS_BULK_COMPLETE_FOLLOWUPS: 'leads:bulkCompleteFollowups',
   LEADS_LIST: 'leads:list',
   LEADS_GET_DETAILS: 'leads:getDetails',
   LEADS_GET_TIMELINE: 'leads:getTimeline',
@@ -38,6 +39,7 @@ export const IPC_CHANNELS = {
   LEADS_GET_RECENT_LOST: 'leads:getRecentlyLost',
   LEADS_GET_FUNNEL_COUNTS: 'leads:getFunnelCounts',
   LEADS_SEARCH_PEOPLE: 'leads:searchPeople',
+  LEADS_CHECK_PERSON: 'leads:checkPerson',
   LEADS_GET_REFERENCE: 'leads:getReferenceData',
   LEADS_SEARCH_SOURCES: 'leads:searchSources',
   LEADS_CREATE_SOURCE: 'leads:createSource',
@@ -45,6 +47,7 @@ export const IPC_CHANNELS = {
   LEADS_SEARCH_GOALS: 'leads:searchGoals',
 
   CATALOG_LIST_PLANS: 'catalog:listPlans',
+  CATALOG_LIST_AVAILABLE_PLANS: 'catalog:listAvailablePlans',
   CATALOG_CREATE_PLAN: 'catalog:createPlan',
   CATALOG_UPDATE_PLAN: 'catalog:updatePlan',
   CATALOG_DELETE_PLAN: 'catalog:deletePlan',
@@ -92,15 +95,23 @@ export const IPC_CHANNELS = {
   FINANCE_LIST_ALL_CREDITS: 'finance:listAllCredits',
   FINANCE_LIST_PAYMENTS: 'finance:listPayments',
   FINANCE_LIST_REFUNDS: 'finance:listRefunds',
+  FINANCE_PROCESS_SCHEDULED_REFUNDS: 'finance:processScheduledRefunds',
   FINANCE_LIST_PAYMENT_METHODS: 'finance:listPaymentMethods',
   FINANCE_OUTSTANDING_INVOICES: 'finance:outstandingInvoices',
 
   // Membership Sale (Module 02+03+04+05 — atomic)
   MEMBERSHIPS_SELL: 'memberships:sell',
+  MEMBERSHIPS_CANCEL: 'memberships:cancel',
+  MEMBERSHIPS_UNDO_CANCELLATION: 'memberships:undo-cancellation',
+  MEMBERSHIPS_RENEW: 'memberships:renew',
+  MEMBERSHIPS_REFUND_STATE: 'memberships:refund-state',
 
   // Customers (Module 02)
   CUSTOMERS_LIST: 'customers:list',
   CUSTOMERS_GET: 'customers:get',
+
+  // Person blacklist
+  PERSON_BLACKLIST_TOGGLE: 'person:blacklistToggle',
 
   // Invoices (Module 04 read models)
   INVOICES_LIST: 'invoices:list',
@@ -120,6 +131,7 @@ export const IPC_CHANNELS = {
   // PDF Generation
   PDF_EXPORT_INVOICE: 'pdf:exportInvoice',
   PDF_EXPORT_RECEIPT: 'pdf:exportReceipt',
+  PDF_EXPORT_REFUND: 'pdf:exportRefund',
 
   // Excel Export
   EXPORT_EXCEL: 'export:excel',
@@ -133,7 +145,13 @@ export const IPC_CHANNELS = {
   IDENTITY_UPDATE_ORGANIZATION: 'identity:updateOrganization',
 
   // Licensing
-  LICENSE_STATUS: 'license:status'
+  LICENSE_STATUS: 'license:status',
+
+  // Person Photo (Issue #106)
+  PERSON_PHOTO_UPDATE: 'person.photo:update',
+  PERSON_PHOTO_DELETE: 'person.photo:delete',
+  PERSON_PHOTO_GET: 'person.photo:get',
+  PERSON_PHOTO_GET_MANY: 'person.photo:getMany'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

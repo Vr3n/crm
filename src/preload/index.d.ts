@@ -93,6 +93,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -104,6 +105,7 @@ import type {
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadTextOptionRow,
   LeadTimelineEntry,
@@ -116,7 +118,24 @@ import type {
   ScheduleFollowUpInput,
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
+import type {
+  UpdatePersonPhotoInput,
+  DeletePersonPhotoInput,
+  GetPersonPhotoInput,
+  PersonPhotoOutput,
+  GetManyPersonPhotosInput,
+  GetManyPersonPhotosOutput
+} from '../shared/contracts/person-photo'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
+import type {
+  CancelMembershipInput,
+  CancelMembershipResult,
+  RevertCancellationInput,
+  RenewMembershipInput,
+  RenewMembershipResult,
+  MembershipRefundStateRequest,
+  MembershipRefundState
+} from '../shared/contracts/membership-cancel-renew'
 import type { LicenseStatus } from '../shared/contracts/license'
 
 declare global {
@@ -147,6 +166,9 @@ declare global {
         markLost: (input: MarkLeadLostInput) => Promise<void>
         scheduleFollowup: (input: ScheduleFollowUpInput) => Promise<{ followupId: number }>
         completeFollowup: (input: CompleteFollowUpInput) => Promise<void>
+        bulkCompleteFollowups: (
+          input: BulkCompleteFollowUpsInput
+        ) => Promise<BulkCompleteFollowUpsResult>
         updateFollowup: (input: UpdateFollowUpInput) => Promise<void>
         cancelFollowup: (input: CancelFollowUpInput) => Promise<void>
         getDetails: (input: LeadIdRequest) => Promise<LeadDetails | null>
@@ -175,6 +197,7 @@ declare global {
         getRecentlyLost: () => Promise<{ id: number; personName: string }[]>
         getFunnelCounts: () => Promise<FunnelCounts>
         searchPeople: (query: string) => Promise<PeopleList>
+        checkPerson: (input: CheckLeadPersonInput) => Promise<LeadPersonAvailability>
         getReferenceData: () => Promise<ReferenceData>
         searchSources: (query: string) => Promise<LeadSourceRow[]>
         createSource: (input: CreateLeadSourceInput) => Promise<LeadSourceRow>
@@ -183,6 +206,7 @@ declare global {
       }
       catalog: {
         listPlans: () => Promise<PlanRow[]>
+        listAvailablePlans: () => Promise<PlanRow[]>
         createPlan: (input: CreatePlanInput) => Promise<PlanRow>
         updatePlan: (input: UpdatePlanInput) => Promise<PlanRow>
         deletePlan: (input: PlanIdRequest) => Promise<void>
@@ -239,10 +263,12 @@ declare global {
         listPayments: () => Promise<unknown[]>
         listRefunds: () => Promise<unknown[]>
         listAllCredits: () => Promise<unknown[]>
+        processScheduledRefunds: () => Promise<{ issued: number }>
       }
       pdf: {
         exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }) => Promise<string>
         exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }) => Promise<string>
+        exportRefund: (input: { refundId: number; mode?: 'save' | 'preview' }) => Promise<string>
       }
       customers: {
         list: () => Promise<CustomerRowOutput[]>
@@ -270,6 +296,10 @@ declare global {
       }
       memberships: {
         sell: (input: SellMembershipInput) => Promise<SellMembershipResult>
+        cancel: (input: CancelMembershipInput) => Promise<CancelMembershipResult>
+        undoCancellation: (input: RevertCancellationInput) => Promise<void>
+        renew: (input: RenewMembershipInput) => Promise<RenewMembershipResult>
+        refundState: (input: MembershipRefundStateRequest) => Promise<MembershipRefundState>
       }
       export: {
         excel: (input: {
@@ -281,6 +311,19 @@ declare global {
       }
       license: {
         status: () => Promise<LicenseStatus>
+      }
+      blacklist: {
+        toggle: (input: {
+          personId: number
+          action: 'blacklist' | 'unblacklist'
+          reason: string | null
+        }) => Promise<{ personId: number; isBlacklisted: boolean }>
+      }
+      person: {
+        updatePhoto: (input: UpdatePersonPhotoInput) => Promise<PersonPhotoOutput>
+        deletePhoto: (input: DeletePersonPhotoInput) => Promise<void>
+        getPhoto: (input: GetPersonPhotoInput) => Promise<PersonPhotoOutput>
+        getPhotos: (input: GetManyPersonPhotosInput) => Promise<GetManyPersonPhotosOutput>
       }
     }
   }

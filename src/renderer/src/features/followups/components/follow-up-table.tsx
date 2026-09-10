@@ -4,15 +4,17 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCompleteFollowUp } from '@/features/leads/queries'
+import { PersonCell } from '@/components/person/person-cell'
 import { EditFollowUpDialog } from '@/features/leads/components/edit-follow-up-dialog'
 import { CancelFollowUpDialog } from './cancel-follow-up-dialog'
+import { CompleteFollowUpDialog } from './complete-follow-up-dialog'
+import { BulkCompleteFollowUpDialog } from './bulk-complete-follow-up-dialog'
 import { StageBadge } from '@/features/leads/components/stage-badge'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { cn } from '@/lib/utils'
-import { bucketOf } from '../build'
+import { bucketOf, dueAtOpenFirst } from '../build'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
 import type { FollowUpBucket, FollowUpRow } from '../types'
@@ -29,32 +31,46 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 const helper = createColumnHelper<DashboardFeatures, FollowUpRow>()
 
 function CompleteFollowUpButton({
-  followUpId,
+  followUp,
   onDone
 }: {
-  followUpId: number
+  followUp: FollowUpRow
   onDone: () => void
 }): React.JSX.Element {
-  const complete = useCompleteFollowUp()
+  const [open, setOpen] = useState(false)
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="text-success hover:bg-success/10 hover:text-success"
-          aria-label="Mark follow-up done"
-          disabled={complete.isPending}
-          onClick={(e) => {
-            e.stopPropagation()
-            complete.mutate({ followupId: followUpId }, { onSuccess: onDone })
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="text-success hover:bg-success/10 hover:text-success"
+            aria-label="Mark follow-up done"
+            disabled={followUp.isBlacklisted}
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpen(true)
+            }}
+          >
+            <Check className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          {followUp.isBlacklisted ? 'Blacklisted — refunds only' : 'Mark done'}
+        </TooltipContent>
+      </Tooltip>
+      {open && (
+        <CompleteFollowUpDialog
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o)
+            if (!o) onDone()
           }}
-        >
-          <Check className="size-4" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="left">Mark done</TooltipContent>
-    </Tooltip>
+          followUp={followUp}
+        />
+      )}
+    </>
   )
 }
 
@@ -75,6 +91,7 @@ function CancelFollowUpButton({
             size="icon-sm"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label="Cancel follow-up"
+            disabled={followUp.isBlacklisted}
             onClick={(e) => {
               e.stopPropagation()
               setOpen(true)
@@ -83,7 +100,9 @@ function CancelFollowUpButton({
             <XCircle className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Cancel</TooltipContent>
+        <TooltipContent side="left">
+          {followUp.isBlacklisted ? 'Blacklisted — refunds only' : 'Cancel'}
+        </TooltipContent>
       </Tooltip>
       {open && (
         <CancelFollowUpDialog
@@ -116,6 +135,7 @@ function EditFollowUpButton({
             size="icon-sm"
             className="text-muted-foreground hover:text-foreground"
             aria-label="Edit follow-up"
+            disabled={followUp.isBlacklisted}
             onClick={(e) => {
               e.stopPropagation()
               setOpen(true)
@@ -124,7 +144,9 @@ function EditFollowUpButton({
             <CalendarClock className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Extend due date</TooltipContent>
+        <TooltipContent side="left">
+          {followUp.isBlacklisted ? 'Blacklisted — refunds only' : 'Extend due date'}
+        </TooltipContent>
       </Tooltip>
       {open && (
         <EditFollowUpDialog
@@ -222,10 +244,17 @@ function buildColumns(
           </SortButton>
         ),
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{row.original.leadName}</p>
-            <StageBadge stage={row.original.stage} className="mt-0.5" />
-          </div>
+          <PersonCell
+            personId={row.original.personId}
+            name={row.original.leadName}
+            subtext={
+              <StageBadge
+                stage={row.original.stage}
+                isBlacklisted={row.original.isBlacklisted}
+                className="mt-0.5"
+              />
+            }
+          />
         ),
         sortFn: 'alphanumeric'
       }),
@@ -267,7 +296,7 @@ function buildColumns(
           </SortButton>
         ),
         cell: ({ row }) => <DueCell row={row.original} />,
-        sortFn: 'datetime'
+        sortFn: dueAtOpenFirst
       }),
       helper.accessor((row) => row.ownerName ?? '', {
         id: 'ownerName',
@@ -294,7 +323,7 @@ function buildColumns(
           return (
             <div className="flex items-center justify-end gap-1">
               <EditFollowUpButton followUp={row.original} onDone={onDone} />
-              <CompleteFollowUpButton followUpId={row.original.id} onDone={onDone} />
+              <CompleteFollowUpButton followUp={row.original} onDone={onDone} />
               <CancelFollowUpButton followUp={row.original} onDone={onDone} />
             </div>
           )
@@ -305,8 +334,11 @@ function buildColumns(
 }
 
 /**
- * The follow-up queue table: every open follow-up across leads, sorted by
- * urgency, with an inline "mark done" verb and row-click through to the lead.
+ * The follow-up queue table: every open follow-up across leads, open first and
+ * earliest-due first (done items sink — see `dueAtOpenFirst`), with an inline
+ * "mark done" verb and row-click through to the lead. The default row order is
+ * the upstream `sortFollowUpRows` order; the table applies no initial sort of
+ * its own so done rows never interleave with open ones.
  */
 export function FollowUpTable({
   rows,
@@ -323,8 +355,7 @@ export function FollowUpTable({
     // nothing extra — the leads query invalidation refreshes this table
   }, [])
   const columns = useMemo(() => buildColumns(bucket, handleDone), [bucket, handleDone])
-  const complete = useCompleteFollowUp()
-  const [bulkPending, setBulkPending] = useState(false)
+  const [bulkDoneRows, setBulkDoneRows] = useState<FollowUpRow[] | null>(null)
 
   const exportData = useMemo(
     () =>
@@ -339,23 +370,14 @@ export function FollowUpTable({
     [rows]
   )
 
-  const handleBulkDone = useCallback(
-    async (ids: string[]) => {
-      const rowMap = new Map(rows.map((r) => [String(r.id), r]))
-      const pendingIds = ids.filter((id) => {
-        const r = rowMap.get(id)
-        return r && !r.completedAt && !r.cancelledAt
-      })
-      if (pendingIds.length === 0) return
-      setBulkPending(true)
-      try {
-        await Promise.all(pendingIds.map((id) => complete.mutateAsync({ followupId: Number(id) })))
-      } finally {
-        setBulkPending(false)
-      }
-    },
-    [rows, complete]
-  )
+  const handleBulkDone = useCallback((ids: string[]) => {
+    const rowMap = new Map(rows.map((r) => [String(r.id), r]))
+    const pending = ids
+      .map((id) => rowMap.get(id))
+      .filter((r): r is FollowUpRow => !!r && !r.completedAt && !r.cancelledAt)
+    if (pending.length === 0) return
+    setBulkDoneRows(pending)
+  }, [rows])
 
   const emptyCopy: Record<FollowUpBucket, { title: string; description: string }> = {
     all: {
@@ -372,25 +394,35 @@ export function FollowUpTable({
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={rows}
-      getRowId={(row) => String(row.id)}
-      isLoading={isLoading}
-      initialSorting={[{ id: 'dueAt', desc: false }]}
-      initialPageSize={8}
-      pageSizeOptions={[8, 16, 32]}
-      onRowClick={(row) => onOpenLead(row.leadId)}
-      showSearch={false}
-      emptyIcon={bucket === 'done' ? CheckCircle2 : Inbox}
-      emptyTitle={emptyCopy[bucket].title}
-      emptyDescription={emptyCopy[bucket].description}
-      headerTone="primary"
-      onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
-      isMarkingSelected={bulkPending}
-      toolbar={
-        <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Follow-ups" />
-      }
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(row) => String(row.id)}
+        isLoading={isLoading}
+        initialPageSize={8}
+        pageSizeOptions={[8, 16, 32]}
+        onRowClick={(row) => onOpenLead(row.leadId)}
+        showSearch={false}
+        emptyIcon={bucket === 'done' ? CheckCircle2 : Inbox}
+        emptyTitle={emptyCopy[bucket].title}
+        emptyDescription={emptyCopy[bucket].description}
+        headerTone="primary"
+        onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
+        toolbar={
+          <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Follow-ups" />
+        }
+      />
+      {bulkDoneRows && (
+        <BulkCompleteFollowUpDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setBulkDoneRows(null)
+          }}
+          rows={bulkDoneRows}
+          onSuccess={() => {}}
+        />
+      )}
+    </>
   )
 }

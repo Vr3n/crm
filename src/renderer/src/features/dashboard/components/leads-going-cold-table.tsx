@@ -12,6 +12,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
+import { PersonCell } from '@/components/person/person-cell'
 import { timeAgo } from '@/features/leads/format'
 import { useLeads } from '@/features/leads/queries'
 import type { Lead } from '@/features/leads/types'
@@ -176,12 +177,15 @@ export function LeadsGoingColdTable(): React.JSX.Element {
                     />
                   </TableCell>
                   <TableCell className={CELL}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{lead.name}</span>
-                      <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                        {since}d silent
-                      </span>
-                    </div>
+                    <PersonCell
+                      personId={lead.personId}
+                      name={lead.name}
+                      subtext={
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {since}d silent
+                        </span>
+                      }
+                    />
                   </TableCell>
                   <TableCell className={`${CELL} text-muted-foreground`}>
                     {lead.phone?.trim() || lead.email?.trim() || '—'}

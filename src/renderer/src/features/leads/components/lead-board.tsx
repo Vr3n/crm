@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pencil, UserRound, CalendarClock } from 'lucide-react'
+import { Ban, Pencil, UserRound, CalendarClock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { SOURCES, STAGES } from '../constants'
@@ -85,11 +85,17 @@ export function LeadBoard({
                     onClick={() => onOpen(lead)}
                     className={cn(
                       'cursor-pointer rounded-md border bg-card p-2.5 transition-transform hover:shadow-sm',
-                      dragId === lead.id && 'opacity-50'
+                      dragId === lead.id && 'opacity-50',
+                      lead.isBlacklisted && 'border-destructive/30 bg-destructive/5'
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-medium">{lead.name}</span>
+                      <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                        {lead.isBlacklisted ? (
+                          <Ban className="size-3 shrink-0 text-destructive" aria-label="Blacklisted" />
+                        ) : null}
+                        <span className="truncate">{lead.name}</span>
+                      </span>
                       <QualityDot quality={q} className="mt-0.5" />
                     </div>
                     <div className="mt-2 flex flex-col gap-1 border-t pt-1.5 text-xs text-muted-foreground">

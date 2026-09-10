@@ -13,6 +13,7 @@ import {
 import { PaymentAllocationService } from '../domain/finance'
 import type { Refund } from '../domain/finance'
 import { NotFoundError, ValidationError } from '../domain/errors'
+import { assertCustomerAllowed, assertPersonAllowed } from './blacklist'
 import { PERMISSIONS } from '../db/permissions'
 import { asc, eq, and, inArray, sql } from 'drizzle-orm'
 import {
@@ -114,6 +115,47 @@ function collectCreditsForInvoice(
   return creditAllocationRepo.listByInvoice(organizationId, invoiceId)
 }
 
+/**
+ * Issues every SCHEDULED refund whose scheduled date has arrived.
+ * Runs at app startup (all orgs) and when the Refunds page opens. Does not
+ * require a session. Scheduled refunds are recorded as ISSUED on their
+ * scheduled date, then the affected invoices' status is re-derived.
+ */
+export function processScheduledRefunds(): { issued: number } {
+  const today = new Date().toISOString().slice(0, 10)
+  const due = refundRepo.listScheduledDueAll(today)
+  let issued = 0
+
+  for (const refund of due) {
+    const { organizationId } = refund
+    refundRepo.markIssued(organizationId, refund.id, refund.scheduledDate ?? today)
+    issued++
+
+    // Re-derive status for every invoice this refund's payment is allocated to.
+    const allocations = allocationRepo.listByPayment(organizationId, refund.paymentId)
+    const affectedInvoiceIds = [...new Set(allocations.map((a) => a.invoiceId))]
+    for (const invoiceId of affectedInvoiceIds) {
+      const invoice = invoiceRepo.getById(organizationId, invoiceId)
+      if (!invoice || invoice.status === 'VOID' || invoice.status === 'UNCOLLECTIBLE') continue
+      const invoiceAllocations = allocationRepo.listByInvoice(organizationId, invoiceId)
+      const invoiceRefunds = collectRefundsForInvoice(organizationId, invoiceId)
+      const invoiceCredits = collectCreditsForInvoice(organizationId, invoiceId)
+      const netAllocated = PaymentAllocationService.calculateNetAllocated(
+        invoiceAllocations,
+        invoiceRefunds,
+        invoiceCredits
+      )
+      const newStatus = PaymentAllocationService.deriveInvoiceStatus(
+        netAllocated,
+        invoice.totalMinor
+      )
+      invoiceRepo.updateStatus(organizationId, invoiceId, newStatus)
+    }
+  }
+
+  return { issued }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Commands                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -142,6 +184,7 @@ export function recordPayment(input: {
 
   const customer = customerRepo.getById(organizationId, input.customerId)
   if (!customer) throw new NotFoundError('Customer not found')
+  assertPersonAllowed(organizationId, customer.personId, 'record a payment')
 
   if (input.amountMinor <= 0) throw new ValidationError('Payment amount must be positive')
 
@@ -182,6 +225,8 @@ export function allocatePayment(input: {
   return withTransaction(() => {
     const payment = paymentRepo.getById(organizationId, input.paymentId)
     if (!payment) throw new NotFoundError('Payment not found')
+
+    assertCustomerAllowed(organizationId, payment.customerId, 'allocate a payment')
 
     const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
     if (!invoice) throw new NotFoundError('Invoice not found')
@@ -302,6 +347,7 @@ export function recordAndAllocatePayment(input: {
   return withTransaction(() => {
     const customer = customerRepo.getById(organizationId, input.customerId)
     if (!customer) throw new NotFoundError('Customer not found')
+    assertPersonAllowed(organizationId, customer.personId, 'record a payment')
 
     const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
     if (!invoice) throw new NotFoundError('Invoice not found')
@@ -472,6 +518,7 @@ export function issueCredit(input: {
 
   const customer = customerRepo.getById(organizationId, input.customerId)
   if (!customer) throw new NotFoundError('Customer not found')
+  assertCustomerAllowed(organizationId, customer.id, 'issue a credit')
 
   if (input.amountMinor <= 0) throw new ValidationError('Credit amount must be positive')
 
@@ -506,6 +553,7 @@ export function applyCredit(input: { creditId: number; invoiceId: number; amount
   return withTransaction(() => {
     const credit = creditRepo.getById(organizationId, input.creditId)
     if (!credit) throw new NotFoundError('Credit not found')
+    assertCustomerAllowed(organizationId, credit.customerId, 'apply a credit')
 
     const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
     if (!invoice) throw new NotFoundError('Invoice not found')
@@ -940,6 +988,7 @@ export function getAllPayments(): Array<{
       customer: {
         id: String(p.customerId),
         name: person?.name ?? 'Unknown',
+        personId: personId ? String(personId) : undefined,
         phone: person?.phone,
         email: person?.email
       },
@@ -972,6 +1021,8 @@ export function getAllRefunds(): Array<{
   sourcePaymentId: string
   sourcePaymentNo: string
   method: string
+  status: string
+  scheduledDate: string | null
   reason: string
   createdBy: string
 }> {
@@ -1037,14 +1088,17 @@ export function getAllRefunds(): Array<{
       customer: {
         id: String(payment?.customer_id ?? 0),
         name: person?.name ?? 'Unknown',
+        personId: personId ? String(personId) : undefined,
         phone: person?.phone,
         email: person?.email
       },
-      refundDate: r.createdAt,
+      refundDate: r.issuedAt ?? r.scheduledDate ?? r.createdAt,
       amountMinor: r.amountMinor,
       sourcePaymentId: String(r.paymentId),
       sourcePaymentNo: `PAY-${String(r.paymentId).padStart(4, '0')}`,
       method: payment?.payment_method ?? 'UNKNOWN',
+      status: r.status,
+      scheduledDate: r.scheduledDate,
       reason: r.reason,
       createdBy: creator?.name ?? 'System'
     }
@@ -1120,6 +1174,7 @@ export function getAllCredits(): Array<{
       customer: {
         id: String(c.customerId),
         name: person?.name ?? 'Unknown',
+        personId: personId ? String(personId) : undefined,
         phone: person?.phone,
         email: person?.email
       },

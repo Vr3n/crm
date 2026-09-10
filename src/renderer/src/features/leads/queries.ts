@@ -8,6 +8,8 @@ import {
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type {
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
@@ -15,11 +17,13 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreatedLead,
   DeleteLeadsInput,
   EditLeadInput,
+  LeadPersonAvailability,
   MarkLeadLostInput,
   MoveLeadStageInput,
   RecordLeadActivityInput,
@@ -27,7 +31,7 @@ import type {
   ScheduleFollowUpInput,
   UpdateFollowUpInput
 } from '../../../../shared/contracts/sales'
-import { isApiError } from '../../../../shared/contracts/errors'
+import { errorMessage } from '../../../../shared/contracts/errors'
 import { api } from './api'
 import { mapLeadRow } from './mapping'
 import type { Lead } from './types'
@@ -35,6 +39,24 @@ import type { Lead } from './types'
 const leadKeys = {
   all: ['leads'] as const,
   list: () => [...leadKeys.all, 'list'] as const
+}
+
+/**
+ * Reactive duplicate probe for the lead dialogs (docs/107). `input` is `undefined`
+ * until the form values are complete enough to judge; the enclosed forms debounce
+ * name/phone/email before enabling it, so one IPC round trip per pause.
+ */
+export function useLeadPersonAvailability(
+  input: CheckLeadPersonInput | undefined
+): UseQueryResult<LeadPersonAvailability, Error> {
+  return useQuery({
+    queryKey: ['leads', 'person-availability', input],
+    queryFn: () => api.checkPerson(input as CheckLeadPersonInput),
+    enabled: Boolean(input),
+    retry: false,
+    staleTime: 1000,
+    refetchOnWindowFocus: false
+  })
 }
 
 /**
@@ -72,15 +94,10 @@ export function useLead(id: number | undefined): UseQueryResult<Lead | undefined
   })
 }
 
-/** Show the backend's message when it's an ApiError, else the fallback. */
-function errorMessage(e: Error, fallback: string): string {
-  return isApiError(e) ? e.message : fallback
-}
-
 /**
  * Generic lead mutation: invalidate the list cache on success so every derived
  * read model (table, board, detail, follow-ups, activities) re-derives from one
- * source of truth. Errors surface the stable ApiError message.
+ * source of truth. Errors surface the backend message when available.
  */
 function useLeadMutation<TInput, TResult>(
   mutator: (input: TInput) => Promise<TResult>,
@@ -209,6 +226,19 @@ export function useCompleteFollowUp(): UseMutationResult<void, Error, CompleteFo
     (input) => api.completeFollowUp(input),
     'Follow-up done',
     'Could not complete follow-up'
+  )
+}
+
+export function useBulkCompleteFollowUps(): UseMutationResult<
+  BulkCompleteFollowUpsResult,
+  Error,
+  BulkCompleteFollowUpsInput
+> {
+  return useLeadMutation(
+    (input) => api.bulkCompleteFollowUps(input),
+    'Follow-ups completed',
+    'Could not complete follow-ups',
+    true
   )
 }
 

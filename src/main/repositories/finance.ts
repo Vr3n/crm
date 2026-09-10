@@ -288,6 +288,9 @@ interface RefundRow {
   payment_id: number
   amount_minor: number
   reason: string
+  status: string
+  scheduled_date: string | null
+  issued_at: string | null
   created_at: string
   created_by: number
 }
@@ -299,12 +302,16 @@ function mapRefund(row: RefundRow): Refund {
     paymentId: row.payment_id,
     amountMinor: row.amount_minor,
     reason: row.reason,
+    status: row.status as Refund['status'],
+    scheduledDate: row.scheduled_date,
+    issuedAt: row.issued_at,
     createdAt: row.created_at,
     createdBy: row.created_by
   }
 }
 
 export const refundRepo = {
+  /** All refunds incl. SCHEDULED/VOIDED — used by the Refunds page list. */
   listAll(organizationId: number): Refund[] {
     const rows = getDrizzle()
       .select()
@@ -315,6 +322,7 @@ export const refundRepo = {
     return rows.map(mapRefund)
   },
 
+  /** ISSUED refunds only (money already left) — used for payment detail/refunded totals. */
   listByPayments(organizationId: number, paymentIds: number[]): Refund[] {
     if (paymentIds.length === 0) return []
     const rows = getDrizzle()
@@ -323,6 +331,7 @@ export const refundRepo = {
       .where(
         and(
           eq(refunds.organization_id, organizationId),
+          eq(refunds.status, 'ISSUED'),
           sql`${refunds.payment_id} IN (${sql.join(
             paymentIds.map((id) => sql`${id}`),
             sql`, `
@@ -333,11 +342,90 @@ export const refundRepo = {
     return rows.map(mapRefund)
   },
 
+  /** ISSUED refunds only (money already left) — used for refundable / invoice net math. */
   getByPayment(organizationId: number, paymentId: number): Refund[] {
     const rows = getDrizzle()
       .select()
       .from(refunds)
-      .where(and(eq(refunds.organization_id, organizationId), eq(refunds.payment_id, paymentId)))
+      .where(
+        and(
+          eq(refunds.organization_id, organizationId),
+          eq(refunds.payment_id, paymentId),
+          eq(refunds.status, 'ISSUED')
+        )
+      )
+      .all() as RefundRow[]
+    return rows.map(mapRefund)
+  },
+
+  getById(organizationId: number, id: number): Refund | null {
+    const row = getDrizzle()
+      .select()
+      .from(refunds)
+      .where(and(eq(refunds.organization_id, organizationId), eq(refunds.id, id)))
+      .get() as RefundRow | undefined
+    return row ? mapRefund(row) : null
+  },
+
+  /** ISSUED refunds for an invoice = refunds on every payment allocated to it. */
+  listByInvoice(organizationId: number, invoiceId: number): Refund[] {
+    const allocRows = getDrizzle()
+      .select({ payment_id: paymentAllocations.payment_id })
+      .from(paymentAllocations)
+      .where(
+        and(
+          eq(paymentAllocations.organization_id, organizationId),
+          eq(paymentAllocations.invoice_id, invoiceId)
+        )
+      )
+      .all() as Array<{ payment_id: number }>
+    const paymentIds = [...new Set(allocRows.map((a) => a.payment_id))]
+    if (paymentIds.length === 0) return []
+    return this.listByPayments(organizationId, paymentIds)
+  },
+
+  /** SCHEDULED refunds due on or before `today` for one org. */
+  listScheduledDue(organizationId: number, today: string): Refund[] {
+    const rows = getDrizzle()
+      .select()
+      .from(refunds)
+      .where(
+        and(
+          eq(refunds.organization_id, organizationId),
+          eq(refunds.status, 'SCHEDULED'),
+          sql`${refunds.scheduled_date} <= ${today}`
+        )
+      )
+      .all() as RefundRow[]
+    return rows.map(mapRefund)
+  },
+
+  /** SCHEDULED refunds due on or before `today` across all orgs (startup sweep). */
+  listScheduledDueAll(today: string): Refund[] {
+    const rows = getDrizzle()
+      .select()
+      .from(refunds)
+      .where(and(eq(refunds.status, 'SCHEDULED'), sql`${refunds.scheduled_date} <= ${today}`))
+      .all() as RefundRow[]
+    return rows.map(mapRefund)
+  },
+
+  /** SCHEDULED refunds on the given payments (org-scoped) — used by revert. */
+  listScheduledByPayments(organizationId: number, paymentIds: number[]): Refund[] {
+    if (paymentIds.length === 0) return []
+    const rows = getDrizzle()
+      .select()
+      .from(refunds)
+      .where(
+        and(
+          eq(refunds.organization_id, organizationId),
+          eq(refunds.status, 'SCHEDULED'),
+          sql`${refunds.payment_id} IN (${sql.join(
+            paymentIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
+        )
+      )
       .all() as RefundRow[]
     return rows.map(mapRefund)
   },
@@ -348,6 +436,9 @@ export const refundRepo = {
     amountMinor: number
     reason: string
     createdBy: number
+    status?: Refund['status']
+    scheduledDate?: string | null
+    issuedAt?: string | null
   }): Refund {
     const row = getDrizzle()
       .insert(refunds)
@@ -356,11 +447,32 @@ export const refundRepo = {
         payment_id: input.paymentId,
         amount_minor: input.amountMinor,
         reason: input.reason,
+        status: input.status ?? 'ISSUED',
+        scheduled_date: input.scheduledDate ?? null,
+        issued_at: input.issuedAt ?? null,
         created_by: input.createdBy
       })
       .returning()
       .get() as RefundRow
     return mapRefund(row)
+  },
+
+  /** Marks a SCHEDULED refund as issued on the given date (money left). */
+  markIssued(organizationId: number, id: number, issuedAt: string): void {
+    getDrizzle()
+      .update(refunds)
+      .set({ status: 'ISSUED', issued_at: issuedAt })
+      .where(and(eq(refunds.organization_id, organizationId), eq(refunds.id, id)))
+      .run()
+  },
+
+  /** Soft-deletes a SCHEDULED refund (e.g. cancellation reverted) — kept for audit. */
+  markVoided(organizationId: number, id: number): void {
+    getDrizzle()
+      .update(refunds)
+      .set({ status: 'VOIDED', issued_at: null })
+      .where(and(eq(refunds.organization_id, organizationId), eq(refunds.id, id)))
+      .run()
   }
 }
 

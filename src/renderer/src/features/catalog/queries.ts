@@ -45,6 +45,13 @@ export function usePlans(): UseQueryResult<Plan[], Error> {
   })
 }
 
+export function useAvailablePlans(): UseQueryResult<Plan[], Error> {
+  return useQuery({
+    queryKey: [...catalogKeys.plans, 'available'] as const,
+    queryFn: async () => (await plansApi.listAvailablePlans()).map(mapPlanRow)
+  })
+}
+
 export function useOffers(): UseQueryResult<Offer[], Error> {
   return useQuery({
     queryKey: catalogKeys.offers,

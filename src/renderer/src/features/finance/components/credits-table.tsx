@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { PiggyBank } from 'lucide-react'
 import { createColumnHelper } from '@tanstack/react-table'
+import { PersonCell } from '@/components/person/person-cell'
 import {
   Select,
   SelectContent,
@@ -82,12 +83,15 @@ function buildColumns(currency: CurrencyCode): ReturnType<typeof helper.columns>
       header: () => 'Customer',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{row.original.customer.name}</p>
-          <p className="truncate font-mono text-[11px] text-muted-foreground">
-            {row.original.customer.phone}
-          </p>
-        </div>
+        <PersonCell
+          personId={row.original.customer.personId}
+          name={row.original.customer.name}
+          subtext={
+            <p className="truncate font-mono text-[11px] text-muted-foreground">
+              {row.original.customer.phone}
+            </p>
+          }
+        />
       )
     }),
     helper.accessor('amountMinor', {

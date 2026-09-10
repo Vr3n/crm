@@ -13,5 +13,11 @@ export const pdfApi = {
   exportReceipt: (
     paymentId: number | string,
     mode: 'save' | 'preview' = 'preview'
-  ): Promise<string> => window.api.pdf.exportReceipt({ paymentId: Number(paymentId), mode })
+  ): Promise<string> => window.api.pdf.exportReceipt({ paymentId: Number(paymentId), mode }),
+
+  /** Exports a refund receipt as PDF. Opens in system viewer (preview) or saves to Documents/Refunds. */
+  exportRefund: (
+    refundId: number | string,
+    mode: 'save' | 'preview' = 'preview'
+  ): Promise<string> => window.api.pdf.exportRefund({ refundId: Number(refundId), mode })
 }

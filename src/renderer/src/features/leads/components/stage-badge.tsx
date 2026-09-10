@@ -1,19 +1,30 @@
+import { Ban } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { stageConfig } from '../constants'
 import type { StageKey } from '../types'
 
 const toneClass: Record<string, string> = {
   default: 'bg-muted text-muted-foreground',
-  primary: 'bg-primary/10 text-primary',
+  engaged: 'bg-cyan-500/10 text-cyan-600',
+  hot: 'bg-yellow-500/10 text-yellow-600',
   success: 'bg-success/15 text-success',
-  destructive: 'bg-destructive/10 text-destructive'
+  danger: 'bg-red-800/15 text-red-800'
 }
 
+/**
+ * Stage pill. `isBlacklisted` is an optional *person-state* marker layered on
+ * top of the stage tone — pipeline position (tone) and person state read as
+ * two dimensions, so blacklisting never overrides the stage color. Only lead-
+ * context call sites pass it; stage-key-only usages (filter options, target
+ * displays) leave it unset.
+ */
 export function StageBadge({
   stage,
+  isBlacklisted,
   className
 }: {
   stage: StageKey
+  isBlacklisted?: boolean
   className?: string
 }): React.JSX.Element {
   const cfg = stageConfig(stage)
@@ -31,6 +42,11 @@ export function StageBadge({
         })}
       />
       {cfg.label}
+      {isBlacklisted ? (
+        <span className="inline-flex items-center gap-0.5" title="Blacklisted">
+          <Ban className="size-3" aria-label="Blacklisted" />
+        </span>
+      ) : null}
     </span>
   )
 }

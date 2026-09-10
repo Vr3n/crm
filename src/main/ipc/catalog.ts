@@ -6,6 +6,7 @@ import {
   createProrationPolicy,
   deactivateOffer,
   deletePlan,
+  getAvailablePlans,
   getOffer,
   listOfferVersions,
   listOffers,
@@ -39,6 +40,7 @@ import { handle } from './handle'
 
 export function registerCatalogIpc(): void {
   handle(IPC_CHANNELS.CATALOG_LIST_PLANS, () => listPlans())
+  handle(IPC_CHANNELS.CATALOG_LIST_AVAILABLE_PLANS, () => getAvailablePlans())
   handle(IPC_CHANNELS.CATALOG_CREATE_PLAN, createPlanInputSchema, (input) => createPlan(input))
   handle(IPC_CHANNELS.CATALOG_UPDATE_PLAN, updatePlanInputSchema, (input) => updatePlan(input))
   handle(IPC_CHANNELS.CATALOG_DELETE_PLAN, planIdRequestSchema, (input) => deletePlan(input))

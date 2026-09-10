@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type FieldErrorValue = string | { message?: string } | undefined
@@ -23,6 +23,12 @@ interface FieldProps {
   labelEnd?: React.ReactNode
   /** Helper text shown when the field is not in an error state. */
   hint?: React.ReactNode
+  /**
+   * Non-blocking amber notice (e.g. an async "this value already exists"
+   * warning). Shown beneath the control when the field is otherwise valid; an
+   * error always wins over it.
+   */
+  warning?: React.ReactNode
   /** Convenience error message; takes precedence over `errors`. */
   error?: React.ReactNode
   /** TanStack Form error array shape (`field.state.meta.errors`). */
@@ -44,6 +50,7 @@ export function Field({
   label,
   labelEnd,
   hint,
+  warning,
   error,
   errors,
   trailing,
@@ -70,6 +77,8 @@ export function Field({
       <div className="flex min-h-5 items-center justify-between gap-3">
         {message ? (
           <FieldError id={id ? `${id}-error` : undefined}>{message}</FieldError>
+        ) : warning ? (
+          <FieldWarning id={id ? `${id}-warning` : undefined}>{warning}</FieldWarning>
         ) : hint ? (
           <FieldDescription id={id ? `${id}-hint` : undefined}>{hint}</FieldDescription>
         ) : (
@@ -120,6 +129,33 @@ export function FieldError({
       {...props}
     >
       <AlertCircle className="size-3.5 shrink-0" />
+      <span>{children}</span>
+    </p>
+  )
+}
+
+/**
+ * Non-blocking amber notice shown beneath the control when the field is valid
+ * but deserves attention (e.g. "this mobile number already exists"). Announced
+ * politely via `aria-live`, not as an `alert` — it never blocks submission.
+ */
+export function FieldWarning({
+  id,
+  className,
+  children,
+  ...props
+}: React.ComponentProps<'p'>): React.JSX.Element {
+  return (
+    <p
+      id={id}
+      aria-live="polite"
+      className={cn(
+        'flex animate-in items-center gap-1.5 text-xs font-medium text-amber-600 fade-in-0 slide-in-from-top-1 duration-200 dark:text-amber-500',
+        className
+      )}
+      {...props}
+    >
+      <AlertTriangle className="size-3.5 shrink-0" />
       <span>{children}</span>
     </p>
   )

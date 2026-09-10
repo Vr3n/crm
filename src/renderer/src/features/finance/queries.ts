@@ -51,6 +51,19 @@ export function useRefunds(): UseQueryResult<Refund[], Error> {
   return useQuery({ queryKey: financeKeys.refunds(), queryFn: () => api.refunds() })
 }
 
+/** Issues any scheduled refunds whose cancellation date has arrived. */
+export function useProcessScheduledRefunds(): UseMutationResult<{ issued: number }, Error, void> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.processScheduledRefunds(),
+    onSuccess: (result) => {
+      if (result.issued > 0) {
+        qc.invalidateQueries({ queryKey: financeKeys.all })
+      }
+    }
+  })
+}
+
 export function useCredits(): UseQueryResult<Credit[], Error> {
   return useQuery({ queryKey: financeKeys.credits(), queryFn: () => api.credits() })
 }

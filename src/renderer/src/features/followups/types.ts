@@ -12,7 +12,10 @@ export interface FollowUpRow {
   id: number
   leadId: number
   leadName: string
+  personId: number
   stage: StageKey
+  /** Person-level flag — shows a blacklist marker in the queue. */
+  isBlacklisted: boolean
   title: string
   dueAt: string
   extensionReason?: string

@@ -5,16 +5,27 @@ import { Button } from '@/components/ui/button'
 import { useCustomer } from '@/features/customers/queries'
 import { InvoiceOverviewCard } from '@/features/customers/components/detail/invoice-overview-card'
 import { MembershipOverviewCard } from '@/features/customers/components/detail/membership-overview-card'
+import { MembershipTimeline } from '@/features/customers/components/detail/membership-timeline'
+import { CancelMembershipDialog } from '@/features/memberships/components/cancel-membership-dialog'
+import { RenewMembershipDialog } from '@/features/memberships/components/renew-membership-dialog'
+import { can, useSession } from '@/context/session-context'
+import type { Membership } from '@/features/customers/types'
 import type { Lead } from '../../types'
 
 /**
  * Rich commercial-history block for a converted lead: full membership cards
- * plus invoice cards, identical to what the Customer detail page shows.
+ * (with joining date, paid/total and cancel/renew actions) plus invoice cards
+ * and a membership lifecycle timeline — mirroring the Customer detail page.
  */
 export function LeadCommerceCard({ lead }: { lead: Lead }): React.JSX.Element | null {
   const customerId = lead.customerId
+  const session = useSession()
   const { data: customer } = useCustomer(customerId !== undefined ? String(customerId) : undefined)
   const [now] = useState(() => Date.now())
+  const [cancelTarget, setCancelTarget] = useState<Membership | null>(null)
+  const [renewTarget, setRenewTarget] = useState<Membership | null>(null)
+  const canCancel = can(session.permissions, session.isSuper, 'membership.cancel')
+  const canRenew = can(session.permissions, session.isSuper, 'membership.renew')
 
   if (!customer) return null
 
@@ -43,7 +54,15 @@ export function LeadCommerceCard({ lead }: { lead: Lead }): React.JSX.Element | 
               {[...customer.memberships]
                 .sort((a, b) => b.startDate.localeCompare(a.startDate))
                 .map((m) => (
-                  <MembershipOverviewCard key={m.id} membership={m} now={now} />
+                  <MembershipOverviewCard
+                    key={m.id}
+                    membership={m}
+                    now={now}
+                    canCancel={canCancel}
+                    canRenew={canRenew}
+                    onCancel={() => setCancelTarget(m)}
+                    onRenew={() => setRenewTarget(m)}
+                  />
                 ))}
             </div>
           </div>
@@ -64,6 +83,31 @@ export function LeadCommerceCard({ lead }: { lead: Lead }): React.JSX.Element | 
           </div>
         ) : null}
       </div>
+
+      {hasMemberships ? (
+        <div className="mt-4">
+          <MembershipTimeline memberships={customer.memberships} now={now} />
+        </div>
+      ) : null}
+
+      {cancelTarget ? (
+        <CancelMembershipDialog
+          open={!!cancelTarget}
+          onOpenChange={(o) => {
+            if (!o) setCancelTarget(null)
+          }}
+          membership={cancelTarget}
+        />
+      ) : null}
+      {renewTarget ? (
+        <RenewMembershipDialog
+          open={!!renewTarget}
+          onOpenChange={(o) => {
+            if (!o) setRenewTarget(null)
+          }}
+          membership={renewTarget}
+        />
+      ) : null}
     </section>
   )
 }

@@ -69,6 +69,15 @@ import type {
 import type { CustomerIdRequest, CustomerRowOutput } from '../shared/contracts/customers'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type {
+  CancelMembershipInput,
+  CancelMembershipResult,
+  RevertCancellationInput,
+  RenewMembershipInput,
+  RenewMembershipResult,
+  MembershipRefundStateRequest,
+  MembershipRefundState
+} from '../shared/contracts/membership-cancel-renew'
+import type {
   InvoiceIdRequest as InvoiceReadIdRequest,
   InvoicesByStatusRequest,
   InvoiceOutput
@@ -95,6 +104,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -106,6 +116,7 @@ import type {
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadTextOptionRow,
   LeadTimelineEntry,
@@ -118,6 +129,14 @@ import type {
   ScheduleFollowUpInput,
   UpdateFollowUpInput
 } from '../shared/contracts/sales'
+import type {
+  UpdatePersonPhotoInput,
+  DeletePersonPhotoInput,
+  GetPersonPhotoInput,
+  PersonPhotoOutput,
+  GetManyPersonPhotosInput,
+  GetManyPersonPhotosOutput
+} from '../shared/contracts/person-photo'
 import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 
 /* -------------------------------------------------------------------------- */
@@ -145,6 +164,11 @@ interface ExportTableInput {
  * On failure it re-throws an `ApiError` carrying the stable machine-readable
  * code from the shared catalog, so the renderer branches on `error.code`
  * (ADR-0006) instead of matching on messages or Electron's serialization.
+ *
+ * Note: Electron's contextBridge clones the thrown `ApiError` into a plain
+ * `Error` in the renderer realm — `instanceof ApiError` fails and `code` is
+ * dropped, but `message` survives. Renderer surfaces therefore display
+ * `error.message` (not the code) when it is an `Error`.
  */
 async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
   const res = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>
@@ -192,6 +216,10 @@ const api = {
       call(IPC_CHANNELS.LEADS_SCHEDULE_FOLLOWUP, input),
     completeFollowup: (input: CompleteFollowUpInput): Promise<void> =>
       call(IPC_CHANNELS.LEADS_COMPLETE_FOLLOWUP, input),
+    bulkCompleteFollowups: (
+      input: BulkCompleteFollowUpsInput
+    ): Promise<BulkCompleteFollowUpsResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_COMPLETE_FOLLOWUPS, input),
     updateFollowup: (input: UpdateFollowUpInput): Promise<void> =>
       call(IPC_CHANNELS.LEADS_UPDATE_FOLLOWUP, input),
     cancelFollowup: (input: CancelFollowUpInput): Promise<void> =>
@@ -221,6 +249,8 @@ const api = {
     getFunnelCounts: (): Promise<FunnelCounts> => call(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS),
     searchPeople: (query: string): Promise<PeopleList> =>
       call(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, query),
+    checkPerson: (input: CheckLeadPersonInput): Promise<LeadPersonAvailability> =>
+      call(IPC_CHANNELS.LEADS_CHECK_PERSON, input),
     getReferenceData: (): Promise<ReferenceData> => call(IPC_CHANNELS.LEADS_GET_REFERENCE),
     searchSources: (query: string): Promise<LeadSourceRow[]> =>
       call(IPC_CHANNELS.LEADS_SEARCH_SOURCES, { query }),
@@ -233,6 +263,7 @@ const api = {
   },
   catalog: {
     listPlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_PLANS),
+    listAvailablePlans: (): Promise<PlanRow[]> => call(IPC_CHANNELS.CATALOG_LIST_AVAILABLE_PLANS),
     createPlan: (input: CreatePlanInput): Promise<PlanRow> =>
       call(IPC_CHANNELS.CATALOG_CREATE_PLAN, input),
     updatePlan: (input: UpdatePlanInput): Promise<PlanRow> =>
@@ -334,13 +365,17 @@ const api = {
       call(IPC_CHANNELS.FINANCE_OUTSTANDING_INVOICES, input),
     listPayments: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_PAYMENTS, {}),
     listRefunds: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_REFUNDS, {}),
-    listAllCredits: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {})
+    listAllCredits: (): Promise<unknown[]> => call(IPC_CHANNELS.FINANCE_LIST_ALL_CREDITS, {}),
+    processScheduledRefunds: (): Promise<{ issued: number }> =>
+      call(IPC_CHANNELS.FINANCE_PROCESS_SCHEDULED_REFUNDS, {})
   },
   pdf: {
     exportInvoice: (input: { invoiceId: number; mode?: 'save' | 'preview' }): Promise<string> =>
       call(IPC_CHANNELS.PDF_EXPORT_INVOICE, input),
     exportReceipt: (input: { paymentId: number; mode?: 'save' | 'preview' }): Promise<string> =>
-      call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input)
+      call(IPC_CHANNELS.PDF_EXPORT_RECEIPT, input),
+    exportRefund: (input: { refundId: number; mode?: 'save' | 'preview' }): Promise<string> =>
+      call(IPC_CHANNELS.PDF_EXPORT_REFUND, input)
   },
   customers: {
     list: (): Promise<CustomerRowOutput[]> => call(IPC_CHANNELS.CUSTOMERS_LIST),
@@ -349,7 +384,23 @@ const api = {
   },
   memberships: {
     sell: (input: SellMembershipInput): Promise<SellMembershipResult> =>
-      call(IPC_CHANNELS.MEMBERSHIPS_SELL, input)
+      call(IPC_CHANNELS.MEMBERSHIPS_SELL, input),
+    cancel: (input: CancelMembershipInput): Promise<CancelMembershipResult> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_CANCEL, input),
+    undoCancellation: (input: RevertCancellationInput): Promise<void> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_UNDO_CANCELLATION, input),
+    renew: (input: RenewMembershipInput): Promise<RenewMembershipResult> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_RENEW, input),
+    refundState: (input: MembershipRefundStateRequest): Promise<MembershipRefundState> =>
+      call(IPC_CHANNELS.MEMBERSHIPS_REFUND_STATE, input)
+  },
+  blacklist: {
+    toggle: (input: {
+      personId: number
+      action: 'blacklist' | 'unblacklist'
+      reason: string | null
+    }): Promise<{ personId: number; isBlacklisted: boolean }> =>
+      call(IPC_CHANNELS.PERSON_BLACKLIST_TOGGLE, input)
   },
   invoices: {
     list: (): Promise<InvoiceOutput[]> => call(IPC_CHANNELS.INVOICES_LIST),
@@ -383,6 +434,16 @@ const api = {
   },
   license: {
     status: (): Promise<LicenseStatus> => call(IPC_CHANNELS.LICENSE_STATUS)
+  },
+  person: {
+    updatePhoto: (input: UpdatePersonPhotoInput): Promise<PersonPhotoOutput> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_UPDATE, input),
+    deletePhoto: (input: DeletePersonPhotoInput): Promise<void> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_DELETE, input),
+    getPhoto: (input: GetPersonPhotoInput): Promise<PersonPhotoOutput> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_GET, input),
+    getPhotos: (input: GetManyPersonPhotosInput): Promise<GetManyPersonPhotosOutput> =>
+      call(IPC_CHANNELS.PERSON_PHOTO_GET_MANY, input)
   }
 }
 

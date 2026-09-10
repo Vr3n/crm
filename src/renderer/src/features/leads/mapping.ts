@@ -20,6 +20,8 @@ export function mapLeadRow(row: LeadListRow): Lead {
     name: row.personName,
     phone: row.phone,
     email: row.email ?? undefined,
+    isBlacklisted: row.isBlacklisted,
+    blacklistedReason: row.blacklistedReason ?? undefined,
     source: row.sourceName ? sourceKeyFromName(row.sourceName) : 'OTHER',
     sourceId: row.sourceId,
     owner: row.ownerUserId

@@ -25,6 +25,8 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Tax Code', key: 'taxCode', format: 'text' },
   { header: 'Registration Fee', key: 'registrationFeeMinor', format: 'money' },
   { header: 'Access', key: 'access', format: 'text' },
+  { header: 'Available From', key: 'availableFrom', format: 'date' },
+  { header: 'Available To', key: 'availableTo', format: 'date' },
   { header: 'Created', key: 'createdAt', format: 'date' },
   { header: 'Status', key: 'status', format: 'text' }
 ]
@@ -143,11 +145,36 @@ function buildColumns(
         </span>
       )
     }),
+    helper.accessor(
+      (row) => {
+        const from = row.availableFrom ?? ''
+        const to = row.availableTo ?? ''
+        return `${from}|${to}`
+      },
+      {
+        id: 'availability',
+        header: () => 'Availability',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const { availableFrom, availableTo } = row.original
+          if (!availableFrom && !availableTo) {
+            return <span className="text-xs text-muted-foreground">Open-ended</span>
+          }
+          const from = availableFrom ? formatDate(availableFrom) : '—'
+          const to = availableTo ? formatDate(availableTo) : 'Open-ended'
+          return (
+            <span className="font-mono text-xs text-muted-foreground tabular-nums">
+              {from} – {to}
+            </span>
+          )
+        }
+      }
+    ),
     helper.accessor((row) => row.isActive, {
       id: 'status',
       header: () => 'Status',
       enableSorting: false,
-      cell: ({ row }) => <PlanStatusBadge isActive={row.original.isActive} />
+      cell: ({ row }) => <PlanStatusBadge plan={row.original} isActive={row.original.isActive} />
     }),
     helper.display({
       id: 'actions',
@@ -237,6 +264,8 @@ export function PlanTable({
         taxCode: r.taxCode ?? '',
         registrationFeeMinor: r.registrationFeeMinor,
         access: r.accessWindow === 'TIMED' ? `${r.startTime}–${r.endTime}` : 'All hours',
+        availableFrom: r.availableFrom ?? '',
+        availableTo: r.availableTo ?? '',
         createdAt: r.createdAt,
         status: r.isActive ? 'Active' : 'Inactive'
       })),

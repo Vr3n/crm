@@ -10,6 +10,7 @@
  * IPC rows plus the org's reference data (ids ↔ keys resolved via
  * `getLeadMaps`). All ids are the real SQLite integer ids.
  */
+import type { PersonStatus } from '../people/person-status'
 
 export type StageKey =
   | 'NEW'
@@ -21,6 +22,8 @@ export type StageKey =
   | 'NEGOTIATION'
   | 'WON'
   | 'LOST'
+  | 'DO_NOT_DISTURB'
+  | 'NOT_INTERESTED'
 
 export interface StageConfig {
   key: StageKey
@@ -30,7 +33,7 @@ export interface StageConfig {
   isWon?: boolean
   isLost?: boolean
   /** Tint used for the stage pill / board column accent. */
-  tone: 'default' | 'primary' | 'success' | 'destructive'
+  tone: 'default' | 'engaged' | 'hot' | 'success' | 'danger'
 }
 
 export type SourceKey =
@@ -111,6 +114,9 @@ export interface Lead {
   name: string
   phone?: string
   email?: string
+  /** Person-level flag — blacklisted people cannot be sold/renewed. */
+  isBlacklisted: boolean
+  blacklistedReason?: string
   /** Canonical source key. */
   source: SourceKey
   sourceId: number
@@ -148,5 +154,6 @@ export type LeadFilters = {
   stage?: StageKey | 'ALL'
   sourceId?: number | 'ALL'
   ownerId?: number | 'ALL'
+  personStatus?: 'ALL' | PersonStatus
   range: 'today' | 'week' | 'month' | 'all'
 }

@@ -3,7 +3,7 @@ import type { ZodType } from 'zod'
 import type { IpcError, IpcResult } from '../../shared/contracts/errors'
 import { ERROR_CODES } from '../../shared/contracts/errors'
 import { DomainError, ValidationError } from '../domain/errors'
-import { logger, short } from '../lib/logger'
+import { logger, short, full } from '../lib/logger'
 
 /**
  * Wraps an `ipcMain.handle` handler so thrown errors never cross the IPC
@@ -58,7 +58,7 @@ export function handle<T, R>(
         `ipc ${channel} failed`,
         `${Date.now() - startedAt}ms`,
         error.code,
-        short(error.message)
+        full(error.message)
       )
       return { ok: false, error }
     }
@@ -80,7 +80,10 @@ function toIpcError(err: unknown): IpcError {
     return { code: err.code, message: err.message }
   }
   if (err instanceof Error) {
-    return { code: ERROR_CODES.INTERNAL_ERROR, message: err.message }
+    const cause = (err as Error & { cause?: unknown }).cause
+    const causeMsg = cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : ''
+    const fullMsg = causeMsg ? `${err.message} | cause: ${causeMsg}` : err.message
+    return { code: ERROR_CODES.INTERNAL_ERROR, message: fullMsg }
   }
   return { code: ERROR_CODES.INTERNAL_ERROR, message: 'Unexpected error. Please try again.' }
 }

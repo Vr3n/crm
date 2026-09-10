@@ -9,7 +9,8 @@ import type {
   MembershipStatus,
   FreezeBillingBehavior,
   FreezeAccessBehavior,
-  MembershipEventType
+  MembershipEventType,
+  CancellationReasonCode
 } from '../domain/membership'
 
 /**
@@ -150,6 +151,7 @@ interface MembershipRow {
   cancellation_requested_at: string | null
   cancellation_effective_date: string | null
   cancellation_reason: string | null
+  cancellation_reason_code: string | null
   created_at: string
   created_by: number
 }
@@ -175,6 +177,7 @@ function mapMembership(row: MembershipRow): Membership {
     cancellationRequestedAt: row.cancellation_requested_at,
     cancellationEffectiveDate: row.cancellation_effective_date,
     cancellationReason: row.cancellation_reason,
+    cancellationReasonCode: row.cancellation_reason_code as CancellationReasonCode | null,
     createdAt: row.created_at,
     createdBy: row.created_by
   }
@@ -279,6 +282,66 @@ export const membershipRepo = {
       .set({ end_date: endDate })
       .where(and(eq(memberships.organization_id, organizationId), eq(memberships.id, id)))
       .run()
+  },
+
+  setCancellation(
+    organizationId: number,
+    id: number,
+    data: {
+      cancellationRequestedAt: string | null
+      cancellationEffectiveDate: string | null
+      cancellationReasonCode: CancellationReasonCode | null
+      cancellationReason: string | null
+    }
+  ): void {
+    getDrizzle()
+      .update(memberships)
+      .set({
+        cancellation_requested_at: data.cancellationRequestedAt,
+        cancellation_effective_date: data.cancellationEffectiveDate,
+        cancellation_reason_code: data.cancellationReasonCode,
+        cancellation_reason: data.cancellationReason
+      })
+      .where(and(eq(memberships.organization_id, organizationId), eq(memberships.id, id)))
+      .run()
+  },
+
+  clearCancellation(organizationId: number, id: number): void {
+    getDrizzle()
+      .update(memberships)
+      .set({
+        cancellation_requested_at: null,
+        cancellation_effective_date: null,
+        cancellation_reason_code: null,
+        cancellation_reason: null
+      })
+      .where(and(eq(memberships.organization_id, organizationId), eq(memberships.id, id)))
+      .run()
+  },
+
+  getOverlappingActive(
+    organizationId: number,
+    customerId: number,
+    startDate: string,
+    endDate: string,
+    excludeId?: number
+  ): Membership | null {
+    const conditions = [
+      eq(memberships.organization_id, organizationId),
+      eq(memberships.customer_id, customerId),
+      sql`${memberships.status} IN ('ACTIVE', 'FROZEN')`,
+      sql`${memberships.start_date} <= ${endDate}`,
+      sql`${memberships.end_date} >= ${startDate}`
+    ]
+    if (excludeId !== undefined) {
+      conditions.push(sql`${memberships.id} != ${excludeId}`)
+    }
+    const row = getDrizzle()
+      .select()
+      .from(memberships)
+      .where(and(...conditions))
+      .get() as MembershipRow | undefined
+    return row ? mapMembership(row) : null
   }
 }
 
@@ -387,6 +450,20 @@ export const freezeRepo = {
       .returning()
       .get() as FreezeRow
     return mapFreeze(row)
+  },
+
+  closeOpenFreezes(organizationId: number, membershipId: number, today: string): void {
+    getDrizzle()
+      .update(membershipFreezes)
+      .set({ end_date: today })
+      .where(
+        and(
+          eq(membershipFreezes.organization_id, organizationId),
+          eq(membershipFreezes.membership_id, membershipId),
+          sql`${membershipFreezes.end_date} > ${today}`
+        )
+      )
+      .run()
   }
 }
 
@@ -451,5 +528,26 @@ export const membershipEventRepo = {
       .returning()
       .get() as EventRow
     return mapEvent(row)
+  },
+
+  getSourceInvoiceId(organizationId: number, membershipId: number): number | null {
+    const row = getDrizzle()
+      .select()
+      .from(membershipEvents)
+      .where(
+        and(
+          eq(membershipEvents.organization_id, organizationId),
+          eq(membershipEvents.membership_id, membershipId),
+          eq(membershipEvents.type, 'CREATED')
+        )
+      )
+      .get() as EventRow | undefined
+    if (!row?.data) return null
+    try {
+      const parsed = JSON.parse(row.data)
+      return typeof parsed.invoiceId === 'number' ? parsed.invoiceId : null
+    } catch {
+      return null
+    }
   }
 }

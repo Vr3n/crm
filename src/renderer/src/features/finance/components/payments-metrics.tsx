@@ -22,7 +22,9 @@ export function PaymentsMetrics({
   const currency = useCurrency()
   const today = payments.filter((p) => isSameDay(p.paymentDate, now))
   const month = payments.filter((p) => isSameMonth(p.paymentDate, now))
-  const monthRefunds = refunds.filter((r) => isSameMonth(r.refundDate, now))
+  const monthRefunds = refunds.filter(
+    (r) => r.status === 'ISSUED' && isSameMonth(r.refundDate, now)
+  )
   const unallocated = payments.reduce((s, p) => s + unallocatedAmount(p), 0)
 
   return (

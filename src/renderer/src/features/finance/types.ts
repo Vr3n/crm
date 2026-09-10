@@ -65,6 +65,8 @@ export interface Refund {
   sourcePaymentId: string
   sourcePaymentNo: string
   method: PaymentMethod
+  status: 'ISSUED' | 'SCHEDULED' | 'VOIDED'
+  scheduledDate?: string | null
   reason: string
   createdBy: string
 }

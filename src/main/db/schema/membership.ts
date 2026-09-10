@@ -81,6 +81,7 @@ export const memberships = sqliteTable(
     cancellation_requested_at: text('cancellation_requested_at'),
     cancellation_effective_date: text('cancellation_effective_date'),
     cancellation_reason: text('cancellation_reason'),
+    cancellation_reason_code: text('cancellation_reason_code'),
     created_at: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),

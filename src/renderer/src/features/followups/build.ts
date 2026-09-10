@@ -1,3 +1,5 @@
+import type { Row, SortFn } from '@tanstack/react-table'
+import type { DashboardFeatures } from '@/features/dashboard/components/data-table'
 import type { Lead } from '@/features/leads/types'
 import type { FollowUpBucket, FollowUpRow } from './types'
 
@@ -12,7 +14,9 @@ export function buildFollowUpRows(leads: Lead[]): FollowUpRow[] {
       id: f.id,
       leadId: lead.id,
       leadName: lead.name,
+      personId: lead.personId,
       stage: lead.stage,
+      isBlacklisted: lead.isBlacklisted,
       title: f.title,
       dueAt: f.dueAt,
       extensionReason: f.extensionReason,
@@ -58,4 +62,34 @@ export function sortFollowUpRows(rows: FollowUpRow[]): FollowUpRow[] {
     if (bDone) return -1
     return a.dueAt.localeCompare(b.dueAt)
   })
+}
+
+function isDoneRow(row: FollowUpRow): boolean {
+  return Boolean(row.completedAt || row.cancelledAt)
+}
+
+function isDueDesc(row: Row<DashboardFeatures, FollowUpRow>, columnId: string): boolean {
+  const sorting = row.table.atoms.sorting?.get() ?? []
+  return sorting.some((entry) => entry.id === columnId && entry.desc)
+}
+
+/**
+ * Due-column sort for the follow-ups table: open follow-ups always surface
+ * above done/cancelled ones, in both directions — only the within-group
+ * due-date order follows the sort direction. The engine negates the comparator
+ * result on desc, so the open-first partition is applied direction-aware here
+ * to counter that.
+ */
+export const dueAtOpenFirst: SortFn<DashboardFeatures, FollowUpRow> = (
+  rowA,
+  rowB,
+  columnId
+) => {
+  const aDone = isDoneRow(rowA.original)
+  const bDone = isDoneRow(rowB.original)
+  if (aDone !== bDone) {
+    const openFirst = aDone ? 1 : -1
+    return isDueDesc(rowA, columnId) ? -openFirst : openFirst
+  }
+  return rowA.original.dueAt.localeCompare(rowB.original.dueAt)
 }

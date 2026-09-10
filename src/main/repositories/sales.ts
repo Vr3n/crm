@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, isNull, like, lt, lte, ne, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { getDrizzle } from '../db/connection'
 import { logger } from '../lib/logger'
@@ -36,6 +36,11 @@ interface PersonRow {
   full_name: string
   phone: string
   email: string | null
+  is_blacklisted: boolean
+  blacklisted_reason: string | null
+  blacklisted_at: string | null
+  blacklisted_by: number | null
+  photo_filename: string | null
   created_at: string
   updated_at: string
 }
@@ -67,6 +72,7 @@ interface LeadStageRow {
   is_initial: boolean
   is_won: boolean
   is_lost: boolean
+  suppress_followups: boolean
   active: boolean
   created_at: string
 }
@@ -118,6 +124,11 @@ function mapPerson(row: PersonRow): Person {
     fullName: row.full_name,
     phone: row.phone,
     email: row.email,
+    isBlacklisted: row.is_blacklisted,
+    blacklistedReason: row.blacklisted_reason,
+    blacklistedAt: row.blacklisted_at,
+    blacklistedBy: row.blacklisted_by,
+    photoFilename: row.photo_filename,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -152,6 +163,7 @@ function mapStage(row: LeadStageRow): LeadStage {
     isInitial: row.is_initial,
     isWon: row.is_won,
     isLost: row.is_lost,
+    suppressFollowups: row.suppress_followups,
     active: row.active
   }
 }
@@ -222,20 +234,74 @@ export const personRepo = {
     return row ? mapPerson(row) : null
   },
 
+  /**
+   * Case-insensitive email lookup over the org's people. Advisory by design
+   * (email is duplicable; phone is the identity key): `excludePersonId` skips a
+   * person's own record so the edit dialog never flags itself. Returns the
+   * owner's brief so the UI can name them in a warning.
+   */
+  findByEmail(
+    organizationId: number,
+    emailLower: string,
+    excludePersonId?: number
+  ): {
+    id: number
+    fullName: string
+    phone: string
+    isBlacklisted: boolean
+    blacklistedReason: string | null
+  } | null {
+    const emailMatch = sql<number>`lower(${people.email}) = ${emailLower}`
+    const cond =
+      excludePersonId !== undefined
+        ? and(eq(people.organization_id, organizationId), emailMatch, ne(people.id, excludePersonId))
+        : and(eq(people.organization_id, organizationId), emailMatch)
+    const row = getDrizzle()
+      .select({
+        id: people.id,
+        fullName: people.full_name,
+        phone: people.phone,
+        isBlacklisted: people.is_blacklisted,
+        blacklistedReason: people.blacklisted_reason
+      })
+      .from(people)
+      .where(cond)
+      .get()
+    if (!row) return null
+    return {
+      id: row.id,
+      fullName: row.fullName,
+      phone: row.phone,
+      isBlacklisted: row.isBlacklisted,
+      blacklistedReason: row.blacklistedReason
+    }
+  },
+
   /** Basic name/phone search over the org's people, newest first. */
   search(
     organizationId: number,
     query: string,
     limit: number,
     offset: number
-  ): { id: number; fullName: string; phone: string; email: string | null }[] {
+  ): {
+    id: number
+    fullName: string
+    phone: string
+    email: string | null
+    isBlacklisted: boolean
+    blacklistedReason: string | null
+    photoFilename: string | null
+  }[] {
     const term = `%${query}%`
     return getDrizzle()
       .select({
         id: people.id,
         fullName: people.full_name,
         phone: people.phone,
-        email: people.email
+        email: people.email,
+        isBlacklisted: people.is_blacklisted,
+        blacklistedReason: people.blacklisted_reason,
+        photoFilename: people.photo_filename
       })
       .from(people)
       .where(
@@ -281,6 +347,52 @@ export const personRepo = {
         full_name: input.fullName,
         phone: input.phone,
         email: input.email,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  blacklist(organizationId: number, id: number, reason: string | null, byUserId: number): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        is_blacklisted: true,
+        blacklisted_reason: reason,
+        blacklisted_at: sql`(datetime('now'))`,
+        blacklisted_by: byUserId,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  unblacklist(organizationId: number, id: number): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        is_blacklisted: false,
+        blacklisted_reason: null,
+        blacklisted_at: null,
+        blacklisted_by: null,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
+      .returning()
+      .get()
+    return mapPerson(row as unknown as PersonRow)
+  },
+
+  /** Updates only the photo_filename field on a person. */
+  updatePhoto(organizationId: number, id: number, photoFilename: string | null): Person {
+    const row = getDrizzle()
+      .update(people)
+      .set({
+        photo_filename: photoFilename,
         updated_at: sql`(datetime('now'))`
       })
       .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
@@ -598,6 +710,24 @@ export const leadRepo = {
   },
 
   /**
+   * Clears the lost markers when a LOST lead is won back to an open stage.
+   * Only the current-state columns are reset — the `lead_stage_history` rows
+   * (including the original LOST entry with its reason) stay as the audit
+   * trail. Runs inside the caller's move transaction.
+   */
+  clearLostState(organizationId: number, id: number): void {
+    getDrizzle()
+      .update(leads)
+      .set({
+        lost_reason_id: null,
+        lost_at: null,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(leads.organization_id, organizationId), eq(leads.id, id)))
+      .run()
+  },
+
+  /**
    * Deletes leads together with their child rows. The FKs have no ON DELETE
    * CASCADE and `PRAGMA foreign_keys` is ON, so children are removed explicitly
    * in dependency order: stage history references activities, so it goes first.
@@ -675,6 +805,9 @@ export const leadRepo = {
       personName: string
       phone: string
       email: string | null
+      isBlacklisted: boolean
+      photoFilename: string | null
+      blacklistedReason: string | null
       sourceId: number
       sourceName: string | null
       stageId: number
@@ -714,6 +847,9 @@ export const leadRepo = {
         personName: people.full_name,
         phone: people.phone,
         email: people.email,
+        isBlacklisted: people.is_blacklisted,
+        photoFilename: people.photo_filename,
+        blacklistedReason: people.blacklisted_reason,
         sourceId: leads.source_id,
         sourceName: leadSources.name,
         stageId: leads.current_stage_id,
@@ -1085,6 +1221,50 @@ export const followupRepo = {
       .from(leadFollowups)
       .where(
         and(eq(leadFollowups.organization_id, organizationId), eq(leadFollowups.lead_id, leadId))
+      )
+      .orderBy(leadFollowups.due_at)
+      .all() as unknown as FollowupRow[]
+    return rows.map(mapFollowup)
+  },
+
+  /** Pending (not completed, not cancelled) follow-ups for a lead. */
+  listPendingForLead(organizationId: number, leadId: number): LeadFollowup[] {
+    const rows = getDrizzle()
+      .select()
+      .from(leadFollowups)
+      .where(
+        and(
+          eq(leadFollowups.organization_id, organizationId),
+          eq(leadFollowups.lead_id, leadId),
+          isNull(leadFollowups.completed_at),
+          isNull(leadFollowups.cancelled_at)
+        )
+      )
+      .orderBy(leadFollowups.due_at)
+      .all() as unknown as FollowupRow[]
+    return rows.map(mapFollowup)
+  },
+
+  /** Pending follow-ups across all leads for a person (used by blacklist). */
+  listPendingForPerson(organizationId: number, personId: number): LeadFollowup[] {
+    // Subquery, not a join: a star-select across a join collides `lead_followups`
+    // and `leads` columns (both have `id`/`organization_id`), which silently
+    // corrupts the mapped row's id. Filtering the lead set via IN keeps the
+    // result to lead_followups columns only.
+    const leadIds = getDrizzle()
+      .select({ id: leads.id })
+      .from(leads)
+      .where(eq(leads.person_id, personId))
+    const rows = getDrizzle()
+      .select()
+      .from(leadFollowups)
+      .where(
+        and(
+          eq(leadFollowups.organization_id, organizationId),
+          inArray(leadFollowups.lead_id, leadIds),
+          isNull(leadFollowups.completed_at),
+          isNull(leadFollowups.cancelled_at)
+        )
       )
       .orderBy(leadFollowups.due_at)
       .all() as unknown as FollowupRow[]

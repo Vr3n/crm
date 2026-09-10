@@ -155,3 +155,15 @@ export class DuplicateTransactionError extends DomainError {
     this.name = 'DuplicateTransactionError'
   }
 }
+
+/**
+ * The person is blacklisted: reads stay visible and refunds still flow, but no
+ * other business operation may touch them. Callers pass a specific message
+ * naming the refused action; the default covers the general case.
+ */
+export class BlacklistedPersonError extends DomainError {
+  constructor(message = 'This person is blacklisted (refunds only)') {
+    super(message, ERROR_CODES.VALIDATION_ERROR)
+    this.name = 'BlacklistedPersonError'
+  }
+}

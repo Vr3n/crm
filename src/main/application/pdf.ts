@@ -1,21 +1,24 @@
 import { currentOrganizationId, requirePermission } from '../auth/session'
 import { invoiceRepo, invoiceLineRepo } from '../repositories/billing'
-import { allocationRepo, paymentRepo } from '../repositories/finance'
+import { allocationRepo, paymentRepo, refundRepo } from '../repositories/finance'
 import { getDrizzle } from '../db/connection'
 import { organizations, customers, people, users, memberships } from '../db/schema'
 import { eq, and, desc } from 'drizzle-orm'
-import { NotFoundError } from '../domain/errors'
+import { NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import { formatRate } from '../../shared/contracts/money'
 import { renderPdf } from '../pdf/renderer'
 import { renderInvoiceDocument } from '../pdf/templates/invoice-document'
 import { renderPaymentReceipt } from '../pdf/templates/payment-receipt'
+import { renderRefundReceipt } from '../pdf/templates/refund-receipt'
 import type {
   InvoicePrintContext,
   ReceiptPrintContext,
+  RefundPrintContext,
   OrgBranding,
   PdfAllocation,
-  PdfCustomer
+  PdfCustomer,
+  PdfRefund
 } from '../pdf/types'
 
 /* -------------------------------------------------------------------------- */
@@ -98,6 +101,20 @@ function buildFilename(customerName: string, docId: string, timestamp: Date): st
 /* Invoice Document Export                                                     */
 /* -------------------------------------------------------------------------- */
 
+/** Collects refunds for an invoice = refunds on every payment allocated to it. */
+function collectInvoiceRefunds(organizationId: number, invoiceId: number): PdfRefund[] {
+  return refundRepo.listByInvoice(organizationId, invoiceId).map((r) => {
+    const payment = paymentRepo.getById(organizationId, r.paymentId)
+    return {
+      refundNo: `REF-${String(r.id).padStart(4, '0')}`,
+      refundDate: r.issuedAt ?? r.createdAt,
+      method: payment?.paymentMethod ?? 'UNKNOWN',
+      reason: r.reason,
+      amount: r.amountMinor
+    }
+  })
+}
+
 export function exportInvoicePdf(input: {
   invoiceId: number
   mode?: 'save' | 'preview'
@@ -151,6 +168,8 @@ export function exportInvoicePdf(input: {
 
   // Calculate paid amount from allocations
   const paidAmount = allocations.reduce((sum, a) => sum + a.amountMinor, 0)
+  const refunds = collectInvoiceRefunds(organizationId, input.invoiceId)
+  const refundedAmount = refunds.reduce((sum, r) => sum + r.amount, 0)
   const outstanding = invoice.totalMinor - paidAmount
 
   const ctx: InvoicePrintContext = {
@@ -180,7 +199,9 @@ export function exportInvoicePdf(input: {
     taxTotal: invoice.taxMinor,
     total: invoice.totalMinor,
     allocations: enrichedAllocations,
+    refunds,
     paidAmount,
+    refundedAmount,
     outstanding,
     generatedAt: now
   }
@@ -274,4 +295,81 @@ export function exportReceiptPdf(input: {
   const shouldOpen = input.mode !== 'save'
 
   return renderPdf(html, filename, 'Receipts', shouldOpen)
+}
+
+/* -------------------------------------------------------------------------- */
+/* Refund Receipt Export                                                       */
+/* -------------------------------------------------------------------------- */
+
+export function exportRefundPdf(input: {
+  refundId: number
+  mode?: 'save' | 'preview'
+}): Promise<string> {
+  requirePermission(PERMISSIONS.REFUND_VIEW)
+  const organizationId = currentOrganizationId()
+
+  const refund = refundRepo.getById(organizationId, input.refundId)
+  if (!refund) throw new NotFoundError('Refund not found')
+  if (refund.status !== 'ISSUED') {
+    throw new ValidationError('Receipt is only available for issued refunds')
+  }
+
+  const payment = paymentRepo.getById(organizationId, refund.paymentId)
+  if (!payment) throw new NotFoundError('Payment not found')
+
+  const customerInfo = getCustomerInfo(organizationId, payment.customerId)
+
+  // Invoice numbers the source payment was allocated to
+  const allocations = allocationRepo.listByPayment(organizationId, refund.paymentId)
+  const invoiceNumbers = allocations
+    .map((alloc) => invoiceRepo.getById(organizationId, alloc.invoiceId)?.number)
+    .filter((n): n is string => Boolean(n))
+
+  // Fetch the latest membership name for this customer
+  const membership = getDrizzle()
+    .select({ planName: memberships.plan_name_snapshot })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.organization_id, organizationId),
+        eq(memberships.customer_id, payment.customerId)
+      )
+    )
+    .orderBy(desc(memberships.created_at))
+    .get() as { planName: string } | undefined
+
+  const org = getOrgBranding(organizationId)
+  const now = formatNow()
+
+  // Fetch the user name for recordedBy (staff who recorded the refund)
+  const createdByUser = getDrizzle()
+    .select({ fullName: users.full_name })
+    .from(users)
+    .where(eq(users.id, refund.createdBy))
+    .get() as { fullName: string } | undefined
+
+  const refundNo = `REF-${String(refund.id).padStart(4, '0')}`
+  const sourcePaymentNo = `PAY-${String(payment.id).padStart(4, '0')}`
+
+  const ctx: RefundPrintContext = {
+    org,
+    refundNo,
+    refundDate: refund.issuedAt ?? refund.createdAt,
+    amount: refund.amountMinor,
+    method: payment.paymentMethod,
+    sourcePaymentNo,
+    invoiceNumbers,
+    customer: customerInfo,
+    membershipName: membership?.planName ?? null,
+    reason: refund.reason,
+    recordedBy: createdByUser?.fullName ?? 'System',
+    generatedAt: now
+  }
+
+  const html = renderRefundReceipt(ctx)
+  const downloadTime = new Date()
+  const filename = buildFilename(customerInfo.name, refundNo, downloadTime)
+  const shouldOpen = input.mode !== 'save'
+
+  return renderPdf(html, filename, 'Refunds', shouldOpen)
 }
