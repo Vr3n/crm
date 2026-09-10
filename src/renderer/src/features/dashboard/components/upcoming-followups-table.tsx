@@ -111,6 +111,7 @@ function buildColumns(
                 size="icon-sm"
                 className="text-muted-foreground hover:text-foreground"
                 aria-label={`Extend due date for ${row.original.title}`}
+                disabled={row.original.isBlacklisted}
                 onClick={(e) => {
                   e.stopPropagation()
                   onEdit(row.original)
@@ -119,7 +120,9 @@ function buildColumns(
                 <CalendarClock className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="left">Extend due date</TooltipContent>
+            <TooltipContent side="left">
+              {row.original.isBlacklisted ? 'Blacklisted — refunds only' : 'Extend due date'}
+            </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -128,6 +131,7 @@ function buildColumns(
                 size="icon-sm"
                 className="text-success hover:bg-success/10 hover:text-success"
                 aria-label={`Mark ${row.original.title} done`}
+                disabled={row.original.isBlacklisted}
                 onClick={(e) => {
                   e.stopPropagation()
                   onComplete(row.original)
@@ -136,7 +140,9 @@ function buildColumns(
                 <Check className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="left">Mark done</TooltipContent>
+            <TooltipContent side="left">
+              {row.original.isBlacklisted ? 'Blacklisted — refunds only' : 'Mark done'}
+            </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -145,6 +151,7 @@ function buildColumns(
                 size="icon-sm"
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 aria-label={`Cancel ${row.original.title}`}
+                disabled={row.original.isBlacklisted}
                 onClick={(e) => {
                   e.stopPropagation()
                   onCancel(row.original)
@@ -153,7 +160,9 @@ function buildColumns(
                 <XCircle className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="left">Cancel</TooltipContent>
+            <TooltipContent side="left">
+              {row.original.isBlacklisted ? 'Blacklisted — refunds only' : 'Cancel'}
+            </TooltipContent>
           </Tooltip>
         </div>
       )

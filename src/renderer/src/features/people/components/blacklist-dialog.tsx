@@ -75,8 +75,8 @@ export function BlacklistDialog({
           </DialogTitle>
           <DialogDescription>
             {isBlacklisted
-              ? 'This person can buy and renew memberships again once the flag is lifted.'
-              : 'Blacklisted people cannot be sold new memberships. The reason is visible to front desk.'}
+              ? 'This person can use every module again once the flag is lifted.'
+              : 'Blacklisted people are blocked from every module except refunds. The reason is visible to front desk.'}
           </DialogDescription>
         </DialogHeader>
 

@@ -47,6 +47,7 @@ function CompleteFollowUpButton({
             size="icon-sm"
             className="text-success hover:bg-success/10 hover:text-success"
             aria-label="Mark follow-up done"
+            disabled={followUp.isBlacklisted}
             onClick={(e) => {
               e.stopPropagation()
               setOpen(true)
@@ -55,7 +56,9 @@ function CompleteFollowUpButton({
             <Check className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Mark done</TooltipContent>
+        <TooltipContent side="left">
+          {followUp.isBlacklisted ? 'Blacklisted — refunds only' : 'Mark done'}
+        </TooltipContent>
       </Tooltip>
       {open && (
         <CompleteFollowUpDialog
@@ -88,6 +91,7 @@ function CancelFollowUpButton({
             size="icon-sm"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label="Cancel follow-up"
+            disabled={followUp.isBlacklisted}
             onClick={(e) => {
               e.stopPropagation()
               setOpen(true)
@@ -96,7 +100,9 @@ function CancelFollowUpButton({
             <XCircle className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Cancel</TooltipContent>
+        <TooltipContent side="left">
+          {followUp.isBlacklisted ? 'Blacklisted — refunds only' : 'Cancel'}
+        </TooltipContent>
       </Tooltip>
       {open && (
         <CancelFollowUpDialog
@@ -129,6 +135,7 @@ function EditFollowUpButton({
             size="icon-sm"
             className="text-muted-foreground hover:text-foreground"
             aria-label="Edit follow-up"
+            disabled={followUp.isBlacklisted}
             onClick={(e) => {
               e.stopPropagation()
               setOpen(true)
@@ -137,7 +144,9 @@ function EditFollowUpButton({
             <CalendarClock className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left">Extend due date</TooltipContent>
+        <TooltipContent side="left">
+          {followUp.isBlacklisted ? 'Blacklisted — refunds only' : 'Extend due date'}
+        </TooltipContent>
       </Tooltip>
       {open && (
         <EditFollowUpDialog

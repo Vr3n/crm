@@ -9,7 +9,7 @@ import {
   InvalidStateTransitionError,
   RefundExceedsPaymentError
 } from '../domain/errors'
-import { BlacklistedPersonError } from '../domain/errors'
+import { assertCustomerAllowed, assertPersonAllowed } from './blacklist'
 import { calculateSalePricing, type DiscountType } from '../domain/pricing'
 import { deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
 import {
@@ -118,11 +118,7 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
   const person = personRepo.findById(organizationId, lead.personId)
   if (!person) throw new NotFoundError('Person not found for lead')
 
-  if (person.isBlacklisted) {
-    throw new BlacklistedPersonError(
-      `Cannot sell membership: person "${person.fullName}" is blacklisted`
-    )
-  }
+  assertPersonAllowed(organizationId, lead.personId, 'sell a membership')
 
   const plan = planRepo.getById(organizationId, input.planId)
   if (!plan) throw new NotFoundError('Plan not found')
@@ -489,6 +485,8 @@ export function cancelMembership(input: CancelMembershipInput): CancelMembership
   const membership = membershipRepo.getById(organizationId, input.membershipId)
   if (!membership) throw new NotFoundError('Membership not found')
 
+  assertCustomerAllowed(organizationId, membership.customerId, 'cancel a membership')
+
   const today = new Date().toISOString().slice(0, 10)
 
   // Derive effective status (the stored status is a cache; derive at decision time per R1.3)
@@ -733,6 +731,8 @@ export function revertCancellationRequest(input: RevertCancellationInput): void 
   const membership = membershipRepo.getById(organizationId, input.membershipId)
   if (!membership) throw new NotFoundError('Membership not found')
 
+  assertCustomerAllowed(organizationId, membership.customerId, 'revert a cancellation')
+
   const today = new Date().toISOString().slice(0, 10)
 
   // Must have a pending cancellation (effective date in the future)
@@ -813,6 +813,7 @@ export function renewMembership(input: RenewMembershipInput): RenewMembershipRes
   // Validate customer
   const customer = customerRepo.getById(organizationId, input.customerId)
   if (!customer) throw new NotFoundError('Customer not found')
+  assertPersonAllowed(organizationId, customer.personId, 'renew a membership')
 
   // Validate plan
   const plan = planRepo.getById(organizationId, input.planId)

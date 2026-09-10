@@ -1,6 +1,7 @@
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
 import { PERMISSIONS } from '../db/permissions'
-import { NotFoundError, ValidationError } from '../domain/errors'
+import { BlacklistedPersonError, NotFoundError, ValidationError } from '../domain/errors'
+import { customerRepo } from '../repositories/membership'
 import { followupRepo, personRepo } from '../repositories/sales'
 import type {
   BlacklistPersonInput,
@@ -32,6 +33,41 @@ export function blacklistPerson(input: BlacklistPersonInput): BlacklistPersonRes
   }
 
   return { personId: input.personId, isBlacklisted: true }
+}
+
+/**
+ * Refund-only rule: a blacklisted person may appear in reads and receive
+ * refunds, but every other mutating use case must refuse them up front.
+ * Resolves the person here so call sites only pass an id plus the action
+ * name for the error message (e.g. 'schedule a follow-up').
+ */
+export function assertPersonAllowed(
+  organizationId: number,
+  personId: number,
+  action: string
+): void {
+  const person = personRepo.findById(organizationId, personId)
+  if (!person) throw new NotFoundError('Person not found')
+  if (person.isBlacklisted) {
+    throw new BlacklistedPersonError(
+      `Cannot ${action}: person "${person.fullName}" is blacklisted (refunds only)`
+    )
+  }
+}
+
+/**
+ * Same refund-only rule starting from a customer id: resolves the customer,
+ * then delegates to `assertPersonAllowed`. For invoice/payment/membership
+ * flows that only carry a customer reference.
+ */
+export function assertCustomerAllowed(
+  organizationId: number,
+  customerId: number,
+  action: string
+): void {
+  const customer = customerRepo.getById(organizationId, customerId)
+  if (!customer) throw new NotFoundError('Customer not found')
+  assertPersonAllowed(organizationId, customer.personId, action)
 }
 
 export function unblacklistPerson(input: UnblacklistPersonInput): BlacklistPersonResult {

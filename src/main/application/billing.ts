@@ -1,5 +1,6 @@
 import { withTransaction } from '../db/connection'
 import { requirePermission, currentOrganizationId, requireSession } from '../auth/session'
+import { assertCustomerAllowed, assertPersonAllowed } from './blacklist'
 import { customerRepo } from '../repositories/membership'
 import { invoiceRepo, invoiceLineRepo, invoiceSequenceRepo } from '../repositories/billing'
 import { InvoiceCalculationService, deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
@@ -83,10 +84,12 @@ export function createInvoice(input: CreateInvoiceInput): InvoiceOutput {
 
   const customer = customerRepo.getById(organizationId, input.customerId)
   if (!customer) throw new NotFoundError('Customer not found')
+  assertPersonAllowed(organizationId, customer.personId, 'create an invoice')
 
-  // Generate a temporary number; final number assigned on finalize
+  // Generate a temporary number; final number assigned on finalize. The random
+  // suffix keeps back-to-back creates in the same millisecond unique.
   const today = new Date().toISOString().slice(0, 10)
-  const tempNumber = `DRAFT-${today}-${customer.id}-${Date.now()}`
+  const tempNumber = `DRAFT-${today}-${customer.id}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`
 
   const invoice = invoiceRepo.create({
     organizationId,
@@ -114,6 +117,7 @@ export function addInvoiceLine(input: AddInvoiceLineInput): InvoiceLineOutput {
   const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
   if (!invoice) throw new NotFoundError('Invoice not found')
   if (invoice.status !== 'DRAFT') throw new InvoiceAlreadyFinalizedError()
+  assertCustomerAllowed(organizationId, invoice.customerId, 'edit an invoice')
 
   const { taxAmountMinor, lineTotalMinor } = InvoiceCalculationService.calculateLineTax(
     input.unitPriceMinor,
@@ -157,6 +161,7 @@ export function removeInvoiceLine(input: RemoveInvoiceLineInput): void {
   const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
   if (!invoice) throw new NotFoundError('Invoice not found')
   if (invoice.status !== 'DRAFT') throw new InvoiceAlreadyFinalizedError()
+  assertCustomerAllowed(organizationId, invoice.customerId, 'edit an invoice')
 
   const lines = invoiceLineRepo.listByInvoice(organizationId, input.invoiceId)
   const targetLine = lines.find((l) => l.id === input.lineId)
@@ -197,6 +202,7 @@ export function updateBillingSnapshot(input: UpdateBillingSnapshotInput): Invoic
   const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
   if (!invoice) throw new NotFoundError('Invoice not found')
   if (invoice.status !== 'DRAFT') throw new InvoiceAlreadyFinalizedError()
+  assertCustomerAllowed(organizationId, invoice.customerId, 'edit an invoice')
 
   invoiceRepo.updateBillingSnapshot(organizationId, input.invoiceId, {
     billingName: input.billingName,
@@ -243,6 +249,7 @@ export function finalizeInvoice(input: FinalizeInvoiceInput): InvoiceOutput {
     const invoice = invoiceRepo.getById(organizationId, input.invoiceId)
     if (!invoice) throw new NotFoundError('Invoice not found')
     if (invoice.status !== 'DRAFT') throw new InvoiceAlreadyFinalizedError()
+    assertCustomerAllowed(organizationId, invoice.customerId, 'finalize an invoice')
 
     const lines = invoiceLineRepo.listByInvoice(organizationId, input.invoiceId)
     if (lines.length === 0) throw new InvoiceEmptyError()
@@ -302,6 +309,7 @@ export function finalizeInvoice(input: FinalizeInvoiceInput): InvoiceOutput {
   if (invoice.status !== 'OPEN' && invoice.status !== 'PARTIALLY_PAID') {
     throw new ValidationError('Only OPEN or PARTIALLY_PAID invoices can be voided')
   }
+  assertCustomerAllowed(organizationId, invoice.customerId, 'void an invoice')
 
   const now = new Date().toISOString()
   invoiceRepo.updateStatus(organizationId, input.invoiceId, 'VOID', {
@@ -329,6 +337,7 @@ export function markUncollectible(input: MarkUncollectibleInput): InvoiceOutput 
   if (invoice.status !== 'OPEN' && invoice.status !== 'PARTIALLY_PAID') {
     throw new ValidationError('Only OPEN or PARTIALLY_PAID invoices can be marked uncollectible')
   }
+  assertCustomerAllowed(organizationId, invoice.customerId, 'mark an invoice uncollectible')
 
   invoiceRepo.updateStatus(organizationId, input.invoiceId, 'UNCOLLECTIBLE', {
     voidReason: input.reason

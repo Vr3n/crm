@@ -23,6 +23,7 @@ import {
   samePersonName
 } from '../domain/lead'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors'
+import { assertPersonAllowed } from './blacklist'
 import { PERMISSIONS } from '../db/permissions'
 import type {
   AssignLeadInput,
@@ -124,6 +125,8 @@ export function createLead(input: CreateLeadInput): CreatedLead {
       })
     }
 
+    assertPersonAllowed(organizationId, person.id, 'create a lead')
+
     if (leadRepo.findActiveByPersonId(organizationId, person.id)) {
       throw new ConflictError('This person already has an active lead')
     }
@@ -223,6 +226,7 @@ export function editLead(input: EditLeadInput): void {
 
   const person = personRepo.findById(organizationId, lead.personId)
   if (!person) throw new NotFoundError('Person not found')
+  assertPersonAllowed(organizationId, person.id, 'edit this lead')
 
   const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
   if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
@@ -270,8 +274,10 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
   const machine = stageMachineFor(organizationId)
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'move this lead')
 
   const current = stageRepo.findById(organizationId, lead.currentStageId)
+  if (!current) throw new NotFoundError('Current stage not found')
   const target = stageRepo.findById(organizationId, input.targetStageId)
   if (!current) throw new NotFoundError('Current stage not found')
   if (!target) throw new NotFoundError('Target stage not found')
@@ -344,6 +350,7 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
   // Validate every move before mutating anything, so a bad lead aborts the batch.
   for (const lead of leads) {
     if (lead.currentStageId === target.id) continue
+    assertPersonAllowed(organizationId, lead.personId, 'move this lead')
     const current = stageRepo.findById(organizationId, lead.currentStageId)
     if (!current) throw new NotFoundError('Current stage not found')
     machine.assertMoveAllowed(current, target, true)
@@ -401,9 +408,11 @@ export function deleteLeads(input: DeleteLeadsInput): void {
   const organizationId = currentOrganizationId()
 
   for (const id of input.leadIds) {
-    if (!leadRepo.getById(organizationId, id)) {
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) {
       throw new NotFoundError('Lead not found')
     }
+    assertPersonAllowed(organizationId, lead.personId, 'delete this lead')
   }
 
   withTransaction(() => {
@@ -419,6 +428,7 @@ export function recordLeadActivity(input: RecordLeadActivityInput): RecordedActi
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'log an activity')
 
   const type = activityTypeRepo.findById(organizationId, input.typeId)
   if (!type) throw new NotFoundError('Activity type not found')
@@ -455,6 +465,7 @@ export function bulkScheduleFollowUp(input: BulkScheduleFollowUpInput): BulkSche
   const leads = input.leadIds.map((id) => {
     const lead = leadRepo.getById(organizationId, id)
     if (!lead) throw new NotFoundError('Lead not found')
+    assertPersonAllowed(organizationId, lead.personId, 'schedule a follow-up')
     return lead
   })
 
@@ -491,7 +502,9 @@ export function bulkRecordActivity(input: BulkRecordActivityInput): BulkRecordAc
   if (!type) throw new NotFoundError('Activity type not found')
 
   for (const id of input.leadIds) {
-    if (!leadRepo.getById(organizationId, id)) throw new NotFoundError('Lead not found')
+    const lead = leadRepo.getById(organizationId, id)
+    if (!lead) throw new NotFoundError('Lead not found')
+    assertPersonAllowed(organizationId, lead.personId, 'log an activity')
   }
 
   return withTransaction(() => {
@@ -519,6 +532,7 @@ export function assignLead(input: AssignLeadInput): void {
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'reassign this lead')
   if (lead.ownerUserId === input.ownerUserId) return
 
   const target = userRepo.findById(input.ownerUserId)
@@ -550,6 +564,7 @@ export function markLeadLost(input: MarkLeadLostInput): void {
   const machine = stageMachineFor(organizationId)
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'mark this lead lost')
 
   const current = stageRepo.findById(organizationId, lead.currentStageId)
   if (!current) throw new NotFoundError('Current stage not found')
@@ -591,6 +606,7 @@ export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: nu
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, lead.personId, 'schedule a follow-up')
 
   const currentStage = stageRepo.findById(organizationId, lead.currentStageId)
   if (!currentStage) throw new NotFoundError('Lead stage not found')
@@ -637,6 +653,9 @@ export function completeFollowUp(input: CompleteFollowUpInput): void {
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) return
 
+  const completedLead = leadRepo.getById(organizationId, followup.leadId)
+  if (!completedLead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, completedLead.personId, 'complete a follow-up')
 
   const machine = stageMachineFor(organizationId)
 
@@ -741,6 +760,12 @@ export function bulkCompleteFollowUps(
   const pending = followups.filter((followup) => !followup.completedAt)
   if (pending.length === 0) return { completed: 0 }
 
+  // Refund-only rule, fail-closed before anything completes — regardless of
+  // whether the batch also moves stages.
+  for (const followup of pending) {
+    const pendingLead = leadRepo.getById(organizationId, followup.leadId)
+    if (!pendingLead) throw new NotFoundError('Lead not found')
+    assertPersonAllowed(organizationId, pendingLead.personId, 'complete a follow-up')
   }
 
   const machine = stageMachineFor(organizationId)
@@ -834,6 +859,10 @@ export function updateFollowUp(input: UpdateFollowUpInput): void {
   if (followup.completedAt) throw new ValidationError('Cannot edit a completed follow-up')
   if (followup.cancelledAt) throw new ValidationError('Cannot edit a cancelled follow-up')
 
+  const editedLead = leadRepo.getById(organizationId, followup.leadId)
+  if (!editedLead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, editedLead.personId, 'extend a follow-up')
+
   const due = new Date(input.dueAt)
   if (Number.isNaN(due.getTime())) throw new ValidationError('dueAt must be a valid date')
   if (due.getTime() <= Date.now()) {
@@ -857,6 +886,10 @@ export function cancelFollowUp(input: CancelFollowUpInput): void {
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) throw new ValidationError('Cannot cancel a completed follow-up')
   if (followup.cancelledAt) return
+
+  const cancelledLead = leadRepo.getById(organizationId, followup.leadId)
+  if (!cancelledLead) throw new NotFoundError('Lead not found')
+  assertPersonAllowed(organizationId, cancelledLead.personId, 'cancel a follow-up')
 
   withTransaction(() => {
     followupRepo.cancel(organizationId, followup.id, requireSession().userId, input.reason)
