@@ -14,7 +14,7 @@ import { formatDateTime, timeAgo } from '@/features/leads/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
 import { SortButton } from '@/features/dashboard/components/sort-button'
 import { cn } from '@/lib/utils'
-import { bucketOf } from '../build'
+import { bucketOf, dueAtOpenFirst } from '../build'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
 import type { FollowUpBucket, FollowUpRow } from '../types'
@@ -296,7 +296,7 @@ function buildColumns(
           </SortButton>
         ),
         cell: ({ row }) => <DueCell row={row.original} />,
-        sortFn: 'datetime'
+        sortFn: dueAtOpenFirst
       }),
       helper.accessor((row) => row.ownerName ?? '', {
         id: 'ownerName',
@@ -334,8 +334,11 @@ function buildColumns(
 }
 
 /**
- * The follow-up queue table: every open follow-up across leads, sorted by
- * urgency, with an inline "mark done" verb and row-click through to the lead.
+ * The follow-up queue table: every open follow-up across leads, open first and
+ * earliest-due first (done items sink — see `dueAtOpenFirst`), with an inline
+ * "mark done" verb and row-click through to the lead. The default row order is
+ * the upstream `sortFollowUpRows` order; the table applies no initial sort of
+ * its own so done rows never interleave with open ones.
  */
 export function FollowUpTable({
   rows,
@@ -397,7 +400,6 @@ export function FollowUpTable({
         data={rows}
         getRowId={(row) => String(row.id)}
         isLoading={isLoading}
-        initialSorting={[{ id: 'dueAt', desc: false }]}
         initialPageSize={8}
         pageSizeOptions={[8, 16, 32]}
         onRowClick={(row) => onOpenLead(row.leadId)}

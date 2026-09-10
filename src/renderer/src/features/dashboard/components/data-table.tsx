@@ -169,7 +169,10 @@ export function DataTable<TData extends RowData>({
     getRowId,
     globalFilterFn: 'includesString',
     initialState: {
-      sorting: initialSorting,
+      // An omitted initialSorting must still seed an empty array: the sorting
+      // toggle updater reads the current state with `.findIndex`, which throws
+      // on `undefined` on the first header click.
+      sorting: initialSorting ?? [],
       pagination: { pageIndex: 0, pageSize: initialPageSize }
     },
     state: { globalFilter, rowSelection },

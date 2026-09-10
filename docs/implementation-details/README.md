@@ -20,6 +20,7 @@ were made, the trade-offs accepted, the test strategy, and the known gaps.
 - [`winback-terminal-confirm-blacklist.md`](./winback-terminal-confirm-blacklist.md) — LOST win-back re-open, terminal-stage scheduling confirm, and the blacklist refund-only rule (backend guards + renderer).
 - [`catalog-plans-and-lead-fk.md`](./catalog-plans-and-lead-fk.md) — the `membership_plans` catalog (Module 03) and the `leads.plan_id` FK migration (v9/v10).
 - [`autocorrect-combobox.md`](./autocorrect-combobox.md) — the reusable TanStack Form/Query-backed autocomplete + create combobox (`src/renderer/src/components/autocorrect-combobox.tsx`).
+- [`follow-ups-table-ordering.md`](./follow-ups-table-ordering.md) — open-first / done-sunk ordering in the follow-ups queue (custom Due sort, `DataTable` empty-sort fix).
 
 ## Scope of this pass
 
