@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile, unlink, access, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdir, writeFile, unlink, access } from 'node:fs/promises'
+import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs'
 import { join, extname } from 'node:path'
 
 /**
@@ -124,9 +125,9 @@ export function deletePhotoFileSync(
   const dir = getPhotoDirectorySync(organizationId)
   const filePath = join(dir, filename)
   try {
-    writeFileSync(filePath, '') // This won't work for deletion
+    unlinkSync(filePath)
   } catch {
-    // Ignore errors
+    // File doesn't exist or already deleted — no-op
   }
 }
 

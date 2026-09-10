@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { setupSalesDb, seedOrgWithSession } from '../../helpers/sales-db'
 import { createLead } from '../../../src/main/application/leads'
@@ -21,6 +21,20 @@ import {
 import type { SellMembershipInput } from '../../../src/shared/contracts/membership-sale'
 
 setupSalesDb()
+
+// Every expectation in this file is anchored to "today" = 2026-09-08 (sale
+// window 2026-08-25 → 2026-11-22, notice math, effective dates). Freeze the
+// clock so the suite is independent of the real calendar day. Noon UTC keeps
+// the UTC calendar day stable in every timezone (the app derives today from
+// `new Date().toISOString()`).
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-09-08T12:00:00Z'))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 function createLeadForSale(): {
   organizationId: number

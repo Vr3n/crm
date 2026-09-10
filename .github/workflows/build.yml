@@ -27,6 +27,9 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Build app (main/preload/renderer into out/)
+        run: npx electron-vite build
+
       - name: Build and package (fuses applied via afterPack hook)
         run: npx electron-builder --win
 

@@ -101,6 +101,8 @@ import type {
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
   BulkRecordActivityResult,
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,

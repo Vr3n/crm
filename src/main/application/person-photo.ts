@@ -57,7 +57,8 @@ export function updatePersonPhoto(input: UpdatePersonPhotoInput): PersonPhotoOut
   return {
     personId: person.id,
     photoFilename: filename,
-    photoPath: null
+    photoPath: null,
+    photoData: buffer.toString('base64')
   }
 }
 
