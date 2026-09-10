@@ -166,6 +166,9 @@ declare global {
         markLost: (input: MarkLeadLostInput) => Promise<void>
         scheduleFollowup: (input: ScheduleFollowUpInput) => Promise<{ followupId: number }>
         completeFollowup: (input: CompleteFollowUpInput) => Promise<void>
+        bulkCompleteFollowups: (
+          input: BulkCompleteFollowUpsInput
+        ) => Promise<BulkCompleteFollowUpsResult>
         updateFollowup: (input: UpdateFollowUpInput) => Promise<void>
         cancelFollowup: (input: CancelFollowUpInput) => Promise<void>
         getDetails: (input: LeadIdRequest) => Promise<LeadDetails | null>

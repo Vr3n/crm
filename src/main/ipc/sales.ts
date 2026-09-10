@@ -1,5 +1,6 @@
 import {
   assignLead,
+  bulkCompleteFollowUps,
   bulkMoveLeadStage,
   bulkRecordActivity,
   bulkScheduleFollowUp,
@@ -34,6 +35,7 @@ import {
 } from '../application/leads'
 import {
   assignLeadInputSchema,
+  bulkCompleteFollowUpsInputSchema,
   bulkMoveLeadStageInputSchema,
   bulkRecordActivityInputSchema,
   bulkScheduleFollowUpInputSchema,
@@ -82,6 +84,9 @@ export function registerSalesIpc(): void {
   )
   handle(IPC_CHANNELS.LEADS_COMPLETE_FOLLOWUP, completeFollowUpInputSchema, (input) =>
     completeFollowUp(input)
+  )
+  handle(IPC_CHANNELS.LEADS_BULK_COMPLETE_FOLLOWUPS, bulkCompleteFollowUpsInputSchema, (input) =>
+    bulkCompleteFollowUps(input)
   )
   handle(IPC_CHANNELS.LEADS_UPDATE_FOLLOWUP, updateFollowUpInputSchema, (input) =>
     updateFollowUp(input)

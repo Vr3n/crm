@@ -26,6 +26,8 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { PERMISSIONS } from '../db/permissions'
 import type {
   AssignLeadInput,
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
@@ -72,6 +74,11 @@ const OWNER_CHANGE_TYPE = 'OWNER_CHANGE'
 const SUPPRESS_FOLLOWUP_REASONS: Record<string, string> = {
   DO_NOT_DISTURB: 'Follow-up cancelled — lead moved to Do Not Disturb',
   NOT_INTERESTED: 'Follow-up cancelled — lead moved to Not Interested'
+}
+
+/** Auto-NOTE text for a completion that also moves the lead (strict-move rule). */
+function completedFollowupNote(targetName: string): string {
+  return `Followup completed — moved to ${targetName}`
 }
 
 function orgTimezone(organizationId: number): string {
@@ -609,9 +616,17 @@ export function scheduleFollowUp(input: ScheduleFollowUpInput): { followupId: nu
   return { followupId: followup.id }
 }
 
-/** Completes a follow-up. Idempotent: completing an already-done one is a no-op. */
+/**
+ * Completes a follow-up. Idempotent: completing an already-done one is a no-op.
+ * Optionally moves the lead's stage in the SAME transaction — the strict-move
+ * rule (every stage change must link a real activity) is satisfied by the
+ * activity recorded alongside the completion; when none was supplied, a NOTE
+ * activity is recorded automatically so the move stays auditable. The stage
+ * change requires `lead.update_stage`, which is checked before any write.
+ */
 export function completeFollowUp(input: CompleteFollowUpInput): void {
   requirePermission(PERMISSIONS.FOLLOWUP_COMPLETE)
+  if (input.stageChange) requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
   const organizationId = currentOrganizationId()
   const userId = requireSession().userId
 
@@ -619,22 +634,188 @@ export function completeFollowUp(input: CompleteFollowUpInput): void {
   if (!followup) throw new NotFoundError('Follow-up not found')
   if (followup.completedAt) return
 
+
+  const machine = stageMachineFor(organizationId)
+
+  const change = input.stageChange
+    ? (() => {
+        const lead = leadRepo.getById(organizationId, followup.leadId)
+        if (!lead) throw new NotFoundError('Lead not found')
+        const current = stageRepo.findById(organizationId, lead.currentStageId)
+        if (!current) throw new NotFoundError('Current stage not found')
+        const target = stageRepo.findById(organizationId, input.stageChange!.targetStageId)
+        if (!target) throw new NotFoundError('Target stage not found')
+        if (lead.currentStageId !== input.stageChange!.expectedStageId) {
+          throw new ConflictError('Lead changed concurrently; refresh and retry')
+        }
+        return { lead, current, target }
+      })()
+    : null
+
   withTransaction(() => {
     followupRepo.complete(organizationId, followup.id, userId, input.notes)
 
+    let activityId: number | null = null
     if (input.activity) {
       const type = activityTypeRepo.findById(organizationId, input.activity.typeId)
       if (!type) throw new NotFoundError('Activity type not found')
 
-      activityRepo.create({
+      activityId = activityRepo.create({
         organizationId,
         leadId: followup.leadId,
         typeId: type.id,
         note: input.activity.note?.trim() || null,
         occurredAt: new Date().toISOString(),
         createdBy: userId
-      })
+      }).id
     }
+
+    if (change) {
+      const { lead, current, target } = change
+
+      if (activityId === null) {
+        const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
+        if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
+        activityId = activityRepo.create({
+          organizationId,
+          leadId: lead.id,
+          typeId: noteType.id,
+          note: input.notes?.trim() ? input.notes : completedFollowupNote(target.name),
+          occurredAt: new Date().toISOString(),
+          createdBy: userId
+        }).id
+      }
+
+      machine.assertMoveAllowed(current, target, true)
+      leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+      stageHistoryRepo.record({
+        organizationId,
+        leadId: lead.id,
+        fromStageId: current.id,
+        toStageId: target.id,
+        activityId,
+        reason: null,
+        changedBy: userId
+      })
+
+      // Cancel other pending follow-ups when moving to a stage that suppresses them
+      if (target.suppressFollowups) {
+        const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+        const reason =
+          SUPPRESS_FOLLOWUP_REASONS[target.name] ??
+          `Follow-up cancelled — lead moved to ${target.name}`
+        for (const fu of pendingFollowups) {
+          followupRepo.cancel(organizationId, fu.id, userId, reason)
+        }
+      }
+    }
+  })
+}
+
+/**
+ * Bulk "mark done" for the follow-ups queue selection toolbar. Completes every
+ * open follow-up in one transaction; when `stageChange` is given, each lead is
+ * validated by the stage machine up front (all-or-nothing) and moved with an
+ * auto-NOTE activity + stage history entry, mirroring `bulkMoveLeadStage`.
+ * Already-completed follow-ups are skipped silently (idempotent, matching the
+ * single `completeFollowUp`). A single IPC call + one SQLite transaction beats
+ * N per-follow-up round trips (fewer bridge crossings, one commit).
+ */
+export function bulkCompleteFollowUps(
+  input: BulkCompleteFollowUpsInput
+): BulkCompleteFollowUpsResult {
+  requirePermission(PERMISSIONS.FOLLOWUP_COMPLETE)
+  if (input.stageChange) requirePermission(PERMISSIONS.LEAD_UPDATE_STAGE)
+  const organizationId = currentOrganizationId()
+  const userId = requireSession().userId
+
+  const followups = input.followUpIds.map((id) => {
+    const followup = followupRepo.getById(organizationId, id)
+    if (!followup) throw new NotFoundError('Follow-up not found')
+    return followup
+  })
+  const pending = followups.filter((followup) => !followup.completedAt)
+  if (pending.length === 0) return { completed: 0 }
+
+  }
+
+  const machine = stageMachineFor(organizationId)
+
+  const change = input.stageChange
+    ? (() => {
+        const target = stageRepo.findById(organizationId, input.stageChange!.targetStageId)
+        if (!target) throw new NotFoundError('Target stage not found')
+
+        // Validate every move before mutating anything, so a bad lead aborts
+        // the batch (all-or-nothing, same rule as `bulkMoveLeadStage`).
+        const leadIds = [...new Set(pending.map((followup) => followup.leadId))]
+        for (const leadId of leadIds) {
+          const lead = leadRepo.getById(organizationId, leadId)
+          if (!lead) throw new NotFoundError('Lead not found')
+          if (lead.currentStageId === target.id) continue
+          const current = stageRepo.findById(organizationId, lead.currentStageId)
+          if (!current) throw new NotFoundError('Current stage not found')
+          machine.assertMoveAllowed(current, target, true)
+        }
+        return target
+      })()
+    : null
+
+  return withTransaction(() => {
+    let completed = 0
+    for (const followup of pending) {
+      followupRepo.complete(organizationId, followup.id, userId)
+      completed += 1
+    }
+
+    if (change) {
+      const noteType = activityTypeRepo.findByName(organizationId, 'NOTE')
+      if (!noteType) throw new NotFoundError('NOTE activity type is not configured')
+
+      const movedLeadIds = new Set<number>()
+      for (const followup of pending) {
+        if (movedLeadIds.has(followup.leadId)) continue
+        const lead = leadRepo.getById(organizationId, followup.leadId)
+        if (!lead) throw new NotFoundError('Lead not found')
+        if (lead.currentStageId === change.id) continue
+
+        const current = stageRepo.findById(organizationId, lead.currentStageId)
+        if (!current) throw new NotFoundError('Current stage not found')
+        const activity = activityRepo.create({
+          organizationId,
+          leadId: lead.id,
+          typeId: noteType.id,
+          note: completedFollowupNote(change.name),
+          occurredAt: new Date().toISOString(),
+          createdBy: userId
+        })
+        leadRepo.updateCurrentStage(organizationId, lead.id, change.id)
+        stageHistoryRepo.record({
+          organizationId,
+          leadId: lead.id,
+          fromStageId: current.id,
+          toStageId: change.id,
+          activityId: activity.id,
+          reason: null,
+          changedBy: userId
+        })
+        movedLeadIds.add(lead.id)
+
+        // Cancel other pending follow-ups when moving to a suppressing stage,
+        // exactly like the single `completeFollowUp`.
+        if (change.suppressFollowups) {
+          const pendingFollowups = followupRepo.listPendingForLead(organizationId, lead.id)
+          const reason =
+            SUPPRESS_FOLLOWUP_REASONS[change.name] ??
+            `Follow-up cancelled — lead moved to ${change.name}`
+          for (const other of pendingFollowups) {
+            followupRepo.cancel(organizationId, other.id, userId, reason)
+          }
+        }
+      }
+    }
+
+    return { completed }
   })
 }
 

@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PersonCell } from '@/components/person/person-cell'
-import { useCompleteFollowUp } from '@/features/leads/queries'
 import { EditFollowUpDialog } from '@/features/leads/components/edit-follow-up-dialog'
 import { CancelFollowUpDialog } from './cancel-follow-up-dialog'
+import { CompleteFollowUpDialog } from './complete-follow-up-dialog'
+import { BulkCompleteFollowUpDialog } from './bulk-complete-follow-up-dialog'
 import { StageBadge } from '@/features/leads/components/stage-badge'
 import { formatDateTime, timeAgo } from '@/features/leads/format'
 import { DataTable, type DashboardFeatures } from '@/features/dashboard/components/data-table'
@@ -30,32 +31,43 @@ const EXPORT_COLUMNS: ExportColumn[] = [
 const helper = createColumnHelper<DashboardFeatures, FollowUpRow>()
 
 function CompleteFollowUpButton({
-  followUpId,
+  followUp,
   onDone
 }: {
-  followUpId: number
+  followUp: FollowUpRow
   onDone: () => void
 }): React.JSX.Element {
-  const complete = useCompleteFollowUp()
+  const [open, setOpen] = useState(false)
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="text-success hover:bg-success/10 hover:text-success"
-          aria-label="Mark follow-up done"
-          disabled={complete.isPending}
-          onClick={(e) => {
-            e.stopPropagation()
-            complete.mutate({ followupId: followUpId }, { onSuccess: onDone })
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="text-success hover:bg-success/10 hover:text-success"
+            aria-label="Mark follow-up done"
+            onClick={(e) => {
+              e.stopPropagation()
+              setOpen(true)
+            }}
+          >
+            <Check className="size-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Mark done</TooltipContent>
+      </Tooltip>
+      {open && (
+        <CompleteFollowUpDialog
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o)
+            if (!o) onDone()
           }}
-        >
-          <Check className="size-4" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="left">Mark done</TooltipContent>
-    </Tooltip>
+          followUp={followUp}
+        />
+      )}
+    </>
   )
 }
 
@@ -302,7 +314,7 @@ function buildColumns(
           return (
             <div className="flex items-center justify-end gap-1">
               <EditFollowUpButton followUp={row.original} onDone={onDone} />
-              <CompleteFollowUpButton followUpId={row.original.id} onDone={onDone} />
+              <CompleteFollowUpButton followUp={row.original} onDone={onDone} />
               <CancelFollowUpButton followUp={row.original} onDone={onDone} />
             </div>
           )
@@ -331,8 +343,7 @@ export function FollowUpTable({
     // nothing extra — the leads query invalidation refreshes this table
   }, [])
   const columns = useMemo(() => buildColumns(bucket, handleDone), [bucket, handleDone])
-  const complete = useCompleteFollowUp()
-  const [bulkPending, setBulkPending] = useState(false)
+  const [bulkDoneRows, setBulkDoneRows] = useState<FollowUpRow[] | null>(null)
 
   const exportData = useMemo(
     () =>
@@ -347,23 +358,14 @@ export function FollowUpTable({
     [rows]
   )
 
-  const handleBulkDone = useCallback(
-    async (ids: string[]) => {
-      const rowMap = new Map(rows.map((r) => [String(r.id), r]))
-      const pendingIds = ids.filter((id) => {
-        const r = rowMap.get(id)
-        return r && !r.completedAt && !r.cancelledAt
-      })
-      if (pendingIds.length === 0) return
-      setBulkPending(true)
-      try {
-        await Promise.all(pendingIds.map((id) => complete.mutateAsync({ followupId: Number(id) })))
-      } finally {
-        setBulkPending(false)
-      }
-    },
-    [rows, complete]
-  )
+  const handleBulkDone = useCallback((ids: string[]) => {
+    const rowMap = new Map(rows.map((r) => [String(r.id), r]))
+    const pending = ids
+      .map((id) => rowMap.get(id))
+      .filter((r): r is FollowUpRow => !!r && !r.completedAt && !r.cancelledAt)
+    if (pending.length === 0) return
+    setBulkDoneRows(pending)
+  }, [rows])
 
   const emptyCopy: Record<FollowUpBucket, { title: string; description: string }> = {
     all: {
@@ -380,25 +382,36 @@ export function FollowUpTable({
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={rows}
-      getRowId={(row) => String(row.id)}
-      isLoading={isLoading}
-      initialSorting={[{ id: 'dueAt', desc: false }]}
-      initialPageSize={8}
-      pageSizeOptions={[8, 16, 32]}
-      onRowClick={(row) => onOpenLead(row.leadId)}
-      showSearch={false}
-      emptyIcon={bucket === 'done' ? CheckCircle2 : Inbox}
-      emptyTitle={emptyCopy[bucket].title}
-      emptyDescription={emptyCopy[bucket].description}
-      headerTone="primary"
-      onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
-      isMarkingSelected={bulkPending}
-      toolbar={
-        <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Follow-ups" />
-      }
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowId={(row) => String(row.id)}
+        isLoading={isLoading}
+        initialSorting={[{ id: 'dueAt', desc: false }]}
+        initialPageSize={8}
+        pageSizeOptions={[8, 16, 32]}
+        onRowClick={(row) => onOpenLead(row.leadId)}
+        showSearch={false}
+        emptyIcon={bucket === 'done' ? CheckCircle2 : Inbox}
+        emptyTitle={emptyCopy[bucket].title}
+        emptyDescription={emptyCopy[bucket].description}
+        headerTone="primary"
+        onMarkSelectedDone={bucket === 'done' ? undefined : handleBulkDone}
+        toolbar={
+          <ExportExcelButton columns={EXPORT_COLUMNS} rows={exportData} sheetName="Follow-ups" />
+        }
+      />
+      {bulkDoneRows && (
+        <BulkCompleteFollowUpDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setBulkDoneRows(null)
+          }}
+          rows={bulkDoneRows}
+          onSuccess={() => {}}
+        />
+      )}
+    </>
   )
 }

@@ -1,4 +1,6 @@
 import type {
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
@@ -53,6 +55,9 @@ export const api = {
     window.api.leads.scheduleFollowup(input),
   completeFollowUp: (input: CompleteFollowUpInput): Promise<void> =>
     window.api.leads.completeFollowup(input),
+  bulkCompleteFollowUps: (
+    input: BulkCompleteFollowUpsInput
+  ): Promise<BulkCompleteFollowUpsResult> => window.api.leads.bulkCompleteFollowups(input),
   updateFollowUp: (input: UpdateFollowUpInput): Promise<void> =>
     window.api.leads.updateFollowup(input),
   cancelFollowUp: (input: CancelFollowUpInput): Promise<void> =>

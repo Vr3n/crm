@@ -26,6 +26,7 @@ export const IPC_CHANNELS = {
   LEADS_UPDATE_FOLLOWUP: 'leads:updateFollowup',
   LEADS_CANCEL_FOLLOWUP: 'leads:cancelFollowup',
   LEADS_COMPLETE_FOLLOWUP: 'leads:completeFollowup',
+  LEADS_BULK_COMPLETE_FOLLOWUPS: 'leads:bulkCompleteFollowups',
   LEADS_LIST: 'leads:list',
   LEADS_GET_DETAILS: 'leads:getDetails',
   LEADS_GET_TIMELINE: 'leads:getTimeline',

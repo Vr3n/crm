@@ -250,6 +250,7 @@ beforeEach(() => {
       markLost: vi.fn(),
       scheduleFollowup: vi.fn(),
       completeFollowup: vi.fn(),
+      bulkCompleteFollowups: vi.fn().mockResolvedValue({ completed: 0 }),
       getDetails: vi.fn(),
       list: vi.fn().mockResolvedValue(emptyLeadList),
       getTimeline: vi.fn(),

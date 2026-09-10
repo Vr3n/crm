@@ -8,6 +8,8 @@ import {
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type {
+  BulkCompleteFollowUpsInput,
+  BulkCompleteFollowUpsResult,
   BulkMoveLeadStageInput,
   BulkMoveLeadStageResult,
   BulkRecordActivityInput,
@@ -224,6 +226,19 @@ export function useCompleteFollowUp(): UseMutationResult<void, Error, CompleteFo
     (input) => api.completeFollowUp(input),
     'Follow-up done',
     'Could not complete follow-up'
+  )
+}
+
+export function useBulkCompleteFollowUps(): UseMutationResult<
+  BulkCompleteFollowUpsResult,
+  Error,
+  BulkCompleteFollowUpsInput
+> {
+  return useLeadMutation(
+    (input) => api.bulkCompleteFollowUps(input),
+    'Follow-ups completed',
+    'Could not complete follow-ups',
+    true
   )
 }
 

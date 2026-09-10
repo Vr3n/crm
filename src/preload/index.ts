@@ -216,6 +216,10 @@ const api = {
       call(IPC_CHANNELS.LEADS_SCHEDULE_FOLLOWUP, input),
     completeFollowup: (input: CompleteFollowUpInput): Promise<void> =>
       call(IPC_CHANNELS.LEADS_COMPLETE_FOLLOWUP, input),
+    bulkCompleteFollowups: (
+      input: BulkCompleteFollowUpsInput
+    ): Promise<BulkCompleteFollowUpsResult> =>
+      call(IPC_CHANNELS.LEADS_BULK_COMPLETE_FOLLOWUPS, input),
     updateFollowup: (input: UpdateFollowUpInput): Promise<void> =>
       call(IPC_CHANNELS.LEADS_UPDATE_FOLLOWUP, input),
     cancelFollowup: (input: CancelFollowUpInput): Promise<void> =>

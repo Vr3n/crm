@@ -82,9 +82,43 @@ export const completeFollowUpInputSchema = z.object({
       typeId: z.number().int().positive(),
       note: z.string().max(2000).optional()
     })
+    .optional(),
+  /**
+   * Optional stage move completed in the same atomic transaction as the
+   * completion. `expectedStageId` is the stage the renderer believes the lead
+   * is on — a mismatch (concurrent change) aborts with a ConflictError (D17).
+   */
+  stageChange: z
+    .object({
+      targetStageId: z.number().int().positive(),
+      expectedStageId: z.number().int().positive()
+    })
     .optional()
 })
 export type CompleteFollowUpInput = z.infer<typeof completeFollowUpInputSchema>
+
+/**
+ * Bulk "mark done" for the follow-ups queue's selection toolbar. Completes every
+ * follow-up in one atomic transaction; when `stageChange` is given, each lead
+ * (whose stage allows it) is moved too, with a NOTE activity auto-recorded per
+ * lead. Already-completed follow-ups are skipped silently (idempotent). There is
+ * no `expectedStageId` — the backend validates each lead's live current stage
+ * inside the transaction, mirroring `bulkMoveLeadStage`.
+ */
+export const bulkCompleteFollowUpsInputSchema = z.object({
+  followUpIds: z.array(z.number().int().positive()).min(1).max(100),
+  stageChange: z
+    .object({
+      targetStageId: z.number().int().positive()
+    })
+    .optional()
+})
+export type BulkCompleteFollowUpsInput = z.infer<typeof bulkCompleteFollowUpsInputSchema>
+
+export const bulkCompleteFollowUpsResultSchema = z.object({
+  completed: z.number().int().nonnegative()
+})
+export type BulkCompleteFollowUpsResult = z.infer<typeof bulkCompleteFollowUpsResultSchema>
 
 export const updateFollowUpInputSchema = z.object({
   followupId: z.number().int().positive(),
