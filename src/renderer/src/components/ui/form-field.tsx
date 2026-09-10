@@ -37,6 +37,7 @@ export function FormField({
   validate,
   completeWhen,
   extraError,
+  warning,
   showSuccessCheck = true,
   leading,
   trailing,
@@ -68,6 +69,12 @@ export function FormField({
   completeWhen?: (value: string) => boolean
   /** Externally-computed error shown in the same red style as a field error. */
   extraError?: string | null
+  /**
+   * Non-blocking amber notice (yellow input + `FieldWarning` message) shown only
+   * while the field is otherwise valid. An active error (field or `extraError`)
+   * always wins over it.
+   */
+  warning?: React.ReactNode
   showSuccessCheck?: boolean
   /** Node rendered as a leading addon inside the input (Input convenience mode). */
   leading?: React.ReactNode
@@ -86,6 +93,7 @@ export function FormField({
     value: string
     invalid: boolean | undefined
     valid: boolean | undefined
+    warning: boolean | undefined
     describedBy: string | undefined
     onBlur: () => void
     onChange: (value: string) => void
@@ -98,13 +106,21 @@ export function FormField({
   const invalid = (Boolean(errorMsg) || hasExtra) && (evaluated || hasExtra)
   const valid = !errorMsg && !hasExtra && evaluated
   const error = invalid ? (extraError ?? errorMsg) : undefined
-  const describedBy = error ? `${name}-error` : hint ? `${name}-hint` : undefined
+  const hasWarning = Boolean(warning) && !invalid
+  const describedBy = error
+    ? `${name}-error`
+    : hasWarning
+      ? `${name}-warning`
+      : hint
+        ? `${name}-hint`
+        : undefined
 
   const control = {
     id: name,
     value,
     invalid: invalid || undefined,
     valid: valid || undefined,
+    warning: hasWarning || undefined,
     describedBy,
     onBlur: handleBlur,
     onChange: handleChange
@@ -116,9 +132,10 @@ export function FormField({
       label={label}
       labelEnd={labelEnd}
       hint={hint}
+      warning={hasWarning ? warning : undefined}
       error={error}
       trailing={
-        valid && showSuccessCheck ? (
+        valid && showSuccessCheck && !hasWarning ? (
           <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" aria-hidden />
         ) : undefined
       }
@@ -140,6 +157,7 @@ export function FormField({
             inputMode={inputMode}
             aria-invalid={control.invalid}
             data-valid={control.valid}
+            data-warning={control.warning}
             aria-describedby={describedBy}
             className={cn(inputClassName, leading ? 'pl-9' : '', trailing ? 'pr-10' : '')}
           />

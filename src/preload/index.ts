@@ -104,6 +104,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -115,6 +116,7 @@ import type {
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadTextOptionRow,
   LeadTimelineEntry,
@@ -162,6 +164,11 @@ interface ExportTableInput {
  * On failure it re-throws an `ApiError` carrying the stable machine-readable
  * code from the shared catalog, so the renderer branches on `error.code`
  * (ADR-0006) instead of matching on messages or Electron's serialization.
+ *
+ * Note: Electron's contextBridge clones the thrown `ApiError` into a plain
+ * `Error` in the renderer realm — `instanceof ApiError` fails and `code` is
+ * dropped, but `message` survives. Renderer surfaces therefore display
+ * `error.message` (not the code) when it is an `Error`.
  */
 async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
   const res = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>
@@ -238,6 +245,8 @@ const api = {
     getFunnelCounts: (): Promise<FunnelCounts> => call(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS),
     searchPeople: (query: string): Promise<PeopleList> =>
       call(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, query),
+    checkPerson: (input: CheckLeadPersonInput): Promise<LeadPersonAvailability> =>
+      call(IPC_CHANNELS.LEADS_CHECK_PERSON, input),
     getReferenceData: (): Promise<ReferenceData> => call(IPC_CHANNELS.LEADS_GET_REFERENCE),
     searchSources: (query: string): Promise<LeadSourceRow[]> =>
       call(IPC_CHANNELS.LEADS_SEARCH_SOURCES, { query }),

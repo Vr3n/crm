@@ -4,6 +4,7 @@ import {
   bulkRecordActivity,
   bulkScheduleFollowUp,
   cancelFollowUp,
+  checkLeadPersonAvailability,
   completeFollowUp,
   createLead,
   createLeadSource,
@@ -37,6 +38,7 @@ import {
   bulkRecordActivityInputSchema,
   bulkScheduleFollowUpInputSchema,
   cancelFollowUpInputSchema,
+  checkLeadPersonInputSchema,
   completeFollowUpInputSchema,
   createLeadInputSchema,
   createLeadSourceInputSchema,
@@ -100,6 +102,9 @@ export function registerSalesIpc(): void {
   handle(IPC_CHANNELS.LEADS_GET_RECENT_LOST, () => getRecentlyLost())
   handle(IPC_CHANNELS.LEADS_GET_FUNNEL_COUNTS, () => getFunnelCounts())
   handle(IPC_CHANNELS.LEADS_SEARCH_PEOPLE, (query: string) => searchPeople(query))
+  handle(IPC_CHANNELS.LEADS_CHECK_PERSON, checkLeadPersonInputSchema, (input) =>
+    checkLeadPersonAvailability(input)
+  )
   handle(IPC_CHANNELS.LEADS_GET_REFERENCE, () => getReferenceData())
   handle(IPC_CHANNELS.LEADS_SEARCH_SOURCES, leadSourceSearchRequestSchema, (input) =>
     searchLeadSources(input)

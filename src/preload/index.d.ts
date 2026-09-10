@@ -93,6 +93,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -104,6 +105,7 @@ import type {
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadTextOptionRow,
   LeadTimelineEntry,
@@ -192,6 +194,7 @@ declare global {
         getRecentlyLost: () => Promise<{ id: number; personName: string }[]>
         getFunnelCounts: () => Promise<FunnelCounts>
         searchPeople: (query: string) => Promise<PeopleList>
+        checkPerson: (input: CheckLeadPersonInput) => Promise<LeadPersonAvailability>
         getReferenceData: () => Promise<ReferenceData>
         searchSources: (query: string) => Promise<LeadSourceRow[]>
         createSource: (input: CreateLeadSourceInput) => Promise<LeadSourceRow>

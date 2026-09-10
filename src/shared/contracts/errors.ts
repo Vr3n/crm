@@ -62,3 +62,16 @@ export class ApiError extends Error {
 export function isApiError(err: unknown): err is ApiError {
   return err instanceof ApiError
 }
+
+/**
+ * Best-effort human-readable message for an error surfaced from an IPC
+ * operation. Electron's contextBridge clones the preload's `ApiError` into a
+ * plain `Error` in the renderer realm — `instanceof ApiError` fails and `code`
+ * is dropped, but `message` survives (see preload `call`). The fallback is used
+ * only for values that are not `Error` objects at all.
+ */
+export function errorMessage(err: unknown, fallback: string): string {
+  if (isApiError(err)) return err.message
+  if (err instanceof Error) return err.message
+  return fallback
+}

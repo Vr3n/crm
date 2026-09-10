@@ -392,3 +392,38 @@ export const peopleSearchSchema = pageRequestSchema.extend({
   query: z.string().max(120)
 })
 export type PeopleSearch = z.infer<typeof peopleSearchSchema>
+
+/**
+ * Reactive duplicate probe for the lead forms. The renderer calls this while
+ * the user types (debounced) so "this person already exists" is caught client
+ * side instead of on submit. `excludePersonId` is used by the edit dialog so a
+ * person's own record never flags itself.
+ */
+export const checkLeadPersonInputSchema = z.object({
+  fullName: z.string().min(1).max(120),
+  phone: z.string().min(1).max(24),
+  email: z.string().max(254).optional(),
+  excludePersonId: z.number().int().positive().optional()
+})
+export type CheckLeadPersonInput = z.infer<typeof checkLeadPersonInputSchema>
+
+export const personBriefSchema = z.object({
+  id: z.number().int().positive(),
+  fullName: z.string(),
+  phone: z.string(),
+  isBlacklisted: z.boolean(),
+  blacklistedReason: z.string().nullable()
+})
+export type PersonBrief = z.infer<typeof personBriefSchema>
+
+export const leadPersonAvailabilitySchema = z.object({
+  /* True when an org person already owns this phone (excluding `excludePersonId`). */
+  phoneTaken: z.boolean(),
+  /* True when that person's name matches the entered name (the unique-together key). */
+  sameNamedPerson: z.boolean(),
+  matchedPerson: personBriefSchema.nullable(),
+  /* Advisory only: another person (excluding the matched/excluded one) holds this email. */
+  emailTaken: z.boolean(),
+  emailOwnerName: z.string().nullable()
+})
+export type LeadPersonAvailability = z.infer<typeof leadPersonAvailabilitySchema>

@@ -38,6 +38,7 @@ export const IPC_CHANNELS = {
   LEADS_GET_RECENT_LOST: 'leads:getRecentlyLost',
   LEADS_GET_FUNNEL_COUNTS: 'leads:getFunnelCounts',
   LEADS_SEARCH_PEOPLE: 'leads:searchPeople',
+  LEADS_CHECK_PERSON: 'leads:checkPerson',
   LEADS_GET_REFERENCE: 'leads:getReferenceData',
   LEADS_SEARCH_SOURCES: 'leads:searchSources',
   LEADS_CREATE_SOURCE: 'leads:createSource',

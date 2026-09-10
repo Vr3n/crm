@@ -20,12 +20,19 @@ import { Textarea } from '@/components/ui/textarea'
 import { PersonAvatar } from '@/components/person/person-avatar'
 import { can, useSession } from '@/context/session-context'
 import { logger } from '@/lib/logger'
-import { emailError, isValidEmail, leadNameError, mobileError } from '@/lib/validation'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
+import {
+  emailError,
+  isValidEmail,
+  isValidIndianMobile,
+  leadNameError,
+  mobileError
+} from '@/lib/validation'
 import { cn } from '@/lib/utils'
-import { isApiError } from '../../../../../shared/contracts/errors'
+import { errorMessage } from '../../../../../shared/contracts/errors'
 import { api } from '../api'
 import { SOURCES } from '../constants'
-import { useEditLead } from '../queries'
+import { useEditLead, useLeadPersonAvailability } from '../queries'
 import { referenceKeys } from '../reference-data'
 import type { Lead } from '../types'
 
@@ -90,11 +97,29 @@ export function EditLeadDialog({
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting)
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
   const sourceValue = useStore(form.store, (s) => s.values.source)
-  const formError = edit.error
-    ? isApiError(edit.error)
-      ? edit.error.message
-      : 'Could not update lead'
-    : null
+
+  // Reactive duplicate check (docs/107), mirroring the create form. The lead's
+  // own person is excluded, so a match here means the phone belongs to ANOTHER
+  // person — a hard conflict the edit backend also enforces. Email stays
+  // advisory (amber). (Selecting field primitives — never the whole `values`
+  // object — keeps the store subscription stable.)
+  const debouncedName = useDebouncedValue(useStore(form.store, (s) => s.values.name), 400)
+  const debouncedPhone = useDebouncedValue(useStore(form.store, (s) => s.values.phone), 400)
+  const debouncedEmail = useDebouncedValue(useStore(form.store, (s) => s.values.email), 400)
+  const availabilityInput =
+    isValidIndianMobile(debouncedPhone) && debouncedName.trim().length > 0
+      ? {
+          fullName: debouncedName.trim(),
+          phone: debouncedPhone.trim(),
+          email: isValidEmail(debouncedEmail) ? debouncedEmail.trim() : undefined,
+          excludePersonId: lead.personId
+        }
+      : undefined
+  const { data: availability, isFetching: availabilityChecking } =
+    useLeadPersonAvailability(availabilityInput)
+  const personConflict = Boolean(availability?.phoneTaken)
+
+  const formError = edit.error ? errorMessage(edit.error, 'Could not update lead') : null
 
   // Same as the create form: creating a source is a settings action.
   const canCreateSource = can(session.permissions, session.isSuper, 'settings.manage')
@@ -242,6 +267,13 @@ export function EditLeadDialog({
                       }
                       hint="10-digit mobile or landline"
                       validate={mobileError}
+                      extraError={
+                        availability?.phoneTaken
+                          ? availability.sameNamedPerson
+                            ? `This number is already used by ${availability.matchedPerson?.fullName} — a different person already owns it`
+                            : `This phone number belongs to another person — someone else already uses it`
+                          : undefined
+                      }
                       completeWhen={(v) => {
                         const digits = v.replace(/\D/g, '')
                         return (
@@ -279,6 +311,11 @@ export function EditLeadDialog({
                     label="Email"
                     validate={(v) => (v.trim() ? emailError(v, 'Enter a valid email') : undefined)}
                     completeWhen={isValidEmail}
+                    warning={
+                      availability?.emailTaken && availability.emailOwnerName
+                        ? `This email already belongs to ${availability.emailOwnerName} — you can still use it`
+                        : undefined
+                    }
                     leading={<Mail className="pointer-events-none size-4" aria-hidden />}
                     type="email"
                     autoComplete="email"
@@ -401,7 +438,7 @@ export function EditLeadDialog({
               type="submit"
               loading={isSubmitting}
               success={submitSuccess}
-              disabled={!canSubmit || sourceValue === ''}
+              disabled={!canSubmit || sourceValue === '' || personConflict || availabilityChecking}
               loadingLabel="Saving…"
               successLabel="Saved!"
             >

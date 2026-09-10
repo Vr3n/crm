@@ -98,6 +98,20 @@ export interface LeadStageHistoryEntry {
   changedAt: string
 }
 
+/**
+ * Normalizes a person's name for identity comparison: trim, collapse interior
+ * whitespace, and lowercase. Used by the lead duplicate probe — "Rahul  Sharma"
+ * and "rahul sharma" must match, while "Rahul" and "Rahul Sharma" must not.
+ */
+export function normalizePersonName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+/** True when two person names are the same person by the normalize rule above. */
+export function samePersonName(a: string, b: string): boolean {
+  return normalizePersonName(a) === normalizePersonName(b)
+}
+
 /** Derived, never stored (D3): the lead's status comes from its current stage. */
 export function deriveLeadStatus(stage: LeadStage): LeadStatus {
   if (stage.isWon) return 'WON'

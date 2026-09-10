@@ -6,6 +6,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -14,6 +15,7 @@ import type {
   EditLeadInput,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadTextOptionRow,
   MarkLeadLostInput,
@@ -59,6 +61,8 @@ export const api = {
   searchSources: (query: string): Promise<LeadSourceRow[]> => window.api.leads.searchSources(query),
   createSource: (input: CreateLeadSourceInput): Promise<LeadSourceRow> =>
     window.api.leads.createSource(input),
+  checkPerson: (input: CheckLeadPersonInput): Promise<LeadPersonAvailability> =>
+    window.api.leads.checkPerson(input),
   searchPlanInterests: (query: string): Promise<PlanOptionRow[]> =>
     window.api.leads.searchPlanInterests(query),
   searchGoals: (query: string): Promise<LeadTextOptionRow[]> => window.api.leads.searchGoals(query)

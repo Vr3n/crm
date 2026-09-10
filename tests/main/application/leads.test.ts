@@ -23,7 +23,8 @@ import {
   scheduleFollowUp,
   searchLeadGoals,
   searchLeadPlans,
-  searchLeadSources
+  searchLeadSources,
+  checkLeadPersonAvailability
 } from '../../../src/main/application/leads'
 import { activityRepo, leadRepo } from '../../../src/main/repositories/sales'
 import {
@@ -1315,5 +1316,135 @@ describe('createLeadSource', () => {
   it('denies creation without settings.manage even when lead.view is present', () => {
     seedOrgWithSession('Sales')
     expect(() => createLeadSource({ name: 'Podcast' })).toThrow(ForbiddenError)
+  })
+})
+
+describe('checkLeadPersonAvailability', () => {
+  it('reports no matches for a phone number not used by any person', () => {
+    seedOrgWithSession()
+    expect(checkLeadPersonAvailability({ fullName: 'New Person', phone: '9888777666' })).toEqual({
+      phoneTaken: false,
+      sameNamedPerson: false,
+      matchedPerson: null,
+      emailTaken: false,
+      emailOwnerName: null
+    })
+  })
+
+  it('finds an existing person whose phone matches, reports same name when names align', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Rahul Sharma', phone: '9876543210', sourceId })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210'
+    })
+
+    expect(result.phoneTaken).toBe(true)
+    expect(result.sameNamedPerson).toBe(true)
+    expect(result.matchedPerson).toMatchObject({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      isBlacklisted: false
+    })
+  })
+
+  it('detects a name mismatch on a taken phone', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Rahul Sharma', phone: '9876543210', sourceId })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Neha Kapoor',
+      phone: '9876543210'
+    })
+
+    expect(result.phoneTaken).toBe(true)
+    expect(result.sameNamedPerson).toBe(false)
+    expect(result.matchedPerson).toMatchObject({ fullName: 'Rahul Sharma' })
+  })
+
+  it('normalizes whitespace and case when comparing names', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({ fullName: 'Priya Verma', phone: '9876543211', sourceId })
+
+    const result = checkLeadPersonAvailability({
+      fullName: '  priya   VERMA ',
+      phone: '9876543211'
+    })
+
+    expect(result.phoneTaken).toBe(true)
+    expect(result.sameNamedPerson).toBe(true)
+  })
+
+  it('ignores the excluded person (edit dialog scenario)', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    const { personId } = createLead({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      sourceId
+    })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      excludePersonId: personId
+    })
+
+    expect(result.phoneTaken).toBe(false)
+    expect(result.sameNamedPerson).toBe(false)
+    expect(result.matchedPerson).toBeNull()
+  })
+
+  it('warns when email belongs to a different person', () => {
+    seedOrgWithSession()
+    const { organizationId } = seedOrgWithSession()
+    const sourceId = createSourceId(organizationId)
+    createLead({
+      fullName: 'Rahul Sharma',
+      phone: '9876543210',
+      sourceId,
+      email: 'rahul@test.com'
+    })
+
+    const result = checkLeadPersonAvailability({
+      fullName: 'Neha Kapoor',
+      phone: '9876543211',
+      email: 'rahul@test.com'
+    })
+
+    expect(result.phoneTaken).toBe(false)
+    expect(result.emailTaken).toBe(true)
+    expect(result.emailOwnerName).toBe('Rahul Sharma')
+  })
+
+  it('treats an invalid phone as all-clear (no block, no warning)', () => {
+    seedOrgWithSession()
+    const result = checkLeadPersonAvailability({
+      fullName: 'Test',
+      phone: 'not-a-phone'
+    })
+
+    expect(result).toEqual({
+      phoneTaken: false,
+      sameNamedPerson: false,
+      matchedPerson: null,
+      emailTaken: false,
+      emailOwnerName: null
+    })
+  })
+
+  it('denies access without lead.view permission', () => {
+    seedOrgWithSession('Finance')
+    expect(() =>
+      checkLeadPersonAvailability({ fullName: 'Test', phone: '9876543210' })
+    ).toThrow(ForbiddenError)
   })
 })

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNull, like, lt, lte, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, isNull, like, lt, lte, ne, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { getDrizzle } from '../db/connection'
 import { logger } from '../lib/logger'
@@ -232,6 +232,49 @@ export const personRepo = {
       .where(and(eq(people.organization_id, organizationId), eq(people.id, id)))
       .get() as PersonRow | undefined
     return row ? mapPerson(row) : null
+  },
+
+  /**
+   * Case-insensitive email lookup over the org's people. Advisory by design
+   * (email is duplicable; phone is the identity key): `excludePersonId` skips a
+   * person's own record so the edit dialog never flags itself. Returns the
+   * owner's brief so the UI can name them in a warning.
+   */
+  findByEmail(
+    organizationId: number,
+    emailLower: string,
+    excludePersonId?: number
+  ): {
+    id: number
+    fullName: string
+    phone: string
+    isBlacklisted: boolean
+    blacklistedReason: string | null
+  } | null {
+    const emailMatch = sql<number>`lower(${people.email}) = ${emailLower}`
+    const cond =
+      excludePersonId !== undefined
+        ? and(eq(people.organization_id, organizationId), emailMatch, ne(people.id, excludePersonId))
+        : and(eq(people.organization_id, organizationId), emailMatch)
+    const row = getDrizzle()
+      .select({
+        id: people.id,
+        fullName: people.full_name,
+        phone: people.phone,
+        isBlacklisted: people.is_blacklisted,
+        blacklistedReason: people.blacklisted_reason
+      })
+      .from(people)
+      .where(cond)
+      .get()
+    if (!row) return null
+    return {
+      id: row.id,
+      fullName: row.fullName,
+      phone: row.phone,
+      isBlacklisted: row.isBlacklisted,
+      blacklistedReason: row.blacklistedReason
+    }
   },
 
   /** Basic name/phone search over the org's people, newest first. */

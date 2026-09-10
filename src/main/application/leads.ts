@@ -19,7 +19,8 @@ import {
   DEFAULT_TIMEZONE,
   LeadStageMachine,
   localDayUtcRange,
-  deriveLeadStatus
+  deriveLeadStatus,
+  samePersonName
 } from '../domain/lead'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
@@ -32,6 +33,7 @@ import type {
   BulkScheduleFollowUpInput,
   BulkScheduleFollowUpResult,
   CancelFollowUpInput,
+  CheckLeadPersonInput,
   CompleteFollowUpInput,
   CreateLeadInput,
   CreateLeadSourceInput,
@@ -42,6 +44,7 @@ import type {
   LeadIdRequest,
   LeadListRequest,
   LeadListResponse,
+  LeadPersonAvailability,
   LeadSourceRow,
   LeadSourceSearchRequest,
   LeadTextOptionRow,
@@ -912,6 +915,57 @@ export function searchPeople(query: string): PeopleList {
   requirePermission(PERMISSIONS.LEAD_VIEW)
   const organizationId = currentOrganizationId()
   return personRepo.search(organizationId, query.trim(), 50, 0)
+}
+
+/**
+ * Reactive duplicate probe for the lead forms (see docs/107). Given the
+ * name/phone/email currently typed, reports whether an org person already owns
+ * the phone, whether their name matches (the unique-together key that blocks a
+ * duplicate lead), and whether another person holds the same email (advisory).
+ * Pure read — no transaction, no writes. An unparseable phone is treated as "no
+ * match yet" so an in-progress number never throws from the form.
+ */
+export function checkLeadPersonAvailability(input: CheckLeadPersonInput): LeadPersonAvailability {
+  requirePermission(PERMISSIONS.LEAD_VIEW)
+  const organizationId = currentOrganizationId()
+
+  let normalizedPhone: string
+  try {
+    normalizedPhone = IndianMobileNumber.parse(input.phone).value
+  } catch {
+    return {
+      phoneTaken: false,
+      sameNamedPerson: false,
+      matchedPerson: null,
+      emailTaken: false,
+      emailOwnerName: null
+    }
+  }
+
+  const matched = personRepo.findByPhone(organizationId, normalizedPhone)
+  const matchedPerson = matched && matched.id !== input.excludePersonId ? matched : null
+
+  const email = input.email?.trim().toLowerCase()
+  const emailOwner = email
+    ? personRepo.findByEmail(organizationId, email, matchedPerson?.id ?? input.excludePersonId)
+    : null
+
+  return {
+    phoneTaken: matchedPerson != null,
+    sameNamedPerson:
+      matchedPerson != null && samePersonName(matchedPerson.fullName, input.fullName),
+    matchedPerson: matchedPerson
+      ? {
+          id: matchedPerson.id,
+          fullName: matchedPerson.fullName,
+          phone: matchedPerson.phone,
+          isBlacklisted: matchedPerson.isBlacklisted,
+          blacklistedReason: matchedPerson.blacklistedReason
+        }
+      : null,
+    emailTaken: emailOwner != null,
+    emailOwnerName: emailOwner?.fullName ?? null
+  }
 }
 
 export function getReferenceData(): ReferenceData {
