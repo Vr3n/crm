@@ -10,9 +10,9 @@ export type QuickActionType = 'activity' | 'followup' | 'move' | 'lost'
 
 /**
  * Quick actions on the detail page — the primary verbs a staff member uses
- * with a lead. LOST is terminal, so move/mark-lost hide once the lead has
- * closed. Converting to a customer is Module 02 (not built yet), so no WON
- * action is surfaced here.
+ * with a lead. WON is absorbing so move/mark-lost hide once won; LOST stays
+ * re-openable (win-back), hiding only mark-lost. Converting to a customer is
+ * Module 02 (not built yet), so no WON action is surfaced here.
  */
 export function QuickActions({
   lead,
@@ -42,7 +42,7 @@ export function QuickActions({
           <BellPlus className="text-primary" />
           Add follow-up
         </Button>
-        {!terminal && (
+        {lead.stage !== 'WON' && (
           <Button variant="outline" className="justify-start" onClick={() => onAction('move')}>
             <ArrowRight className="text-primary" />
             Move stage

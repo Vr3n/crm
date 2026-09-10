@@ -501,6 +501,77 @@ describe('moveLeadStage', () => {
     ).toThrow(InvalidStateTransitionError)
   })
 
+  it('re-opens a LOST lead, clearing lost markers but keeping history', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const reason = getDb()
+      .prepare('SELECT id, name FROM lead_lost_reasons WHERE organization_id = ? LIMIT 1')
+      .get(organizationId) as { id: number; name: string }
+    markLeadLost({ leadId, lostReasonId: reason.id })
+
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    const activity = activityRepo.create({
+      organizationId,
+      leadId,
+      typeId,
+      note: 'win back',
+      occurredAt: new Date().toISOString(),
+      createdBy: userId
+    })
+    moveLeadStage({
+      leadId,
+      targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+      expectedStageId: stageIdByName(organizationId, 'LOST'),
+      activityId: activity.id
+    })
+
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(lead.lostReasonId).toBeNull()
+    expect(lead.lostAt).toBeNull()
+
+    // Audit trail preserved: the LOST entry (with reason) plus the re-open entry.
+    const history = getDb()
+      .prepare(
+        'SELECT from_stage_id, to_stage_id, reason FROM lead_stage_history WHERE lead_id = ? ORDER BY id'
+      )
+      .all(leadId) as { from_stage_id: number; to_stage_id: number; reason: string | null }[]
+    const lostId = stageIdByName(organizationId, 'LOST')
+    const contactedId = stageIdByName(organizationId, 'CONTACTED')
+    expect(history).toContainEqual(
+      expect.objectContaining({ to_stage_id: lostId, reason: reason.name })
+    )
+    expect(history[history.length - 1]).toMatchObject({
+      from_stage_id: lostId,
+      to_stage_id: contactedId
+    })
+  })
+
+  it('still rejects a move out of WON', () => {
+    const { organizationId, userId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const wonId = stageIdByName(organizationId, 'WON')
+    leadRepo.updateCurrentStage(organizationId, leadId, wonId)
+    const typeId = activityTypeId(organizationId, 'PHONE_CALL')
+    const activity = activityRepo.create({
+      organizationId,
+      leadId,
+      typeId,
+      note: 'x',
+      occurredAt: new Date().toISOString(),
+      createdBy: userId
+    })
+    expect(() =>
+      moveLeadStage({
+        leadId,
+        targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+        expectedStageId: wonId,
+        activityId: activity.id
+      })
+    ).toThrow(InvalidStateTransitionError)
+    expect(leadRepo.getById(organizationId, leadId)!.currentStageId).toBe(wonId)
+  })
+
   it('rejects a stale optimistic concurrency token', () => {
     const { organizationId, userId } = seedOrgWithSession()
     const { leadId } = createLeadFor(organizationId)
@@ -605,6 +676,26 @@ describe('bulkMoveLeadStage', () => {
     expect(leadRepo.getById(organizationId, leadId)!.currentStageId).toBe(
       stageIdByName(organizationId, 'NEW')
     )
+  })
+
+  it('re-opens LOST leads, clearing lost markers', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const reason = getDb()
+      .prepare('SELECT id FROM lead_lost_reasons WHERE organization_id = ? LIMIT 1')
+      .get(organizationId) as { id: number }
+    markLeadLost({ leadId, lostReasonId: reason.id })
+
+    const result = bulkMoveLeadStage({
+      leadIds: [leadId],
+      targetStageId: stageIdByName(organizationId, 'CONTACTED')
+    })
+
+    expect(result).toEqual({ moved: 1 })
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(lead.lostReasonId).toBeNull()
+    expect(lead.lostAt).toBeNull()
   })
 
   it('throws NotFoundError when any lead id is unknown', () => {
@@ -1034,6 +1125,40 @@ describe('follow-ups', () => {
     expect(activities[0].note).toContain('Interested in family plan')
   })
 
+  it('completes with a stageChange that re-opens a LOST lead', () => {
+    const { organizationId } = seedOrgWithSession()
+    const { leadId } = createLeadFor(organizationId)
+    const { followupId } = scheduleFollowUp({
+      leadId,
+      title: 'Win back call',
+      dueAt: new Date(Date.now() + 86_400_000).toISOString()
+    })
+    const reason = getDb()
+      .prepare('SELECT id FROM lead_lost_reasons WHERE organization_id = ? LIMIT 1')
+      .get(organizationId) as { id: number }
+    markLeadLost({ leadId, lostReasonId: reason.id })
+
+    completeFollowUp({
+      followupId,
+      notes: 'Convinced to return',
+      stageChange: {
+        targetStageId: stageIdByName(organizationId, 'CONTACTED'),
+        expectedStageId: stageIdByName(organizationId, 'LOST')
+      }
+    })
+
+    const lead = leadRepo.getById(organizationId, leadId)!
+    expect(lead.currentStageId).toBe(stageIdByName(organizationId, 'CONTACTED'))
+    expect(lead.lostReasonId).toBeNull()
+    expect(lead.lostAt).toBeNull()
+    const history = getDb()
+      .prepare(
+        'SELECT from_stage_id, to_stage_id FROM lead_stage_history WHERE lead_id = ? ORDER BY id DESC LIMIT 1'
+      )
+      .get(leadId) as { from_stage_id: number; to_stage_id: number }
+    expect(history.from_stage_id).toBe(stageIdByName(organizationId, 'LOST'))
+    expect(history.to_stage_id).toBe(stageIdByName(organizationId, 'CONTACTED'))
+  })
 
   it('denies the stageChange without lead.update_stage', () => {
     const { organizationId } = seedOrgWithSession()

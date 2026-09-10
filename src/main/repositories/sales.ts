@@ -710,6 +710,24 @@ export const leadRepo = {
   },
 
   /**
+   * Clears the lost markers when a LOST lead is won back to an open stage.
+   * Only the current-state columns are reset — the `lead_stage_history` rows
+   * (including the original LOST entry with its reason) stay as the audit
+   * trail. Runs inside the caller's move transaction.
+   */
+  clearLostState(organizationId: number, id: number): void {
+    getDrizzle()
+      .update(leads)
+      .set({
+        lost_reason_id: null,
+        lost_at: null,
+        updated_at: sql`(datetime('now'))`
+      })
+      .where(and(eq(leads.organization_id, organizationId), eq(leads.id, id)))
+      .run()
+  },
+
+  /**
    * Deletes leads together with their child rows. The FKs have no ON DELETE
    * CASCADE and `PRAGMA foreign_keys` is ON, so children are removed explicitly
    * in dependency order: stage history references activities, so it goes first.

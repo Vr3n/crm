@@ -120,11 +120,13 @@ export function deriveLeadStatus(stage: LeadStage): LeadStatus {
 }
 
 /**
- * The only place that decides whether a stage change may happen. Terminal stages
- * (is_won/is_lost) are absorbing: a lead in one can never change stage again.
- * WON/LOST cannot be entered via `assertMoveAllowed` in this module — WON is
- * reachable only through the Module 07 conversion path, and LOST only through
- * `assertCanMarkLost`.
+ * The only place that decides whether a stage change may happen. WON is
+ * absorbing: a lead in it can never change stage again. LOST is re-openable —
+ * a salesperson can win the lead back, so moves OUT of LOST are allowed (the
+ * application clears the lost markers while the stage history keeps the full
+ * audit trail). WON/LOST cannot be entered via `assertMoveAllowed` in this
+ * module — WON is reachable only through the Module 07 conversion path, and
+ * LOST only through `assertCanMarkLost`.
  */
 export class LeadStageMachine {
   constructor(private readonly stages: LeadStage[]) {}
@@ -150,13 +152,14 @@ export class LeadStageMachine {
   /**
    * Validates a normal MoveLeadStage. `hasActivity` is true when the caller
    * supplied a valid activity_id. Target must be an active non-terminal stage;
-   * WON/LOST targets are rejected here (D2, D10).
+   * WON/LOST targets are rejected here (D2, D10). A LOST lead may be won back,
+   * so LOST is a valid source; WON stays absorbing.
    */
   assertMoveAllowed(current: LeadStage, target: LeadStage, hasActivity: boolean): void {
     if (!current.active) {
       throw new InvalidStateTransitionError('The current stage is inactive')
     }
-    if (current.isWon || current.isLost) {
+    if (current.isWon) {
       throw new InvalidStateTransitionError('A terminal lead cannot change stage')
     }
     if (!target.active) {

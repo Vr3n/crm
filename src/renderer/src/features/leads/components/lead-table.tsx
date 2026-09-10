@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PersonCell } from '@/components/person/person-cell'
-import { SOURCES, STAGES, isTerminal } from '../constants'
+import { SOURCES, STAGES } from '../constants'
 import { computeQuality, qualityMessage, qualityTier } from '../data-quality'
 import { displayPhone, timeAgo } from '../format'
 import type { Lead, StageKey } from '../types'
@@ -120,7 +120,9 @@ export function LeadTable({
         <TableBody>
           {all.map((lead) => {
             const q = computeQuality(lead, all)
-            const terminal = isTerminal(lead.stage)
+            // WON stays absorbing; LOST leads can be won back, so only WON
+            // disables the inline stage move.
+            const moveDisabled = lead.stage === 'WON'
             return (
               <TableRow
                 key={lead.id}
@@ -187,7 +189,7 @@ export function LeadTable({
                   <Select
                     value={lead.stage}
                     onValueChange={(v) => v !== lead.stage && onStageChange(lead, v as StageKey)}
-                    disabled={terminal}
+                    disabled={moveDisabled}
                   >
                     <SelectTrigger className="h-8 w-36 border-transparent bg-transparent text-left hover:bg-accent">
                       <SelectValue>

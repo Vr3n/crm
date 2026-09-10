@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { CalendarClock } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
@@ -15,6 +16,7 @@ import { FieldGroup } from '@/components/ui/field'
 import { FormField } from '@/components/ui/form-field'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { Textarea } from '@/components/ui/textarea'
+import { isTerminal, stageConfig } from '../constants'
 import { useUpdateFollowUp } from '../queries'
 import type { FollowUpRow } from '@/features/followups/types'
 
@@ -32,6 +34,9 @@ export function EditFollowUpDialog({
 }): React.JSX.Element {
   const update = useUpdateFollowUp()
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
+  const followUpTerminal = isTerminal(followUp.stage)
 
   const form = useForm({
     defaultValues: {
@@ -39,6 +44,11 @@ export function EditFollowUpDialog({
       extensionReason: followUp.extensionReason ?? ''
     },
     onSubmit: async ({ value }) => {
+      // Soft gate: extending a terminal-stage lead's follow-up asks first.
+      if (followUpTerminal && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
         await update.mutateAsync({
           followupId: followUp.id,
@@ -156,6 +166,21 @@ export function EditFollowUpDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {followUpTerminal ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={`Extend for a ${stageConfig(followUp.stage).label} lead?`}
+          description={`This follow-up belongs to a lead on the ${stageConfig(followUp.stage).label} stage. Your team can still win them back — extend it anyway?`}
+          confirmLabel="Extend anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }

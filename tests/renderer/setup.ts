@@ -249,6 +249,8 @@ beforeEach(() => {
       assign: vi.fn(),
       markLost: vi.fn(),
       scheduleFollowup: vi.fn(),
+      updateFollowup: vi.fn(),
+      cancelFollowup: vi.fn(),
       completeFollowup: vi.fn(),
       bulkCompleteFollowups: vi.fn().mockResolvedValue({ completed: 0 }),
       getDetails: vi.fn(),

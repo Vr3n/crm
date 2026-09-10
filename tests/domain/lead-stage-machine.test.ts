@@ -98,10 +98,9 @@ describe('LeadStageMachine.assertMoveAllowed', () => {
     )
   })
 
-  it('rejects a move out of a terminal stage (LOST)', () => {
-    expect(() => machine(NEW, LOST).assertMoveAllowed(LOST, NEW, true)).toThrow(
-      InvalidStateTransitionError
-    )
+  it('allows a win-back move out of LOST', () => {
+    expect(() => machine(NEW, LOST).assertMoveAllowed(LOST, NEW, true)).not.toThrow()
+    expect(() => machine(NEW, CONTACTED, LOST).assertMoveAllowed(LOST, CONTACTED, true)).not.toThrow()
   })
 
   it('rejects an inactive source stage', () => {
@@ -178,8 +177,8 @@ describe('suppressFollowups flag', () => {
     expect(() => machine(WON, DND).assertMoveAllowed(WON, DND, true)).toThrow(InvalidStateTransitionError)
   })
 
-  it('rejects moving from a terminal stage to Not Interested', () => {
-    expect(() => machine(LOST, NOT_INTERESTED).assertMoveAllowed(LOST, NOT_INTERESTED, true)).toThrow(InvalidStateTransitionError)
+  it('allows a win-back move from LOST to Not Interested', () => {
+    expect(() => machine(LOST, NOT_INTERESTED).assertMoveAllowed(LOST, NOT_INTERESTED, true)).not.toThrow()
   })
 })
 

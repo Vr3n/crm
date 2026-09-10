@@ -289,6 +289,7 @@ export function moveLeadStage(input: MoveLeadStageInput): void {
 
   withTransaction(() => {
     leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+    if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
     stageHistoryRepo.record({
       organizationId,
       leadId: lead.id,
@@ -362,6 +363,7 @@ export function bulkMoveLeadStage(input: BulkMoveLeadStageInput): BulkMoveLeadSt
         createdBy: userId
       })
       leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+      if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
       stageHistoryRepo.record({
         organizationId,
         leadId: lead.id,
@@ -538,7 +540,8 @@ export function assignLead(input: AssignLeadInput): void {
   })
 }
 
-/** Marks a lead lost with a mandatory reason (D8). Terminal; no further moves. */
+/** Marks a lead lost with a mandatory reason (D8). LOST stays re-openable — a later
+ * stage move wins the lead back and clears the lost markers (history preserved). */
 export function markLeadLost(input: MarkLeadLostInput): void {
   requirePermission(PERMISSIONS.LEAD_MARK_LOST)
   const organizationId = currentOrganizationId()
@@ -688,6 +691,7 @@ export function completeFollowUp(input: CompleteFollowUpInput): void {
 
       machine.assertMoveAllowed(current, target, true)
       leadRepo.updateCurrentStage(organizationId, lead.id, target.id)
+      if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
       stageHistoryRepo.record({
         organizationId,
         leadId: lead.id,
@@ -790,6 +794,7 @@ export function bulkCompleteFollowUps(
           createdBy: userId
         })
         leadRepo.updateCurrentStage(organizationId, lead.id, change.id)
+        if (current.isLost) leadRepo.clearLostState(organizationId, lead.id)
         stageHistoryRepo.record({
           organizationId,
           leadId: lead.id,

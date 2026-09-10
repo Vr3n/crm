@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { can, useSession } from '@/context/session-context'
-import { filterLeads, moveableStages, sortLeads, STAGES } from '../constants'
+import { filterLeads, isTerminal, moveableStages, sortLeads, STAGES } from '../constants'
 import { useBulkMoveStage, useDeleteLeads, useLeads } from '../queries'
 import type { Lead, LeadFilters, StageKey } from '../types'
 import { LeadFilters as Filters } from '../components/lead-filters'
@@ -130,6 +130,12 @@ export function LeadsPage(): React.JSX.Element {
   const selectedLeads = useMemo(
     () => filtered.filter((l) => selected.has(l.id)),
     [filtered, selected]
+  )
+
+  /** Selected leads on a terminal stage — bulk scheduling/logging confirms first. */
+  const terminalSelectedCount = useMemo(
+    () => selectedLeads.filter((l) => isTerminal(l.stage)).length,
+    [selectedLeads]
   )
 
   /** Stages every selected lead can be moved to — the safe intersection. */
@@ -344,6 +350,7 @@ export function LeadsPage(): React.JSX.Element {
             count={selected.size}
             leadIds={[...selected]}
             moveOptions={moveOptions}
+            terminalCount={terminalSelectedCount}
             onSuccess={clearSelection}
           />
         </Suspense>
@@ -356,6 +363,7 @@ export function LeadsPage(): React.JSX.Element {
             count={selected.size}
             leadIds={[...selected]}
             moveOptions={moveOptions}
+            terminalCount={terminalSelectedCount}
             onSuccess={clearSelection}
           />
         </Suspense>

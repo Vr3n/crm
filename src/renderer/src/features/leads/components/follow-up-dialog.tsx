@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { BellPlus } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { moveableStages } from '../constants'
+import { isTerminal, moveableStages, stageConfig } from '../constants'
 import { useLogActivity, useMoveStage, useScheduleFollowUp } from '../queries'
 import { getLeadMaps, stageIdOf, useReferenceData } from '../reference-data'
 import { LeadPicker } from './lead-picker'
@@ -50,7 +51,10 @@ export function FollowUpDialog({
   const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const [picked, setPicked] = useState<Lead | null>(lead ?? null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
   const target = picked ?? lead ?? null
+  const targetTerminal = target !== null && isTerminal(target.stage)
 
   const stageOptions = useMemo(
     () => (target ? moveableStages(target.stage) : []),
@@ -61,6 +65,12 @@ export function FollowUpDialog({
     defaultValues: { title: '', due: '', targetStage: '' },
     onSubmit: async ({ value }) => {
       if (!target) return
+      // Soft gate: terminal-stage leads can be won back, but scheduling for
+      // one asks for an explicit confirmation first.
+      if (targetTerminal && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
         await schedule.mutateAsync({
           leadId: target.id,
@@ -122,7 +132,12 @@ export function FollowUpDialog({
           <FieldGroup className="gap-4">
             {!lead ? (
               <Field label="For whom">
-                <LeadPicker value={target?.id ?? 0} onChange={setPicked} invalid={!target} />
+                <LeadPicker
+                  value={target?.id ?? 0}
+                  onChange={setPicked}
+                  invalid={!target}
+                  excludeBlacklisted
+                />
               </Field>
             ) : null}
 
@@ -257,6 +272,21 @@ export function FollowUpDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {targetTerminal && target ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={`Schedule for a ${stageConfig(target.stage).label} lead?`}
+          description={`${target.name} is on the ${stageConfig(target.stage).label} stage. Your team can still win them back — schedule this follow-up anyway?`}
+          confirmLabel="Schedule anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }

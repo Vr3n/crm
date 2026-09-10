@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { BellPlus } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
@@ -37,6 +38,7 @@ export function BulkFollowUpDialog({
   count,
   leadIds,
   moveOptions,
+  terminalCount,
   onSuccess
 }: {
   open: boolean
@@ -44,6 +46,8 @@ export function BulkFollowUpDialog({
   count: number
   leadIds: number[]
   moveOptions: StageConfig[]
+  /** How many selected leads sit on a terminal stage — asks for confirmation. */
+  terminalCount: number
   onSuccess: () => void
 }): React.JSX.Element {
   const schedule = useBulkScheduleFollowUp()
@@ -51,10 +55,17 @@ export function BulkFollowUpDialog({
   const { data: ref } = useReferenceData()
   const maps = useMemo(() => (ref ? getLeadMaps(ref) : null), [ref])
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
 
   const form = useForm({
     defaultValues: { title: '', due: '', targetStage: '' },
     onSubmit: async ({ value }) => {
+      // Soft gate: scheduling for terminal-stage leads asks for confirmation.
+      if (terminalCount > 0 && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
         await schedule.mutateAsync({
           leadIds,
@@ -218,6 +229,21 @@ export function BulkFollowUpDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {terminalCount > 0 ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Schedule for terminal-stage leads?"
+          description={`${terminalCount} of ${count} selected ${count === 1 ? 'lead is' : 'leads are'} on a terminal stage (Lost/Won). Your team can still win them back — schedule these follow-ups anyway?`}
+          confirmLabel="Schedule anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }

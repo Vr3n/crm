@@ -10,6 +10,7 @@ import { useNow } from '@/lib/use-now'
 import { bucketOf } from '@/features/followups/build'
 import { useFollowUpRows } from '@/features/followups/queries'
 import type { FollowUpRow } from '@/features/followups/types'
+import { StageBadge } from '@/features/leads/components/stage-badge'
 import { MAX_ROWS, PAGE_SIZE_OPTIONS, UPCOMING_FOLLOWUP_DAYS } from '../constants'
 import { DataTable, type DashboardFeatures, type DataTableColumnMeta } from './data-table'
 import { CardPaginationFooter } from './card-pagination-footer'
@@ -32,7 +33,15 @@ function buildColumns(
           Lead
         </SortButton>
       ),
-      cell: ({ row }) => <NameCell name={row.original.leadName} personId={row.original.personId} />,
+      cell: ({ row }) => (
+        <NameCell
+          name={row.original.leadName}
+          personId={row.original.personId}
+          subtext={
+            <StageBadge stage={row.original.stage} isBlacklisted={row.original.isBlacklisted} />
+          }
+        />
+      ),
       sortFn: 'alphanumeric'
     }),
     helper.accessor((row) => row.title, {

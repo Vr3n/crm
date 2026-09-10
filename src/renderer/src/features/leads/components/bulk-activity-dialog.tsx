@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { NotebookPen } from 'lucide-react'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export function BulkActivityDialog({
   count,
   leadIds,
   moveOptions,
+  terminalCount,
   onSuccess
 }: {
   open: boolean
@@ -45,6 +47,8 @@ export function BulkActivityDialog({
   count: number
   leadIds: number[]
   moveOptions: StageConfig[]
+  /** How many selected leads sit on a terminal stage — asks for confirmation. */
+  terminalCount: number
   onSuccess: () => void
 }): React.JSX.Element {
   const log = useBulkRecordActivity()
@@ -56,10 +60,17 @@ export function BulkActivityDialog({
     [ref]
   )
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmedRef = useRef(false)
 
   const form = useForm({
     defaultValues: { typeId: types[0]?.id ?? 0, note: '', targetStage: '' },
     onSubmit: async ({ value }) => {
+      // Soft gate: logging for terminal-stage leads asks for confirmation.
+      if (terminalCount > 0 && !confirmedRef.current) {
+        setConfirmOpen(true)
+        return
+      }
       try {
         await log.mutateAsync({
           leadIds,
@@ -252,6 +263,21 @@ export function BulkActivityDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {terminalCount > 0 ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Log for terminal-stage leads?"
+          description={`${terminalCount} of ${count} selected ${count === 1 ? 'lead is' : 'leads are'} on a terminal stage (Lost/Won). Your team can still win them back — log these activities anyway?`}
+          confirmLabel="Log anyway"
+          onConfirm={() => {
+            confirmedRef.current = true
+            setConfirmOpen(false)
+            form.handleSubmit()
+          }}
+        />
+      ) : null}
     </Dialog>
   )
 }
