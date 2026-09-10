@@ -6,6 +6,7 @@ import {
   createStaffMemberInputSchema,
   organizationExistenceInputSchema
 } from '../../src/shared/contracts/identity'
+import { sellMembershipInputSchema } from '../../src/shared/contracts/membership-sale'
 
 /**
  * Tests the canonical shared contracts (ADR-0006): the additive error-code
@@ -103,6 +104,48 @@ describe('boundary zod schemas', () => {
         password: 'p',
         roleName: 'Manager'
       }).success
+    ).toBe(false)
+  })
+
+  it('accepts a membership sale with an optional payment reference', () => {
+    const base = {
+      leadId: 1,
+      planId: 2,
+      offerId: null,
+      joiningDate: '2026-08-25',
+      startDate: '2026-08-25',
+      endDate: '2026-11-22',
+      basePriceMinor: 150_000,
+      discountType: 'NONE' as const,
+      discountValueMinor: null,
+      paidAmountMinor: 150_000,
+      paymentMethod: 'CHEQUE' as const,
+      transactionId: '00000000-0000-4000-8000-000000000001'
+    }
+    expect(sellMembershipInputSchema.safeParse(base).success).toBe(true)
+    expect(sellMembershipInputSchema.safeParse({ ...base, reference: 'CHQ-0042' }).success).toBe(
+      true
+    )
+    expect(sellMembershipInputSchema.safeParse({ ...base, reference: null }).success).toBe(true)
+  })
+
+  it('rejects a membership sale reference longer than 200 chars', () => {
+    const base = {
+      leadId: 1,
+      planId: 2,
+      offerId: null,
+      joiningDate: '2026-08-25',
+      startDate: '2026-08-25',
+      endDate: '2026-11-22',
+      basePriceMinor: 150_000,
+      discountType: 'NONE' as const,
+      discountValueMinor: null,
+      paidAmountMinor: 150_000,
+      paymentMethod: 'CHEQUE' as const,
+      transactionId: '00000000-0000-4000-8000-000000000001'
+    }
+    expect(
+      sellMembershipInputSchema.safeParse({ ...base, reference: 'x'.repeat(201) }).success
     ).toBe(false)
   })
 

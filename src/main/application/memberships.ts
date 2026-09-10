@@ -331,6 +331,7 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
           payment_date: new Date().toISOString().slice(0, 10),
           amount_minor: input.paidAmountMinor,
           payment_method: input.paymentMethod,
+          reference: input.reference ?? null,
           created_by: userId
         })
         .returning()

@@ -114,7 +114,8 @@ export function MembershipSalePage(): React.JSX.Element {
       discountType: 'NONE' as 'NONE' | Offer['discountType'],
       discountValue: '',
       paidInput: '',
-      paymentMethod: '' as string
+      paymentMethod: '' as string,
+      chequeNumber: '' as string
     },
     onSubmit: async ({ value }) => {
       setServerError(null)
@@ -140,6 +141,7 @@ export function MembershipSalePage(): React.JSX.Element {
           discountValueMinor,
           paidAmountMinor: paidMinor,
           paymentMethod: value.paymentMethod as SellMembershipInput['paymentMethod'],
+          reference: value.paymentMethod === 'CHEQUE' ? value.chequeNumber.trim() || null : null,
           transactionId: crypto.randomUUID()
         })
         // Navigate to invoice detail page
@@ -168,6 +170,7 @@ export function MembershipSalePage(): React.JSX.Element {
   const discountValue = useStore(form.store, (s) => s.values.discountValue)
   const paidInput = useStore(form.store, (s) => s.values.paidInput)
   const paymentMethod = useStore(form.store, (s) => s.values.paymentMethod)
+  const chequeNumber = useStore(form.store, (s) => s.values.chequeNumber)
 
   const { data: leadDetail } = useLead(leadId ?? undefined)
   const selectedPlan = plansList.find((p) => p.id === planId) ?? null
@@ -795,6 +798,8 @@ export function MembershipSalePage(): React.JSX.Element {
               paymentMethod={paymentMethod || ''}
               onPaidChange={(v) => form.setFieldValue('paidInput', v)}
               onPaymentMethodChange={(v) => form.setFieldValue('paymentMethod', v)}
+              chequeNumber={chequeNumber}
+              onChequeNumberChange={(v) => form.setFieldValue('chequeNumber', v)}
               isDirty={isDirty}
               leadName={effectiveLead?.name ?? null}
             />

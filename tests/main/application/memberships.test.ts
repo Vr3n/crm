@@ -103,6 +103,30 @@ describe('sellMembership', () => {
     expect(db.select().from(invoices).all()).toHaveLength(0)
   })
 
+  it('stores the payment reference for a cheque sale', () => {
+    const { leadId } = createLeadForSale()
+    const result = sellMembership({
+      ...saleInput(leadId, '00000000-0000-4000-8000-000000000005'),
+      paymentMethod: 'CHEQUE' as const,
+      reference: 'CHQ-0042'
+    })
+    const db = getDrizzle()
+
+    expect(
+      db.select().from(payments).where(eq(payments.id, result.paymentId)).get()?.reference
+    ).toBe('CHQ-0042')
+  })
+
+  it('keeps reference null when the payment method is not cheque', () => {
+    const { leadId } = createLeadForSale()
+    const result = sellMembership(saleInput(leadId, '00000000-0000-4000-8000-000000000006'))
+    const db = getDrizzle()
+
+    expect(
+      db.select().from(payments).where(eq(payments.id, result.paymentId)).get()?.reference
+    ).toBeNull()
+  })
+
   it('rejects dates shorter than the selected plan duration', () => {
     const { leadId } = createLeadForSale()
     expect(() =>
