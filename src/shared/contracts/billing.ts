@@ -87,7 +87,12 @@ export const removeInvoiceLineInputSchema = z.object({
 export type RemoveInvoiceLineInput = z.infer<typeof removeInvoiceLineInputSchema>
 
 export const finalizeInvoiceInputSchema = z.object({
-  invoiceId: z.number().int().positive()
+  invoiceId: z.number().int().positive(),
+  /** Business issue date (#110). Absent → today in the Organization timezone. */
+  issueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
 })
 export type FinalizeInvoiceInput = z.infer<typeof finalizeInvoiceInputSchema>
 
@@ -138,3 +143,14 @@ export interface InvoiceNumberPreview {
   nextValue: number
   preview: string
 }
+
+/** Optional issue date so the preview follows the picked billing date (#110). */
+export const invoiceNumberPreviewRequestSchema = z
+  .object({
+    issueDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+  })
+  .default({})
+export type InvoiceNumberPreviewRequest = z.infer<typeof invoiceNumberPreviewRequestSchema>

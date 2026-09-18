@@ -26,8 +26,12 @@ interface OrgRow {
   mobile_number: string
   timezone: string | null
   currency: string
+  logo: string | null
   status: string
   plan_tier: string | null
+  invoice_terms: string | null
+  receipt_terms: string | null
+  refund_terms: string | null
   created_at: string
 }
 
@@ -72,8 +76,12 @@ export function registerIdentityReadIpc(): void {
       mobileNumber: row.mobile_number,
       timezone: row.timezone,
       currency: row.currency,
+      logo: row.logo ?? null,
       status: row.status,
       planTier: row.plan_tier,
+      invoiceTerms: row.invoice_terms,
+      receiptTerms: row.receipt_terms,
+      refundTerms: row.refund_terms,
       createdAt: row.created_at
     }
   })

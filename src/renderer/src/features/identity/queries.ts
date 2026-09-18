@@ -8,10 +8,16 @@ import {
 import { toast } from 'sonner'
 import { api } from './api'
 import type { OrganizationProfile, Role, StaffMember } from './types'
+import type { OrgLogo } from './logo'
+import type {
+  OrgLogoOutput,
+  UpdateOrgLogoInput
+} from '../../../../shared/contracts/organization-logo'
 
 const identityKeys = {
   all: ['identity-settings'] as const,
   organization: () => [...identityKeys.all, 'organization'] as const,
+  orgLogo: () => [...identityKeys.all, 'organization', 'logo'] as const,
   staff: () => [...identityKeys.all, 'staff'] as const,
   roles: () => [...identityKeys.all, 'roles'] as const
 }
@@ -20,6 +26,46 @@ export function useOrganization(): UseQueryResult<OrganizationProfile, Error> {
   return useQuery({
     queryKey: identityKeys.organization(),
     queryFn: () => api.organization()
+  })
+}
+
+/** Organization logo with base64 data for <img> display. Cached 5 min (static asset). */
+export function useOrgLogo(): UseQueryResult<OrgLogo, Error> {
+  return useQuery({
+    queryKey: identityKeys.orgLogo(),
+    queryFn: async () => {
+      const out = await api.orgLogo()
+      if (!out.logoData || !out.mimeType) return { filename: out.logoFilename, src: null }
+      return {
+        filename: out.logoFilename,
+        src: `data:${out.mimeType};base64,${out.logoData}`
+      }
+    },
+    staleTime: 5 * 60 * 1000
+  })
+}
+
+export function useUpdateOrgLogo(): UseMutationResult<OrgLogoOutput, Error, UpdateOrgLogoInput> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: UpdateOrgLogoInput) => api.updateOrgLogo(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: identityKeys.all })
+      toast.success('Logo updated')
+    },
+    onError: (e: Error) => toast.error('Logo upload failed', { description: e.message })
+  })
+}
+
+export function useDeleteOrgLogo(): UseMutationResult<void, Error, void> {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.deleteOrgLogo(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: identityKeys.all })
+      toast.success('Logo removed')
+    },
+    onError: (e: Error) => toast.error('Logo removal failed', { description: e.message })
   })
 }
 

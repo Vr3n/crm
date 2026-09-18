@@ -74,7 +74,7 @@ export type InvoicePaymentState = z.infer<typeof invoicePaymentStateSchema>
 
 export const recordPaymentInputSchema = z.object({
   customerId: z.number().int().positive(),
-  paymentDate: z.string(),
+  paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   amountMinor: z.number().int().positive(),
   paymentMethod: z.string().min(1),
   reference: z.string().max(200).nullable().optional(),
@@ -91,7 +91,7 @@ export type AllocatePaymentInput = z.infer<typeof allocatePaymentInputSchema>
 
 export const recordAndAllocatePaymentInputSchema = z.object({
   customerId: z.number().int().positive(),
-  paymentDate: z.string(),
+  paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   amountMinor: z.number().int().positive(),
   paymentMethod: z.string().min(1),
   invoiceId: z.number().int().positive(),

@@ -2,12 +2,14 @@ import { currentOrganizationId, requirePermission } from '../auth/session'
 import { invoiceRepo, invoiceLineRepo } from '../repositories/billing'
 import { allocationRepo, paymentRepo, refundRepo } from '../repositories/finance'
 import { getDrizzle } from '../db/connection'
-import { organizations, customers, people, users, memberships } from '../db/schema'
+import { organizations, customers, people, users, memberships, organizationStaff, roles } from '../db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { NotFoundError, ValidationError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
 import { formatRate } from '../../shared/contracts/money'
 import { renderPdf } from '../pdf/renderer'
+import { readFileSync } from 'node:fs'
+import { getLogoPathSync } from '../lib/photo-storage'
 import { renderInvoiceDocument } from '../pdf/templates/invoice-document'
 import { renderPaymentReceipt } from '../pdf/templates/payment-receipt'
 import { renderRefundReceipt } from '../pdf/templates/refund-receipt'
@@ -25,9 +27,38 @@ import type {
 /* Helpers                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Resolves a stored logo filename to a base64 data-URI for PDF <img> embeds.
+ * Returns null when missing, legacy data-URL-shaped, or unreadable — the
+ * caller prints without a logo instead of blocking the document.
+ */
+function resolveLogoDataUri(organizationId: number, logo: string | null): string | null {
+  if (!logo || logo.startsWith('data:')) return logo ?? null
+  try {
+    const buffer: Buffer = readFileSync(getLogoPathSync(organizationId, logo))
+    const ext = logo.split('.').pop()?.toLowerCase()
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+    return `data:${mime};base64,${buffer.toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
 function getOrgBranding(organizationId: number): OrgBranding {
   const org = getDrizzle()
-    .select()
+    .select({
+      name: organizations.name,
+      legal_name: organizations.legal_name,
+      logo: organizations.logo,
+      address: organizations.address,
+      gstin: organizations.gstin,
+      mobile_number: organizations.mobile_number,
+      org_invoice_prefix: organizations.org_invoice_prefix,
+      timezone: organizations.timezone,
+      invoice_terms: organizations.invoice_terms,
+      receipt_terms: organizations.receipt_terms,
+      refund_terms: organizations.refund_terms
+    })
     .from(organizations)
     .where(eq(organizations.id, organizationId))
     .get() as
@@ -39,6 +70,10 @@ function getOrgBranding(organizationId: number): OrgBranding {
         gstin: string | null
         mobile_number: string
         org_invoice_prefix: string | null
+        timezone: string | null
+        invoice_terms: string | null
+        receipt_terms: string | null
+        refund_terms: string | null
       }
     | undefined
 
@@ -47,11 +82,15 @@ function getOrgBranding(organizationId: number): OrgBranding {
   return {
     name: org.name,
     legalName: org.legal_name,
-    logo: org.logo,
+    logo: resolveLogoDataUri(organizationId, org.logo),
     address: org.address,
     gstin: org.gstin,
     mobileNumber: org.mobile_number,
-    invoicePrefix: org.org_invoice_prefix
+    invoicePrefix: org.org_invoice_prefix,
+    timezone: org.timezone,
+    invoiceTerms: org.invoice_terms,
+    receiptTerms: org.receipt_terms,
+    refundTerms: org.refund_terms
   }
 }
 
@@ -77,14 +116,54 @@ function getCustomerInfo(organizationId: number, customerId: number): PdfCustome
   }
 }
 
-function formatNow(): string {
-  return new Date().toLocaleDateString('en-IN', {
+/**
+ * Renders "now" in the Organization's timezone so the printed timestamp matches
+ * the gym's business date. Falls back to Asia/Kolkata (the setup default) when
+ * the org has no explicit timezone.
+ */
+export function formatNow(timezone?: string | null): string {
+  return new Date().toLocaleString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: timezone ?? 'Asia/Kolkata'
   })
+}
+
+/**
+ * Resolves a user's attribution for a print document as "Full Name (Role)".
+ * The name comes from the stamped User row unconditionally, so historical
+ * documents keep their attribution even after the staffer is deactivated or
+ * removed; the "(Role)" suffix resolves only from an ACTIVE staff membership
+ * row. Returns null only when the User row itself is missing — renderers fall
+ * back to "Unknown User". Attribution always comes from the session User
+ * stamped on the record, never a hardcoded name and never an inferred
+ * `created_by` fallback.
+ */
+export function resolveAttribution(organizationId: number, userId: number): string | null {
+  const user = getDrizzle()
+    .select({ fullName: users.full_name })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get() as { fullName: string } | undefined
+  if (!user) return null
+
+  const staff = getDrizzle()
+    .select({ roleName: roles.name })
+    .from(organizationStaff)
+    .leftJoin(roles, eq(roles.id, organizationStaff.role_id))
+    .where(
+      and(
+        eq(organizationStaff.organization_id, organizationId),
+        eq(organizationStaff.user_id, userId),
+        eq(organizationStaff.status, 'ACTIVE')
+      )
+    )
+    .get() as { roleName: string | null } | undefined
+
+  return staff?.roleName ? `${user.fullName} (${staff.roleName})` : user.fullName
 }
 
 /** Builds a safe filename from customer name + ID + timestamp. */
@@ -145,7 +224,7 @@ export function exportInvoicePdf(input: {
   })
 
   const org = getOrgBranding(organizationId)
-  const now = formatNow()
+  const now = formatNow(org.timezone)
 
   // Fetch the latest membership for this customer (for duration info)
   const membership = getDrizzle()
@@ -172,11 +251,19 @@ export function exportInvoicePdf(input: {
   const refundedAmount = refunds.reduce((sum, r) => sum + r.amount, 0)
   const outstanding = invoice.totalMinor - paidAmount
 
+  // Attribution: the session User who finalized the invoice. Null for a DRAFT —
+  // the template omits the Finalized By line until the invoice is finalized.
+  const finalizedBy =
+    invoice.finalizedBy != null
+      ? resolveAttribution(organizationId, invoice.finalizedBy) ?? 'Unknown User'
+      : null
+
   const ctx: InvoicePrintContext = {
     org,
     invoiceNo: invoice.number,
     status: invoice.status,
-    issuedAt: invoice.createdAt,
+    // Canonical issue date (#110): business date, not the audit timestamp.
+    issuedAt: invoice.finalizedAt ?? invoice.createdAt,
     dueAt: invoice.finalizedAt,
     customer: customerInfo,
     membership: membership
@@ -203,6 +290,7 @@ export function exportInvoicePdf(input: {
     paidAmount,
     refundedAmount,
     outstanding,
+    finalizedBy,
     generatedAt: now
   }
 
@@ -263,14 +351,10 @@ export function exportReceiptPdf(input: {
     .get() as { planName: string } | undefined
 
   const org = getOrgBranding(organizationId)
-  const now = formatNow()
+  const now = formatNow(org.timezone)
 
-  // Fetch the user name for receivedBy (staff who recorded the payment)
-  const createdByUser = getDrizzle()
-    .select({ fullName: users.full_name })
-    .from(users)
-    .where(eq(users.id, payment.createdBy))
-    .get() as { fullName: string } | undefined
+  // Attribution: the session User who recorded the payment (Full Name (Role)).
+  const receivedBy = resolveAttribution(organizationId, payment.createdBy) ?? 'Unknown User'
 
   const paymentNo = `PAY-${String(payment.id).padStart(4, '0')}`
 
@@ -285,7 +369,7 @@ export function exportReceiptPdf(input: {
     membershipName: membership?.planName ?? null,
     allocations: enrichedAllocations,
     outstanding: totalOutstanding,
-    receivedBy: createdByUser?.fullName ?? 'System',
+    receivedBy,
     generatedAt: now
   }
 
@@ -339,14 +423,10 @@ export function exportRefundPdf(input: {
     .get() as { planName: string } | undefined
 
   const org = getOrgBranding(organizationId)
-  const now = formatNow()
+  const now = formatNow(org.timezone)
 
-  // Fetch the user name for recordedBy (staff who recorded the refund)
-  const createdByUser = getDrizzle()
-    .select({ fullName: users.full_name })
-    .from(users)
-    .where(eq(users.id, refund.createdBy))
-    .get() as { fullName: string } | undefined
+  // Attribution: the session User who recorded the refund (Full Name (Role)).
+  const recordedBy = resolveAttribution(organizationId, refund.createdBy) ?? 'Unknown User'
 
   const refundNo = `REF-${String(refund.id).padStart(4, '0')}`
   const sourcePaymentNo = `PAY-${String(payment.id).padStart(4, '0')}`
@@ -362,7 +442,7 @@ export function exportRefundPdf(input: {
     customer: customerInfo,
     membershipName: membership?.planName ?? null,
     reason: refund.reason,
-    recordedBy: createdByUser?.fullName ?? 'System',
+    recordedBy,
     generatedAt: now
   }
 

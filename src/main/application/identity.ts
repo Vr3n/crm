@@ -8,6 +8,8 @@ import {
 } from '../db/seed'
 import { hashPassword, verifyPassword } from '../auth/password'
 import { requirePermission, currentOrganizationId, setSession, getSession } from '../auth/session'
+import { validateFileType, saveLogoSync } from '../lib/photo-storage'
+import { ORG_LOGO_MAX_BYTES } from '../../shared/contracts/organization-logo'
 import {
   organizationRepo,
   userRepo,
@@ -22,8 +24,10 @@ import type {
   LoginInput,
   OrganizationExistenceInput,
   SessionContext,
-  SetupOrganizationInput
+  SetupOrganizationInput,
+  UpdateOrganizationInput
 } from '../../shared/contracts/identity'
+import type { Organization } from '../domain/identity'
 import { IndianMobileNumber } from '../domain/phone'
 import { ValidationError, UnauthorizedError, NotFoundError } from '../domain/errors'
 import { PERMISSIONS } from '../db/permissions'
@@ -71,6 +75,73 @@ export function createStaffMember(input: CreateStaffMemberInput): CreatedStaffMe
 }
 
 /**
+ * Updates the current organization's profile and per-document terms. Gated by
+ * `org.manage` (the same permission the Organization settings UI checks). Profile
+ * rules mirror the setup flow (Indian mobile required; optional email/legal name
+ * format-checked); terms are trimmed and stored as NULL when blank so an emptied
+ * Terms block simply disappears from the next print.
+ *
+ * Patch semantics: only keys present in the input are validated and written —
+ * an omitted optional field keeps its stored value, while an explicit
+ * null/blank clears it.
+ */
+export function updateOrganization(input: UpdateOrganizationInput): Organization {
+  requirePermission(PERMISSIONS.ORG_MANAGE)
+  const organizationId = currentOrganizationId()
+
+  const patch: {
+    legalName?: string | null
+    billingEmail?: string | null
+    mobileNumber?: string
+    timezone?: string | null
+    currency?: string
+    invoiceTerms?: string | null
+    receiptTerms?: string | null
+    refundTerms?: string | null
+  } = {}
+
+  if (input.legalName !== undefined) {
+    const legalName = input.legalName?.trim() || null
+    if (legalName && legalName.length < 2) {
+      throw new ValidationError('Legal name must be at least 2 characters')
+    }
+    patch.legalName = legalName
+  }
+
+  if (input.billingEmail !== undefined) {
+    const billingEmail = input.billingEmail?.trim().toLowerCase() || null
+    if (billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
+      throw new ValidationError('Enter a valid billing email address')
+    }
+    patch.billingEmail = billingEmail
+  }
+
+  if (input.mobileNumber !== undefined) {
+    patch.mobileNumber = IndianMobileNumber.parse(input.mobileNumber).value
+  }
+  if (input.currency !== undefined) {
+    patch.currency = input.currency
+  }
+  if (input.timezone !== undefined) {
+    patch.timezone = input.timezone?.trim() || null
+  }
+
+  for (const key of ['invoiceTerms', 'receiptTerms', 'refundTerms'] as const) {
+    if (input[key] !== undefined) {
+      const terms = input[key]?.trim() || null
+      if (terms && terms.length > 2000) {
+        throw new ValidationError('Terms must be 2000 characters or fewer')
+      }
+      patch[key] = terms
+    }
+  }
+
+  const org = organizationRepo.update(organizationId, patch)
+  if (!org) throw new NotFoundError('Organization not found')
+  return org
+}
+
+/**
  * First-run setup: creates the single Organization, seeds its roles, creates the
  * Owner User and their OrganizationStaff membership — all in one atomic transaction.
  * Rejects if an organization already exists (v1 provisions exactly one per install).
@@ -90,6 +161,24 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
     throw new ValidationError('Slug may only contain lowercase letters, numbers, and hyphens')
   }
 
+  // Optional setup logo: validated before the transaction (shape, type, size);
+  // the file itself is written inside the transaction next to the org row.
+  let logoBuffer: Buffer | null = null
+  let logoFilename: string | null = null
+  if (input.logo) {
+    try {
+      validateFileType(input.logo.filename)
+    } catch {
+      throw new ValidationError('Logo must be a jpg, png or webp image')
+    }
+    logoBuffer = Buffer.from(input.logo.data, 'base64')
+    if (logoBuffer.length === 0) throw new ValidationError('Logo data is empty')
+    if (logoBuffer.length > ORG_LOGO_MAX_BYTES) {
+      throw new ValidationError('Logo must be 5MB or smaller')
+    }
+    logoFilename = input.logo.filename
+  }
+
   return withTransaction(() => {
     if (organizationRepo.count() > 0) {
       throw new ValidationError('An organization has already been set up on this machine')
@@ -104,6 +193,11 @@ export function setupOrganization(input: SetupOrganizationInput): SessionContext
       legalName: null,
       billingEmail: null
     })
+
+    if (logoBuffer && logoFilename) {
+      const stored = saveLogoSync(org.id, logoFilename, logoBuffer)
+      organizationRepo.updateLogo(org.id, stored)
+    }
 
     seedRolesForOrganization(org.id)
     seedSalesReferenceData(org.id)

@@ -19,6 +19,9 @@ import { NameCell } from './name-cell'
 import { PlanCell } from './plan-cell'
 import { RowActions } from './row-actions'
 import { SortButton } from './sort-button'
+import { expirationToRenewTarget } from './renew-target'
+import { RenewMembershipDialog } from '@/features/memberships/components/renew-membership-dialog'
+import type { Membership } from '@/features/customers/types'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
 import type { ExportColumn } from '@/features/export/api'
 
@@ -35,6 +38,7 @@ const helper = createColumnHelper<DashboardFeatures, MembershipExpiration>()
 
 function buildColumns(
   onView: (row: MembershipExpiration) => void,
+  onRenew: (row: MembershipExpiration) => void,
   onFollowUp: (row: MembershipExpiration) => void
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
@@ -45,7 +49,9 @@ function buildColumns(
           Client
         </SortButton>
       ),
-      cell: ({ row }) => <NameCell name={row.original.member.name} personId={row.original.member.personId} />,
+      cell: ({ row }) => (
+        <NameCell name={row.original.member.name} personId={row.original.member.personId} />
+      ),
       sortFn: 'alphanumeric'
     }),
     helper.accessor((row) => row.member, {
@@ -80,6 +86,7 @@ function buildColumns(
         <RowActions
           memberName={row.original.member.name}
           onView={() => onView(row.original)}
+          onRenew={() => onRenew(row.original)}
           onFollowUp={() => onFollowUp(row.original)}
         />
       )
@@ -121,10 +128,15 @@ export function MembershipExpirationsTable({
   const [range, setRange] = useState<DateRange>()
   const [member, setMember] = useState<MembershipExpiration | null>(null)
   const [open, setOpen] = useState(false)
+  const [renewTarget, setRenewTarget] = useState<Membership | null>(null)
 
   const handleView = useCallback((row: MembershipExpiration) => {
     setMember(row)
     setOpen(true)
+  }, [])
+
+  const handleRenew = useCallback((row: MembershipExpiration) => {
+    setRenewTarget(expirationToRenewTarget(row))
   }, [])
 
   const handleFollowUp = useCallback(
@@ -135,8 +147,8 @@ export function MembershipExpirationsTable({
   )
 
   const columns = useMemo(
-    () => buildColumns(handleView, handleFollowUp),
-    [handleView, handleFollowUp]
+    () => buildColumns(handleView, handleRenew, handleFollowUp),
+    [handleView, handleRenew, handleFollowUp]
   )
 
   const presets = useMemo<DateRangePreset[]>(() => {
@@ -176,6 +188,7 @@ export function MembershipExpirationsTable({
   return (
     <>
       <Card
+        data-testid="membership-expirations-table"
         className="crm-gradient-border"
         style={
           {
@@ -228,6 +241,15 @@ export function MembershipExpirationsTable({
         </CardContent>
       </Card>
       <MemberDetailsSheet row={member} open={open} onOpenChange={setOpen} />
+      {renewTarget ? (
+        <RenewMembershipDialog
+          membership={renewTarget}
+          open={!!renewTarget}
+          onOpenChange={(o) => {
+            if (!o) setRenewTarget(null)
+          }}
+        />
+      ) : null}
     </>
   )
 }

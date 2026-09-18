@@ -22,6 +22,7 @@ import { registerExportIpc } from './ipc/export'
 import { registerLicenseIpc } from './ipc/license'
 import { registerBlacklistIpc } from './ipc/blacklist'
 import { registerPersonPhotoIpc } from './ipc/person'
+import { registerOrgLogoIpc } from './ipc/organization-logo'
 import { configurePhotoStorage } from './lib/photo-storage'
 import { restoreRememberedLogin } from './application/identity'
 import { processScheduledRefunds } from './application/finance'
@@ -124,6 +125,7 @@ app.whenReady().then(async () => {
   registerLicenseIpc()
   registerBlacklistIpc()
   registerPersonPhotoIpc()
+  registerOrgLogoIpc()
 
   createWindow()
 

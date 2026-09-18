@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { exportExcel, type ExportColumn } from '../api'
 import { useCurrency } from '@/hooks/use-currency'
+import { useOrganization } from '@/features/identity/queries'
 
 interface ExportExcelButtonProps {
   columns: ExportColumn[]
@@ -36,6 +37,9 @@ export function ExportExcelButton({
 }: ExportExcelButtonProps): React.JSX.Element {
   const [loading, setLoading] = useState(false)
   const currency = useCurrency()
+  const { data: organization } = useOrganization()
+  // Organization-local wall clock for dates (#110); backend falls back safely.
+  const timezone = organization?.timezone ?? undefined
 
   async function handleExport(): Promise<void> {
     if (rows.length === 0) {
@@ -53,7 +57,8 @@ export function ExportExcelButton({
         filename: name,
         columns,
         rows,
-        currency
+        currency,
+        timezone
       })
       toast.success('Exported & opened', {
         description: filePath

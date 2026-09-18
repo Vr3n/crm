@@ -127,7 +127,11 @@ export function registerDashboardIpc(): void {
         },
         plan: m.plan_name_snapshot,
         purchasedAt: m.start_date,
-        expiresAt: m.end_date
+        expiresAt: m.end_date,
+        // Renewal shortcut (#110): enough to open the renew dialog directly.
+        customerId: String(m.customer_id),
+        planId: m.plan_id != null ? String(m.plan_id) : null,
+        joiningDate: m.joining_date
       }
     })
   })
@@ -273,7 +277,18 @@ export function registerDashboardIpc(): void {
         planEndDate: membership?.end_date ?? inv.created_at,
         joiningDate: membership?.joining_date ?? inv.created_at,
         membershipAmountMinor: membership?.final_price_minor ?? inv.total_minor,
-        membershipPurchasedAt: membership?.created_at ?? inv.created_at
+        membershipPurchasedAt: membership?.created_at ?? inv.created_at,
+        // Renewal shortcut (#110, Phase 2): direct renew-dialog inputs.
+        // Latest membership for this customer+plan; null when unresolvable —
+        // callers hide the Renew action instead of guessing.
+        customerId: String(inv.customer_id),
+        membershipId: membership ? String(membership.id) : null,
+        renewPlanId:
+          membership?.plan_id != null
+            ? String(membership.plan_id)
+            : firstPlanId != null
+              ? String(firstPlanId)
+              : null
       }
     })
   })

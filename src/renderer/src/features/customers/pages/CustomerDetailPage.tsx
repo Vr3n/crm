@@ -141,6 +141,7 @@ export function CustomerDetailPage(): React.JSX.Element {
             now={now}
             onCancel={handleCancel}
             onRevert={handleRevert}
+            onRenew={canRenew ? handleRenew : undefined}
           />
         </div>
         <div className="md:col-span-5">

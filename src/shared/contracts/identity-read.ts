@@ -12,8 +12,12 @@ export interface OrganizationOutput {
   mobileNumber: string
   timezone: string | null
   currency: string
+  logo: string | null
   status: string
   planTier: string | null
+  invoiceTerms: string | null
+  receiptTerms: string | null
+  refundTerms: string | null
   createdAt: string
 }
 

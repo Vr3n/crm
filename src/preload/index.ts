@@ -9,7 +9,8 @@ import type {
   LoginInput,
   OrganizationExistenceInput,
   SessionContext,
-  SetupOrganizationInput
+  SetupOrganizationInput,
+  UpdateOrganizationInput
 } from '../shared/contracts/identity'
 import type {
   CreateCancellationPolicyInput,
@@ -44,6 +45,7 @@ import type {
   CustomerInvoicesRequest,
   InvoiceDetail,
   InvoiceNumberPreview,
+  InvoiceNumberPreviewRequest,
   InvoiceLineRow,
   InvoiceRow
 } from '../shared/contracts/billing'
@@ -139,13 +141,17 @@ import type {
   GetManyPersonPhotosInput,
   GetManyPersonPhotosOutput
 } from '../shared/contracts/person-photo'
+import type {
+  UpdateOrgLogoInput,
+  OrgLogoOutput
+} from '../shared/contracts/organization-logo'
 import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 
 /* -------------------------------------------------------------------------- */
 /* Export types (mirrors src/main/application/export.ts)                       */
 /* -------------------------------------------------------------------------- */
 
-type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number'
+type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number' | 'isodate'
 
 interface ExportColumn {
   header: string
@@ -159,6 +165,8 @@ interface ExportTableInput {
   filename: string
   columns: ExportColumn[]
   rows: Record<string, unknown>[]
+  currency?: string
+  timezone?: string
 }
 
 /**
@@ -194,6 +202,8 @@ const api = {
       call(IPC_CHANNELS.IDENTITY_CREATE_STAFF, input),
     checkOrganizationExists: (input: OrganizationExistenceInput): Promise<boolean> =>
       call(IPC_CHANNELS.IDENTITY_CHECK_ORGANIZATION_EXISTS, input),
+    updateOrganization: (input: UpdateOrganizationInput): Promise<OrganizationOutput> =>
+      call(IPC_CHANNELS.IDENTITY_UPDATE_ORGANIZATION, input),
     logout: (): Promise<boolean> => call(IPC_CHANNELS.IDENTITY_LOGOUT)
   },
   leads: {
@@ -331,7 +341,8 @@ const api = {
       call(IPC_CHANNELS.BILLING_GET_INVOICE, input),
     updateSnapshot: (input: UpdateBillingSnapshotInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, input),
-    nextNumber: (): Promise<InvoiceNumberPreview> => call(IPC_CHANNELS.BILLING_NEXT_NUMBER),
+    nextNumber: (input?: InvoiceNumberPreviewRequest): Promise<InvoiceNumberPreview> =>
+      call(IPC_CHANNELS.BILLING_NEXT_NUMBER, input),
     listByCustomer: (input: CustomerInvoicesRequest): Promise<InvoiceRow[]> =>
       call(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, input),
     listOpen: (): Promise<InvoiceRow[]> => call(IPC_CHANNELS.BILLING_LIST_OPEN)
@@ -446,6 +457,12 @@ const api = {
       call(IPC_CHANNELS.PERSON_PHOTO_GET, input),
     getPhotos: (input: GetManyPersonPhotosInput): Promise<GetManyPersonPhotosOutput> =>
       call(IPC_CHANNELS.PERSON_PHOTO_GET_MANY, input)
+  },
+  organizationLogo: {
+    update: (input: UpdateOrgLogoInput): Promise<OrgLogoOutput> =>
+      call(IPC_CHANNELS.ORG_LOGO_UPDATE, input),
+    remove: (): Promise<void> => call(IPC_CHANNELS.ORG_LOGO_DELETE, {}),
+    get: (): Promise<OrgLogoOutput> => call(IPC_CHANNELS.ORG_LOGO_GET, {})
   }
 }
 

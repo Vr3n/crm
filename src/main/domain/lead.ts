@@ -1,4 +1,7 @@
 import { InvalidStateTransitionError } from './errors'
+import { tzOffsetMinutes } from './dates'
+
+export { DEFAULT_TIMEZONE } from './dates'
 
 /**
  * Sales & CRM domain (Module 01).
@@ -8,8 +11,6 @@ import { InvalidStateTransitionError } from './errors'
  * configurable per-org reference data (ADR-0007). Everything here is pure: no
  * I/O, no Electron, no Drizzle, so it is trivially unit-testable.
  */
-
-export const DEFAULT_TIMEZONE = 'Asia/Kolkata'
 
 export type LeadStatus = 'OPEN' | 'WON' | 'LOST'
 
@@ -200,18 +201,4 @@ export function localDayUtcRange(tz: string, date: Date): { start: string; end: 
   )
   const end = new Date(start.getTime() + 86_400_000)
   return { start: start.toISOString(), end: end.toISOString() }
-}
-
-/** The IANA timezone's UTC offset (minutes) for the given instant. */
-function tzOffsetMinutes(tz: string, date: Date): number {
-  try {
-    const part = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longOffset' })
-      .formatToParts(date)
-      .find((p) => p.type === 'timeZoneName')?.value
-    const m = part ? /GMT([+-])(\d{2}):(\d{2})/.exec(part) : null
-    if (!m) return 0
-    return (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]))
-  } catch {
-    return 0
-  }
 }

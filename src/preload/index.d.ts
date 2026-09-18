@@ -6,7 +6,8 @@ import type {
   LoginInput,
   OrganizationExistenceInput,
   SessionContext,
-  SetupOrganizationInput
+  SetupOrganizationInput,
+  UpdateOrganizationInput
 } from '../shared/contracts/identity'
 import type {
   CancellationPolicyRow,
@@ -44,6 +45,7 @@ import type {
   CustomerInvoicesRequest,
   InvoiceDetail,
   InvoiceNumberPreview,
+  InvoiceNumberPreviewRequest,
   InvoiceLineRow,
   InvoiceRow
 } from '../shared/contracts/billing'
@@ -126,6 +128,10 @@ import type {
   GetManyPersonPhotosInput,
   GetManyPersonPhotosOutput
 } from '../shared/contracts/person-photo'
+import type {
+  UpdateOrgLogoInput,
+  OrgLogoOutput
+} from '../shared/contracts/organization-logo'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type {
   CancelMembershipInput,
@@ -149,6 +155,7 @@ declare global {
         status: () => Promise<AuthStatus>
         createStaff: (input: CreateStaffMemberInput) => Promise<CreatedStaffMember>
         checkOrganizationExists: (input: OrganizationExistenceInput) => Promise<boolean>
+        updateOrganization: (input: UpdateOrganizationInput) => Promise<OrganizationOutput>
         logout: () => Promise<boolean>
       }
       leads: {
@@ -238,7 +245,7 @@ declare global {
         markUncollectible: (input: MarkUncollectibleInput) => Promise<InvoiceRow>
         getInvoice: (input: InvoiceIdRequest) => Promise<InvoiceDetail>
         updateSnapshot: (input: UpdateBillingSnapshotInput) => Promise<InvoiceRow>
-        nextNumber: () => Promise<InvoiceNumberPreview>
+        nextNumber: (input?: InvoiceNumberPreviewRequest) => Promise<InvoiceNumberPreview>
         listByCustomer: (input: CustomerInvoicesRequest) => Promise<InvoiceRow[]>
         listOpen: () => Promise<InvoiceRow[]>
       }
@@ -307,6 +314,8 @@ declare global {
           filename: string
           columns: { header: string; key: string; width?: number; format?: string }[]
           rows: Record<string, unknown>[]
+          currency?: string
+          timezone?: string
         }) => Promise<string>
       }
       license: {
@@ -324,6 +333,11 @@ declare global {
         deletePhoto: (input: DeletePersonPhotoInput) => Promise<void>
         getPhoto: (input: GetPersonPhotoInput) => Promise<PersonPhotoOutput>
         getPhotos: (input: GetManyPersonPhotosInput) => Promise<GetManyPersonPhotosOutput>
+      }
+      organizationLogo: {
+        update: (input: UpdateOrgLogoInput) => Promise<OrgLogoOutput>
+        remove: () => Promise<void>
+        get: () => Promise<OrgLogoOutput>
       }
     }
   }

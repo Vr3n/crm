@@ -1,4 +1,9 @@
 import type { OrganizationProfile, StaffMember, Role } from './types'
+import type { UpdateOrganizationInput } from '../../../../shared/contracts/identity'
+import type {
+  UpdateOrgLogoInput,
+  OrgLogoOutput
+} from '../../../../shared/contracts/organization-logo'
 
 interface CreateStaffInput {
   fullName: string
@@ -21,5 +26,11 @@ export const api = {
     window.api.identity.createStaff(input) as unknown as Promise<StaffMember>,
   updateStaff: (_input: Record<string, unknown>): Promise<StaffMember> => Promise.resolve({} as StaffMember),
   updateRole: (_input: Record<string, unknown>): Promise<Role> => Promise.resolve({} as Role),
-  updateOrganization: (_input: Record<string, unknown>): Promise<OrganizationProfile> => Promise.resolve({} as OrganizationProfile)
+  updateOrganization: (input: UpdateOrganizationInput): Promise<OrganizationProfile> =>
+    window.api.identity.updateOrganization(input) as unknown as Promise<OrganizationProfile>,
+  orgLogo: (): Promise<OrgLogoOutput> =>
+    window.api.organizationLogo.get() as unknown as Promise<OrgLogoOutput>,
+  updateOrgLogo: (input: UpdateOrgLogoInput): Promise<OrgLogoOutput> =>
+    window.api.organizationLogo.update(input) as unknown as Promise<OrgLogoOutput>,
+  deleteOrgLogo: (): Promise<void> => window.api.organizationLogo.remove() as unknown as Promise<void>
 }

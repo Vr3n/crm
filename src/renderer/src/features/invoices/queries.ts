@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { api, invoiceCommands } from './api'
 import type {
   AddInvoiceLineInput,
+  FinalizeInvoiceInput,
   InvoiceDetail,
   InvoiceNumberPreview,
   MarkUncollectibleInput,
@@ -73,11 +74,15 @@ export function useDraftInvoice(
 /**
  * Display-only preview of the next invoice number. Long-ish staleTime is fine —
  * it is cosmetic and never reserved; finalize re-reads it authoritatively.
+ * Pass the picked issue date so the preview follows the billing date (#110).
  */
-export function useNextInvoiceNumber(enabled = false): UseQueryResult<InvoiceNumberPreview, Error> {
+export function useNextInvoiceNumber(
+  enabled = false,
+  issueDate?: string
+): UseQueryResult<InvoiceNumberPreview, Error> {
   return useQuery({
-    queryKey: keys.nextNumber(),
-    queryFn: () => invoiceCommands.nextNumber(),
+    queryKey: [...keys.nextNumber(), issueDate ?? 'today'],
+    queryFn: () => invoiceCommands.nextNumber(issueDate ? { issueDate } : undefined),
     enabled,
     staleTime: 30_000
   })
@@ -130,9 +135,9 @@ export function useRemoveInvoiceLine(
   })
 }
 
-export function useFinalizeInvoice(): UseMutationResult<unknown, Error, { invoiceId: number }> {
+export function useFinalizeInvoice(): UseMutationResult<unknown, Error, FinalizeInvoiceInput> {
   return useBillingMutation(
-    (input: { invoiceId: number }) => invoiceCommands.finalize(input),
+    (input: FinalizeInvoiceInput) => invoiceCommands.finalize(input),
     'Invoice finalized'
   )
 }

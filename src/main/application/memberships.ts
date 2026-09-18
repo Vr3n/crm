@@ -11,7 +11,9 @@ import {
 } from '../domain/errors'
 import { assertCustomerAllowed, assertPersonAllowed } from './blacklist'
 import { calculateSalePricing, type DiscountType } from '../domain/pricing'
-import { deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
+import { deriveInvoicePrefix } from '../domain/billing'
+import { assertValidBusinessDate, businessDateToUtc } from '../domain/dates'
+import { orgTimezone } from './organization'
 import {
   calculateProratedRefund,
   resolveCancellationEffectiveDate,
@@ -112,6 +114,9 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
   )
     throw new ValidationError('Invalid joining, start, or end date')
   if (end < start) throw new ValidationError('End date cannot be before start date')
+  // Shared billing date (#110): drives BOTH Invoice finalized_at and Payment
+  // payment_date. Audit fields (created_at/occurred_at) stay as now.
+  assertValidBusinessDate(input.issueDate, 'issueDate')
 
   const lead = leadRepo.getById(organizationId, input.leadId)
   if (!lead) throw new NotFoundError('Lead not found')
@@ -269,8 +274,9 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
         .where(eq(organizations.id, organizationId))
         .get()?.org_invoice_prefix ?? null
     const prefix = deriveInvoicePrefix(org?.name ?? 'ORG', orgInvoicePrefix)
-    const now = new Date()
-    const ddmmYY = formatDDMMYY(now)
+    // Invoice Number follows the shared billing date (#110); derived from the
+    // YYYY-MM-DD string so no local-timezone shift can move the day.
+    const ddmmYY = `${input.issueDate.slice(8, 10)}${input.issueDate.slice(5, 7)}${input.issueDate.slice(2, 4)}`
     const seqKey = ddmmYY
     const seqRow = db
       .select()
@@ -315,7 +321,7 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
         subtotal_minor: pricing.finalPriceMinor,
         tax_minor: taxAmountMinor,
         total_minor: lineTotalMinor,
-        finalized_at: new Date().toISOString(),
+        finalized_at: businessDateToUtc(input.issueDate, orgTimezone(organizationId)),
         finalized_by: userId
       })
       .where(eq(invoices.id, invoiceId))
@@ -328,7 +334,7 @@ export function sellMembership(input: SellMembershipInput): SellMembershipResult
         .values({
           organization_id: organizationId,
           customer_id: customer.id,
-          payment_date: new Date().toISOString().slice(0, 10),
+          payment_date: input.issueDate,
           amount_minor: input.paidAmountMinor,
           payment_method: input.paymentMethod,
           reference: input.reference ?? null,
@@ -810,6 +816,9 @@ export function renewMembership(input: RenewMembershipInput): RenewMembershipRes
   )
     throw new ValidationError('Invalid joining, start, or end date')
   if (end < start) throw new ValidationError('End date cannot be before start date')
+  // Shared billing date (#110): drives BOTH Invoice finalized_at and Payment
+  // payment_date. Audit fields (created_at/occurred_at) stay as now.
+  assertValidBusinessDate(input.issueDate, 'issueDate')
 
   // Validate customer
   const customer = customerRepo.getById(organizationId, input.customerId)
@@ -968,8 +977,9 @@ export function renewMembership(input: RenewMembershipInput): RenewMembershipRes
         .get()?.org_invoice_prefix ?? null
     const org = organizationRepo.findById(organizationId)
     const prefix = deriveInvoicePrefix(org?.name ?? 'ORG', orgInvoicePrefix)
-    const now = new Date()
-    const ddmmYY = formatDDMMYY(now)
+    // Invoice Number follows the shared billing date (#110); derived from the
+    // YYYY-MM-DD string so no local-timezone shift can move the day.
+    const ddmmYY = `${input.issueDate.slice(8, 10)}${input.issueDate.slice(5, 7)}${input.issueDate.slice(2, 4)}`
     const seqKey = ddmmYY
     const seqRow = db
       .select()
@@ -1014,7 +1024,7 @@ export function renewMembership(input: RenewMembershipInput): RenewMembershipRes
         subtotal_minor: pricing.finalPriceMinor,
         tax_minor: taxAmountMinor,
         total_minor: lineTotalMinor,
-        finalized_at: new Date().toISOString(),
+        finalized_at: businessDateToUtc(input.issueDate, orgTimezone(organizationId)),
         finalized_by: userId
       })
       .where(eq(invoices.id, invoiceId))
@@ -1027,7 +1037,7 @@ export function renewMembership(input: RenewMembershipInput): RenewMembershipRes
         .values({
           organization_id: organizationId,
           customer_id: customer.id,
-          payment_date: new Date().toISOString().slice(0, 10),
+          payment_date: input.issueDate,
           amount_minor: input.paidAmountMinor,
           payment_method: input.paymentMethod,
           created_by: userId

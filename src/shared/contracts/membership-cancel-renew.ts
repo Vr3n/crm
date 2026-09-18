@@ -89,6 +89,8 @@ export const renewMembershipInputSchema = z
     joiningDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /** Shared billing date: drives BOTH Invoice finalized_at and Payment payment_date (#110). */
+    issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     basePriceMinor: z.number().int().min(0),
     discountType: z.enum(['NONE', 'PERCENTAGE', 'FIXED_AMOUNT', 'OVERRIDE_PRICE']),
     discountValueMinor: z.number().int().min(0).nullable(),

@@ -110,6 +110,7 @@ export function MembershipSalePage(): React.JSX.Element {
       joiningDate: todayISO(),
       startDate: todayISO(),
       endDate: todayISO(),
+      billingDate: todayISO(),
       baseInput: '',
       discountType: 'NONE' as 'NONE' | Offer['discountType'],
       discountValue: '',
@@ -136,6 +137,7 @@ export function MembershipSalePage(): React.JSX.Element {
           joiningDate: value.joiningDate,
           startDate: value.startDate,
           endDate: value.endDate,
+          issueDate: value.billingDate,
           basePriceMinor: baseMinor,
           discountType: value.discountType as SellMembershipInput['discountType'],
           discountValueMinor,
@@ -165,6 +167,7 @@ export function MembershipSalePage(): React.JSX.Element {
   const startDate = useStore(form.store, (s) => s.values.startDate)
   const joiningDate = useStore(form.store, (s) => s.values.joiningDate)
   const endDate = useStore(form.store, (s) => s.values.endDate)
+  const billingDate = useStore(form.store, (s) => s.values.billingDate)
   const baseInput = useStore(form.store, (s) => s.values.baseInput)
   const discountType = useStore(form.store, (s) => s.values.discountType)
   const discountValue = useStore(form.store, (s) => s.values.discountValue)
@@ -222,6 +225,7 @@ export function MembershipSalePage(): React.JSX.Element {
   const paidAmount = paidInput === '' ? null : (parseToMinor(paidInput, currency) ?? 0)
   const paidValid = paidAmount === null || paidAmount >= 0
   const paidOverMax = paidAmount !== null && maxPayment !== null && paidAmount > maxPayment
+  const billingValid = /^\d{4}-\d{2}-\d{2}$/.test(billingDate)
 
   // Use leadDetail as effective lead (simplified, no selectedLead cache needed because leadId now drives lookup)
   const effectiveLead = leadDetail ?? null
@@ -800,6 +804,9 @@ export function MembershipSalePage(): React.JSX.Element {
               onPaymentMethodChange={(v) => form.setFieldValue('paymentMethod', v)}
               chequeNumber={chequeNumber}
               onChequeNumberChange={(v) => form.setFieldValue('chequeNumber', v)}
+              billingDate={billingDate}
+              todayIso={todayISO()}
+              onBillingDateChange={(v) => form.setFieldValue('billingDate', v)}
               isDirty={isDirty}
               leadName={effectiveLead?.name ?? null}
             />
@@ -816,6 +823,7 @@ export function MembershipSalePage(): React.JSX.Element {
                     !paymentMethod ||
                     !paidValid ||
                     paidOverMax ||
+                    !billingValid ||
                     paidInput === '' ||
                     isSubmitting
                   }

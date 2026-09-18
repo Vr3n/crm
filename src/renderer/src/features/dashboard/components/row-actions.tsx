@@ -1,22 +1,25 @@
-import { Bell, Eye, Wallet } from 'lucide-react'
+import { Bell, Eye, RotateCcw, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 /**
- * Row actions: icon-only View-details (Eye), Make Payment (Wallet), and
- * Follow-up (Bell). Each is a slightly larger outlined button tinted with a
- * brand accent so the actions are easy to tell apart at a glance.
+ * Row actions: icon-only View-details (Eye), Make Payment (Wallet), optional
+ * Renew (RotateCcw, only when onRenew is provided) and Follow-up (Bell). Each
+ * is a slightly larger outlined button tinted with a brand accent so the
+ * actions are easy to tell apart at a glance.
  */
 export function RowActions({
   memberName,
   onView,
   onMakePayment,
+  onRenew,
   onFollowUp
 }: {
   memberName: string
   onView?: () => void
   onMakePayment?: () => void
+  onRenew?: () => void
   onFollowUp?: () => void
 }): React.JSX.Element {
   return (
@@ -62,6 +65,23 @@ export function RowActions({
         </TooltipTrigger>
         <TooltipContent side="left">Make payment</TooltipContent>
       </Tooltip>
+
+      {onRenew ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950"
+              aria-label={`Renew ${memberName} membership`}
+              onClick={onRenew}
+            >
+              <RotateCcw className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">Renew</TooltipContent>
+        </Tooltip>
+      ) : null}
 
       <Tooltip>
         <TooltipTrigger asChild>

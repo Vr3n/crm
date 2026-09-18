@@ -17,6 +17,9 @@ import { DateRangePicker, type DateRangePreset } from './date-range-picker'
 import { ContactCell } from './contact-cell'
 import { MemberDetailsSheet } from './member-details-sheet'
 import { NameCell } from './name-cell'
+import { paymentToRenewTarget } from './renew-target'
+import { RenewMembershipDialog } from '@/features/memberships/components/renew-membership-dialog'
+import type { Membership } from '@/features/customers/types'
 import { RowActions } from './row-actions'
 import { SortButton } from './sort-button'
 import { ExportExcelButton } from '@/features/export/components/export-excel-button'
@@ -41,6 +44,7 @@ const helper = createColumnHelper<DashboardFeatures, PaymentDue>()
 function buildColumns(
   onView: (row: PaymentDue) => void,
   onMakePayment: (row: PaymentDue) => void,
+  onRenew: (row: PaymentDue) => void,
   onFollowUp: (row: PaymentDue) => void
 ): ReturnType<typeof helper.columns> {
   return helper.columns([
@@ -103,6 +107,11 @@ function buildColumns(
           memberName={row.original.member.name}
           onView={() => onView(row.original)}
           onMakePayment={() => onMakePayment(row.original)}
+          onRenew={
+            // Hide Renew when the backend couldn't resolve a membership —
+            // renewing the wrong period would misattribute the renewal.
+            paymentToRenewTarget(row.original) ? () => onRenew(row.original) : undefined
+          }
           onFollowUp={() => onFollowUp(row.original)}
         />
       )
@@ -141,6 +150,7 @@ export function PaymentsDueTable({
   const [range, setRange] = useState<DateRange>()
   const [row, setRow] = useState<PaymentDue | null>(null)
   const [open, setOpen] = useState(false)
+  const [renewTarget, setRenewTarget] = useState<Membership | null>(null)
 
   const handleView = useCallback((selected: PaymentDue) => {
     setRow(selected)
@@ -161,6 +171,11 @@ export function PaymentsDueTable({
     [onMakePayment]
   )
 
+  const handleRenew = useCallback((selected: PaymentDue) => {
+    const target = paymentToRenewTarget(selected)
+    if (target) setRenewTarget(target)
+  }, [])
+
   const handleFollowUp = useCallback(
     (selected: PaymentDue) => {
       onFollowUp(selected)
@@ -169,8 +184,8 @@ export function PaymentsDueTable({
   )
 
   const columns = useMemo(
-    () => buildColumns(handleView, handleMakePayment, handleFollowUp),
-    [handleView, handleMakePayment, handleFollowUp]
+    () => buildColumns(handleView, handleMakePayment, handleRenew, handleFollowUp),
+    [handleView, handleMakePayment, handleRenew, handleFollowUp]
   )
 
   const presets = useMemo<DateRangePreset[]>(() => {
@@ -215,6 +230,7 @@ export function PaymentsDueTable({
   return (
     <>
       <Card
+        data-testid="payments-due-table"
         className="crm-gradient-border"
         style={
           {
@@ -268,6 +284,15 @@ export function PaymentsDueTable({
         </CardContent>
       </Card>
       <MemberDetailsSheet row={row} open={open} onOpenChange={setOpen} />
+      {renewTarget ? (
+        <RenewMembershipDialog
+          membership={renewTarget}
+          open={!!renewTarget}
+          onOpenChange={(o) => {
+            if (!o) setRenewTarget(null)
+          }}
+        />
+      ) : null}
     </>
   )
 }

@@ -15,13 +15,16 @@ export function CatalogDatePicker({
   onChange,
   placeholder = 'Pick a date',
   clearable = false,
-  triggerClassName
+  triggerClassName,
+  testId
 }: {
   value: string
   onChange: (date: string) => void
   placeholder?: string
   clearable?: boolean
   triggerClassName?: string
+  /** Optional data-testid for the trigger (E2E only, no visual effect). */
+  testId?: string
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
 
@@ -34,6 +37,7 @@ export function CatalogDatePicker({
         <Button
           variant="outline"
           size="sm"
+          data-testid={testId}
           className={cn(
             'h-9 w-full justify-start gap-2 rounded-md px-3 text-sm font-normal',
             !valid && 'text-muted-foreground',

@@ -4,6 +4,7 @@ import {
   buildOrgHeader,
   buildDocTitle,
   buildFooter,
+  buildTermsBlock,
   formatRupees,
   formatDate,
   escapeHtml,
@@ -262,6 +263,24 @@ export function renderInvoiceDocument(ctx: InvoicePrintContext): string {
     `
         : ''
     }
+
+    ${
+      ctx.finalizedBy
+        ? `
+    <!-- Attribution -->
+    <div class="section">
+      <div class="info-grid">
+        <div class="info-block">
+          <div class="info-label">Finalized By</div>
+          <div class="info-value">${escapeHtml(ctx.finalizedBy)}</div>
+        </div>
+      </div>
+    </div>
+    `
+        : ''
+    }
+
+    ${buildTermsBlock(ctx.org.invoiceTerms)}
 
     <!-- Footer -->
     ${buildFooter(ctx.generatedAt)}

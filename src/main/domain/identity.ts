@@ -13,8 +13,15 @@ export interface Organization {
   mobileNumber: string
   timezone: string | null
   currency: string
+  logo: string | null
   status: OrgStatus
   planTier: string | null
+  /** Free-text T&C printed on Invoice Document footers (live-read on print). */
+  invoiceTerms: string | null
+  /** Free-text T&C printed on Payment Receipt footers (live-read on print). */
+  receiptTerms: string | null
+  /** Free-text T&C printed on Refund Receipt footers (live-read on print). */
+  refundTerms: string | null
   createdAt: string
 }
 

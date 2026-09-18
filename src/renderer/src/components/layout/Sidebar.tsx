@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { initials } from '@/lib/validation'
 import { can, useSession } from '@/context/session-context'
 import { visibleGroups, type NavItem } from '@/lib/navigation'
+import { useOrgLogo } from '@/features/identity/queries'
 import { useOverdueFollowUpCount } from '@/features/followups/queries'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -27,6 +28,7 @@ export function Sidebar(): React.JSX.Element {
   }, [collapsed])
 
   const groups = visibleGroups(session.permissions, session.isSuper, can)
+  const { data: logo } = useOrgLogo()
 
   return (
     <aside
@@ -43,8 +45,12 @@ export function Sidebar(): React.JSX.Element {
           collapsed ? 'justify-center px-2' : 'gap-2.5 px-4'
         )}
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Crown className="size-5" />
+        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+          {logo?.src ? (
+            <img src={logo.src} alt={`${session.organizationName} logo`} className="size-9 object-cover" />
+          ) : (
+            <Crown className="size-5" />
+          )}
         </div>
         {!collapsed && (
           <span className="min-w-0 truncate font-heading text-lg font-semibold tracking-tight">

@@ -23,7 +23,11 @@ export const membershipExpirationSchema = z.object({
   member: dashboardPersonRefSchema,
   plan: z.string(),
   purchasedAt: z.string(),
-  expiresAt: z.string()
+  expiresAt: z.string(),
+  /** Renewal shortcut (#110): direct renew-dialog inputs. */
+  customerId: z.string(),
+  planId: z.string().nullable(),
+  joiningDate: z.string()
 })
 export type MembershipExpirationOutput = z.infer<typeof membershipExpirationSchema>
 
@@ -39,7 +43,11 @@ export const paymentDueSchema = z.object({
   planEndDate: z.string(),
   joiningDate: z.string(),
   membershipAmountMinor: z.number().int(),
-  membershipPurchasedAt: z.string()
+  membershipPurchasedAt: z.string(),
+  /** Renewal shortcut (#110, Phase 2). Null membership/plan → hide Renew. */
+  customerId: z.string(),
+  membershipId: z.string().nullable(),
+  renewPlanId: z.string().nullable()
 })
 export type PaymentDueOutput = z.infer<typeof paymentDueSchema>
 

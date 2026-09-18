@@ -20,6 +20,7 @@ import {
   markUncollectibleInputSchema,
   updateBillingSnapshotInputSchema,
   invoiceIdRequestSchema,
+  invoiceNumberPreviewRequestSchema,
   customerInvoicesRequestSchema
 } from '../../shared/contracts/billing'
 import { IPC_CHANNELS } from '../../shared/contracts/ipc.channels'
@@ -44,7 +45,9 @@ export function registerBillingIpc(): void {
   handle(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, updateBillingSnapshotInputSchema, (input) =>
     updateBillingSnapshot(input)
   )
-  handle(IPC_CHANNELS.BILLING_NEXT_NUMBER, () => nextInvoiceNumberPreview())
+  handle(IPC_CHANNELS.BILLING_NEXT_NUMBER, invoiceNumberPreviewRequestSchema, (input) =>
+    nextInvoiceNumberPreview(input)
+  )
   handle(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, customerInvoicesRequestSchema, (input) =>
     listInvoicesByCustomer(input)
   )

@@ -354,5 +354,16 @@ Reporting queries can use optimized SQL/read models.
 
 This keeps the domain model comprehensible.
 
+Excel exports render Organization-local wall-clock values, never raw UTC
+instants (#110): date-only columns pass through as wall dates (they must never
+cross a calendar day); true datetimes are parsed as UTC (SQLite
+`"YYYY-MM-DD HH:MM:SS"` included) then converted to `Organization.timezone`.
+The exporter accepts an optional `timezone`; invalid values fall back
+deterministically. Revenue-by-period reports group by `finalized_at` (the
+commercial paper date), never `created_at` (the typing timestamp).
+
+The expirations surface carries a Renew shortcut: each row and the record
+drawer open the standard renew dialog prefilled from that membership (#110).
+
 ---
 

@@ -147,6 +147,11 @@ export const IPC_CHANNELS = {
   // Licensing
   LICENSE_STATUS: 'license:status',
 
+  // Organization logo (BrandMark)
+  ORG_LOGO_UPDATE: 'organization.logo:update',
+  ORG_LOGO_DELETE: 'organization.logo:delete',
+  ORG_LOGO_GET: 'organization.logo:get',
+
   // Person Photo (Issue #106)
   PERSON_PHOTO_UPDATE: 'person.photo:update',
   PERSON_PHOTO_DELETE: 'person.photo:delete',

@@ -108,6 +108,13 @@ Because the first application has no payment gateway integration, a staff member
 
 That distinction matters.
 
+`payment_date` is a date-only business value (`YYYY-MM-DD`, validated at the
+IPC boundary). It is independent of any Invoice issue date: the membership
+sale and renewal forms offer one shared billing date as a convenience that
+writes both fields, but later or partial payments always carry their own date.
+A payment dated before its invoice's issue date is accepted with a
+renderer-local warning, never a block (#110).
+
 ---
 
 # 16. Payment Allocation

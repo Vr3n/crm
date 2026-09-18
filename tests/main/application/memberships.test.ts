@@ -34,6 +34,7 @@ function saleInput(leadId: number, transactionId: string): SellMembershipInput {
     offerId: null,
     joiningDate: '2026-08-25',
     ...saleDates,
+    issueDate: '2026-08-25',
     basePriceMinor: 150_000,
     discountType: 'NONE' as const,
     discountValueMinor: null,

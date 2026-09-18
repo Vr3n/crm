@@ -11,17 +11,17 @@ import {
   stageHistoryRepo,
   stageRepo
 } from '../repositories/sales'
-import { organizationRepo, userRepo } from '../repositories/identity'
+import { userRepo } from '../repositories/identity'
 import { planRepo } from '../repositories/catalog'
 import { logger } from '../lib/logger'
 import { IndianMobileNumber } from '../domain/phone'
 import {
-  DEFAULT_TIMEZONE,
   LeadStageMachine,
   localDayUtcRange,
   deriveLeadStatus,
   samePersonName
 } from '../domain/lead'
+import { orgTimezone } from './organization'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors'
 import { assertPersonAllowed } from './blacklist'
 import { PERMISSIONS } from '../db/permissions'
@@ -80,10 +80,6 @@ const SUPPRESS_FOLLOWUP_REASONS: Record<string, string> = {
 /** Auto-NOTE text for a completion that also moves the lead (strict-move rule). */
 function completedFollowupNote(targetName: string): string {
   return `Followup completed — moved to ${targetName}`
-}
-
-function orgTimezone(organizationId: number): string {
-  return organizationRepo.findById(organizationId)?.timezone ?? DEFAULT_TIMEZONE
 }
 
 function stageMachineFor(organizationId: number): LeadStageMachine {

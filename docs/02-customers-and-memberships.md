@@ -352,6 +352,13 @@ RenewMembership
 
 which creates the relevant billing records and adjusts the membership entitlement according to the selected business rule.
 
+Renewal carries three independent dates that must never be conflated (#110):
+`joiningDate` (when the person first joined), `startDate` (the new period's
+start) and `issueDate` (the paperwork date driving Invoice `finalized_at` and
+Payment `payment_date`). Renewal is reachable from the Customer record, lead
+commerce card, and — as a shortcut — every row and the record drawer of the
+dashboard expirations surface, all opening the same renew dialog.
+
 ---
 
 # 29. Membership Upgrade / Downgrade

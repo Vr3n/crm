@@ -101,10 +101,7 @@ export function savePhotoSync(
 /**
  * Deletes a photo file from disk. No-op if the file doesn't exist.
  */
-export async function deletePhotoFile(
-  organizationId: number,
-  filename: string
-): Promise<void> {
+export async function deletePhotoFile(organizationId: number, filename: string): Promise<void> {
   const dir = await getPhotoDirectory(organizationId)
   const filePath = join(dir, filename)
   try {
@@ -118,10 +115,7 @@ export async function deletePhotoFile(
 /**
  * Synchronous version of deletePhotoFile for use in sync contexts.
  */
-export function deletePhotoFileSync(
-  organizationId: number,
-  filename: string
-): void {
+export function deletePhotoFileSync(organizationId: number, filename: string): void {
   const dir = getPhotoDirectorySync(organizationId)
   const filePath = join(dir, filename)
   try {
@@ -134,10 +128,7 @@ export function deletePhotoFileSync(
 /**
  * Returns the absolute path to a photo file for serving/display.
  */
-export async function getPhotoPath(
-  organizationId: number,
-  filename: string
-): Promise<string> {
+export async function getPhotoPath(organizationId: number, filename: string): Promise<string> {
   const dir = await getPhotoDirectory(organizationId)
   return join(dir, filename)
 }
@@ -147,6 +138,56 @@ export async function getPhotoPath(
  */
 export function getPhotoPathSync(organizationId: number, filename: string): string {
   const dir = getPhotoDirectorySync(organizationId)
+  return join(dir, filename)
+}
+
+/**
+ * Returns the directory path for organization logos.
+ * Creates the directory if it doesn't exist.
+ */
+export async function getLogoDirectory(organizationId: number): Promise<string> {
+  const { userDataPath } = getConfig()
+  const dir = join(userDataPath, 'logos', String(organizationId))
+  await mkdir(dir, { recursive: true })
+  return dir
+}
+
+/** Synchronous version of getLogoDirectory for use in sync contexts. */
+export function getLogoDirectorySync(organizationId: number): string {
+  const { userDataPath } = getConfig()
+  const dir = join(userDataPath, 'logos', String(organizationId))
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+/** Saves a logo buffer to disk and returns the filename (UUID.ext). */
+export function saveLogoSync(
+  organizationId: number,
+  originalFilename: string,
+  buffer: Buffer
+): string {
+  const ext = validateFileType(originalFilename)
+  const filename = `${randomUUID()}.${ext}`
+  const dir = getLogoDirectorySync(organizationId)
+  const filePath = join(dir, filename)
+  writeFileSync(filePath, buffer)
+  return filename
+}
+
+/** Deletes a logo file from disk. No-op if missing. */
+export function deleteLogoFileSync(organizationId: number, filename: string): void {
+  const dir = getLogoDirectorySync(organizationId)
+  const filePath = join(dir, filename)
+  try {
+    unlinkSync(filePath)
+  } catch {
+    // no-op
+  }
+}
+
+/** Absolute path to a logo file. */
+export function getLogoPathSync(organizationId: number, filename: string): string {
+  const dir = getLogoDirectorySync(organizationId)
   return join(dir, filename)
 }
 

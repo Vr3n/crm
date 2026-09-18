@@ -28,6 +28,10 @@ export interface MembershipExpiration {
   plan: string
   purchasedAt: string
   expiresAt: string
+  /** Renewal shortcut (#110): direct renew-dialog inputs. */
+  customerId: string
+  planId: string | null
+  joiningDate: string
 }
 
 /** An unpaid obligation — drives collection follow-ups. */
@@ -44,6 +48,10 @@ export interface PaymentDue {
   joiningDate: string
   membershipAmountMinor: number
   membershipPurchasedAt: string
+  /** Renewal shortcut (#110, Phase 2). Null membership/plan → hide Renew. */
+  customerId: string
+  membershipId: string | null
+  renewPlanId: string | null
 }
 
 /** Settlement state of a membership invoice. */

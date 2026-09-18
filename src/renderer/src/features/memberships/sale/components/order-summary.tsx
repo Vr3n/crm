@@ -12,9 +12,13 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { formatMinor, formatRate, parseToMinor, sanitizeMoneyInput } from '@/lib/money'
+import { billingDateCautions } from '@/lib/billing-warnings'
 import { useCurrency } from '@/hooks/use-currency'
 import { PAYMENT_METHODS } from '@/lib/payment-methods'
+import { CatalogDatePicker } from '@/features/catalog/components/catalog-date-picker'
 import type { Plan } from '@/features/catalog/types'
+
+const BILLING_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
 export function OrderSummary({
   plan = null,
@@ -28,9 +32,12 @@ export function OrderSummary({
   paidAmount = null,
   paymentMethod = '',
   chequeNumber = '',
+  billingDate = '',
+  todayIso = '',
   onPaidChange,
   onPaymentMethodChange,
   onChequeNumberChange,
+  onBillingDateChange,
   isDirty = false,
   leadName = null
 }: {
@@ -45,13 +52,18 @@ export function OrderSummary({
   paidAmount?: number | null
   paymentMethod?: string | null
   chequeNumber?: string
+  billingDate?: string
+  todayIso?: string
   onPaidChange?: (v: string) => void
   onPaymentMethodChange?: (v: string) => void
   onChequeNumberChange?: (v: string) => void
+  onBillingDateChange?: (v: string) => void
   isDirty?: boolean
   leadName?: string | null
 }): React.JSX.Element {
   const currency = useCurrency()
+  const billingValid = BILLING_DATE_REGEX.test(billingDate)
+  const cautions = billingValid ? billingDateCautions(billingDate, todayIso || billingDate) : []
   const amountDue =
     finalPrice !== null && paidAmount !== null ? Math.max(0, finalPrice - paidAmount) : null
   const exceedsMax = maxPayment !== null && paidAmount !== null && paidAmount > maxPayment
@@ -144,6 +156,36 @@ export function OrderSummary({
           >
             {finalPrice !== null ? formatMinor(finalPrice, currency) : '—'}
           </span>
+        </div>
+
+        <Separator />
+
+        {/* Billing date — one date drives Invoice finalized_at + Payment date */}
+        <div className="flex flex-col gap-1.5 px-5 py-3">
+          <Label className="text-xs">
+            Billing date <span className="text-destructive">*</span>{' '}
+            <span className="font-normal text-muted-foreground">· sets Invoice + Payment</span>
+          </Label>
+          <CatalogDatePicker
+            value={billingDate}
+            onChange={(v) => onBillingDateChange?.(v)}
+            placeholder="Pick billing date"
+            testId="billing-date-picker"
+          />
+          {!billingValid ? (
+            <p className="text-[11px] text-destructive" role="alert">
+              Enter a valid billing date
+            </p>
+          ) : (
+            cautions.map((c) => (
+              <p key={c.code} className="text-[11px] text-amber-600">
+                {c.message}
+                {c.source ? (
+                  <span className="block text-muted-foreground">{c.source}</span>
+                ) : null}
+              </p>
+            ))
+          )}
         </div>
 
         <Separator />

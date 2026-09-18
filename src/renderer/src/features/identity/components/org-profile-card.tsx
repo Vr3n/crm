@@ -1,9 +1,10 @@
-import { Building2, Clock3, Mail, Phone } from 'lucide-react'
+import { Building2, Clock3, FileText, Mail, Phone } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/features/leads/format'
 import { ORG_STATUS_META } from '../constants'
 import type { OrganizationProfile } from '../types'
+import { useOrgLogo } from '../queries'
 
 /**
  * The organization profile card (Module 14 § 1–2). This is the tenant's
@@ -21,6 +22,7 @@ export function OrgProfileCard({
   canEdit?: boolean
 }): React.JSX.Element {
   const statusMeta = ORG_STATUS_META[org.status]
+  const { data: logo } = useOrgLogo()
 
   return (
     <div
@@ -34,8 +36,12 @@ export function OrgProfileCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <Building2 className="size-5" />
+          <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary/10 text-primary">
+            {logo?.src ? (
+              <img src={logo.src} alt={`${org.name} logo`} className="size-11 object-cover" />
+            ) : (
+              <Building2 className="size-5" />
+            )}
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex items-center gap-2">
@@ -80,6 +86,27 @@ export function OrgProfileCard({
           <span className="truncate font-mono text-sm">{org.currency}</span>
         </div>
       </div>
+
+      {canEdit ? (
+        <div className="grid gap-3">
+          {(
+            [
+              ['Invoice terms', org.invoiceTerms],
+              ['Receipt terms', org.receiptTerms],
+              ['Refund terms', org.refundTerms]
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-border bg-background/50 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-[11px] tracking-wide text-muted-foreground uppercase">
+                <FileText className="size-3" /> {label}
+              </span>
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                {value || 'Not set — printed documents stay clean.'}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <p className="text-xs text-muted-foreground">
         Organization since{' '}
