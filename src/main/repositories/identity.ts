@@ -125,7 +125,6 @@ export const organizationRepo = {
     billingEmail?: string | null
     timezone?: string | null
     currency: string
-    logo?: string | null
   }): Organization {
     const db = getDrizzle()
     const row = db
@@ -137,8 +136,7 @@ export const organizationRepo = {
         legal_name: input.legalName ?? null,
         billing_email: input.billingEmail ?? null,
         timezone: input.timezone ?? null,
-        currency: input.currency,
-        logo: input.logo ?? null
+        currency: input.currency
       })
       .returning()
       .get()

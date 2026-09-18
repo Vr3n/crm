@@ -67,9 +67,13 @@ export function deleteOrgLogo(): void {
   organizationRepo.updateLogo(organizationId, null)
 }
 
-/** Returns the logo with base64 data for display. Nulls when missing or unreadable. */
+/**
+ * Returns the logo with base64 data for display. Nulls when missing or
+ * unreadable. Session-only (no permission gate): the logo is tenant brand
+ * shown in the sidebar for every role, like the identity-read organization
+ * endpoint. Writes stay `org.manage`-gated.
+ */
 export function getOrgLogo(): OrgLogoOutput {
-  requirePermission(PERMISSIONS.ORG_VIEW)
   const organizationId = currentOrganizationId()
   const filename = organizationRepo.findLogoFilename(organizationId)
   if (!filename || filename.startsWith('data:')) {

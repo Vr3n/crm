@@ -8,6 +8,11 @@ import {
 import { toast } from 'sonner'
 import { api } from './api'
 import type { OrganizationProfile, Role, StaffMember } from './types'
+import type { OrgLogo } from './logo'
+import type {
+  OrgLogoOutput,
+  UpdateOrgLogoInput
+} from '../../../../shared/contracts/organization-logo'
 
 const identityKeys = {
   all: ['identity-settings'] as const,
@@ -25,7 +30,7 @@ export function useOrganization(): UseQueryResult<OrganizationProfile, Error> {
 }
 
 /** Organization logo with base64 data for <img> display. Cached 5 min (static asset). */
-export function useOrgLogo(): UseQueryResult<import('./logo').OrgLogo, Error> {
+export function useOrgLogo(): UseQueryResult<OrgLogo, Error> {
   return useQuery({
     queryKey: identityKeys.orgLogo(),
     queryFn: async () => {
@@ -40,14 +45,10 @@ export function useOrgLogo(): UseQueryResult<import('./logo').OrgLogo, Error> {
   })
 }
 
-export function useUpdateOrgLogo(): UseMutationResult<
-  unknown,
-  Error,
-  { filename: string; data: string }
-> {
+export function useUpdateOrgLogo(): UseMutationResult<OrgLogoOutput, Error, UpdateOrgLogoInput> {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { filename: string; data: string }) => api.updateOrgLogo(input),
+    mutationFn: (input: UpdateOrgLogoInput) => api.updateOrgLogo(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: identityKeys.all })
       toast.success('Logo updated')

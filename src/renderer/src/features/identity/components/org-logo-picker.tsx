@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -21,6 +21,21 @@ export function OrgLogoPicker({ disabled = false }: { disabled?: boolean }): Rea
   const src = preview ?? logo?.src ?? null
   const busy = updateLogo.isPending || deleteLogo.isPending
 
+  // Object URLs are process-local blobs: release the previous one whenever
+  // the preview is replaced, cleared, or the picker unmounts.
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [preview])
+
+  function clearPreview(): void {
+    setPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+  }
+
   async function onPick(file: File | undefined): Promise<void> {
     if (!file) return
     const err = logoFileError(file)
@@ -33,16 +48,16 @@ export function OrgLogoPicker({ disabled = false }: { disabled?: boolean }): Rea
     try {
       const data = await readFileAsBase64(file)
       await updateLogo.mutateAsync({ filename: file.name, data })
-      setPreview(null)
+      clearPreview()
     } catch {
-      setPreview(null)
+      clearPreview()
       // error toast handled by the mutation hook
     }
   }
 
   async function onRemove(): Promise<void> {
     setError(null)
-    setPreview(null)
+    clearPreview()
     try {
       await deleteLogo.mutateAsync()
     } catch {

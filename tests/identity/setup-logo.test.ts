@@ -9,6 +9,7 @@ import { organizationRepo } from '../../src/main/repositories/identity'
 import { getOrgLogo } from '../../src/main/application/organization-logo'
 import { configurePhotoStorage, getLogoPathSync } from '../../src/main/lib/photo-storage'
 import { ValidationError } from '../../src/main/domain/errors'
+import { setSession } from '../../src/main/auth/session'
 
 setupTestDb()
 
@@ -41,6 +42,16 @@ describe('setupOrganization with logo', () => {
     expect(logo.logoFilename).toBe(filename)
     expect(logo.logoData).toBe(TINY_PNG_B64)
     expect(logo.mimeType).toBe('image/png')
+  })
+
+  it('reads the logo without org.view (sidebar shows it for every role)', () => {
+    const session = setupOrganization({
+      ...VALID,
+      logo: { filename: 'gym.png', data: TINY_PNG_B64 }
+    })
+    setSession({ ...session, permissions: [], isSuper: false })
+    const logo = getOrgLogo()
+    expect(logo.logoData).toBe(TINY_PNG_B64)
   })
 
   it('setup without a logo still works and leaves no logo', () => {

@@ -1,4 +1,4 @@
-import { useRef, useState, FormEvent } from 'react'
+import { useEffect, useRef, useState, FormEvent } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useQuery } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
@@ -89,6 +89,20 @@ export function AuthGate({
   const [logoError, setLogoError] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
 
+  // Release the transient preview blob when replaced, cleared, or unmounted.
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview)
+    }
+  }, [logoPreview])
+
+  function clearLogoPreview(): void {
+    setLogoPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return null
+    })
+  }
+
   async function onPickSetupLogo(file: File | undefined): Promise<void> {
     if (!file) return
     const err = logoFileError(file)
@@ -102,7 +116,7 @@ export function AuthGate({
       const data = await readFileAsBase64(file)
       setPendingLogo({ filename: file.name, data })
     } catch {
-      setLogoPreview(null)
+      clearLogoPreview()
       setPendingLogo(null)
       setLogoError('Could not read that image — try another file.')
     }
@@ -110,7 +124,7 @@ export function AuthGate({
 
   function onRemoveSetupLogo(): void {
     setPendingLogo(null)
-    setLogoPreview(null)
+    clearLogoPreview()
     setLogoError(null)
     if (logoInputRef.current) logoInputRef.current.value = ''
   }
