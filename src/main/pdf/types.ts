@@ -7,6 +7,14 @@ export interface OrgBranding {
   gstin?: string | null
   mobileNumber: string
   invoicePrefix?: string | null
+  /** Organization timezone — `generatedAt` is rendered in it. */
+  timezone?: string | null
+  /** Terms & Conditions printed on Invoice Document footers. */
+  invoiceTerms?: string | null
+  /** Terms & Conditions printed on Payment Receipt footers. */
+  receiptTerms?: string | null
+  /** Terms & Conditions printed on Refund Receipt footers. */
+  refundTerms?: string | null
 }
 
 /** Customer/billing snapshot for PDF documents. */
@@ -60,6 +68,11 @@ export interface InvoicePrintContext {
   /** Total refunded against this invoice (net = paid − refunded). */
   refundedAmount: number
   outstanding: number
+  /**
+   * User who finalized the invoice, rendered as "Full Name (Role)". Null for a
+   * DRAFT preview — no Finalized By line is shown until the invoice is finalized.
+   */
+  finalizedBy?: string | null
   generatedAt: string
 }
 

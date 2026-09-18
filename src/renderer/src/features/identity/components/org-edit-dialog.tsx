@@ -18,10 +18,13 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { emailError, mobileError } from '@/lib/validation'
 import { CURRENCIES, TIMEZONES } from '../constants'
 import { useUpdateOrganization } from '../queries'
 import type { OrganizationProfile } from '../types'
+import { ORG_TERMS_MAX_LENGTH, termsError } from '../validation'
+import { OrgLogoPicker } from './org-logo-picker'
 
 /**
  * Edit the organization profile (Module 14 § 2). Legal identity, billing
@@ -45,7 +48,10 @@ export function OrgEditDialog({
       billingEmail: org.billingEmail ?? '',
       mobileNumber: org.mobileNumber,
       timezone: org.timezone ?? TIMEZONES[0],
-      currency: org.currency
+      currency: org.currency,
+      invoiceTerms: org.invoiceTerms ?? '',
+      receiptTerms: org.receiptTerms ?? '',
+      refundTerms: org.refundTerms ?? ''
     },
     onSubmit: async ({ value }) => {
       try {
@@ -54,7 +60,10 @@ export function OrgEditDialog({
           billingEmail: value.billingEmail,
           mobileNumber: value.mobileNumber,
           timezone: value.timezone,
-          currency: value.currency
+          currency: value.currency,
+          invoiceTerms: value.invoiceTerms,
+          receiptTerms: value.receiptTerms,
+          refundTerms: value.refundTerms
         })
         onOpenChange(false)
       } catch {
@@ -65,14 +74,15 @@ export function OrgEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="size-4 text-primary" />
             Edit organization
           </DialogTitle>
           <DialogDescription>
-            How your gym identifies itself, and how dates and money are computed.
+            How your gym identifies itself, computes dates and money, and what it
+            promises on its printed invoices and receipts.
           </DialogDescription>
         </DialogHeader>
 
@@ -84,6 +94,7 @@ export function OrgEditDialog({
           }}
         >
           <div className="grid gap-3">
+            <OrgLogoPicker />
             <form.Field
               name="legalName"
               validators={{
@@ -215,6 +226,47 @@ export function OrgEditDialog({
                 )}
               </form.Field>
             </div>
+
+            {(['invoiceTerms', 'receiptTerms', 'refundTerms'] as const).map((name) => (
+              <form.Field
+                key={name}
+                name={name}
+                validators={{
+                  onChange: ({ value }) => termsError(value)
+                }}
+              >
+                {(field) => (
+                  <div className="grid gap-1.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <Label htmlFor={`org-${field.name}`}>
+                        {name === 'invoiceTerms'
+                          ? 'Invoice terms'
+                          : name === 'receiptTerms'
+                            ? 'Receipt terms'
+                            : 'Refund terms'}
+                      </Label>
+                      <span className="text-[11px] text-muted-foreground tabular-nums">
+                        {field.state.value.length}/{ORG_TERMS_MAX_LENGTH}
+                      </span>
+                    </div>
+                    <Textarea
+                      id={`org-${field.name}`}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Printed on the footer of the document. Empty leaves the document clean."
+                      className="max-h-40 min-h-16"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Appears on new printed documents the moment you save.
+                    </p>
+                    {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
+                      <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+            ))}
           </div>
 
           <DialogFooter>

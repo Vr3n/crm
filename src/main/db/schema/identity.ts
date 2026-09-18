@@ -22,6 +22,28 @@ export const organizations = sqliteTable('organizations', {
   logo: text('logo'),
   address: text('address'),
   gstin: text('gstin'),
+  /**
+   * Free-text Terms & Conditions printed on Invoice Document footers (live-read
+   * on each print, never snapshotted). Edited in Organization settings; a
+   * seeded default is supplied so new receipts are never blank.
+   */
+  invoice_terms: text('invoice_terms').default(
+    "1. This is a computer-generated invoice and is valid without a signature.\n2. Fees for the agreed membership period are payable in full once billed.\n3. Report any billing discrepancy within 7 days of the invoice date.\n4. This invoice is subject to the gym cancellation, freeze and proration policies in force."
+  ),
+  /**
+   * Free-text Terms & Conditions printed on Payment Receipt footers (live-read
+   * on each print, never snapshotted). Edited in Organization settings.
+   */
+  receipt_terms: text('receipt_terms').default(
+    "1. This receipt acknowledges payment received for the stated membership.\n2. Please keep this receipt for your records.\n3. This is a computer-generated document and needs no signature."
+  ),
+  /**
+   * Free-text Terms & Conditions printed on Refund Receipt footers (live-read
+   * on each print, never snapshotted). Edited in Organization settings.
+   */
+  refund_terms: text('refund_terms').default(
+    "1. Refunds are issued per the applicable cancellation policy.\n2. Refunded value returns via the method shown above.\n3. This is a computer-generated document and needs no signature."
+  ),
   status: text('status').notNull().default('ACTIVE'),
   plan_tier: text('plan_tier'),
   created_at: text('created_at')

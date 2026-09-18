@@ -95,6 +95,75 @@ describe('organizationRepo', () => {
       })
     ).toBe(false)
   })
+
+  it('updates the profile and per-document terms, clearing nulls', () => {
+    const org = createOrg()
+
+    const updated = organizationRepo.update(org.id, {
+      legalName: 'Fit Gym LLP',
+      billingEmail: 'billing@fitgym.com',
+      mobileNumber: '9123456789',
+      timezone: 'Asia/Kolkata',
+      currency: 'INR',
+      invoiceTerms: 'Invoice clause one',
+      receiptTerms: 'Receipt clause one',
+      refundTerms: 'Refund clause one'
+    })
+
+    expect(updated).toMatchObject({
+      id: org.id,
+      legalName: 'Fit Gym LLP',
+      billingEmail: 'billing@fitgym.com',
+      mobileNumber: '9123456789',
+      timezone: 'Asia/Kolkata',
+      currency: 'INR',
+      invoiceTerms: 'Invoice clause one',
+      receiptTerms: 'Receipt clause one',
+      refundTerms: 'Refund clause one'
+    })
+    expect(organizationRepo.findById(org.id)!.invoiceTerms).toBe('Invoice clause one')
+
+    const cleared = organizationRepo.update(org.id, {
+      legalName: null,
+      billingEmail: null,
+      mobileNumber: '9111111111',
+      timezone: null,
+      currency: 'INR',
+      invoiceTerms: null,
+      receiptTerms: null,
+      refundTerms: null
+    })
+    expect(cleared!.invoiceTerms).toBeNull()
+    expect(cleared!.receiptTerms).toBeNull()
+    expect(cleared!.refundTerms).toBeNull()
+    expect(cleared!.legalName).toBeNull()
+  })
+
+  it('returns null when updating an organization that does not exist', () => {
+    expect(
+      organizationRepo.update(99999, {
+        mobileNumber: '9876543210',
+        currency: 'INR'
+      })
+    ).toBeNull()
+  })
+
+  it('creates an organization with term defaults pre-seeded by the column default', () => {
+    const org = createOrg()
+    const row = getDb()
+      .prepare('SELECT invoice_terms, receipt_terms, refund_terms FROM organizations WHERE id = ?')
+      .get(org.id) as {
+      invoice_terms: string | null
+      receipt_terms: string | null
+      refund_terms: string | null
+    }
+    expect(row.invoice_terms).toBeTruthy()
+    expect(row.receipt_terms).toBeTruthy()
+    expect(row.refund_terms).toBeTruthy()
+    expect(org.invoiceTerms).toBe(row.invoice_terms)
+    expect(org.receiptTerms).toBe(row.receipt_terms)
+    expect(org.refundTerms).toBe(row.refund_terms)
+  })
 })
 
 describe('userRepo', () => {

@@ -14,6 +14,9 @@ export interface OrganizationOutput {
   currency: string
   status: string
   planTier: string | null
+  invoiceTerms: string | null
+  receiptTerms: string | null
+  refundTerms: string | null
   createdAt: string
 }
 

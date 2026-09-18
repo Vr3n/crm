@@ -4,6 +4,7 @@ import {
   buildOrgHeader,
   buildDocTitle,
   buildFooter,
+  buildTermsBlock,
   formatRupees,
   formatDate,
   escapeHtml,
@@ -128,6 +129,8 @@ export function renderPaymentReceipt(ctx: ReceiptPrintContext): string {
         </div>
       </div>
     </div>
+
+    ${buildTermsBlock(ctx.org.receiptTerms)}
 
     <!-- Footer -->
     ${buildFooter(ctx.generatedAt)}

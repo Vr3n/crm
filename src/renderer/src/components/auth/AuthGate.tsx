@@ -32,6 +32,7 @@ import {
 } from '@/lib/validation'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { cn } from '@/lib/utils'
+import { logoFileError, readFileAsBase64 } from '@/features/identity/logo'
 
 type SessionContext = Awaited<ReturnType<typeof window.api.identity.session>>
 
@@ -78,6 +79,41 @@ export function AuthGate({
   const [showPassword, setShowPassword] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const successTimer = useRef<number | null>(null)
+  /**
+   * Optional setup logo (transient mode, like PersonAvatar in the New Lead
+   * form): held outside the TanStack Form state, read to base64 at pick
+   * time, and sent with the setup payload on submit. Absent stays valid.
+   */
+  const [pendingLogo, setPendingLogo] = useState<{ filename: string; data: string } | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+
+  async function onPickSetupLogo(file: File | undefined): Promise<void> {
+    if (!file) return
+    const err = logoFileError(file)
+    if (err) {
+      setLogoError(err)
+      return
+    }
+    setLogoError(null)
+    setLogoPreview(URL.createObjectURL(file))
+    try {
+      const data = await readFileAsBase64(file)
+      setPendingLogo({ filename: file.name, data })
+    } catch {
+      setLogoPreview(null)
+      setPendingLogo(null)
+      setLogoError('Could not read that image — try another file.')
+    }
+  }
+
+  function onRemoveSetupLogo(): void {
+    setPendingLogo(null)
+    setLogoPreview(null)
+    setLogoError(null)
+    if (logoInputRef.current) logoInputRef.current.value = ''
+  }
 
   const setupForm = useForm({
     defaultValues: {
@@ -91,7 +127,10 @@ export function AuthGate({
       setFormError(null)
       setSubmitSuccess(false)
       try {
-        const session = await window.api.identity.setup(value)
+        const session = await window.api.identity.setup({
+          ...value,
+          ...(pendingLogo ? { logo: pendingLogo } : {})
+        })
         setSubmitSuccess(true)
         toast.success('Your workspace is ready', {
           description: `Welcome, ${session.userFullName}`
@@ -316,6 +355,66 @@ export function AuthGate({
                     />
                   )}
                 </setupForm.Field>
+
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor="setup-logo"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Gym logo <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40">
+                      {logoPreview ? (
+                        <img
+                          src={logoPreview}
+                          alt="Logo preview"
+                          className="size-12 object-cover"
+                        />
+                      ) : (
+                        <Building2 className="size-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => logoInputRef.current?.click()}
+                        >
+                          {logoPreview ? 'Change' : 'Upload'}
+                        </Button>
+                        {logoPreview ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onRemoveSetupLogo}
+                          >
+                            Remove
+                          </Button>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        jpg, png or webp · max 5MB · shown in the sidebar and PDFs
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    ref={logoInputRef}
+                    id="setup-logo"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(e) => void onPickSetupLogo(e.target.files?.[0])}
+                  />
+                  {logoError ? (
+                    <p role="alert" className="text-xs text-destructive">
+                      {logoError}
+                    </p>
+                  ) : null}
+                </div>
 
                 <setupForm.Field
                   name="mobileNumber"

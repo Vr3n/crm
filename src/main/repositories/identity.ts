@@ -27,8 +27,12 @@ interface OrgRow {
   mobile_number: string
   timezone: string | null
   currency: string
+  logo: string | null
   status: OrgStatus
   plan_tier: string | null
+  invoice_terms: string | null
+  receipt_terms: string | null
+  refund_terms: string | null
   created_at: string
 }
 
@@ -69,8 +73,12 @@ function mapOrg(row: OrgRow): Organization {
     mobileNumber: row.mobile_number,
     timezone: row.timezone,
     currency: row.currency,
+    logo: row.logo ?? null,
     status: row.status,
     planTier: row.plan_tier,
+    invoiceTerms: row.invoice_terms,
+    receiptTerms: row.receipt_terms,
+    refundTerms: row.refund_terms,
     createdAt: row.created_at
   }
 }
@@ -117,6 +125,7 @@ export const organizationRepo = {
     billingEmail?: string | null
     timezone?: string | null
     currency: string
+    logo?: string | null
   }): Organization {
     const db = getDrizzle()
     const row = db
@@ -128,7 +137,8 @@ export const organizationRepo = {
         legal_name: input.legalName ?? null,
         billing_email: input.billingEmail ?? null,
         timezone: input.timezone ?? null,
-        currency: input.currency
+        currency: input.currency,
+        logo: input.logo ?? null
       })
       .returning()
       .get()
@@ -139,6 +149,59 @@ export const organizationRepo = {
     const row = getDrizzle().select().from(organizations).where(eq(organizations.id, id)).get() as
       OrgRow | undefined
     return row ? mapOrg(row) : null
+  },
+
+  /**
+   * Updates the organization profile and terms. `null` values persist as NULL
+   * (a cleared terms field drops its footer block); only the current org row is
+   * touched — never invoice lines, snapshots, or any financial history.
+   */
+  update(
+    organizationId: number,
+    input: {
+      legalName?: string | null
+      billingEmail?: string | null
+      mobileNumber: string
+      timezone?: string | null
+      currency: string
+      invoiceTerms?: string | null
+      receiptTerms?: string | null
+      refundTerms?: string | null
+    }
+  ): Organization | null {
+    const row = getDrizzle()
+      .update(organizations)
+      .set({
+        legal_name: input.legalName ?? null,
+        billing_email: input.billingEmail ?? null,
+        mobile_number: input.mobileNumber,
+        timezone: input.timezone ?? null,
+        currency: input.currency,
+        invoice_terms: input.invoiceTerms ?? null,
+        receipt_terms: input.receiptTerms ?? null,
+        refund_terms: input.refundTerms ?? null
+      })
+      .where(eq(organizations.id, organizationId))
+      .returning()
+      .get() as OrgRow | undefined
+    return row ? mapOrg(row) : null
+  },
+
+  findLogoFilename(organizationId: number): string | null {
+    const row = getDrizzle()
+      .select({ logo: organizations.logo })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .get()
+    return row?.logo ?? null
+  },
+
+  updateLogo(organizationId: number, logo: string | null): void {
+    getDrizzle()
+      .update(organizations)
+      .set({ logo })
+      .where(eq(organizations.id, organizationId))
+      .run()
   },
 
   findAll(): Organization[] {

@@ -49,7 +49,19 @@ export const setupOrganizationInputSchema = z.object({
   ownerFullName: z.string().min(1).max(120),
   ownerEmail: z.string().min(1).max(254),
   ownerPassword: z.string().min(1).max(256),
-  mobileNumber: z.string().min(1).max(24)
+  mobileNumber: z.string().min(1).max(24),
+  /**
+   * Optional gym logo (BrandMark) picked during first-run setup. Same
+   * constraints as the settings uploader (jpg/png/webp, 5MB); stored as a
+   * file with only the filename persisted. Absent stays a valid setup.
+   */
+  logo: z
+    .object({
+      filename: z.string().min(1).max(255),
+      /** Base64-encoded image data (no data-URL prefix). */
+      data: z.string().min(1)
+    })
+    .optional()
 })
 export type SetupOrganizationInput = z.infer<typeof setupOrganizationInputSchema>
 
@@ -78,3 +90,20 @@ export const createdStaffMemberSchema = z.object({
   userId: z.number().int().positive()
 })
 export type CreatedStaffMember = z.infer<typeof createdStaffMemberSchema>
+
+export const updateOrganizationInputSchema = z.object({
+  legalName: z.string().max(120).optional().nullable(),
+  billingEmail: z.string().max(254).optional().nullable(),
+  mobileNumber: z.string().min(1).max(24),
+  timezone: z.string().max(64).optional().nullable(),
+  currency: currencyCodeSchema,
+  /**
+   * Per-document Terms & Conditions. Length capped at the boundary (max ~2000
+   * chars each) so a PDF footer stays a single page; domain trimming happens in
+   * the application layer.
+   */
+  invoiceTerms: z.string().max(2000).optional().nullable(),
+  receiptTerms: z.string().max(2000).optional().nullable(),
+  refundTerms: z.string().max(2000).optional().nullable()
+})
+export type UpdateOrganizationInput = z.infer<typeof updateOrganizationInputSchema>

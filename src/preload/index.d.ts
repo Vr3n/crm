@@ -6,7 +6,8 @@ import type {
   LoginInput,
   OrganizationExistenceInput,
   SessionContext,
-  SetupOrganizationInput
+  SetupOrganizationInput,
+  UpdateOrganizationInput
 } from '../shared/contracts/identity'
 import type {
   CancellationPolicyRow,
@@ -127,6 +128,10 @@ import type {
   GetManyPersonPhotosInput,
   GetManyPersonPhotosOutput
 } from '../shared/contracts/person-photo'
+import type {
+  UpdateOrgLogoInput,
+  OrgLogoOutput
+} from '../shared/contracts/organization-logo'
 import type { SellMembershipInput, SellMembershipResult } from '../shared/contracts/membership-sale'
 import type {
   CancelMembershipInput,
@@ -150,6 +155,7 @@ declare global {
         status: () => Promise<AuthStatus>
         createStaff: (input: CreateStaffMemberInput) => Promise<CreatedStaffMember>
         checkOrganizationExists: (input: OrganizationExistenceInput) => Promise<boolean>
+        updateOrganization: (input: UpdateOrganizationInput) => Promise<OrganizationOutput>
         logout: () => Promise<boolean>
       }
       leads: {
@@ -327,6 +333,11 @@ declare global {
         deletePhoto: (input: DeletePersonPhotoInput) => Promise<void>
         getPhoto: (input: GetPersonPhotoInput) => Promise<PersonPhotoOutput>
         getPhotos: (input: GetManyPersonPhotosInput) => Promise<GetManyPersonPhotosOutput>
+      }
+      organizationLogo: {
+        update: (input: UpdateOrgLogoInput) => Promise<OrgLogoOutput>
+        remove: () => Promise<void>
+        get: () => Promise<OrgLogoOutput>
       }
     }
   }

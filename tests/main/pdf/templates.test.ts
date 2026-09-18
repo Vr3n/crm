@@ -277,6 +277,42 @@ describe('Invoice Document Template', () => {
     const html = renderInvoiceDocument(baseCtx)
     expect(html).not.toContain('Refunds Issued')
   })
+
+  it('renders invoice terms block when terms are set', () => {
+    const ctx = {
+      ...baseCtx,
+      org: { ...baseCtx.org, invoiceTerms: 'All dues must be cleared before renewal.' }
+    }
+    const html = renderInvoiceDocument(ctx)
+    expect(html).toContain('Terms &amp; Conditions')
+    expect(html).toContain('All dues must be cleared before renewal.')
+  })
+
+  it('omits terms block when terms are null', () => {
+    const html = renderInvoiceDocument({ ...baseCtx, org: { ...baseCtx.org, invoiceTerms: null } })
+    expect(html).not.toContain('Terms &amp; Conditions')
+  })
+
+  it('escapes HTML and preserves line breaks in terms', () => {
+    const ctx = {
+      ...baseCtx,
+      org: { ...baseCtx.org, invoiceTerms: 'No <b>bold</b> allowed.\nLine two.' }
+    }
+    const html = renderInvoiceDocument(ctx)
+    expect(html).toContain('&lt;b&gt;bold&lt;/b&gt;')
+    expect(html).not.toContain('<b>bold</b>')
+    expect(html).toContain('Line two.')
+    expect(html).toContain('<br />')
+  })
+
+  it('shows Finalized By only when a finalizer is set', () => {
+    const plain = renderInvoiceDocument(baseCtx)
+    expect(plain).not.toContain('Finalized By')
+
+    const html = renderInvoiceDocument({ ...baseCtx, finalizedBy: 'Viren (Owner)' })
+    expect(html).toContain('Finalized By')
+    expect(html).toContain('Viren (Owner)')
+  })
 })
 
 describe('Refund Receipt Template', () => {
@@ -336,6 +372,21 @@ describe('Refund Receipt Template', () => {
     const ctx = { ...baseCtx, invoiceNumbers: [] }
     const html = renderRefundReceipt(ctx)
     expect(html).toContain('not allocated')
+  })
+
+  it('renders refund terms block when terms are set', () => {
+    const ctx = {
+      ...baseCtx,
+      org: { ...baseCtx.org, refundTerms: 'Refunds reach your account within 5 working days.' }
+    }
+    const html = renderRefundReceipt(ctx)
+    expect(html).toContain('Terms &amp; Conditions')
+    expect(html).toContain('Refunds reach your account within 5 working days.')
+  })
+
+  it('omits refund terms block when terms are null', () => {
+    const html = renderRefundReceipt({ ...baseCtx, org: { ...baseCtx.org, refundTerms: null } })
+    expect(html).not.toContain('Terms &amp; Conditions')
   })
 })
 
@@ -482,5 +533,20 @@ describe('Payment Receipt Template', () => {
   it('includes accent bar', () => {
     const html = renderPaymentReceipt(baseCtx)
     expect(html).toContain('accent-bar')
+  })
+
+  it('renders receipt terms block when terms are set', () => {
+    const ctx = {
+      ...baseCtx,
+      org: { ...baseCtx.org, receiptTerms: 'This receipt confirms your payment.' }
+    }
+    const html = renderPaymentReceipt(ctx)
+    expect(html).toContain('Terms &amp; Conditions')
+    expect(html).toContain('This receipt confirms your payment.')
+  })
+
+  it('omits receipt terms block when terms are null', () => {
+    const html = renderPaymentReceipt({ ...baseCtx, org: { ...baseCtx.org, receiptTerms: null } })
+    expect(html).not.toContain('Terms &amp; Conditions')
   })
 })
