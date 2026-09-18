@@ -21,6 +21,9 @@ PDF footers, plus session-User attribution ("Finalized By") on invoice documents
   a PDF footer stays a single page); output shape extended in
   `src/shared/contracts/identity-read.ts` and `identity-read.ts`.
 - Terms are trimmed, stored as NULL when blank; `org.manage`-gated.
+- Patch semantics: `updateOrganization` / `organizationRepo.update` write only
+  keys present in the input — omitted optional fields keep stored values,
+  explicit null/blank clears.
 
 ## PDFs
 
@@ -31,8 +34,11 @@ PDF footers, plus session-User attribution ("Finalized By") on invoice documents
   block above the footer; empty string when unset so documents stay clean.
   Wired into invoice, payment-receipt, and refund-receipt templates.
 - Attribution: `resolveAttribution()` stamps the session User who finalized the
-  invoice as "Full Name (Role)" (`InvoicePrintContext.finalizedBy`); null for
-  DRAFT previews (no Finalized By line); unknown users render "Unknown User".
+  invoice as "Full Name (Role)". The name resolves from the stamped User row
+  unconditionally (historical documents keep attribution after a staffer is
+  deactivated/removed); only the "(Role)" suffix needs an ACTIVE staff
+  membership row. Null (→ "Unknown User") only when the User row itself is
+  missing; null for DRAFT previews (no Finalized By line).
   Never a hardcoded name, never an inferred `created_by` fallback.
 - `formatNow(timezone?)` renders the generated-at stamp in the Organization's
   timezone (Asia/Kolkata fallback).
@@ -46,8 +52,10 @@ PDF footers, plus session-User attribution ("Finalized By") on invoice documents
 
 ## Tests
 
+- `tests/main/pdf/attribution.test.ts` — resolver regression: active staffer,
+  missing user, deactivated/removed membership, non-owner role suffix.
 - `tests/main/application/identity-update-organization.test.ts` — profile/terms
-  update rules.
+  update rules + partial-update preservation.
 - `tests/main/pdf/format-now.test.ts` — timezone rendering + fallback.
 - `tests/renderer/terms-validation.test.ts` — client validation mirror.
 - Extended: repo identity, PDF templates, migrations (v31) suites.

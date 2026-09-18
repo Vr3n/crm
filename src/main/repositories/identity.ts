@@ -152,35 +152,47 @@ export const organizationRepo = {
   },
 
   /**
-   * Updates the organization profile and terms. `null` values persist as NULL
-   * (a cleared terms field drops its footer block); only the current org row is
-   * touched — never invoice lines, snapshots, or any financial history.
+   * Updates the organization profile and terms. Only keys present in `input`
+   * are written — omitted fields keep their stored values, while an explicit
+   * `null` clears the column (a cleared terms field drops its footer block).
+   * Only the current org row is touched — never invoice lines, snapshots, or
+   * any financial history.
    */
   update(
     organizationId: number,
     input: {
       legalName?: string | null
       billingEmail?: string | null
-      mobileNumber: string
+      mobileNumber?: string
       timezone?: string | null
-      currency: string
+      currency?: string
       invoiceTerms?: string | null
       receiptTerms?: string | null
       refundTerms?: string | null
     }
   ): Organization | null {
+    const set: {
+      legal_name?: string | null
+      billing_email?: string | null
+      mobile_number?: string
+      timezone?: string | null
+      currency?: string
+      invoice_terms?: string | null
+      receipt_terms?: string | null
+      refund_terms?: string | null
+    } = {}
+    if (input.legalName !== undefined) set.legal_name = input.legalName
+    if (input.billingEmail !== undefined) set.billing_email = input.billingEmail
+    if (input.mobileNumber !== undefined) set.mobile_number = input.mobileNumber
+    if (input.timezone !== undefined) set.timezone = input.timezone
+    if (input.currency !== undefined) set.currency = input.currency
+    if (input.invoiceTerms !== undefined) set.invoice_terms = input.invoiceTerms
+    if (input.receiptTerms !== undefined) set.receipt_terms = input.receiptTerms
+    if (input.refundTerms !== undefined) set.refund_terms = input.refundTerms
+    if (Object.keys(set).length === 0) return this.findById(organizationId)
     const row = getDrizzle()
       .update(organizations)
-      .set({
-        legal_name: input.legalName ?? null,
-        billing_email: input.billingEmail ?? null,
-        mobile_number: input.mobileNumber,
-        timezone: input.timezone ?? null,
-        currency: input.currency,
-        invoice_terms: input.invoiceTerms ?? null,
-        receipt_terms: input.receiptTerms ?? null,
-        refund_terms: input.refundTerms ?? null
-      })
+      .set(set)
       .where(eq(organizations.id, organizationId))
       .returning()
       .get() as OrgRow | undefined

@@ -10,7 +10,7 @@ import type { SessionContext } from '../../../src/main/domain/identity'
 
 /**
  * Module 14 § 2 — organization profile + per-document terms update (Issue #111).
- * The real end-to-end path for the settings form: sessioon-gated, profile rules
+ * The real end-to-end path for the settings form: session-gated, profile rules
  * mirroring setup, and blank terms persisted as NULL so printed footers stay clean.
  */
 setupSalesDb()
@@ -143,7 +143,7 @@ describe('updateOrganization', () => {
     expect(() => updateOrganization(termsInput({ legalName: 'F' }))).toThrow(ValidationError)
   })
 
-  it('rejects an malformed billing email', () => {
+  it('rejects a malformed billing email', () => {
     seedOrgWithSession()
     expect(() =>
       updateOrganization(termsInput({ billingEmail: 'not-an-email' }))
@@ -155,6 +155,29 @@ describe('updateOrganization', () => {
     expect(() =>
       updateOrganization(termsInput({ mobileNumber: '123' }))
     ).toThrow(ValidationError)
+  })
+
+  it('preserves fields omitted from a partial update (patch semantics)', () => {
+    const { organizationId } = seedOrgWithSession()
+    updateOrganization(termsInput())
+
+    const updated = updateOrganization({
+      mobileNumber: '9876543210',
+      currency: 'INR',
+      receiptTerms: 'Updated receipt clause.'
+    })
+
+    expect(updated.legalName).toBe('Fit Gym Private Limited')
+    expect(updated.billingEmail).toBe('billing@fitgym.com')
+    expect(updated.invoiceTerms).toBe('All dues must be cleared before renewal.')
+    expect(updated.receiptTerms).toBe('Updated receipt clause.')
+    expect(updated.refundTerms).toBe('Refunds reach your account within 5 working days.')
+
+    const row = getDb()
+      .prepare('SELECT legal_name, receipt_terms FROM organizations WHERE id = ?')
+      .get(organizationId) as { legal_name: string | null; receipt_terms: string | null }
+    expect(row.legal_name).toBe('Fit Gym Private Limited')
+    expect(row.receipt_terms).toBe('Updated receipt clause.')
   })
 
   it('raises ForbiddenError without the org.manage permission', () => {

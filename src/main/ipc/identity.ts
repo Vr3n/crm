@@ -50,6 +50,7 @@ export function registerIdentityIpc(): void {
       mobileNumber: org.mobileNumber,
       timezone: org.timezone,
       currency: org.currency,
+      logo: org.logo,
       status: org.status,
       planTier: org.planTier,
       invoiceTerms: org.invoiceTerms,

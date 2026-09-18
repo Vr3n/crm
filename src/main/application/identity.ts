@@ -80,42 +80,63 @@ export function createStaffMember(input: CreateStaffMemberInput): CreatedStaffMe
  * rules mirror the setup flow (Indian mobile required; optional email/legal name
  * format-checked); terms are trimmed and stored as NULL when blank so an emptied
  * Terms block simply disappears from the next print.
+ *
+ * Patch semantics: only keys present in the input are validated and written —
+ * an omitted optional field keeps its stored value, while an explicit
+ * null/blank clears it.
  */
 export function updateOrganization(input: UpdateOrganizationInput): Organization {
   requirePermission(PERMISSIONS.ORG_MANAGE)
   const organizationId = currentOrganizationId()
 
-  const legalName = input.legalName?.trim() || null
-  if (legalName && legalName.length < 2) {
-    throw new ValidationError('Legal name must be at least 2 characters')
+  const patch: {
+    legalName?: string | null
+    billingEmail?: string | null
+    mobileNumber?: string
+    timezone?: string | null
+    currency?: string
+    invoiceTerms?: string | null
+    receiptTerms?: string | null
+    refundTerms?: string | null
+  } = {}
+
+  if (input.legalName !== undefined) {
+    const legalName = input.legalName?.trim() || null
+    if (legalName && legalName.length < 2) {
+      throw new ValidationError('Legal name must be at least 2 characters')
+    }
+    patch.legalName = legalName
   }
 
-  const billingEmail = input.billingEmail?.trim().toLowerCase() || null
-  if (billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
-    throw new ValidationError('Enter a valid billing email address')
+  if (input.billingEmail !== undefined) {
+    const billingEmail = input.billingEmail?.trim().toLowerCase() || null
+    if (billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
+      throw new ValidationError('Enter a valid billing email address')
+    }
+    patch.billingEmail = billingEmail
   }
 
-  const mobileNumber = IndianMobileNumber.parse(input.mobileNumber).value
+  if (input.mobileNumber !== undefined) {
+    patch.mobileNumber = IndianMobileNumber.parse(input.mobileNumber).value
+  }
+  if (input.currency !== undefined) {
+    patch.currency = input.currency
+  }
+  if (input.timezone !== undefined) {
+    patch.timezone = input.timezone?.trim() || null
+  }
 
-  const invoiceTerms = input.invoiceTerms?.trim() || null
-  const receiptTerms = input.receiptTerms?.trim() || null
-  const refundTerms = input.refundTerms?.trim() || null
-  for (const terms of [invoiceTerms, receiptTerms, refundTerms]) {
-    if (terms && terms.length > 2000) {
-      throw new ValidationError('Terms must be 2000 characters or fewer')
+  for (const key of ['invoiceTerms', 'receiptTerms', 'refundTerms'] as const) {
+    if (input[key] !== undefined) {
+      const terms = input[key]?.trim() || null
+      if (terms && terms.length > 2000) {
+        throw new ValidationError('Terms must be 2000 characters or fewer')
+      }
+      patch[key] = terms
     }
   }
 
-  const org = organizationRepo.update(organizationId, {
-    legalName,
-    billingEmail,
-    mobileNumber,
-    timezone: input.timezone?.trim() || null,
-    currency: input.currency,
-    invoiceTerms,
-    receiptTerms,
-    refundTerms
-  })
+  const org = organizationRepo.update(organizationId, patch)
   if (!org) throw new NotFoundError('Organization not found')
   return org
 }

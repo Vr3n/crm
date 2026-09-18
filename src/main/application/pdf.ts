@@ -46,7 +46,19 @@ function resolveLogoDataUri(organizationId: number, logo: string | null): string
 
 function getOrgBranding(organizationId: number): OrgBranding {
   const org = getDrizzle()
-    .select()
+    .select({
+      name: organizations.name,
+      legal_name: organizations.legal_name,
+      logo: organizations.logo,
+      address: organizations.address,
+      gstin: organizations.gstin,
+      mobile_number: organizations.mobile_number,
+      org_invoice_prefix: organizations.org_invoice_prefix,
+      timezone: organizations.timezone,
+      invoice_terms: organizations.invoice_terms,
+      receipt_terms: organizations.receipt_terms,
+      refund_terms: organizations.refund_terms
+    })
     .from(organizations)
     .where(eq(organizations.id, organizationId))
     .get() as
@@ -110,7 +122,7 @@ function getCustomerInfo(organizationId: number, customerId: number): PdfCustome
  * the org has no explicit timezone.
  */
 export function formatNow(timezone?: string | null): string {
-  return new Date().toLocaleDateString('en-IN', {
+  return new Date().toLocaleString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -121,20 +133,26 @@ export function formatNow(timezone?: string | null): string {
 }
 
 /**
- * Resolves a user's active staff attribution for a print document as
- * "Full Name (Role)". Returns null when the user is not an active staff member
- * of the organization — renderers fall back to "Unknown User". Attribution
- * always comes from the session User stamped on the record, never a hardcoded
- * name and never an inferred `created_by` fallback.
+ * Resolves a user's attribution for a print document as "Full Name (Role)".
+ * The name comes from the stamped User row unconditionally, so historical
+ * documents keep their attribution even after the staffer is deactivated or
+ * removed; the "(Role)" suffix resolves only from an ACTIVE staff membership
+ * row. Returns null only when the User row itself is missing — renderers fall
+ * back to "Unknown User". Attribution always comes from the session User
+ * stamped on the record, never a hardcoded name and never an inferred
+ * `created_by` fallback.
  */
-function resolveAttribution(organizationId: number, userId: number): string | null {
-  const row = getDrizzle()
-    .select({
-      fullName: users.full_name,
-      roleName: roles.name
-    })
+export function resolveAttribution(organizationId: number, userId: number): string | null {
+  const user = getDrizzle()
+    .select({ fullName: users.full_name })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get() as { fullName: string } | undefined
+  if (!user) return null
+
+  const staff = getDrizzle()
+    .select({ roleName: roles.name })
     .from(organizationStaff)
-    .innerJoin(users, eq(users.id, organizationStaff.user_id))
     .leftJoin(roles, eq(roles.id, organizationStaff.role_id))
     .where(
       and(
@@ -143,10 +161,9 @@ function resolveAttribution(organizationId: number, userId: number): string | nu
         eq(organizationStaff.status, 'ACTIVE')
       )
     )
-    .get() as { fullName: string; roleName: string | null } | undefined
+    .get() as { roleName: string | null } | undefined
 
-  if (!row) return null
-  return row.roleName ? `${row.fullName} (${row.roleName})` : row.fullName
+  return staff?.roleName ? `${user.fullName} (${staff.roleName})` : user.fullName
 }
 
 /** Builds a safe filename from customer name + ID + timestamp. */
