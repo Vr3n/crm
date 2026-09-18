@@ -15,6 +15,8 @@ export interface ExportTableInput {
   columns: ExportColumn[]
   rows: Record<string, unknown>[]
   currency: CurrencyCode
+  /** IANA zone for date rendering (#110); absent → Organization default. */
+  timezone?: string
 }
 
 /**

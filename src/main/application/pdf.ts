@@ -176,7 +176,8 @@ export function exportInvoicePdf(input: {
     org,
     invoiceNo: invoice.number,
     status: invoice.status,
-    issuedAt: invoice.createdAt,
+    // Canonical issue date (#110): business date, not the audit timestamp.
+    issuedAt: invoice.finalizedAt ?? invoice.createdAt,
     dueAt: invoice.finalizedAt,
     customer: customerInfo,
     membership: membership

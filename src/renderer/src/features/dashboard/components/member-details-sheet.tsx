@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   CalendarClock,
   CircleCheck,
@@ -19,6 +20,9 @@ import { formatMinor } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { useMemberRecord, usePaymentRecord } from '../queries'
 import type { MembershipExpiration, MembershipInvoice, PaymentDue } from '../types'
+import { expirationToRenewTarget, paymentToRenewTarget } from './renew-target'
+import { RenewMembershipDialog } from '@/features/memberships/components/renew-membership-dialog'
+import type { Membership } from '@/features/customers/types'
 
 /**
  * Member record drawer opened from a dashboard row "View" action.
@@ -223,6 +227,7 @@ export function MemberDetailsSheet({
   // the close (exit) animation instead of flashing empty.
   const isPayment = row != null && 'amountDueMinor' in row
   const currency = useCurrency()
+  const [renewTarget, setRenewTarget] = useState<Membership | null>(null)
   const {
     data: expData,
     isLoading: expLoading,
@@ -401,22 +406,55 @@ export function MemberDetailsSheet({
                   >
                     Make payment
                   </Button>
+                  {paymentToRenewTarget(row) ? (
+                    <Button
+                      variant="outline"
+                      className="col-span-2"
+                      onClick={() => {
+                        const target = paymentToRenewTarget(row)
+                        if (target) setRenewTarget(target)
+                      }}
+                    >
+                      Renew membership
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
-                <Button
-                  onClick={() =>
-                    toast('Follow-up scheduled', {
-                      description:
-                        'Follow-up scheduling arrives with the Members module (Module 02).'
-                    })
-                  }
-                >
-                  Schedule follow-up
-                </Button>
+                <div className="grid w-full grid-cols-2 gap-2.5">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      toast('Follow-up scheduled', {
+                        description:
+                          'Follow-up scheduling arrives with the Members module (Module 02).'
+                      })
+                    }
+                  >
+                    Schedule follow-up
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (row && !('amountDueMinor' in row)) {
+                        setRenewTarget(expirationToRenewTarget(row))
+                      }
+                    }}
+                  >
+                    Renew membership
+                  </Button>
+                </div>
               )}
             </SheetFooter>
           </>
         )}
+        {renewTarget ? (
+          <RenewMembershipDialog
+            membership={renewTarget}
+            open={!!renewTarget}
+            onOpenChange={(o) => {
+              if (!o) setRenewTarget(null)
+            }}
+          />
+        ) : null}
       </SheetContent>
     </Sheet>
   )

@@ -2,6 +2,7 @@ import type {
   AddInvoiceLineInput,
   CreateInvoiceInput,
   FinalizeInvoiceInput,
+  InvoiceNumberPreviewRequest,
   MarkUncollectibleInput,
   RemoveInvoiceLineInput,
   UpdateBillingSnapshotInput,
@@ -34,6 +35,6 @@ export const invoiceCommands = {
     window.api.billing.markUncollectible(input),
   updateSnapshot: (input: UpdateBillingSnapshotInput): Promise<unknown> =>
     window.api.billing.updateSnapshot(input),
-  nextNumber: () => window.api.billing.nextNumber(),
+  nextNumber: (input?: InvoiceNumberPreviewRequest) => window.api.billing.nextNumber(input),
   detail: (invoiceId: number) => window.api.billing.getInvoice({ invoiceId })
 }

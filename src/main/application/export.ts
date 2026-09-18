@@ -4,6 +4,13 @@ import { join } from 'node:path'
 import { app, shell } from 'electron'
 import { logger } from '../lib/logger'
 import { exponentFor, type CurrencyCode } from '../../shared/contracts/money'
+import {
+  BUSINESS_DATE_REGEX,
+  excelDateForDateOnly,
+  excelDateForInstant,
+  parseStoredInstant,
+  resolveTimezone
+} from '../domain/dates'
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
@@ -24,6 +31,8 @@ export interface ExportTableInput {
   columns: ExportColumn[]
   rows: Record<string, unknown>[]
   currency: CurrencyCode
+  /** IANA zone for date rendering (#110). Absent → Organization default. */
+  timezone?: string
 }
 
 /* -------------------------------------------------------------------------- */
@@ -107,6 +116,49 @@ function sanitizeFilename(name: string): string {
 /* -------------------------------------------------------------------------- */
 
 /**
+ * Converts one raw cell value for Excel (#110). Pure and unit-tested —
+ * `exportTableToExcel` below only handles workbook/file concerns.
+ *
+ * - `date` / `isodate` holding YYYY-MM-DD → wall-date serial (never shifts).
+ * - `datetime` (or any format holding an instant string) → Organization-local
+ *   wall-time serial. Unparseable → null.
+ */
+export function convertCellValue(
+  raw: unknown,
+  format: CellFormat | undefined,
+  timezone: string,
+  currency: CurrencyCode
+): string | number | Date | null {
+  if (raw == null || raw === '') return null
+  if (format === 'money') {
+    const minor = typeof raw === 'number' ? raw : parseFloat(String(raw))
+    if (Number.isNaN(minor)) return null
+    return minor / 10 ** exponentFor(currency)
+  }
+  if (format === 'number') {
+    const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
+    return isNaN(num) ? null : num
+  }
+  if (format === 'isodate' || format === 'date' || format === 'datetime') {
+    const rawStr = String(raw).trim()
+    // Date-only values have no time component: write the wall date
+    // directly so no timezone rule can move the calendar day (#110).
+    if (BUSINESS_DATE_REGEX.test(rawStr)) {
+      try {
+        return excelDateForDateOnly(rawStr)
+      } catch {
+        return null
+      }
+    }
+    // True instants (SQLite "YYYY-MM-DD HH:MM:SS" or ISO): parse as UTC,
+    // then materialise Organization-local wall time for the cell.
+    const instant = parseStoredInstant(rawStr)
+    return instant ? excelDateForInstant(instant, timezone) : null
+  }
+  return raw as string | number | Date | null
+}
+
+/**
  * Generates a styled .xlsx workbook from table data and saves it to
  * Documents/CrownCRM/Exports/. Returns the absolute file path.
  *
@@ -116,6 +168,8 @@ function sanitizeFilename(name: string): string {
  */
 export async function exportTableToExcel(input: ExportTableInput): Promise<string> {
   const { sheetName, filename, columns, rows, currency } = input
+  // Invalid zones can never reach conversion: resolve falls back deterministically.
+  const timezone = resolveTimezone(input.timezone)
 
   const workbook = new ExcelJS.Workbook()
   workbook.creator = 'CrownCRM'
@@ -141,24 +195,9 @@ export async function exportTableToExcel(input: ExportTableInput): Promise<strin
   const columnWidths: number[] = columns.map((c) => measureWidth(c.header))
 
   for (const row of rows) {
-    const values = columns.map((col) => {
-      const raw = row[col.key]
-      if (raw == null || raw === '') return null
-      if (col.format === 'money') {
-        const minor = typeof raw === 'number' ? raw : parseFloat(String(raw))
-        if (Number.isNaN(minor)) return null
-        return minor / 10 ** exponentFor(currency)
-      }
-      if (col.format === 'number') {
-        const num = typeof raw === 'number' ? raw : parseFloat(String(raw))
-        return isNaN(num) ? null : num
-      }
-      if (col.format === 'isodate' || col.format === 'datetime') {
-        const d = new Date(String(raw))
-        return Number.isNaN(d.getTime()) ? null : d
-      }
-      return raw
-    })
+    const values = columns.map((col) =>
+      convertCellValue(row[col.key], col.format, timezone, currency)
+    )
 
     const dataRow = sheet.addRow(values)
 

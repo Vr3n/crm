@@ -45,3 +45,29 @@ describe('OrderSummary — cheque number field', () => {
     expect(screen.getByDisplayValue('123456')).toBeInTheDocument()
   })
 })
+
+describe('OrderSummary — billing date cautions (#110)', () => {
+  it('shows no caution for today', () => {
+    render(<OrderSummary billingDate="2026-09-08" todayIso="2026-09-08" />)
+    expect(screen.queryByText(/back-dated entry/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/rule 47/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the series note for a recent back-date', () => {
+    render(<OrderSummary billingDate="2026-09-01" todayIso="2026-09-08" />)
+    expect(screen.getByText(/invoice number uses this date/i)).toBeInTheDocument()
+    expect(screen.queryByText(/rule 47/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the Rule-47 caution with source past 30 days', () => {
+    render(<OrderSummary billingDate="2026-07-01" todayIso="2026-09-08" />)
+    expect(screen.getByText(/rule 47/i)).toBeInTheDocument()
+    expect(screen.getByText(/cbic-gst\.gov\.in/)).toBeInTheDocument()
+  })
+
+  it('shows the FY-mismatch caution across April', () => {
+    render(<OrderSummary billingDate="2026-03-20" todayIso="2026-04-10" />)
+    expect(screen.getByText(/FY 2025-26/)).toBeInTheDocument()
+    expect(screen.getByText(/GSTR-1/)).toBeInTheDocument()
+  })
+})

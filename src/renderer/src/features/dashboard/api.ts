@@ -25,7 +25,10 @@ function mapPaymentDue(row: PaymentDueOutput): PaymentDue {
     planEndDate: row.planEndDate,
     joiningDate: row.joiningDate,
     membershipAmountMinor: row.membershipAmountMinor,
-    membershipPurchasedAt: row.membershipPurchasedAt
+    membershipPurchasedAt: row.membershipPurchasedAt,
+    customerId: row.customerId,
+    membershipId: row.membershipId,
+    renewPlanId: row.renewPlanId
   }
 }
 

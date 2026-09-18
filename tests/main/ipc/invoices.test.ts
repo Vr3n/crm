@@ -41,6 +41,7 @@ function saleInput(leadId: number, planId: number, transactionId: string): SellM
     joiningDate: '2026-08-25',
     startDate: '2026-08-25',
     endDate: '2026-11-22',
+    issueDate: '2026-08-25',
     basePriceMinor: 150_000,
     discountType: 'NONE' as const,
     discountValueMinor: null,

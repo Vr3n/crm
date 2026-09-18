@@ -96,10 +96,7 @@ export const invoiceRepo = {
       .select()
       .from(invoices)
       .where(
-        and(
-          eq(invoices.organization_id, organizationId),
-          eq(invoices.membership_id, membershipId)
-        )
+        and(eq(invoices.organization_id, organizationId), eq(invoices.membership_id, membershipId))
       )
       .orderBy(asc(invoices.created_at))
       .all() as InvoiceRow[]
@@ -194,6 +191,19 @@ export const invoiceRepo = {
         tax_minor: totals.taxMinor,
         total_minor: totals.totalMinor
       })
+      .where(and(eq(invoices.organization_id, organizationId), eq(invoices.id, id)))
+      .run()
+  },
+
+  /**
+   * Persists the business number assigned at finalization (#110). Called only
+   * inside the finalize transaction, alongside updateStatus — a finalized
+   * invoice must never commit with its DRAFT number.
+   */
+  updateNumber(organizationId: number, id: number, number: string): void {
+    getDrizzle()
+      .update(invoices)
+      .set({ number })
       .where(and(eq(invoices.organization_id, organizationId), eq(invoices.id, id)))
       .run()
   },

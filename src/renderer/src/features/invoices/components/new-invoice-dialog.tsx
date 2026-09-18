@@ -46,8 +46,10 @@ import {
 } from '@/lib/money'
 import { useCurrency } from '@/hooks/use-currency'
 import { cn } from '@/lib/utils'
+import { billingDateCautions } from '@/lib/billing-warnings'
 import { usePlans } from '@/features/catalog/queries'
 import type { Plan } from '@/features/catalog/types'
+import { CatalogDatePicker } from '@/features/catalog/components/catalog-date-picker'
 import { CustomerPicker } from '@/features/finance/components/customer-picker'
 import type { PersonRef } from '@/features/dashboard/types'
 import { INVOICE_STATUS_META } from '../constants'
@@ -720,9 +722,15 @@ export function NewInvoiceDialog({
   const [draftId, setDraftId] = useState<number | undefined>(undefined)
   const [confirming, setConfirming] = useState(false)
   const [finalizedNo, setFinalizedNo] = useState<string | null>(null)
+  // Business issue date (#110); defaults to today, drives number + finalized_at.
+  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10))
 
   // Display-only preview; fetched only while the confirm dialog is open.
-  const { data: preview } = useNextInvoiceNumber(confirming && draftId !== undefined)
+  // Follows the picked issue date but never reserves a number.
+  const { data: preview } = useNextInvoiceNumber(
+    confirming && draftId !== undefined,
+    confirming ? issueDate : undefined
+  )
   const { data: detail } = useDraftInvoice(draftId)
 
   // State resets on remount: every caller mounts this dialog only while open
@@ -742,7 +750,7 @@ export function NewInvoiceDialog({
   async function doFinalize(): Promise<void> {
     if (draftId === undefined) return
     try {
-      const row = (await finalize.mutateAsync({ invoiceId: draftId })) as unknown as {
+      const row = (await finalize.mutateAsync({ invoiceId: draftId, issueDate })) as unknown as {
         number?: string
       }
       setConfirming(false)
@@ -930,10 +938,30 @@ export function NewInvoiceDialog({
               corrections happen through void or payment operations.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid gap-1.5 py-2">
+            <Label className="text-xs">
+              Issue date{' '}
+              <span className="font-normal text-muted-foreground">· drives invoice number</span>
+            </Label>
+            <CatalogDatePicker
+              value={issueDate}
+              onChange={(v) => setIssueDate(v)}
+              placeholder="Pick issue date"
+              testId="finalize-issue-date-picker"
+            />
+            {billingDateCautions(issueDate, new Date().toISOString().slice(0, 10)).map((c) => (
+              <p key={c.code} className="text-[11px] text-amber-600">
+                {c.message}
+                {c.source ? (
+                  <span className="block text-muted-foreground">{c.source}</span>
+                ) : null}
+              </p>
+            ))}
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Not yet</AlertDialogCancel>
             <AlertDialogAction
-              disabled={finalize.isPending}
+              disabled={finalize.isPending || !/^\d{4}-\d{2}-\d{2}$/.test(issueDate)}
               onClick={(e) => {
                 e.preventDefault()
                 void doFinalize()

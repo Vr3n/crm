@@ -279,3 +279,28 @@ Do not use SQLite's internal row ID as the printed invoice number.
 
 ---
 
+# 37. Issue Date, Finalization Atomicity & Back-Dated Entry (#110)
+
+**Issue Date := `finalized_at`.** Finalization accepts an explicit business
+issue date (back-dated or future); absent, it defaults to today in the
+Organization timezone. `created_at` stays the audit timestamp of when the row
+was typed. `finalized_at` is instant-shaped storage with day-precision meaning
+(Organization-local noon → UTC). Screen, PDF, Outstanding Balance and Excel all
+read `finalized_at ?? created_at`.
+
+The Invoice Number follows the issue date (`PREFIX-DDMMYY-NN`); the sequence
+counter is keyed `(organization, year/dateKey, prefix)` where `year`
+semantically carries the `DDMMYY` dateKey. Number, `finalized_at` and
+`finalized_by` commit atomically — a finalized invoice never carries a DRAFT
+number, and a failed finalization (including the sequence increment) rolls back
+completely. Uniqueness is enforced by the existing global `UNIQUE` on
+`invoices.number`; the application collision check exists only for a clean
+error.
+
+Back-dated entry is valid: the number takes the old date's series and existing
+invoices are never renumbered, so embedded dates may not follow creation
+chronology. Gaps from late entry are accepted; gaps from failed transactions
+are impossible. See ADR-0010.
+
+---
+

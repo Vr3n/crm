@@ -44,6 +44,7 @@ import type {
   CustomerInvoicesRequest,
   InvoiceDetail,
   InvoiceNumberPreview,
+  InvoiceNumberPreviewRequest,
   InvoiceLineRow,
   InvoiceRow
 } from '../shared/contracts/billing'
@@ -145,7 +146,7 @@ import { IPC_CHANNELS } from '../shared/contracts/ipc.channels'
 /* Export types (mirrors src/main/application/export.ts)                       */
 /* -------------------------------------------------------------------------- */
 
-type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number'
+type CellFormat = 'text' | 'money' | 'date' | 'datetime' | 'number' | 'isodate'
 
 interface ExportColumn {
   header: string
@@ -159,6 +160,8 @@ interface ExportTableInput {
   filename: string
   columns: ExportColumn[]
   rows: Record<string, unknown>[]
+  currency?: string
+  timezone?: string
 }
 
 /**
@@ -331,7 +334,8 @@ const api = {
       call(IPC_CHANNELS.BILLING_GET_INVOICE, input),
     updateSnapshot: (input: UpdateBillingSnapshotInput): Promise<InvoiceRow> =>
       call(IPC_CHANNELS.BILLING_UPDATE_SNAPSHOT, input),
-    nextNumber: (): Promise<InvoiceNumberPreview> => call(IPC_CHANNELS.BILLING_NEXT_NUMBER),
+    nextNumber: (input?: InvoiceNumberPreviewRequest): Promise<InvoiceNumberPreview> =>
+      call(IPC_CHANNELS.BILLING_NEXT_NUMBER, input),
     listByCustomer: (input: CustomerInvoicesRequest): Promise<InvoiceRow[]> =>
       call(IPC_CHANNELS.BILLING_LIST_BY_CUSTOMER, input),
     listOpen: (): Promise<InvoiceRow[]> => call(IPC_CHANNELS.BILLING_LIST_OPEN)

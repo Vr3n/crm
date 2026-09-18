@@ -27,6 +27,7 @@ import { useAvailablePlans } from '@/features/catalog/queries'
 import type { Plan } from '@/features/catalog/types'
 import { PAYMENT_METHODS } from '@/features/finance/constants'
 import { parseToMinor, formatMinor, minorToMajor, sanitizeMoneyInput } from '@/lib/money'
+import { billingDateCautions } from '@/lib/billing-warnings'
 import { useCurrency } from '@/hooks/use-currency'
 import type { Membership } from '@/features/customers/types'
 import { useRenewMembership } from '../mutations'
@@ -99,7 +100,8 @@ export function RenewMembershipDialog({
       discountType: 'NONE' as RenewMembershipInput['discountType'],
       discountValue: '',
       paidInput: '',
-      paymentMethod: '' as string
+      paymentMethod: '' as string,
+      billingDate: todayISO()
     },
     onSubmit: async ({ value }) => {
       if (!value.planId) return
@@ -121,6 +123,7 @@ export function RenewMembershipDialog({
           joiningDate: value.joiningDate,
           startDate: value.startDate,
           endDate: value.endDate,
+          issueDate: value.billingDate,
           basePriceMinor: baseMinor,
           discountType: value.discountType,
           discountValueMinor,
@@ -275,6 +278,45 @@ export function RenewMembershipDialog({
             {endDate < startDate ? (
               <p className="text-[11px] text-destructive">End date cannot be before start date</p>
             ) : null}
+
+            <div className="grid gap-1.5">
+              <Label className="text-xs">
+                Billing date{' '}
+                <span className="font-normal text-muted-foreground">· sets Invoice + Payment</span>
+              </Label>
+              <form.Field
+                name="billingDate"
+                validators={{
+                  onChange: ({ value }) =>
+                    /^\d{4}-\d{2}-\d{2}$/.test(value) ? undefined : 'Enter a valid billing date'
+                }}
+              >
+                {(field) => (
+                  <>
+                    <CatalogDatePicker
+                      value={field.state.value}
+                      onChange={(v) => field.handleChange(v)}
+                      placeholder="Pick billing date"
+                      testId="renew-billing-date-picker"
+                    />
+                    {field.state.meta.errors.length > 0 ? (
+                      <p className="text-[11px] text-destructive" role="alert">
+                        {field.state.meta.errors.join(', ')}
+                      </p>
+                    ) : (
+                      billingDateCautions(field.state.value, todayISO()).map((c) => (
+                        <p key={c.code} className="text-[11px] text-amber-600">
+                          {c.message}
+                          {c.source ? (
+                            <span className="block text-muted-foreground">{c.source}</span>
+                          ) : null}
+                        </p>
+                      ))
+                    )}
+                  </>
+                )}
+              </form.Field>
+            </div>
 
             <div className="grid gap-3">
               <div className="grid gap-1.5">

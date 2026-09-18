@@ -4,6 +4,8 @@ import { assertCustomerAllowed, assertPersonAllowed } from './blacklist'
 import { customerRepo } from '../repositories/membership'
 import { invoiceRepo, invoiceLineRepo, invoiceSequenceRepo } from '../repositories/billing'
 import { InvoiceCalculationService, deriveInvoicePrefix, formatDDMMYY } from '../domain/billing'
+import { assertValidBusinessDate, businessDateToUtc, todayInOrgTz } from '../domain/dates'
+import { orgTimezone } from './organization'
 import { organizationRepo } from '../repositories/identity'
 import {
   InvoiceAlreadyFinalizedError,
@@ -218,8 +220,10 @@ export function updateBillingSnapshot(input: UpdateBillingSnapshotInput): Invoic
  * Display-only preview of the next invoice number (Module 04 §36). Reads the
  * sequence counter without incrementing — the authoritative number is assigned
  * inside the finalize transaction, so this value is never reserved.
+ * Accepts an optional issue date so the preview follows the picked billing
+ * date (#110); defaults to today in the Organization timezone.
  */
-export function nextInvoiceNumberPreview(): InvoiceNumberPreview {
+export function nextInvoiceNumberPreview(input?: { issueDate?: string }): InvoiceNumberPreview {
   requirePermission(PERMISSIONS.INVOICE_VIEW)
   const organizationId = currentOrganizationId()
 
@@ -228,8 +232,14 @@ export function nextInvoiceNumberPreview(): InvoiceNumberPreview {
     org?.name ?? 'ORG',
     (org as OrganizationWithPrefix)?.org_invoice_prefix ?? null
   )
-  const now = new Date()
-  const dateKey = formatDDMMYY(now)
+  let dateKey: string
+  if (input?.issueDate) {
+    assertValidBusinessDate(input.issueDate, 'issueDate')
+    dateKey = `${input.issueDate.slice(8, 10)}${input.issueDate.slice(5, 7)}${input.issueDate.slice(2, 4)}`
+  } else {
+    const now = new Date()
+    dateKey = formatDDMMYY(now)
+  }
   const nextValue = invoiceSequenceRepo.peekNext(organizationId, dateKey, prefix)
   return {
     dateKey,
@@ -254,14 +264,21 @@ export function finalizeInvoice(input: FinalizeInvoiceInput): InvoiceOutput {
     const lines = invoiceLineRepo.listByInvoice(organizationId, input.invoiceId)
     if (lines.length === 0) throw new InvoiceEmptyError()
 
-    // Generate the real invoice number atomically
+    // Business issue date (#110): explicit back/future date or today in the
+    // Organization timezone. The Invoice Number follows the issue date.
+    const timezone = orgTimezone(organizationId)
+    const effectiveDate = input.issueDate ?? todayInOrgTz(timezone)
+    assertValidBusinessDate(effectiveDate, 'issueDate')
+
+    // Generate the real invoice number atomically.
+    // dateKey is derived from the YYYY-MM-DD string (not via Date getters)
+    // so no local-timezone shift can move it across a day boundary.
     const org = organizationRepo.findById(organizationId)
     const prefix = deriveInvoicePrefix(
       org?.name ?? 'ORG',
       (org as OrganizationWithPrefix)?.org_invoice_prefix ?? null
     )
-    const now = new Date()
-    const dateKey = formatDDMMYY(now)
+    const dateKey = `${effectiveDate.slice(8, 10)}${effectiveDate.slice(5, 7)}${effectiveDate.slice(2, 4)}`
 
     // Ensure sequence exists and increment atomically
     invoiceSequenceRepo.getOrCreate(organizationId, dateKey, prefix)
@@ -272,26 +289,29 @@ export function finalizeInvoice(input: FinalizeInvoiceInput): InvoiceOutput {
     const existing = invoiceRepo.getByNumber(organizationId, invoiceNumber)
     if (existing) throw new InvoiceNumberCollisionError()
 
-    const finalizedAt = new Date().toISOString()
+    // Day-precision business meaning: Organization-local noon → UTC instant.
+    // created_at stays the audit timestamp of when the row was typed.
+    const finalizedAt = businessDateToUtc(effectiveDate, timezone)
     invoiceRepo.updateStatus(organizationId, input.invoiceId, 'OPEN', {
       finalizedAt,
       finalizedBy: userId
     })
+    // Persist the business number in the SAME transaction — a finalized
+    // invoice must never commit with its DRAFT number.
+    invoiceRepo.updateNumber(organizationId, input.invoiceId, invoiceNumber)
 
-    // Overwrite the temporary number with the real one
+    // Overwrite the temporary number with the real one (persisted above)
     invoiceRepo.updateTotals(organizationId, input.invoiceId, {
       subtotalMinor: invoice.subtotalMinor,
       taxMinor: invoice.taxMinor,
       totalMinor: invoice.totalMinor
     })
 
-    // We need to update the number field directly since updateStatus doesn't support it
-    // For now, we'll use the number as-is from the sequence
     return mapInvoiceToRow({
       ...invoice,
       number: invoiceNumber,
       status: 'OPEN',
-      finalizedAt: now.toISOString(),
+      finalizedAt,
       finalizedBy: userId
     })
   })

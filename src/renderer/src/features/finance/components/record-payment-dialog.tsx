@@ -4,7 +4,7 @@ import { useForm } from '@tanstack/react-form'
 import { useStore } from '@tanstack/react-store'
 import { Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DateTimePicker } from '@/components/ui/date-time-picker'
+import { CatalogDatePicker } from '@/features/catalog/components/catalog-date-picker'
 import {
   Dialog,
   DialogContent,
@@ -79,7 +79,8 @@ export function RecordPaymentDialog({
 
   const form = useForm({
     defaultValues: {
-      paymentDate: new Date().toISOString(),
+      // Date-only business value (#110); time-of-day is not recorded.
+      paymentDate: new Date().toISOString().slice(0, 10),
       amount: '',
       method: 'UPI' as string,
       reference: '',
@@ -186,6 +187,23 @@ export function RecordPaymentDialog({
   }, [amount, currency, outstanding])
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Default the date to the linked invoice's issue date on contextual entry
+  // (#110). Only seeds while the clerk hasn't touched the field.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: one-shot contextual default */
+  const paymentDateTouched = useStore(
+    form.store,
+    (s) => s.fieldMeta.paymentDate?.isTouched ?? false
+  )
+  useEffect(() => {
+    if (!preSelectedInvoiceId || !outstanding?.length || paymentDateTouched) return
+    const linked = outstanding.find((i) => String(i.id) === String(preSelectedInvoiceId))
+    const issueDay = linked?.issuedAt.slice(0, 10)
+    if (issueDay && /^\d{4}-\d{2}-\d{2}$/.test(issueDay)) {
+      form.setFieldValue('paymentDate', issueDay)
+    }
+  }, [preSelectedInvoiceId, outstanding, paymentDateTouched, form])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const handleCustomerChange = useCallback((customer: PersonRef) => {
     setPicked(customer)
     setAllocations([])
@@ -236,7 +254,8 @@ export function RecordPaymentDialog({
               <form.Field
                 name="paymentDate"
                 validators={{
-                  onChange: ({ value }) => (value ? undefined : 'Pick a payment date')
+                  onChange: ({ value }) =>
+                    /^\d{4}-\d{2}-\d{2}$/.test(value) ? undefined : 'Pick a valid payment date'
                 }}
               >
                 {(field) => (
@@ -244,9 +263,11 @@ export function RecordPaymentDialog({
                     <Label htmlFor={`pay-${field.name}`}>
                       Date <span className="text-destructive">*</span>
                     </Label>
-                    <DateTimePicker
+                    <CatalogDatePicker
                       value={field.state.value}
-                      onChange={(iso) => field.handleChange(iso)}
+                      onChange={(v) => field.handleChange(v)}
+                      placeholder="Pick payment date"
+                      testId="payment-date-picker"
                     />
                     {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
                       <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>

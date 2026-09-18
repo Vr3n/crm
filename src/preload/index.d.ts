@@ -44,6 +44,7 @@ import type {
   CustomerInvoicesRequest,
   InvoiceDetail,
   InvoiceNumberPreview,
+  InvoiceNumberPreviewRequest,
   InvoiceLineRow,
   InvoiceRow
 } from '../shared/contracts/billing'
@@ -238,7 +239,7 @@ declare global {
         markUncollectible: (input: MarkUncollectibleInput) => Promise<InvoiceRow>
         getInvoice: (input: InvoiceIdRequest) => Promise<InvoiceDetail>
         updateSnapshot: (input: UpdateBillingSnapshotInput) => Promise<InvoiceRow>
-        nextNumber: () => Promise<InvoiceNumberPreview>
+        nextNumber: (input?: InvoiceNumberPreviewRequest) => Promise<InvoiceNumberPreview>
         listByCustomer: (input: CustomerInvoicesRequest) => Promise<InvoiceRow[]>
         listOpen: () => Promise<InvoiceRow[]>
       }
@@ -307,6 +308,8 @@ declare global {
           filename: string
           columns: { header: string; key: string; width?: number; format?: string }[]
           rows: Record<string, unknown>[]
+          currency?: string
+          timezone?: string
         }) => Promise<string>
       }
       license: {
